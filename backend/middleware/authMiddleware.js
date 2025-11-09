@@ -14,3 +14,17 @@ export const protect = async (req, res, next) => {
         res.status(401).json({ message: "Invalid or expired token" });
     }
 };
+// Middleware for role-based access
+export const authorizeRoles = (...roles) => {
+    return (req, res, next) => {
+        if (req.user.role === "admin") return next(); // admins can access everything
+        if (!roles.includes(req.user.role)) {
+            return res
+                .status(403)
+                .json({ message: `Access denied: Role '${req.user.role}' is not authorized` });
+        }
+        next();
+    };
+
+};
+
