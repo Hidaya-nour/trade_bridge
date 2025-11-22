@@ -2,8 +2,9 @@ import express, { Application, Request, Response } from "express";
 import dotenv from "dotenv";
 import mongoose from "mongoose";
 import cors from "cors";
-import authRoutes from "./routes/auth.routes";       // no extension needed in TS
-import productRoutes from "./routes/product.routes"; // no extension needed in TS
+import authRoutes from "./routes/auth.routes";
+import productRoutes from "./routes/product.routes";
+import orderRoutes from "./routes/order.routes";
 import crypto from "crypto";
 import { protect } from "./middleware/auth.middleware";
 
@@ -24,6 +25,7 @@ mongoose
 // Routes
 app.use("/auth", authRoutes);
 app.use("/product", protect, productRoutes);
+app.use("/order", protect, orderRoutes);
 
 app.get("/", (_req: Request, res: Response) => {
   res.send("API is running...");
