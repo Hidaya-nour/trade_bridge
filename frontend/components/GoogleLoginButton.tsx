@@ -43,7 +43,7 @@ useEffect(() => {
 }, []);
 
 
-  return <div id="googleSignInDiv" style={{ marginTop: "20px" }}></div>;
+  return <div id="googleSignInDiv" style={{ marginTop: "20px" }}>button</div>;
 };
 
 export default GoogleLoginButton;
