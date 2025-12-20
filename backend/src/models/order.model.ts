@@ -1,90 +1,82 @@
-import { Schema, model, Document } from 'mongoose';
+import { DataTypes, Model, Optional } from "sequelize";
+import sequelize from "../db";
 
-export interface IOrder extends Document {
-    name: string;
-    description: string;
-    price: number;
-    stock: number;
-    category: string;
-    createdAt: Date;
-    updatedAt: Date;
+export type OrderStatus = "pending" | "confirmed" | "shipped" | "delivered" | "cancelled";
+export type PaymentStatus = "pending" | "paid" | "failed";
+
+interface OrderAttributes {
+    order_id: string;
+    supplier_id: string;
+    buyer_id: string;
+    order_date: Date;
+    total_price: number;
+    payment_status: PaymentStatus;
+    order_status: OrderStatus;
+    assigned_driver_id?: string;
+    delivery_date?: Date;
+    deleted_at?: Date;
 }
 
-// const OrderSchema = new Schema<IOrder>(
-//     {
-//         name: { type: String, required: true, trim: true },
-//         description: { type: String, required: true, trim: true },
-//         price: { type: Number, required: true },
-//         stock: { type: Number, required: true, default: 0 },
-//         category: { type: String, required: true },
-//     },
-//     { timestamps: true }
-// );
+interface OrderCreationAttributes extends Optional<OrderAttributes, "delivery_date"> { }
 
-const OrderSchema = new Schema(
+class Order extends Model<OrderAttributes, OrderCreationAttributes>
+    implements OrderAttributes {
+    public order_id!: string;
+    public supplier_id!: string;
+    public buyer_id!: string;
+    public order_date!: Date;
+    public total_price!: number;
+    public payment_status!: PaymentStatus;
+    public order_status!: OrderStatus;
+    public assigned_driver_id?: string;
+    public delivery_date?: Date;
+}
+
+Order.init(
     {
-        buyer: {
-            type: Schema.Types.ObjectId,
-            ref: "User",
-            required: true,
+        order_id: {
+            type: DataTypes.CHAR(36),
+            primaryKey: true,
         },
-
-        seller: {
-            type: Schema.Types.ObjectId,
-            ref: "User",
-            required: true,
+        supplier_id: {
+            type: DataTypes.CHAR(36),
+            allowNull: false,
         },
-
-        products: [
-            {
-                product: {
-                    type: Schema.Types.ObjectId,
-                    ref: "Product",
-                    required: true,
-                },
-                quantity: { type: Number, required: true },
-                price: { type: Number, required: true }, // snapshot price
-            },
-        ],
-
-        totalPrice: {
-            type: Number,
-            required: true,
+        buyer_id: {
+            type: DataTypes.CHAR(36),
+            allowNull: false,
         },
-
-        paymentStatus: {
-            type: String,
-            enum: ["pending", "paid", "failed"],
-            default: "pending",
+        order_date: {
+            type: DataTypes.DATE,
+            allowNull: false,
         },
-
-        orderStatus: {
-            type: String,
-            enum: [
-                "pending",
-                "confirmed",
-                "processing",
-                "shipped",
-                "delivered",
-                "cancelled",
-            ],
-            default: "pending",
+        total_price: {
+            type: DataTypes.DECIMAL(10, 2),
+            allowNull: false,
         },
-
-        shippingAddress: {
-            fullName: { type: String },
-            phone: { type: String },
-            region: { type: String },
-            city: { type: String },
-            specificAddress: { type: String },
+        payment_status: {
+            type: DataTypes.ENUM("pending", "paid", "failed"),
+            allowNull: false,
         },
-
-        transactionId: {
-            type: String, // for Chapa, Stripe, Telebirr…etc
+        order_status: {
+            type: DataTypes.ENUM("pending", "confirmed", "shipped", "delivered", "cancelled"),
+            allowNull: false,
+        },
+        assigned_driver_id: {
+            type: DataTypes.CHAR(36),
+        },
+        delivery_date: {
+            type: DataTypes.DATEONLY,
+        },
+        deleted_at: {
+            type: DataTypes.DATE,
         },
     },
-    { timestamps: true }
+    {
+        sequelize,
+        tableName: "orders",
+        timestamps: false,
+    }
 );
 
-
-export const Order = model<IOrder>('order', OrderSchema);
+export default Order;

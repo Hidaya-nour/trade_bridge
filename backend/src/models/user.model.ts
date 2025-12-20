@@ -1,31 +1,81 @@
-import mongoose, { Schema, Document } from "mongoose";
+import { DataTypes, Model, Optional } from "sequelize";
+import sequelize from "../db";
 
-export interface IUser extends Document {
-    name: string;
+export type UserRole = "shop" | "distributor" | "factory" | "admin";
+export type UserStatus = "active" | "inactive" | "suspended";
+
+interface UserAttributes {
+    user_id: string;
+    full_name: string;
+    role: UserRole;
+    phone?: string;
     email: string;
-    password: string;
-    role: "shop" | "distributor" | "factory" | "admin";
-    location?: string;
-    contactNumber?: string;
-    profileImage?: string;
-    createdAt: Date;
-    updatedAt: Date;
+    password_hash: string;
+    status: UserStatus;
+    created_at?: Date;
+    updated_at?: Date;
+    deleted_at?: Date;
 }
 
-const userSchema: Schema<IUser> = new Schema(
+interface UserCreationAttributes
+    extends Optional<UserAttributes, "created_at" | "updated_at"> { }
+
+class User extends Model<UserAttributes, UserCreationAttributes>
+    implements UserAttributes {
+    public user_id!: string;
+    public full_name!: string;
+    public role!: UserRole;
+    public phone?: string;
+    public email!: string;
+    public password_hash!: string;
+    public status!: UserStatus;
+
+    public readonly created_at!: Date;
+    public readonly updated_at!: Date;
+}
+
+User.init(
     {
-        name: { type: String, required: true },
-        email: { type: String, required: true, unique: true },
-        password: { type: String, required: true },
-        role: { type: String, enum: ["shop", "distributor", "factory", "admin"], required: true },
-        location: { type: String },
-        contactNumber: { type: String },
-        profileImage: { type: String },
+        user_id: {
+            type: DataTypes.CHAR(36),
+            primaryKey: true,
+        },
+        full_name: {
+            type: DataTypes.STRING(100),
+            allowNull: false,
+        },
+        role: {
+            type: DataTypes.ENUM("shop", "distributor", "factory", "admin"),
+            allowNull: false,
+        },
+        phone: {
+            type: DataTypes.STRING(20),
+        },
+        email: {
+            type: DataTypes.STRING(100),
+            allowNull: false,
+            unique: true,
+        },
+        password_hash: {
+            type: DataTypes.STRING(255),
+            allowNull: false,
+        },
+        status: {
+            type: DataTypes.ENUM("active", "inactive", "suspended"),
+            defaultValue: "active",
+        },
+        deleted_at: {
+            type: DataTypes.DATE,
+        },
     },
     {
-        timestamps: true, // <-- this adds createdAt and updatedAt
+        sequelize,
+        tableName: "users",
+        timestamps: true,
+        underscored: true,
+        paranoid: true,
+        deletedAt: "deleted_at",
     }
 );
 
-const User = mongoose.model<IUser>("User", userSchema);
 export default User;

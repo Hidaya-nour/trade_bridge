@@ -1,49 +1,39 @@
-import React, { useEffect } from "react";
+/// <reference types="vite/client" />
+import React from "react";
+import { GoogleOAuthProvider, GoogleLogin, type CredentialResponse } from "@react-oauth/google";
+import { jwtDecode } from "jwt-decode";
 import axios from "axios";
 
-declare global {
-  interface Window {
-    google: any;
-  }
-}
-
-const GoogleLoginButton: React.FC = () => {
-  const handleCredentialResponse = async (response: { credential: string }) => {
+const GoogleLoginButton = () => {
+  const handleSuccess = async (credentialResponse: CredentialResponse | null) => {
     try {
-      console.log("Google ID token:", response.credential);
-      const res = await axios.post("http://localhost:5000/api/auth/google", {
-        token: response.credential,
+      const token = credentialResponse?.credential;
+      if (!token) {
+        throw new Error("No credential returned from Google.");
+      }
+      const decoded = jwtDecode(token);
+      console.log("Google user:", decoded);
+
+      // Send token to your backend for verification
+      const res = await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/google`, {
+        token,
       });
-      console.log("Backend response:", res.data);
-      alert(`Logged in as: ${res.data.name}`);
-    } catch (error: any) {
-      console.error("Login error:", error.response?.data || error);
+
+      // You can store the JWT from backend in localStorage
+      localStorage.setItem("token", res.data.token);
+      alert("Google Login Successful ✅");
+    } catch (err) {
+      console.error(err);
     }
   };
-useEffect(() => {
-  if (!window.google) return;
 
-  const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-  if (!clientId) {
-    console.error("VITE_GOOGLE_CLIENT_ID not set!");
-    return;
-  }
-
-  window.google.accounts.id.initialize({
-    client_id: clientId,
-    callback: handleCredentialResponse,
-  });
-
-  window.google.accounts.id.renderButton(
-    document.getElementById("googleSignInDiv"),
-    { theme: "outline", size: "large" }
+  return (
+    <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
+      <div className="flex justify-center">
+        <GoogleLogin onSuccess={handleSuccess} onError={() => console.log("Login Failed")} />
+      </div>
+    </GoogleOAuthProvider>
   );
-
-  window.google.accounts.id.prompt();
-}, []);
-
-
-  return <div id="googleSignInDiv" style={{ marginTop: "20px" }}>button</div>;
 };
 
 export default GoogleLoginButton;
