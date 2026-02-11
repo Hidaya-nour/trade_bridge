@@ -2,6 +2,7 @@ import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import RetailerDashboard from "./pages/retailer/Dashboard";
+import ProductsPage from "./pages/retailer/Products";
 
 
 function App() {
@@ -14,11 +15,13 @@ function App() {
             <RetailerDashboard />
           </DashboardLayout>
         } />
-        <Route path="/products" element={
-          <DashboardLayout>
-            <div>Products Page</div>
-          </DashboardLayout>
-        } />
+        <Route path="/retailer/products" 
+          element={
+            <DashboardLayout>
+              <ProductsPage />
+            </DashboardLayout>
+          } 
+/>
         <Route path="/orders" element={
           <DashboardLayout>
             <div>Orders Page</div>
