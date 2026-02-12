@@ -11,6 +11,9 @@ import NotificationsPage from "./pages/shared/Notifications";
 import MessagesPage from "./pages/shared/Messages";
 import CompareSuppliersPage from "./pages/retailer/CompareSuppliers";
 import SupplierDirectoryPage from "./pages/retailer/SupplierDirectory";
+import DistributorDashboard from "./pages/distributor/Dashboard";
+import ManageProductsPage from "./pages/distributor/ManageProducts";
+import FactoryProductsPage from "./pages/distributor/FactoryProducts";
 
 function App() {
   return (
@@ -95,6 +98,49 @@ function App() {
           element={
             <DashboardLayout>
               <CompareSuppliersPage />
+            </DashboardLayout>
+          }
+        />
+        <Route
+          path="/distributor/dashboard"
+          element={
+            <DashboardLayout>
+              <DistributorDashboard />
+            </DashboardLayout>
+          }
+        />
+
+        <Route
+          path="/distributor/products"
+          element={
+            <DashboardLayout>
+              <ManageProductsPage />
+            </DashboardLayout>
+          }
+        />
+
+        <Route
+          path="/distributor/products/add"
+          element={
+            <DashboardLayout>
+              <ManageProductsPage />
+            </DashboardLayout>
+          }
+        />
+        <Route
+          path="/distributor/factory-products"
+          element={
+            <DashboardLayout>
+              <FactoryProductsPage />
+            </DashboardLayout>
+          }
+        />
+
+        <Route
+          path="/distributor/factory-cart"
+          element={
+            <DashboardLayout>
+              <CartPage />
             </DashboardLayout>
           }
         />
