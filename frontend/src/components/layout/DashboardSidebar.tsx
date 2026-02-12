@@ -39,7 +39,7 @@ import { cn } from "@/lib/utils";
 const mockUser = {
   name: "Hidaya Nurmeika",
   email: "hidaya@tradebridge.com",
-  role: "retailer",
+  role: "admin",
   avatar: "",
   verified: true,
   joinDate: "December 2025",
@@ -216,7 +216,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
   const [isProfileOpen, setIsProfileOpen] = useState(false);
 
   // For now using retailer navigation - will be dynamic with role-based routing
-  const navigation = roleNavigation.retailer;
+  const navigation = roleNavigation.factory;
 
   const isActive = (href: string) => {
     return location.pathname === href;

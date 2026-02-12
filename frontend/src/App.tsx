@@ -5,43 +5,80 @@ import RetailerDashboard from "./pages/retailer/Dashboard";
 import ProductsPage from "./pages/retailer/Products";
 import OrdersPage from "./pages/retailer/Order";
 import CartPage from "./pages/retailer/Cart";
-
+import HelpSupportPage from "./pages/shared/HelpSupport";
+import SettingsPage from "./pages/shared/Settings";
+import NotificationsPage from "./pages/shared/Notifications";
+import MessagesPage from "./pages/shared/Messages";
 
 function App() {
   return (
     <Router>
       <Routes>
         {/* Dashboard Routes */}
-        <Route path="/retailer/dashboard" element={
-          <DashboardLayout>
-            <RetailerDashboard />
-          </DashboardLayout>
-        } />
-        <Route path="/retailer/products" 
+        <Route
+          path="/retailer/dashboard"
+          element={
+            <DashboardLayout>
+              <RetailerDashboard />
+            </DashboardLayout>
+          }
+        />
+        <Route
+          path="/retailer/products"
           element={
             <DashboardLayout>
               <ProductsPage />
             </DashboardLayout>
-          } 
-/>
-       <Route 
-  path="/retailer/cart" 
-  element={
-    <DashboardLayout>
-      <CartPage />
-    </DashboardLayout>
-  } 
-/>
-
-<Route 
-  path="/retailer/orders" 
-  element={
-    <DashboardLayout>
-      <OrdersPage />
-    </DashboardLayout>
-  } 
-/>
-        {/* Add more dashboard routes as needed */}
+          }
+        />
+        <Route
+          path="/retailer/cart"
+          element={
+            <DashboardLayout>
+              <CartPage />
+            </DashboardLayout>
+          }
+        />
+        <Route
+          path="/retailer/orders"
+          element={
+            <DashboardLayout>
+              <OrdersPage />
+            </DashboardLayout>
+          }
+        />
+        <Route
+          path="/messages"
+          element={
+            <DashboardLayout>
+              <MessagesPage />
+            </DashboardLayout>
+          }
+        />
+        <Route
+          path="/notifications"
+          element={
+            <DashboardLayout>
+              <NotificationsPage />
+            </DashboardLayout>
+          }
+        />
+        <Route
+          path="/settings"
+          element={
+            <DashboardLayout>
+              <SettingsPage />
+            </DashboardLayout>
+          }
+        />
+        <Route
+          path="/support"
+          element={
+            <DashboardLayout>
+              <HelpSupportPage />
+            </DashboardLayout>
+          }
+        />{" "}
       </Routes>
     </Router>
   );
