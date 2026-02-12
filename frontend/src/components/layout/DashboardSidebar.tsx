@@ -216,7 +216,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
   const [isProfileOpen, setIsProfileOpen] = useState(false);
 
   // For now using retailer navigation - will be dynamic with role-based routing
-  const navigation = roleNavigation.factory;
+  const navigation = roleNavigation.retailer;
 
   const isActive = (href: string) => {
     return location.pathname === href;

@@ -9,6 +9,8 @@ import HelpSupportPage from "./pages/shared/HelpSupport";
 import SettingsPage from "./pages/shared/Settings";
 import NotificationsPage from "./pages/shared/Notifications";
 import MessagesPage from "./pages/shared/Messages";
+import CompareSuppliersPage from "./pages/retailer/CompareSuppliers";
+import SupplierDirectoryPage from "./pages/retailer/SupplierDirectory";
 
 function App() {
   return (
@@ -78,7 +80,24 @@ function App() {
               <HelpSupportPage />
             </DashboardLayout>
           }
-        />{" "}
+        />
+        <Route
+          path="/retailer/suppliers"
+          element={
+            <DashboardLayout>
+              <SupplierDirectoryPage />
+            </DashboardLayout>
+          }
+        />
+
+        <Route
+          path="/retailer/compare"
+          element={
+            <DashboardLayout>
+              <CompareSuppliersPage />
+            </DashboardLayout>
+          }
+        />
       </Routes>
     </Router>
   );
