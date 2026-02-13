@@ -14,6 +14,7 @@ import SupplierDirectoryPage from "./pages/retailer/SupplierDirectory";
 import DistributorDashboard from "./pages/distributor/Dashboard";
 import ManageProductsPage from "./pages/distributor/ManageProducts";
 import FactoryProductsPage from "./pages/distributor/FactoryProducts";
+import IncomingOrdersPage from "./pages/distributor/IncomingOrders";
 
 function App() {
   return (
@@ -141,6 +142,14 @@ function App() {
           element={
             <DashboardLayout>
               <CartPage />
+            </DashboardLayout>
+          }
+        />
+        <Route
+          path="/distributor/orders"
+          element={
+            <DashboardLayout>
+              <IncomingOrdersPage />
             </DashboardLayout>
           }
         />
