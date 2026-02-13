@@ -15,6 +15,9 @@ import DistributorDashboard from "./pages/distributor/Dashboard";
 import ManageProductsPage from "./pages/distributor/ManageProducts";
 import FactoryProductsPage from "./pages/distributor/FactoryProducts";
 import IncomingOrdersPage from "./pages/distributor/IncomingOrders";
+import FactoryOrdersPage from "./pages/distributor/FactoryOrders";
+import BroadcastPromotionsPage from "./pages/distributor/BroadcastPromotions";
+import DeliveryManagementPage from "./pages/distributor/DeliveryManagement";
 
 function App() {
   return (
@@ -150,6 +153,31 @@ function App() {
           element={
             <DashboardLayout>
               <IncomingOrdersPage />
+            </DashboardLayout>
+          }
+        />
+        <Route
+          path="/distributor/factory-orders"
+          element={
+            <DashboardLayout>
+              <FactoryOrdersPage />
+            </DashboardLayout>
+          }
+        />
+        <Route
+          path="/distributor/delivery"
+          element={
+            <DashboardLayout>
+              <DeliveryManagementPage />
+            </DashboardLayout>
+          }
+        />
+
+        <Route
+          path="/distributor/promotions"
+          element={
+            <DashboardLayout>
+              <BroadcastPromotionsPage />
             </DashboardLayout>
           }
         />

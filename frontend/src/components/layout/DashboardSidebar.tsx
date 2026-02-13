@@ -37,15 +37,15 @@ import { cn } from "@/lib/utils";
 
 // Mock user - will be replaced with auth
 const mockUser = {
-  name: "Hidaya Nurmeika",
-  email: "hidaya@tradebridge.com",
-  role: "admin",
+  name: "Abebe Kebede",
+  email: "abebe@adama-wholesalers.com",
+  role: "distributor",
   avatar: "",
   verified: true,
-  joinDate: "December 2025",
-  business: "ABC Retail Shop",
-  rating: 4.8,
-  totalOrders: 156,
+  joinDate: "March 2023",
+  business: "Adama Wholesalers",
+  rating: 4.7,
+  totalOrders: 890,
 };
 
 const getInitials = (name: string) => {
@@ -72,59 +72,116 @@ const roleNavigation = {
       icon: Store,
       badge: "24",
     },
-    { name: "Browse Suppliers", href: "/retailer/suppliers", icon: TrendingUp },
-    { name: "My Orders", href: "/retailer/orders", icon: Package, badge: "5" },
+    {
+      name: "Browse Suppliers",
+      href: "/retailer/suppliers",
+      icon: TrendingUp,
+    },
+    {
+      name: "My Orders",
+      href: "/retailer/orders",
+      icon: Package,
+      badge: "5",
+    },
     {
       name: "Shopping Cart",
       href: "/retailer/cart",
       icon: ShoppingCart,
       badge: "3",
     },
-    { name: "Analytics", href: "/retailer/analytics", icon: BarChart3 },
-  ],
-  distributor: [
     {
-      name: "Dashboard",
-      href: "/distributor/dashboard",
-      icon: LayoutDashboard,
-    },
-    {
-      name: "Manage Products",
-      href: "/distributor/products",
-      icon: Package,
-      badge: "12",
-    },
-    {
-      name: "Inventory",
-      href: "/distributor/inventory",
-      icon: Warehouse,
-      badge: "Low Stock",
-    },
-    {
-      name: "Incoming Orders",
-      href: "/distributor/orders",
-      icon: ShoppingCart,
-      badge: "8",
-    },
-    { name: "Approve Orders", href: "/distributor/approve", icon: Shield },
-    {
-      name: "Broadcast Promotions",
-      href: "/distributor/promotions",
-      icon: TrendingUp,
-    },
-    {
-      name: "Supplier Partnerships",
-      href: "/distributor/partners",
-      icon: Factory,
-    },
-    { name: "Delivery Management", href: "/distributor/delivery", icon: Truck },
-    {
-      name: "Sales Analytics",
-      href: "/distributor/analytics",
+      name: "Analytics",
+      href: "/retailer/analytics",
       icon: BarChart3,
     },
-    { name: "Export Reports", href: "/distributor/reports", icon: FileText },
   ],
+
+  // ✅ DISTRIBUTOR - UPDATED WITH PURCHASING SECTION
+  distributor: {
+    main: [
+      {
+        name: "Dashboard",
+        href: "/distributor/dashboard",
+        icon: LayoutDashboard,
+        exact: true,
+      },
+      {
+        name: "Manage Products",
+        href: "/distributor/products",
+        icon: Package,
+        badge: "12",
+      },
+      {
+        name: "Inventory",
+        href: "/distributor/inventory",
+        icon: Warehouse,
+        badge: "Low Stock",
+      },
+    ],
+
+    // 📤 SELLING TO RETAILERS
+    retailOperations: [
+      {
+        name: "Retailer Orders",
+        href: "/distributor/orders",
+        icon: ShoppingCart,
+        badge: "8",
+      },
+
+      {
+        name: "Delivery Management",
+        href: "/distributor/delivery",
+        icon: Truck,
+      },
+      {
+        name: "Broadcast Promotions",
+        href: "/distributor/promotions",
+        icon: TrendingUp,
+      },
+    ],
+
+    // 📥 BUYING FROM FACTORIES
+    purchasing: [
+      {
+        name: "Source Products",
+        href: "/distributor/factory-products",
+        icon: Factory,
+        badge: "New",
+      },
+      {
+        name: "Purchase Cart",
+        href: "/distributor/factory-cart",
+        icon: ShoppingCart,
+        badge: "3",
+      },
+      {
+        name: "Purchase Orders",
+        href: "/distributor/factory-orders",
+        icon: FileText,
+        badge: "5",
+      },
+    ],
+
+    // 📊 ANALYTICS
+    analytics: [
+      {
+        name: "Sales Analytics",
+        href: "/distributor/analytics",
+        icon: BarChart3,
+      },
+      {
+        name: "Export Reports",
+        href: "/distributor/reports",
+        icon: FileText,
+      },
+      {
+        name: "Supplier Partnerships",
+        href: "/distributor/partners",
+        icon: Users,
+      },
+    ],
+  },
+
   factory: [
     { name: "Dashboard", href: "/factory/dashboard", icon: LayoutDashboard },
     {
@@ -154,6 +211,7 @@ const roleNavigation = {
       icon: Bell,
     },
   ],
+
   driver: [
     { name: "Dashboard", href: "/driver/dashboard", icon: LayoutDashboard },
     {
@@ -164,7 +222,11 @@ const roleNavigation = {
     },
     { name: "Delivery History", href: "/driver/history", icon: Package },
     { name: "Live Tracking", href: "/driver/tracking", icon: TrendingUp },
-    { name: "Route Management", href: "/driver/routes", icon: Map },
+    {
+      name: "Route Management",
+      href: "/driver/routes",
+      icon: TrendingUp,
+    },
     {
       name: "Report Issues",
       href: "/driver/issues",
@@ -173,6 +235,7 @@ const roleNavigation = {
     },
     { name: "Delivery Stats", href: "/driver/stats", icon: BarChart3 },
   ],
+
   admin: [
     { name: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
     { name: "User Management", href: "/admin/users", icon: Users, badge: "5" },
@@ -215,11 +278,374 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
   const location = useLocation();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
 
-  // For now using retailer navigation - will be dynamic with role-based routing
-  const navigation = roleNavigation.distributor;
+  // Get current user role - this will come from auth context
+  const userRole = mockUser.role as keyof typeof roleNavigation;
+  const isDistributor = userRole === "distributor";
 
   const isActive = (href: string) => {
     return location.pathname === href;
+  };
+
+  // Render distributor navigation with sections
+  const renderDistributorNav = () => {
+    const nav = roleNavigation.distributor;
+
+    return (
+      <div className={cn("space-y-4", collapsed ? "px-2 py-4" : "px-3 py-4")}>
+        {/* ===== MAIN MENU ===== */}
+        <div className="space-y-0.5">
+          {!collapsed && (
+            <p className="px-2 pb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+              Main Menu
+            </p>
+          )}
+          {nav.main.map((item) => (
+            <Button
+              key={item.name}
+              variant={isActive(item.href) ? "secondary" : "ghost"}
+              size={collapsed ? "icon" : "default"}
+              className={cn(
+                "group relative transition-all",
+                collapsed
+                  ? "h-10 w-10 mx-auto hover:bg-accent"
+                  : "w-full justify-start px-3",
+                !collapsed && "hover:translate-x-0.5",
+                isActive(item.href) &&
+                  !collapsed &&
+                  "bg-primary/10 text-primary hover:bg-primary/15",
+                isActive(item.href) &&
+                  collapsed &&
+                  "bg-primary/10 text-primary hover:bg-primary/15",
+              )}
+              asChild
+            >
+              <Link to={item.href}>
+                {!collapsed && isActive(item.href) && (
+                  <span className="absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full bg-primary" />
+                )}
+                <div
+                  className={cn(
+                    "flex items-center",
+                    collapsed ? "justify-center" : "justify-between w-full",
+                  )}
+                >
+                  <div className="flex items-center gap-3">
+                    <item.icon
+                      className={cn(
+                        "h-4 w-4 transition-colors",
+                        isActive(item.href)
+                          ? "text-primary"
+                          : "text-muted-foreground group-hover:text-foreground",
+                      )}
+                    />
+                    {!collapsed && (
+                      <span
+                        className={cn(
+                          "text-sm transition-colors",
+                          isActive(item.href) ? "font-medium" : "font-normal",
+                        )}
+                      >
+                        {item.name}
+                      </span>
+                    )}
+                  </div>
+                  {!collapsed && item.badge && (
+                    <Badge
+                      variant={isActive(item.href) ? "default" : "secondary"}
+                      className={cn(
+                        "ml-auto text-[10px] px-1.5 py-0.5 font-medium",
+                        item.badge === "Low Stock" &&
+                          "bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-950/20 dark:text-amber-400 dark:border-amber-800",
+                      )}
+                    >
+                      {item.badge}
+                    </Badge>
+                  )}
+                </div>
+              </Link>
+            </Button>
+          ))}
+        </div>
+
+        <Separator className="bg-border/50" />
+
+        {/* ===== RETAIL OPERATIONS ===== */}
+        <div className="space-y-0.5">
+          {!collapsed && (
+            <p className="px-2 pb-1 text-[11px] font-semibold uppercase tracking-wider text-blue-600 dark:text-blue-400 flex items-center gap-1.5">
+              <ShoppingCart className="h-3 w-3" />
+              RETAIL OPERATIONS
+            </p>
+          )}
+          {nav.retailOperations.map((item) => (
+            <Button
+              key={item.name}
+              variant={isActive(item.href) ? "secondary" : "ghost"}
+              size={collapsed ? "icon" : "default"}
+              className={cn(
+                "group relative transition-all",
+                collapsed
+                  ? "h-10 w-10 mx-auto hover:bg-accent"
+                  : "w-full justify-start px-3",
+                isActive(item.href) &&
+                  !collapsed &&
+                  "bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-500/15",
+              )}
+              asChild
+            >
+              <Link to={item.href}>
+                <div
+                  className={cn(
+                    "flex items-center",
+                    collapsed ? "justify-center" : "justify-between w-full",
+                  )}
+                >
+                  <div className="flex items-center gap-3">
+                    <item.icon
+                      className={cn(
+                        "h-4 w-4 transition-colors",
+                        isActive(item.href)
+                          ? "text-blue-600 dark:text-blue-400"
+                          : "text-muted-foreground group-hover:text-foreground",
+                      )}
+                    />
+                    {!collapsed && (
+                      <span
+                        className={cn(
+                          "text-sm transition-colors",
+                          isActive(item.href)
+                            ? "font-medium text-blue-600 dark:text-blue-400"
+                            : "font-normal",
+                        )}
+                      >
+                        {item.name}
+                      </span>
+                    )}
+                  </div>
+                  {!collapsed && item.badge && (
+                    <Badge
+                      variant="secondary"
+                      className="ml-auto text-[10px] px-1.5 py-0.5 font-medium"
+                    >
+                      {item.badge}
+                    </Badge>
+                  )}
+                </div>
+              </Link>
+            </Button>
+          ))}
+        </div>
+
+        <Separator className="bg-border/50" />
+
+        {/* ===== PURCHASING ===== */}
+        <div className="space-y-0.5">
+          {!collapsed && (
+            <p className="px-2 pb-1 text-[11px] font-semibold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
+              <Factory className="h-3 w-3" />
+              PURCHASING
+            </p>
+          )}
+          {nav.purchasing.map((item) => (
+            <Button
+              key={item.name}
+              variant={isActive(item.href) ? "secondary" : "ghost"}
+              size={collapsed ? "icon" : "default"}
+              className={cn(
+                "group relative transition-all",
+                collapsed
+                  ? "h-10 w-10 mx-auto hover:bg-accent"
+                  : "w-full justify-start px-3",
+                isActive(item.href) &&
+                  !collapsed &&
+                  "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/15",
+              )}
+              asChild
+            >
+              <Link to={item.href}>
+                <div
+                  className={cn(
+                    "flex items-center",
+                    collapsed ? "justify-center" : "justify-between w-full",
+                  )}
+                >
+                  <div className="flex items-center gap-3">
+                    <item.icon
+                      className={cn(
+                        "h-4 w-4 transition-colors",
+                        isActive(item.href)
+                          ? "text-emerald-600 dark:text-emerald-400"
+                          : "text-muted-foreground group-hover:text-foreground",
+                      )}
+                    />
+                    {!collapsed && (
+                      <span
+                        className={cn(
+                          "text-sm transition-colors",
+                          isActive(item.href)
+                            ? "font-medium text-emerald-600 dark:text-emerald-400"
+                            : "font-normal",
+                        )}
+                      >
+                        {item.name}
+                      </span>
+                    )}
+                  </div>
+                  {!collapsed && item.badge && (
+                    <Badge
+                      variant="secondary"
+                      className={cn(
+                        "ml-auto text-[10px] px-1.5 py-0.5 font-medium",
+                        item.badge === "New" &&
+                          "bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-950/20 dark:text-emerald-400",
+                      )}
+                    >
+                      {item.badge}
+                    </Badge>
+                  )}
+                </div>
+              </Link>
+            </Button>
+          ))}
+        </div>
+
+        <Separator className="bg-border/50" />
+
+        {/* ===== ANALYTICS ===== */}
+        <div className="space-y-0.5">
+          {!collapsed && (
+            <p className="px-2 pb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+              ANALYTICS
+            </p>
+          )}
+          {nav.analytics.map((item) => (
+            <Button
+              key={item.name}
+              variant={isActive(item.href) ? "secondary" : "ghost"}
+              size={collapsed ? "icon" : "default"}
+              className={cn(
+                "group relative transition-all",
+                collapsed
+                  ? "h-10 w-10 mx-auto hover:bg-accent"
+                  : "w-full justify-start px-3",
+                isActive(item.href) &&
+                  !collapsed &&
+                  "bg-primary/10 text-primary hover:bg-primary/15",
+              )}
+              asChild
+            >
+              <Link to={item.href}>
+                <div
+                  className={cn(
+                    "flex items-center",
+                    collapsed ? "justify-center" : "justify-between w-full",
+                  )}
+                >
+                  <div className="flex items-center gap-3">
+                    <item.icon
+                      className={cn(
+                        "h-4 w-4 transition-colors",
+                        isActive(item.href)
+                          ? "text-primary"
+                          : "text-muted-foreground group-hover:text-foreground",
+                      )}
+                    />
+                    {!collapsed && (
+                      <span
+                        className={cn(
+                          "text-sm transition-colors",
+                          isActive(item.href) ? "font-medium" : "font-normal",
+                        )}
+                      >
+                        {item.name}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </Link>
+            </Button>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  // Render regular navigation for other roles
+  const renderRegularNav = () => {
+    const nav = roleNavigation[userRole] as any[];
+
+    return (
+      <div className={cn("space-y-4", collapsed ? "px-2 py-4" : "px-3 py-4")}>
+        <div className="space-y-0.5">
+          {nav?.map((item) => (
+            <Button
+              key={item.name}
+              variant={isActive(item.href) ? "secondary" : "ghost"}
+              size={collapsed ? "icon" : "default"}
+              className={cn(
+                "group relative transition-all",
+                collapsed
+                  ? "h-10 w-10 mx-auto hover:bg-accent"
+                  : "w-full justify-start px-3",
+                !collapsed && "hover:translate-x-0.5",
+                isActive(item.href) &&
+                  !collapsed &&
+                  "bg-primary/10 text-primary hover:bg-primary/15",
+                isActive(item.href) &&
+                  collapsed &&
+                  "bg-primary/10 text-primary hover:bg-primary/15",
+              )}
+              asChild
+            >
+              <Link to={item.href}>
+                {!collapsed && isActive(item.href) && (
+                  <span className="absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full bg-primary" />
+                )}
+                <div
+                  className={cn(
+                    "flex items-center",
+                    collapsed ? "justify-center" : "justify-between w-full",
+                  )}
+                >
+                  <div className="flex items-center gap-3">
+                    <item.icon
+                      className={cn(
+                        "h-4 w-4 transition-colors",
+                        isActive(item.href)
+                          ? "text-primary"
+                          : "text-muted-foreground group-hover:text-foreground",
+                      )}
+                    />
+                    {!collapsed && (
+                      <span
+                        className={cn(
+                          "text-sm transition-colors",
+                          isActive(item.href) ? "font-medium" : "font-normal",
+                        )}
+                      >
+                        {item.name}
+                      </span>
+                    )}
+                  </div>
+                  {!collapsed && item.badge && (
+                    <Badge
+                      variant={isActive(item.href) ? "default" : "secondary"}
+                      className={cn(
+                        "ml-auto text-[10px] px-1.5 py-0.5 font-medium",
+                        item.badge === "Low Stock" &&
+                          "bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-950/20 dark:text-amber-400 dark:border-amber-800",
+                      )}
+                    >
+                      {item.badge}
+                    </Badge>
+                  )}
+                </div>
+              </Link>
+            </Button>
+          ))}
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -310,7 +736,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
                   <div className="flex items-center gap-1.5">
                     <Badge
                       variant="secondary"
-                      className="px-2 py-0.5 text-[11px] font-medium bg-primary/5"
+                      className="px-2 py-0.5 text-[11px] font-medium bg-primary/5 capitalize"
                     >
                       {mockUser.role}
                     </Badge>
@@ -348,82 +774,15 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
 
       {/* Main Navigation */}
       <ScrollArea className="flex-1 min-h-0">
-        <div className={cn("space-y-4", collapsed ? "px-2 py-4" : "px-3 py-4")}>
-          <div className="space-y-0.5">
-            {navigation.map((item) => (
-              <Button
-                key={item.name}
-                variant={isActive(item.href) ? "secondary" : "ghost"}
-                size={collapsed ? "icon" : "default"}
-                className={cn(
-                  "group relative transition-all",
-                  collapsed
-                    ? "h-10 w-10 mx-auto hover:bg-accent"
-                    : "w-full justify-start px-3",
-                  !collapsed && "hover:translate-x-0.5",
-                  isActive(item.href) &&
-                    !collapsed &&
-                    "bg-primary/10 text-primary hover:bg-primary/15",
-                  isActive(item.href) &&
-                    collapsed &&
-                    "bg-primary/10 text-primary hover:bg-primary/15",
-                )}
-                asChild
-              >
-                <Link to={item.href}>
-                  {!collapsed && isActive(item.href) && (
-                    <span className="absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full bg-primary" />
-                  )}
-                  <div
-                    className={cn(
-                      "flex items-center",
-                      collapsed ? "justify-center" : "justify-between w-full",
-                    )}
-                  >
-                    <div className="flex items-center gap-3">
-                      <item.icon
-                        className={cn(
-                          "h-4 w-4 transition-colors",
-                          isActive(item.href)
-                            ? "text-primary"
-                            : "text-muted-foreground group-hover:text-foreground",
-                        )}
-                      />
-                      {!collapsed && (
-                        <span
-                          className={cn(
-                            "text-sm transition-colors",
-                            isActive(item.href) ? "font-medium" : "font-normal",
-                          )}
-                        >
-                          {item.name}
-                        </span>
-                      )}
-                    </div>
-                    {!collapsed && item.badge && (
-                      <Badge
-                        variant={isActive(item.href) ? "default" : "secondary"}
-                        className={cn(
-                          "ml-auto text-[10px] px-1.5 py-0.5 font-medium",
-                          item.badge === "Low Stock" &&
-                            "bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-950/20 dark:text-amber-400 dark:border-amber-800",
-                          isActive(item.href) &&
-                            item.badge !== "Low Stock" &&
-                            "bg-primary text-primary-foreground",
-                        )}
-                      >
-                        {item.badge}
-                      </Badge>
-                    )}
-                  </div>
-                </Link>
-              </Button>
-            ))}
-          </div>
+        {isDistributor ? renderDistributorNav() : renderRegularNav()}
 
-          <Separator className="bg-border/50" />
-
-          {/* Secondary Navigation */}
+        {/* Secondary Navigation (Support) */}
+        <div
+          className={cn(
+            "px-3 py-4 border-t border-border/40",
+            collapsed ? "px-2" : "px-3",
+          )}
+        >
           <div className="space-y-0.5">
             {!collapsed && (
               <p className="px-2 pb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
@@ -486,10 +845,10 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
                     <span className="text-muted-foreground">
                       Order Fulfillment
                     </span>
-                    <span className="font-medium text-foreground">92%</span>
+                    <span className="font-medium text-foreground">94%</span>
                   </div>
                   <Progress
-                    value={92}
+                    value={94}
                     className="h-1.5 bg-primary/10 [&>div]:bg-gradient-to-r [&>div]:from-primary [&>div]:to-primary/80"
                   />
                 </div>
@@ -498,19 +857,19 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
                     <span className="text-muted-foreground">
                       On-time Delivery
                     </span>
-                    <span className="font-medium text-foreground">88%</span>
+                    <span className="font-medium text-foreground">92%</span>
                   </div>
                   <Progress
-                    value={88}
+                    value={92}
                     className="h-1.5 bg-primary/10 [&>div]:bg-gradient-to-r [&>div]:from-primary [&>div]:to-primary/80"
                   />
                 </div>
                 <div className="flex items-center justify-between pt-1.5 border-t border-primary/10">
                   <span className="text-xs text-muted-foreground">
-                    Monthly Spend
+                    Monthly Revenue
                   </span>
                   <span className="text-sm font-semibold text-foreground">
-                    ETB 45.2K
+                    ETB 845K
                   </span>
                 </div>
               </div>
