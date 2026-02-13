@@ -3,7 +3,6 @@ import { Link } from "react-router-dom";
 import {
   Package,
   ShoppingCart,
-  TrendingUp,
   Truck,
   Store,
   DollarSign,
@@ -11,15 +10,14 @@ import {
   AlertCircle,
   CheckCircle2,
   Clock,
-  ArrowUpRight,
-  ArrowDownRight,
-  ChevronRight,
-  BarChart3,
-  Download,
-  Filter,
   Eye,
   CheckCheck,
   XCircle,
+  TrendingUp,
+  BarChart3,
+  Download,
+  Filter,
+  ChevronRight,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -37,15 +35,15 @@ import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
+
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { cn } from "@/lib/utils";
+  StatsCard,
+  SectionHeader,
+  StatusBadge,
+  WelcomeHeader,
+} from "@/components/shared";
+import { formatPrice, formatCompactPrice, formatDate } from "@/lib/formatters";
+import { getInitials } from "@/lib/utils";
 
 // Mock distributor stats
 const stats = [
@@ -53,7 +51,7 @@ const stats = [
     title: "Total Orders",
     value: "156",
     change: "+12",
-    trend: "up",
+    trend: "up" as const,
     icon: ShoppingCart,
     color: "text-blue-600",
     bg: "bg-blue-100",
@@ -62,7 +60,7 @@ const stats = [
     title: "Pending Orders",
     value: "24",
     change: "-5",
-    trend: "down",
+    trend: "down" as const,
     icon: Clock,
     color: "text-amber-600",
     bg: "bg-amber-100",
@@ -71,7 +69,7 @@ const stats = [
     title: "Low Stock Items",
     value: "12",
     change: "+3",
-    trend: "up",
+    trend: "up" as const,
     icon: AlertCircle,
     color: "text-red-600",
     bg: "bg-red-100",
@@ -80,7 +78,7 @@ const stats = [
     title: "Active Suppliers",
     value: "18",
     change: "+2",
-    trend: "up",
+    trend: "up" as const,
     icon: Store,
     color: "text-purple-600",
     bg: "bg-purple-100",
@@ -94,50 +92,40 @@ const incomingOrders = [
     retailer: "ABC Retail Shop",
     retailerId: 201,
     items: 5,
-    total: "ETB 12,500",
-    status: "pending",
+    total: 12500,
+    status: "pending" as const,
     date: "2026-02-12T09:30:00",
-    priority: "high",
+    priority: "high" as const,
   },
   {
     id: "ORD-2026-0244",
     retailer: "Mega Mart",
     retailerId: 202,
     items: 12,
-    total: "ETB 45,800",
-    status: "pending",
+    total: 45800,
+    status: "pending" as const,
     date: "2026-02-12T08:15:00",
-    priority: "high",
+    priority: "high" as const,
   },
   {
     id: "ORD-2026-0243",
     retailer: "City Supermarket",
     retailerId: 203,
     items: 3,
-    total: "ETB 8,900",
-    status: "processing",
+    total: 8900,
+    status: "processing" as const,
     date: "2026-02-11T15:45:00",
-    priority: "medium",
+    priority: "medium" as const,
   },
   {
     id: "ORD-2026-0242",
     retailer: "Addis Mart",
     retailerId: 204,
     items: 8,
-    total: "ETB 23,400",
-    status: "approved",
+    total: 23400,
+    status: "approved" as const,
     date: "2026-02-11T11:20:00",
-    priority: "low",
-  },
-  {
-    id: "ORD-2026-0241",
-    retailer: "Bole Superstore",
-    retailerId: 205,
-    items: 15,
-    total: "ETB 67,200",
-    status: "shipped",
-    date: "2026-02-10T14:30:00",
-    priority: "medium",
+    priority: "low" as const,
   },
 ];
 
@@ -150,7 +138,7 @@ const lowStockProducts = [
     stock: 25,
     minStock: 50,
     supplier: "Ethiopia Agri",
-    status: "critical",
+    status: "critical" as const,
   },
   {
     id: 2,
@@ -159,7 +147,7 @@ const lowStockProducts = [
     stock: 120,
     minStock: 200,
     supplier: "Adama Wholesalers",
-    status: "low",
+    status: "low" as const,
   },
   {
     id: 3,
@@ -168,7 +156,7 @@ const lowStockProducts = [
     stock: 45,
     minStock: 100,
     supplier: "Ethiopia Agri",
-    status: "critical",
+    status: "critical" as const,
   },
   {
     id: 4,
@@ -177,7 +165,7 @@ const lowStockProducts = [
     stock: 80,
     minStock: 150,
     supplier: "Ethiopia Coffee Export",
-    status: "low",
+    status: "low" as const,
   },
 ];
 
@@ -188,7 +176,7 @@ const recentShipments = [
     orderId: "ORD-2026-0238",
     retailer: "ABC Retail Shop",
     driver: "Tsegaye Mulugeta",
-    status: "delivered",
+    status: "delivered" as const,
     date: "2026-02-11",
   },
   {
@@ -196,7 +184,7 @@ const recentShipments = [
     orderId: "ORD-2026-0235",
     retailer: "City Supermarket",
     driver: "Abebe Kebede",
-    status: "in-transit",
+    status: "in-transit" as const,
     date: "2026-02-11",
   },
   {
@@ -204,7 +192,7 @@ const recentShipments = [
     orderId: "ORD-2026-0232",
     retailer: "Mega Mart",
     driver: "Almaz Worku",
-    status: "pending",
+    status: "pending" as const,
     date: "2026-02-10",
   },
 ];
@@ -225,45 +213,14 @@ const salesData = [
   { month: "Dec", sales: 84500 },
 ];
 
-const getStatusColor = (status: string) => {
-  switch (status) {
-    case "pending":
-      return "bg-yellow-100 text-yellow-800 border-yellow-200";
-    case "processing":
-      return "bg-blue-100 text-blue-800 border-blue-200";
-    case "approved":
-      return "bg-green-100 text-green-800 border-green-200";
-    case "shipped":
-      return "bg-purple-100 text-purple-800 border-purple-200";
-    case "delivered":
-      return "bg-emerald-100 text-emerald-800 border-emerald-200";
-    case "cancelled":
-      return "bg-red-100 text-red-800 border-red-200";
-    case "in-transit":
-      return "bg-indigo-100 text-indigo-800 border-indigo-200";
-    default:
-      return "bg-gray-100 text-gray-800 border-gray-200";
-  }
-};
-
 const getPriorityBadge = (priority: string) => {
   switch (priority) {
     case "high":
-      return (
-        <Badge className="bg-red-100 text-red-800 border-red-200">High</Badge>
-      );
+      return <StatusBadge status="high" />;
     case "medium":
-      return (
-        <Badge className="bg-amber-100 text-amber-800 border-amber-200">
-          Medium
-        </Badge>
-      );
+      return <StatusBadge status="medium" />;
     case "low":
-      return (
-        <Badge className="bg-green-100 text-green-800 border-green-200">
-          Low
-        </Badge>
-      );
+      return <StatusBadge status="low" />;
     default:
       return null;
   }
@@ -294,73 +251,19 @@ const DistributorDashboard: React.FC = () => {
     name: "Abebe Kebede",
     business: "Adama Wholesalers",
     id: "DIS/102/21",
+    role: "distributor" as const,
     verified: true,
-  };
-
-  const getInitials = (name: string) => {
-    return name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2);
   };
 
   return (
     <div className="space-y-6">
-      {/* Welcome Section */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-3">
-            <h1 className="text-3xl font-bold tracking-tight">
-              Welcome back, {user.name.split(" ")[0]}! 👋
-            </h1>
-            {user.verified && (
-              <Badge
-                variant="outline"
-                className="bg-green-50 text-green-700 border-green-200"
-              >
-                <CheckCircle2 className="h-3 w-3 mr-1" />
-                Verified Distributor
-              </Badge>
-            )}
-          </div>
-          <p className="text-muted-foreground mt-1">
-            Here's what's happening with your distribution business today.
-          </p>
-        </div>
-      </div>
+      {/* Welcome Header - Using shared component */}
+      <WelcomeHeader user={user} />
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      {/* Stats Grid - Using shared StatsCard */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map((stat, index) => (
-          <Card key={index} className="overflow-hidden">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs text-muted-foreground">{stat.title}</p>
-                  <p className="text-lg font-bold mt-1">{stat.value}</p>
-                  <div className="flex items-center gap-1 mt-1">
-                    {stat.trend === "up" ? (
-                      <ArrowUpRight className="h-3 w-3 text-green-600" />
-                    ) : (
-                      <ArrowDownRight className="h-3 w-3 text-red-600" />
-                    )}
-                    <span
-                      className={`text-xs font-medium ${
-                        stat.trend === "up" ? "text-green-600" : "text-red-600"
-                      }`}
-                    >
-                      {stat.change}
-                    </span>
-                  </div>
-                </div>
-                <div className={`${stat.bg} p-2 rounded-full`}>
-                  <stat.icon className={`h-4 w-4 ${stat.color}`} />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <StatsCard key={index} {...stat} />
         ))}
       </div>
 
@@ -425,20 +328,13 @@ const DistributorDashboard: React.FC = () => {
 
           {/* Incoming Orders */}
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <div>
-                <CardTitle>Incoming Orders</CardTitle>
-                <CardDescription>
-                  {incomingOrders.filter((o) => o.status === "pending").length}{" "}
-                  orders pending approval
-                </CardDescription>
-              </div>
-              <Button variant="ghost" size="sm" asChild>
-                <Link to="/distributor/orders" className="gap-1">
-                  View All
-                  <ChevronRight className="h-4 w-4" />
-                </Link>
-              </Button>
+            <CardHeader className="pb-2">
+              <SectionHeader
+                title="Incoming Orders"
+                description={`${incomingOrders.filter((o) => o.status === "pending").length} orders pending approval`}
+                actionLabel="View All"
+                actionHref="/distributor/orders"
+              />
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
@@ -469,14 +365,14 @@ const DistributorDashboard: React.FC = () => {
                       </div>
                       <div>
                         <div className="flex items-center gap-2">
-                          <p className="text-sm font-medium">{order.id}</p>
-                          {getPriorityBadge(order.priority)}
-                          <Badge
-                            variant="outline"
-                            className={getStatusColor(order.status)}
+                          <Link
+                            to={`/distributor/orders/${order.id}`}
+                            className="text-sm font-medium hover:text-primary"
                           >
-                            {order.status}
-                          </Badge>
+                            {order.id}
+                          </Link>
+                          {getPriorityBadge(order.priority)}
+                          <StatusBadge status={order.status} />
                         </div>
                         <p className="text-xs text-muted-foreground mt-1">
                           <Link
@@ -485,16 +381,10 @@ const DistributorDashboard: React.FC = () => {
                           >
                             {order.retailer}
                           </Link>{" "}
-                          • {order.items} items • {order.total}
+                          • {order.items} items • {formatPrice(order.total)}
                         </p>
                         <p className="text-xs text-muted-foreground mt-0.5">
-                          {new Date(order.date).toLocaleString("en-US", {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                            hour12: false,
-                            month: "short",
-                            day: "numeric",
-                          })}
+                          {formatDate(order.date)}
                         </p>
                       </div>
                     </div>
@@ -522,17 +412,13 @@ const DistributorDashboard: React.FC = () => {
 
           {/* Recent Shipments */}
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <div>
-                <CardTitle>Recent Shipments</CardTitle>
-                <CardDescription>Track your ongoing deliveries</CardDescription>
-              </div>
-              <Button variant="ghost" size="sm" asChild>
-                <Link to="/distributor/delivery" className="gap-1">
-                  Manage Deliveries
-                  <ChevronRight className="h-4 w-4" />
-                </Link>
-              </Button>
+            <CardHeader className="pb-2">
+              <SectionHeader
+                title="Recent Shipments"
+                description="Track your ongoing deliveries"
+                actionLabel="Manage Deliveries"
+                actionHref="/distributor/delivery"
+              />
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
@@ -564,12 +450,7 @@ const DistributorDashboard: React.FC = () => {
                       <div>
                         <div className="flex items-center gap-2">
                           <p className="text-sm font-medium">{shipment.id}</p>
-                          <Badge
-                            variant="outline"
-                            className={getStatusColor(shipment.status)}
-                          >
-                            {shipment.status}
-                          </Badge>
+                          <StatusBadge status={shipment.status} />
                         </div>
                         <p className="text-xs text-muted-foreground mt-1">
                           Order {shipment.orderId} • {shipment.retailer}
@@ -786,7 +667,9 @@ const DistributorDashboard: React.FC = () => {
                   <span className="text-sm text-muted-foreground">
                     Avg. Order Value
                   </span>
-                  <span className="text-sm font-medium">ETB 8,450</span>
+                  <span className="text-sm font-medium">
+                    {formatPrice(8450)}
+                  </span>
                 </div>
               </div>
             </CardContent>

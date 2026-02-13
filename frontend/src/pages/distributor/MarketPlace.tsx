@@ -3,31 +3,30 @@ import {
   ProductCatalog,
   type CatalogConfig,
 } from "@/components/shared/ProductCatalog";
-import { Store } from "lucide-react";
-import { retailerProducts } from "./data";
+import { factoryProducts } from "./data";
+import { Factory } from "lucide-react";
 
 const categories = [
   "All Categories",
-  "Beverages",
-  "Food",
-  "Grains",
-  "Textiles",
   "Construction",
-  "Furniture",
-  "Stationery",
-  "Footwear",
+  "Textiles",
+  "Beverages",
+  "Grains",
+  "Food",
+  "Raw Materials",
 ];
 
 const locations = [
+  "All Locations",
   "Addis Ababa",
   "Adama",
-  "Bahir Dar",
   "Mekelle",
+  "Bahir Dar",
   "Hawassa",
   "Dire Dawa",
 ];
 
-const RetailerProductsPage: React.FC = () => {
+const DistributorMarketplacePage: React.FC = () => {
   const [cart, setCart] = useState<{ [key: number]: number }>({});
 
   const addToCart = (productId: number, quantity: number) => {
@@ -54,29 +53,30 @@ const RetailerProductsPage: React.FC = () => {
     Object.values(cart).reduce((sum, qty) => sum + qty, 0);
   const getTotalCartValue = () => {
     return Object.entries(cart).reduce((sum, [id, qty]) => {
-      const product = retailerProducts.find((p) => p.id === parseInt(id));
+      const product = factoryProducts.find((p) => p.id === parseInt(id));
       return sum + (product?.price || 0) * qty;
     }, 0);
   };
 
   const config: CatalogConfig = {
-    role: "retailer",
-    title: "Browse Products",
-    description: "Discover products from verified suppliers across Ethiopia",
-    supplierLabel: "Supplier",
-    supplierPath: "/suppliers",
-    icon: Store,
+    role: "distributor",
+    title: "Factory Products",
+    description:
+      "Source products directly from Ethiopian manufacturers and factories",
+    supplierLabel: "Factory",
+    supplierPath: "/factories",
+    icon: Factory,
     categories,
     locations,
-    showVolumeDiscount: false,
-    cartPath: "/retailer/cart",
-    ordersPath: "/retailer/orders",
+    showVolumeDiscount: true,
+    cartPath: "/distributor/factory-cart",
+    ordersPath: "/distributor/factory-orders",
   };
 
   return (
     <ProductCatalog
       config={config}
-      products={retailerProducts}
+      products={factoryProducts}
       onAddToCart={addToCart}
       onRemoveFromCart={removeFromCart}
       getCartQuantity={getCartQuantity}
@@ -86,4 +86,4 @@ const RetailerProductsPage: React.FC = () => {
   );
 };
 
-export default RetailerProductsPage;
+export default DistributorMarketplacePage;

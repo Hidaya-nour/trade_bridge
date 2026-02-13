@@ -14,20 +14,15 @@ import {
   DollarSign,
   BarChart3,
   Calendar,
-  ArrowUpRight,
-  ArrowDownRight,
-  ChevronRight,
-  Download,
-  Plus,
   Eye,
-  Settings,
-  Truck,
   Shield,
   AlertTriangle,
   Activity,
   Target,
   Star,
   Minus,
+  Plus,
+  ChevronRight,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -42,18 +37,17 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
+
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { cn } from "@/lib/utils";
+  StatsCard,
+  SectionHeader,
+  StatusBadge,
+  WelcomeHeader,
+} from "@/components/shared";
+import { formatPrice, formatCompactPrice, formatDate } from "@/lib/formatters";
+import { getInitials } from "@/lib/utils";
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -204,21 +198,6 @@ const recentOrders: ProductionOrder[] = [
     priority: "low",
     value: 95000,
   },
-  {
-    id: "PO-2026-0115",
-    productName: "Steel Rebars 16mm",
-    productId: 1003,
-    quantity: 15,
-    unit: "tons",
-    distributorId: 105,
-    distributorName: "Mekelle Steel Distributors",
-    orderDate: "2026-02-08T13:20:00",
-    requestedDelivery: "2026-02-18",
-    scheduledDate: "2026-02-17",
-    status: "delivered",
-    priority: "medium",
-    value: 111000,
-  },
 ];
 
 const demandForecasts: ProductForecast[] = [
@@ -266,17 +245,6 @@ const demandForecasts: ProductForecast[] = [
     trend: "up",
     seasonality: "Medium",
   },
-  {
-    id: 1006,
-    name: "Macadamia Nuts",
-    category: "Food",
-    forecastedDemand: 320,
-    currentStock: 280,
-    reorderPoint: 200,
-    confidence: 86,
-    trend: "down",
-    seasonality: "Low",
-  },
 ];
 
 const inventoryAlerts: InventoryAlert[] = [
@@ -315,15 +283,6 @@ const inventoryAlerts: InventoryAlert[] = [
     minStock: 100,
     status: "critical",
     category: "Maintenance",
-  },
-  {
-    id: 5,
-    productName: "Teff Grain",
-    sku: "GRN-002",
-    currentStock: 1800,
-    minStock: 2000,
-    status: "reorder",
-    category: "Raw Materials",
   },
 ];
 
@@ -384,241 +343,87 @@ const productionSchedule = [
     date: "2026-02-16",
     status: "planned",
   },
-  {
-    product: "White Teff Flour",
-    quantity: 1200,
-    unit: "kg",
-    date: "2026-02-17",
-    status: "planned",
-  },
 ];
 
 // ============================================================================
 // CONSTANTS
 // ============================================================================
 
-const statusColors = {
-  pending: "bg-yellow-100 text-yellow-800 border-yellow-200",
-  approved: "bg-blue-100 text-blue-800 border-blue-200",
-  processing: "bg-indigo-100 text-indigo-800 border-indigo-200",
-  shipped: "bg-purple-100 text-purple-800 border-purple-200",
-  delivered: "bg-green-100 text-green-800 border-green-200",
-  cancelled: "bg-red-100 text-red-800 border-red-200",
-};
+const statsData = [
+  {
+    title: "Monthly Revenue",
+    value: formatCompactPrice(mockStats.monthlyRevenue),
+    change: `+${mockStats.revenueGrowth}%`,
+    trend: "up" as const,
+    icon: DollarSign,
+    iconColor: "text-green-600",
+    iconBg: "bg-green-100",
+  },
+  {
+    title: "Total Orders",
+    value: mockStats.totalOrders.toString(),
+    subtext: "+24 this month",
+    icon: ShoppingCart,
+    iconColor: "text-blue-600",
+    iconBg: "bg-blue-100",
+  },
+  {
+    title: "Pending Approvals",
+    value: mockStats.pendingApprovals.toString(),
+    subtext: "Awaiting review",
+    icon: Clock,
+    iconColor: "text-amber-600",
+    iconBg: "bg-amber-100",
+  },
+  {
+    title: "Active Production",
+    value: mockStats.activeProduction.toString(),
+    subtext: `${mockStats.productionCapacity}% capacity`,
+    icon: Activity,
+    iconColor: "text-indigo-600",
+    iconBg: "bg-indigo-100",
+  },
+  {
+    title: "Quality Rate",
+    value: `${mockStats.qualityRate}%`,
+    subtext: "Above target",
+    icon: Target,
+    iconColor: "text-emerald-600",
+    iconBg: "bg-emerald-100",
+  },
+];
 
-const priorityColors = {
-  high: "bg-red-100 text-red-800 border-red-200",
-  medium: "bg-amber-100 text-amber-800 border-amber-200",
-  low: "bg-green-100 text-green-800 border-green-200",
+const getDemandTrendIcon = (trend: string) => {
+  switch (trend) {
+    case "up":
+      return <TrendingUp className="h-3 w-3 text-green-600" />;
+    case "down":
+      return <TrendingDown className="h-3 w-3 text-red-600" />;
+    default:
+      return <Minus className="h-3 w-3 text-amber-600" />;
+  }
 };
-
-const inventoryStatusColors = {
-  critical: "bg-red-100 text-red-800 border-red-200",
-  low: "bg-amber-100 text-amber-800 border-amber-200",
-  reorder: "bg-blue-100 text-blue-800 border-blue-200",
-};
-
-const trendColors = {
-  up: "text-green-600",
-  down: "text-red-600",
-  stable: "text-amber-600",
-};
-
-// ============================================================================
-// COMPONENT
-// ============================================================================
 
 const FactoryDashboard: React.FC = () => {
-  const [timeRange, setTimeRange] = useState("month");
-
-  const formatPrice = (price: number) => {
-    return `ETB ${price.toLocaleString()}`;
-  };
-
-  const formatCompactPrice = (price: number) => {
-    if (price >= 1000000) {
-      return `ETB ${(price / 1000000).toFixed(1)}M`;
-    }
-    if (price >= 1000) {
-      return `ETB ${(price / 1000).toFixed(0)}K`;
-    }
-    return `ETB ${price}`;
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-    });
-  };
-
-  const getInitials = (name: string) => {
-    return name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2);
-  };
-
-  const getDemandTrendIcon = (trend: string) => {
-    switch (trend) {
-      case "up":
-        return <TrendingUp className="h-3 w-3 text-green-600" />;
-      case "down":
-        return <TrendingDown className="h-3 w-3 text-red-600" />;
-      default:
-        return <Minus className="h-3 w-3 text-amber-600" />;
-    }
-  };
-
   // Mock user
   const user = {
     name: "Tadesse Haile",
     business: "Mugher Cement",
-    role: "factory",
     id: "FAC/501/15",
+    role: "factory" as const,
     verified: true,
   };
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-3">
-            <h1 className="text-3xl font-bold tracking-tight">
-              Welcome back, {user.name.split(" ")[0]}! 👋
-            </h1>
-            {user.verified && (
-              <Badge
-                variant="outline"
-                className="bg-green-50 text-green-700 border-green-200"
-              >
-                <Shield className="h-3 w-3 mr-1" />
-                Verified Factory
-              </Badge>
-            )}
-          </div>
-          <p className="text-muted-foreground mt-1">
-            Here's what's happening with your production today.
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <Badge variant="outline" className="px-3 py-1">
-            <Factory className="h-3.5 w-3.5 mr-1" />
-            {user.business}
-          </Badge>
-          <Badge variant="secondary" className="px-3 py-1">
-            ID: {user.id}
-          </Badge>
-          <Button size="sm">
-            <Plus className="h-4 w-4 mr-2" />
-            New Production
-          </Button>
-        </div>
-      </div>
+      {/* Welcome Header - Using shared component */}
+      <WelcomeHeader user={user} />
 
-      {/* Stats Grid */}
+      {/* Stats Grid - Using shared StatsCard */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-muted-foreground">Monthly Revenue</p>
-                <p className="text-lg font-bold mt-1">
-                  {formatCompactPrice(mockStats.monthlyRevenue)}
-                </p>
-                <div className="flex items-center gap-1 mt-1">
-                  <ArrowUpRight className="h-3 w-3 text-green-600" />
-                  <span className="text-xs font-medium text-green-600">
-                    +{mockStats.revenueGrowth}%
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    vs last month
-                  </span>
-                </div>
-              </div>
-              <div className="h-9 w-9 bg-green-100 rounded-full flex items-center justify-center">
-                <DollarSign className="h-5 w-5 text-green-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-muted-foreground">Total Orders</p>
-                <p className="text-lg font-bold mt-1">
-                  {mockStats.totalOrders}
-                </p>
-                <p className="text-xs text-blue-600 mt-1">+24 this month</p>
-              </div>
-              <div className="h-9 w-9 bg-blue-100 rounded-full flex items-center justify-center">
-                <ShoppingCart className="h-5 w-5 text-blue-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-muted-foreground">
-                  Pending Approvals
-                </p>
-                <p className="text-lg font-bold mt-1">
-                  {mockStats.pendingApprovals}
-                </p>
-                <p className="text-xs text-yellow-600 mt-1">Awaiting review</p>
-              </div>
-              <div className="h-9 w-9 bg-yellow-100 rounded-full flex items-center justify-center">
-                <Clock className="h-5 w-5 text-yellow-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-muted-foreground">
-                  Active Production
-                </p>
-                <p className="text-lg font-bold mt-1">
-                  {mockStats.activeProduction}
-                </p>
-                <p className="text-xs text-indigo-600 mt-1">
-                  {mockStats.productionCapacity}% capacity
-                </p>
-              </div>
-              <div className="h-9 w-9 bg-indigo-100 rounded-full flex items-center justify-center">
-                <Activity className="h-5 w-5 text-indigo-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-muted-foreground">Quality Rate</p>
-                <p className="text-lg font-bold mt-1">
-                  {mockStats.qualityRate}%
-                </p>
-                <p className="text-xs text-green-600 mt-1">Above target</p>
-              </div>
-              <div className="h-9 w-9 bg-emerald-100 rounded-full flex items-center justify-center">
-                <Target className="h-5 w-5 text-emerald-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        {statsData.map((stat, index) => (
+          <StatsCard key={index} {...stat} />
+        ))}
       </div>
 
       {/* Main Content Grid */}
@@ -679,19 +484,13 @@ const FactoryDashboard: React.FC = () => {
 
           {/* Recent Orders / Approval Queue */}
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <div>
-                <CardTitle>Order Approval Queue</CardTitle>
-                <CardDescription>
-                  {mockStats.pendingApprovals} orders pending your review
-                </CardDescription>
-              </div>
-              <Button variant="ghost" size="sm" asChild>
-                <Link to="/factory/orders" className="gap-1">
-                  View All
-                  <ChevronRight className="h-4 w-4" />
-                </Link>
-              </Button>
+            <CardHeader className="pb-2">
+              <SectionHeader
+                title="Order Approval Queue"
+                description={`${mockStats.pendingApprovals} orders pending your review`}
+                actionLabel="View All"
+                actionHref="/factory/orders"
+              />
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
@@ -707,24 +506,22 @@ const FactoryDashboard: React.FC = () => {
                     >
                       <div className="flex items-start gap-3">
                         <div
-                          className={cn(
-                            "p-2 rounded-full",
+                          className={`p-2 rounded-full ${
                             order.priority === "high"
                               ? "bg-red-100"
                               : order.priority === "medium"
                                 ? "bg-amber-100"
-                                : "bg-green-100",
-                          )}
+                                : "bg-green-100"
+                          }`}
                         >
                           <Package
-                            className={cn(
-                              "h-4 w-4",
+                            className={`h-4 w-4 ${
                               order.priority === "high"
                                 ? "text-red-600"
                                 : order.priority === "medium"
                                   ? "text-amber-600"
-                                  : "text-green-600",
-                            )}
+                                  : "text-green-600"
+                            }`}
                           />
                         </div>
                         <div>
@@ -735,18 +532,8 @@ const FactoryDashboard: React.FC = () => {
                             >
                               {order.id}
                             </Link>
-                            <Badge
-                              variant="outline"
-                              className={statusColors[order.status]}
-                            >
-                              {order.status}
-                            </Badge>
-                            <Badge
-                              variant="outline"
-                              className={priorityColors[order.priority]}
-                            >
-                              {order.priority}
-                            </Badge>
+                            <StatusBadge status={order.priority} />
+                            <StatusBadge status={order.status} />
                           </div>
                           <p className="text-xs text-muted-foreground mt-1">
                             {order.productName} • {order.quantity} {order.unit}{" "}
@@ -817,17 +604,13 @@ const FactoryDashboard: React.FC = () => {
 
           {/* Production Schedule */}
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <div>
-                <CardTitle>Production Schedule</CardTitle>
-                <CardDescription>Next 3 days</CardDescription>
-              </div>
-              <Button variant="ghost" size="sm" asChild>
-                <Link to="/factory/production" className="gap-1">
-                  Manage Schedule
-                  <ChevronRight className="h-4 w-4" />
-                </Link>
-              </Button>
+            <CardHeader className="pb-2">
+              <SectionHeader
+                title="Production Schedule"
+                description="Next 3 days"
+                actionLabel="Manage Schedule"
+                actionHref="/factory/production"
+              />
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
@@ -882,7 +665,7 @@ const FactoryDashboard: React.FC = () => {
             <CardContent className="pb-3">
               <ScrollArea className="h-[240px] pr-3">
                 <div className="space-y-4">
-                  {demandForecasts.slice(0, 4).map((product) => (
+                  {demandForecasts.map((product) => (
                     <div key={product.id} className="space-y-2">
                       <div className="flex items-center justify-between">
                         <div>
@@ -904,7 +687,13 @@ const FactoryDashboard: React.FC = () => {
                           <div className="flex items-center gap-1 mt-0.5">
                             {getDemandTrendIcon(product.trend)}
                             <span
-                              className={`text-xs font-medium ${trendColors[product.trend]}`}
+                              className={`text-xs font-medium ${
+                                product.trend === "up"
+                                  ? "text-green-600"
+                                  : product.trend === "down"
+                                    ? "text-red-600"
+                                    : "text-amber-600"
+                              }`}
                             >
                               {product.trend === "up"
                                 ? "+12%"
@@ -963,24 +752,22 @@ const FactoryDashboard: React.FC = () => {
                       className="flex items-start gap-3 p-2 hover:bg-accent/50 rounded-lg"
                     >
                       <div
-                        className={cn(
-                          "p-1.5 rounded-full",
+                        className={`p-1.5 rounded-full ${
                           alert.status === "critical"
                             ? "bg-red-100"
                             : alert.status === "low"
                               ? "bg-amber-100"
-                              : "bg-blue-100",
-                        )}
+                              : "bg-blue-100"
+                        }`}
                       >
                         <AlertTriangle
-                          className={cn(
-                            "h-3 w-3",
+                          className={`h-3 w-3 ${
                             alert.status === "critical"
                               ? "text-red-600"
                               : alert.status === "low"
                                 ? "text-amber-600"
-                                : "text-blue-600",
-                          )}
+                                : "text-blue-600"
+                          }`}
                         />
                       </div>
                       <div className="flex-1">
@@ -990,7 +777,13 @@ const FactoryDashboard: React.FC = () => {
                           </p>
                           <Badge
                             variant="outline"
-                            className={inventoryStatusColors[alert.status]}
+                            className={
+                              alert.status === "critical"
+                                ? "bg-red-100 text-red-800"
+                                : alert.status === "low"
+                                  ? "bg-amber-100 text-amber-800"
+                                  : "bg-blue-100 text-blue-800"
+                            }
                           >
                             {alert.status}
                           </Badge>
@@ -1111,7 +904,7 @@ const FactoryDashboard: React.FC = () => {
                 size="sm"
                 asChild
               >
-                <Link to="/factory/announcements/new">
+                <Link to="/factory/announcements">
                   <Users className="mr-2 h-4 w-4" />
                   Broadcast Announcement
                 </Link>
