@@ -169,11 +169,7 @@ const roleNavigation = {
         href: "/distributor/analytics",
         icon: BarChart3,
       },
-      {
-        name: "Export Reports",
-        href: "/distributor/reports",
-        icon: FileText,
-      },
+
       {
         name: "Supplier Partnerships",
         href: "/distributor/partners",
