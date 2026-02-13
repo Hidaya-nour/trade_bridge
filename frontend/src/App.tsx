@@ -20,6 +20,7 @@ import BroadcastPromotionsPage from "./pages/distributor/BroadcastPromotions";
 import DeliveryManagementPage from "./pages/distributor/DeliveryManagement";
 import SalesAnalyticsPage from "./pages/distributor/SalesAnalytics";
 import SupplierPartnershipsPage from "./pages/distributor/SupplierPartnerships";
+import FactoryDashboard from "./pages/factory/Dashboard";
 
 function App() {
   return (
@@ -197,6 +198,14 @@ function App() {
           element={
             <DashboardLayout>
               <SalesAnalyticsPage />
+            </DashboardLayout>
+          }
+        />
+        <Route
+          path="/factory/dashboard"
+          element={
+            <DashboardLayout>
+              <FactoryDashboard />
             </DashboardLayout>
           }
         />
