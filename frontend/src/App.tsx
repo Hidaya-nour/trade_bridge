@@ -13,14 +13,18 @@ import CompareSuppliersPage from "./pages/retailer/CompareSuppliers";
 import SupplierDirectoryPage from "./pages/retailer/SupplierDirectory";
 import DistributorDashboard from "./pages/distributor/Dashboard";
 import ManageProductsPage from "./pages/distributor/ManageProducts";
-import FactoryProductsPage from "./pages/distributor/FactoryProducts";
+import FactoryProductsPage from "./pages/distributor/MarketPlace";
 import IncomingOrdersPage from "./pages/distributor/IncomingOrders";
-import FactoryOrdersPage from "./pages/distributor/FactoryOrders";
-import BroadcastPromotionsPage from "./pages/distributor/BroadcastPromotions";
 import DeliveryManagementPage from "./pages/distributor/DeliveryManagement";
 import SalesAnalyticsPage from "./pages/distributor/SalesAnalytics";
 import SupplierPartnershipsPage from "./pages/distributor/SupplierPartnerships";
 import FactoryDashboard from "./pages/factory/Dashboard";
+import BroadcastPromotionsPage from "./pages/distributor/BroadcastPromotions";
+import BroadcastAnnouncementsPage from "./pages/factory/BroadcastAnnouncements";
+import PurchaseOrdersPage from "./pages/distributor/PurchaseOrders";
+import MarketPlace from "./pages/distributor/MarketPlace";
+import ProductionAnalyticsPage from "./pages/factory/ProductionAnalytics";
+import FactoryDistributorPartnersPage from "./pages/factory/DistributorPartners";
 
 function App() {
   return (
@@ -138,7 +142,7 @@ function App() {
           path="/distributor/factory-products"
           element={
             <DashboardLayout>
-              <FactoryProductsPage />
+              <MarketPlace />
             </DashboardLayout>
           }
         />
@@ -160,10 +164,10 @@ function App() {
           }
         />
         <Route
-          path="/distributor/factory-orders"
+          path="/distributor/purchase-orders"
           element={
             <DashboardLayout>
-              <FactoryOrdersPage />
+              <PurchaseOrdersPage />
             </DashboardLayout>
           }
         />
@@ -206,6 +210,46 @@ function App() {
           element={
             <DashboardLayout>
               <FactoryDashboard />
+            </DashboardLayout>
+          }
+        />
+        <Route
+          path="/factory/announcements"
+          element={
+            <DashboardLayout>
+              <BroadcastAnnouncementsPage />
+            </DashboardLayout>
+          }
+        />
+        <Route
+          path="/factory/products"
+          element={
+            <DashboardLayout>
+              <ManageProductsPage />
+            </DashboardLayout>
+          }
+        />
+        <Route
+          path="/factory/orders"
+          element={
+            <DashboardLayout>
+              <IncomingOrdersPage />
+            </DashboardLayout>
+          }
+        />
+        <Route
+          path="/factory/analytics"
+          element={
+            <DashboardLayout>
+              <ProductionAnalyticsPage />
+            </DashboardLayout>
+          }
+        />
+        <Route
+          path="/factory/partners"
+          element={
+            <DashboardLayout>
+              <FactoryDistributorPartnersPage />
             </DashboardLayout>
           }
         />

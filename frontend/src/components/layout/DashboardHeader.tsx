@@ -24,7 +24,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 
-import { cn } from "@/lib/utils";
+import { cn, getInitials } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -67,15 +67,6 @@ const mockUser = {
   verified: true,
   business: "ABC Retail Shop",
   location: "Adama, Ethiopia",
-};
-
-const getInitials = (name: string) => {
-  return name
-    .split(" ")
-    .map((n) => n[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2);
 };
 
 // Notification data
@@ -210,10 +201,10 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ onMenuClick }) => {
                 <TooltipProvider>
                   <Tooltip delayDuration={300}>
                     <TooltipTrigger asChild>
-                      <Button 
-                        type="button" 
-                        variant="ghost" 
-                        size="icon" 
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
                         className="h-7 w-7 rounded-md text-muted-foreground/60 hover:text-foreground hover:bg-accent/50"
                       >
                         <Filter className="h-3.5 w-3.5" />
@@ -240,9 +231,9 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ onMenuClick }) => {
               <TooltipProvider>
                 <Tooltip delayDuration={300}>
                   <TooltipTrigger asChild>
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
+                    <Button
+                      variant="ghost"
+                      size="icon"
                       className="relative h-9 w-9 text-muted-foreground hover:text-foreground hover:bg-accent/50"
                       asChild
                     >
@@ -260,16 +251,22 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ onMenuClick }) => {
                 </Tooltip>
               </TooltipProvider>
             )}
-            
-            <Separator orientation="vertical" className="h-5 mx-0.5 bg-border/40" />
+
+            <Separator
+              orientation="vertical"
+              className="h-5 mx-0.5 bg-border/40"
+            />
           </div>
 
           {/* Notifications Sheet - Enhanced */}
-          <Sheet open={showNotificationSheet} onOpenChange={setShowNotificationSheet}>
+          <Sheet
+            open={showNotificationSheet}
+            onOpenChange={setShowNotificationSheet}
+          >
             <SheetTrigger asChild>
-              <Button 
-                variant="ghost" 
-                size="icon" 
+              <Button
+                variant="ghost"
+                size="icon"
                 className="relative h-9 w-9 text-muted-foreground hover:text-foreground hover:bg-accent/50"
               >
                 <Bell className="h-5 w-5" />
@@ -287,9 +284,9 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ onMenuClick }) => {
                     <Bell className="h-5 w-5 text-primary" />
                     Notifications
                   </span>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     className="h-8 px-2.5 text-xs font-medium text-muted-foreground hover:text-foreground"
                   >
                     Mark all as read
@@ -302,25 +299,28 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ onMenuClick }) => {
               <Tabs defaultValue="all" className="flex-1">
                 <div className="px-6 pt-4">
                   <TabsList className="grid w-full grid-cols-3 h-9 p-1 bg-muted/50">
-                    <TabsTrigger 
-                      value="all" 
+                    <TabsTrigger
+                      value="all"
                       className="text-xs data-[state=active]:bg-background data-[state=active]:shadow-sm"
                     >
                       All
                     </TabsTrigger>
-                    <TabsTrigger 
-                      value="unread" 
+                    <TabsTrigger
+                      value="unread"
                       className="text-xs data-[state=active]:bg-background data-[state=active]:shadow-sm"
                     >
                       Unread
                       {unreadNotifications > 0 && (
-                        <Badge variant="secondary" className="ml-1.5 h-4 px-1 text-[10px]">
+                        <Badge
+                          variant="secondary"
+                          className="ml-1.5 h-4 px-1 text-[10px]"
+                        >
                           {unreadNotifications}
                         </Badge>
                       )}
                     </TabsTrigger>
-                    <TabsTrigger 
-                      value="mentions" 
+                    <TabsTrigger
+                      value="mentions"
                       className="text-xs data-[state=active]:bg-background data-[state=active]:shadow-sm"
                     >
                       Mentions
@@ -335,14 +335,18 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ onMenuClick }) => {
                           key={notification.id}
                           className={cn(
                             "flex items-start gap-3 p-3 rounded-lg transition-all hover:bg-accent/50 cursor-pointer",
-                            !notification.read && "bg-muted/30"
+                            !notification.read && "bg-muted/30",
                           )}
                         >
-                          <div className={cn(
-                            "rounded-full p-2 shrink-0",
-                            notification.bg
-                          )}>
-                            <notification.icon className={cn("h-4 w-4", notification.color)} />
+                          <div
+                            className={cn(
+                              "rounded-full p-2 shrink-0",
+                              notification.bg,
+                            )}
+                          >
+                            <notification.icon
+                              className={cn("h-4 w-4", notification.color)}
+                            />
                           </div>
                           <div className="flex-1 space-y-1 min-w-0">
                             <div className="flex items-start justify-between gap-2">
@@ -370,7 +374,9 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ onMenuClick }) => {
                     <div className="rounded-full bg-muted p-3">
                       <Bell className="h-6 w-6 text-muted-foreground/50" />
                     </div>
-                    <p className="text-sm font-medium">No unread notifications</p>
+                    <p className="text-sm font-medium">
+                      No unread notifications
+                    </p>
                     <p className="text-xs text-muted-foreground">
                       You're all caught up!
                     </p>
@@ -394,8 +400,8 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ onMenuClick }) => {
           {/* User Menu - Enhanced */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button 
-                variant="ghost" 
+              <Button
+                variant="ghost"
                 className="relative h-9 gap-2 px-2 hover:bg-accent/50 transition-colors"
               >
                 <Avatar className="h-7 w-7 ring-1 ring-primary/20 ring-offset-1 ring-offset-background transition-all hover:ring-primary/30">
@@ -404,7 +410,7 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ onMenuClick }) => {
                     {getInitials(mockUser.name)}
                   </AvatarFallback>
                 </Avatar>
-               
+
                 <ChevronDown className="hidden lg:block h-4 w-4 text-muted-foreground/60" />
               </Button>
             </DropdownMenuTrigger>
@@ -419,35 +425,57 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ onMenuClick }) => {
                   </Avatar>
                   <div className="flex-1 space-y-1">
                     <div className="flex items-center gap-2">
-                      <p className="text-sm font-medium leading-none">{mockUser.name}</p>
+                      <p className="text-sm font-medium leading-none">
+                        {mockUser.name}
+                      </p>
                       {mockUser.verified && (
-                        <Badge variant="outline" className="h-5 px-1.5 text-[10px] border-green-200 bg-green-50 text-green-700 dark:bg-green-950/20 dark:text-green-400 dark:border-green-800">
+                        <Badge
+                          variant="outline"
+                          className="h-5 px-1.5 text-[10px] border-green-200 bg-green-50 text-green-700 dark:bg-green-950/20 dark:text-green-400 dark:border-green-800"
+                        >
                           Verified
                         </Badge>
                       )}
                     </div>
-                    <p className="text-xs text-muted-foreground">{mockUser.email}</p>
-                    <p className="text-[11px] text-muted-foreground/70">{mockUser.business} • {mockUser.location}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {mockUser.email}
+                    </p>
+                    <p className="text-[11px] text-muted-foreground/70">
+                      {mockUser.business} • {mockUser.location}
+                    </p>
                   </div>
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator className="my-1" />
               <DropdownMenuGroup>
-                <DropdownMenuItem asChild className="cursor-pointer rounded-md py-2 px-2 text-sm focus:bg-accent/50">
+                <DropdownMenuItem
+                  asChild
+                  className="cursor-pointer rounded-md py-2 px-2 text-sm focus:bg-accent/50"
+                >
                   <Link to="/profile">
                     <User className="mr-2 h-4 w-4 text-muted-foreground" />
                     <span>Profile</span>
-                    <DropdownMenuShortcut className="text-muted-foreground/70">⇧⌘P</DropdownMenuShortcut>
+                    <DropdownMenuShortcut className="text-muted-foreground/70">
+                      ⇧⌘P
+                    </DropdownMenuShortcut>
                   </Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem asChild className="cursor-pointer rounded-md py-2 px-2 text-sm focus:bg-accent/50">
+                <DropdownMenuItem
+                  asChild
+                  className="cursor-pointer rounded-md py-2 px-2 text-sm focus:bg-accent/50"
+                >
                   <Link to="/settings">
                     <Settings className="mr-2 h-4 w-4 text-muted-foreground" />
                     <span>Settings</span>
-                    <DropdownMenuShortcut className="text-muted-foreground/70">⌘S</DropdownMenuShortcut>
+                    <DropdownMenuShortcut className="text-muted-foreground/70">
+                      ⌘S
+                    </DropdownMenuShortcut>
                   </Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem asChild className="cursor-pointer rounded-md py-2 px-2 text-sm focus:bg-accent/50">
+                <DropdownMenuItem
+                  asChild
+                  className="cursor-pointer rounded-md py-2 px-2 text-sm focus:bg-accent/50"
+                >
                   <Link to="/support">
                     <HelpCircle className="mr-2 h-4 w-4 text-muted-foreground" />
                     <span>Help & Support</span>
@@ -461,7 +489,9 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ onMenuClick }) => {
               >
                 <LogOut className="mr-2 h-4 w-4" />
                 <span>Log out</span>
-                <DropdownMenuShortcut className="text-destructive/70">⇧⌘Q</DropdownMenuShortcut>
+                <DropdownMenuShortcut className="text-destructive/70">
+                  ⇧⌘Q
+                </DropdownMenuShortcut>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

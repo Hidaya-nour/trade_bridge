@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import {
-  Factory,
   Package,
   Search,
   Filter,
@@ -22,6 +21,8 @@ import {
   FileText,
   Repeat,
   Star,
+  Factory,
+  Store,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -73,22 +74,26 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
+
 import {
-  Pagination,
-  PaginationContent,
-  PaginationEllipsis,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from "@/components/ui/pagination";
-import { cn } from "@/lib/utils";
+  StatusBadge,
+  EmptyState,
+  PaginationBar,
+  SearchFilter,
+  StatsCard,
+} from "@/components/shared";
+import { formatPrice, formatDate, formatDateTime } from "@/lib/formatters";
+import { getInitials, cn } from "@/lib/utils";
+import { Label } from "../ui/label";
 
 // ============================================================================
-// TYPES & INTERFACES
+// TYPES
 // ============================================================================
 
-interface FactoryOrderItem {
+export type OrderRole = "retailer" | "distributor";
+export type OrderType = "sales" | "purchases";
+
+export interface OrderItem {
   name: string;
   sku: string;
   quantity: number;
@@ -97,19 +102,19 @@ interface FactoryOrderItem {
   total: number;
 }
 
-interface FactoryOrder {
+export interface Order {
   id: string;
-  poNumber: string;
-  factoryId: number;
-  factoryName: string;
-  factoryContact: string;
-  factoryPhone: string;
-  factoryLocation: string;
+  orderNumber: string;
+  partyId: number;
+  partyName: string;
+  partyContact: string;
+  partyPhone: string;
+  partyLocation: string;
   orderDate: string;
   requestedDelivery: string;
   estimatedDelivery: string;
-  actualDelivery?: string;
-  items: FactoryOrderItem[];
+  actualDelivery?: string | null;
+  items: OrderItem[];
   subtotal: number;
   shipping: number;
   tax: number;
@@ -134,276 +139,40 @@ interface FactoryOrder {
   receivedDate?: string;
   invoiceUrl?: string;
   rating?: number | null;
+  review?: string;
+}
+
+export interface OrderListConfig {
+  role: OrderRole;
+  type: OrderType;
+  title: string;
+  description: string;
+  partyLabel: string; // "Supplier", "Distributor", "Factory"
+  partyPath: string; // "/suppliers", "/distributors", "/factories"
+  icon: React.ElementType;
+  showRating: boolean; // Retailers rate suppliers
+  showReorder: boolean; // Can reorder from this party
+  showCancel: boolean; // Can cancel orders
+  stats: {
+    totalSpent: number;
+    pending: number;
+    processing: number;
+    shipped: number;
+    delivered: number;
+  };
 }
 
 // ============================================================================
-// MOCK DATA
+// PROPS
 // ============================================================================
 
-const factoryOrders: FactoryOrder[] = [
-  {
-    id: "PO-2026-0125",
-    poNumber: "PO-2026-0125",
-    factoryId: 501,
-    factoryName: "Mugher Cement",
-    factoryContact: "Tadesse Haile",
-    factoryPhone: "+251 11 234 5678",
-    factoryLocation: "Addis Ababa",
-    orderDate: "2026-02-10T10:30:00",
-    requestedDelivery: "2026-02-20",
-    estimatedDelivery: "2026-02-18",
-    items: [
-      {
-        name: "Portland Cement",
-        sku: "CEM-011",
-        quantity: 500,
-        unit: "bag",
-        price: 520,
-        total: 260000,
-      },
-    ],
-    subtotal: 260000,
-    shipping: 5000,
-    tax: 39000,
-    total: 304000,
-    status: "shipped",
-    paymentStatus: "paid",
-    paymentMethod: "Credit",
-    paymentTerms: "30 days",
-    priority: "high",
-    notes: "Urgent - needed for construction project",
-    trackingNumber: "FTRK-501-0125",
-    carrier: "Ethiopia Logistics",
-    invoiceUrl: "#",
-  },
-  {
-    id: "PO-2026-0124",
-    poNumber: "PO-2026-0124",
-    factoryId: 502,
-    factoryName: "Mekelle Steel",
-    factoryContact: "Mulugeta Assefa",
-    factoryPhone: "+251 34 567 8901",
-    factoryLocation: "Mekelle",
-    orderDate: "2026-02-09T14:15:00",
-    requestedDelivery: "2026-02-25",
-    estimatedDelivery: "2026-02-23",
-    items: [
-      {
-        name: "Steel Rebars 12mm",
-        sku: "STL-010",
-        quantity: 20,
-        unit: "ton",
-        price: 7500,
-        total: 150000,
-      },
-      {
-        name: "Steel Rebars 16mm",
-        sku: "STL-011",
-        quantity: 15,
-        unit: "ton",
-        price: 7400,
-        total: 111000,
-      },
-    ],
-    subtotal: 261000,
-    shipping: 8000,
-    tax: 39150,
-    total: 308150,
-    status: "confirmed",
-    paymentStatus: "approved",
-    paymentMethod: "Bank Transfer",
-    paymentTerms: "15 days",
-    priority: "medium",
-    invoiceUrl: "#",
-  },
-  {
-    id: "PO-2026-0123",
-    poNumber: "PO-2026-0123",
-    factoryId: 504,
-    factoryName: "Ethiopia Coffee Export",
-    factoryContact: "Bereket Tesfaye",
-    factoryPhone: "+251 11 345 6789",
-    factoryLocation: "Addis Ababa",
-    orderDate: "2026-02-08T09:45:00",
-    requestedDelivery: "2026-02-22",
-    estimatedDelivery: "2026-02-20",
-    items: [
-      {
-        name: "Yirgacheffe Coffee",
-        sku: "COF-004",
-        quantity: 200,
-        unit: "kg",
-        price: 380,
-        total: 76000,
-      },
-      {
-        name: "Macadamia Nuts",
-        sku: "NUT-005",
-        quantity: 150,
-        unit: "kg",
-        price: 580,
-        total: 87000,
-      },
-    ],
-    subtotal: 163000,
-    shipping: 3500,
-    tax: 24450,
-    total: 190950,
-    status: "processing",
-    paymentStatus: "approved",
-    paymentMethod: "Credit",
-    paymentTerms: "30 days",
-    priority: "medium",
-  },
-  {
-    id: "PO-2026-0122",
-    poNumber: "PO-2026-0122",
-    factoryId: 505,
-    factoryName: "Ethiopia Agri",
-    factoryContact: "Almaz Worku",
-    factoryPhone: "+251 22 456 7890",
-    factoryLocation: "Adama",
-    orderDate: "2026-02-07T11:20:00",
-    requestedDelivery: "2026-02-21",
-    estimatedDelivery: "2026-02-19",
-    items: [
-      {
-        name: "White Teff Flour",
-        sku: "TFF-001",
-        quantity: 1000,
-        unit: "kg",
-        price: 95,
-        total: 95000,
-      },
-      {
-        name: "Soybean Oil",
-        sku: "OIL-002",
-        quantity: 500,
-        unit: "liter",
-        price: 145,
-        total: 72500,
-      },
-    ],
-    subtotal: 167500,
-    shipping: 4500,
-    tax: 25125,
-    total: 197125,
-    status: "pending",
-    paymentStatus: "pending",
-    paymentMethod: "Mobile Banking",
-    paymentTerms: "Cash on Delivery",
-    priority: "high",
-    notes: "Please expedite - running low on stock",
-  },
-  {
-    id: "PO-2026-0121",
-    poNumber: "PO-2026-0121",
-    factoryId: 503,
-    factoryName: "Ethiopian Textile",
-    factoryContact: "Hirut Desta",
-    factoryPhone: "+251 11 456 7890",
-    factoryLocation: "Addis Ababa",
-    orderDate: "2026-02-06T13:50:00",
-    requestedDelivery: "2026-02-19",
-    estimatedDelivery: "2026-02-18",
-    items: [
-      {
-        name: "Cotton Fabric",
-        sku: "FAB-008",
-        quantity: 500,
-        unit: "meter",
-        price: 280,
-        total: 140000,
-      },
-    ],
-    subtotal: 140000,
-    shipping: 3000,
-    tax: 21000,
-    total: 164000,
-    status: "delivered",
-    paymentStatus: "paid",
-    paymentMethod: "Credit",
-    paymentTerms: "30 days",
-    priority: "low",
-    trackingNumber: "FTRK-503-0121",
-    carrier: "Express Delivery",
-    receivedBy: "Abebe Kebede",
-    receivedDate: "2026-02-17",
-    invoiceUrl: "#",
-    rating: 4.5,
-  },
-  {
-    id: "PO-2026-0120",
-    poNumber: "PO-2026-0120",
-    factoryId: 506,
-    factoryName: "Adama Oil",
-    factoryContact: "Kebede Desta",
-    factoryPhone: "+251 22 567 8901",
-    factoryLocation: "Adama",
-    orderDate: "2026-02-05T15:30:00",
-    requestedDelivery: "2026-02-18",
-    estimatedDelivery: "2026-02-17",
-    items: [
-      {
-        name: "Soybean Oil - Bulk",
-        sku: "OIL-003",
-        quantity: 2000,
-        unit: "liter",
-        price: 145,
-        total: 290000,
-      },
-    ],
-    subtotal: 290000,
-    shipping: 6000,
-    tax: 43500,
-    total: 339500,
-    status: "delivered",
-    paymentStatus: "paid",
-    paymentMethod: "Bank Transfer",
-    paymentTerms: "15 days",
-    priority: "medium",
-    trackingNumber: "FTRK-506-0120",
-    carrier: "Adama Logistics",
-    receivedBy: "Tigist Haile",
-    receivedDate: "2026-02-16",
-    invoiceUrl: "#",
-    rating: 4.8,
-  },
-  {
-    id: "PO-2026-0119",
-    poNumber: "PO-2026-0119",
-    factoryId: 507,
-    factoryName: "Adama Plastics",
-    factoryContact: "Solomon Ayele",
-    factoryPhone: "+251 22 678 9012",
-    factoryLocation: "Adama",
-    orderDate: "2026-02-04T10:15:00",
-    requestedDelivery: "2026-02-16",
-    estimatedDelivery: "2026-02-15",
-    items: [
-      {
-        name: "Plastic Granules",
-        sku: "PLA-012",
-        quantity: 1000,
-        unit: "kg",
-        price: 85,
-        total: 85000,
-      },
-    ],
-    subtotal: 85000,
-    shipping: 2500,
-    tax: 12750,
-    total: 100250,
-    status: "cancelled",
-    paymentStatus: "refunded",
-    paymentMethod: "Mobile Banking",
-    paymentTerms: "Prepaid",
-    priority: "low",
-    notes: "Order cancelled due to specification change",
-    cancellationReason: "Specification change requested",
-    cancelledDate: "2026-02-06",
-  },
-];
+interface OrderListProps {
+  config: OrderListConfig;
+  orders: Order[];
+  onCancelOrder?: (orderId: string, reason: string) => void;
+  onReorder?: (orderId: string) => void;
+  onRate?: (orderId: string, rating: number, review: string) => void;
+}
 
 // ============================================================================
 // CONSTANTS
@@ -435,37 +204,44 @@ const paymentStatusColors = {
 // COMPONENT
 // ============================================================================
 
-const FactoryOrdersPage: React.FC = () => {
-  const [orders, setOrders] = useState<FactoryOrder[]>(factoryOrders);
+export const OrderList: React.FC<OrderListProps> = ({
+  config,
+  orders: initialOrders,
+  onCancelOrder,
+  onReorder,
+  onRate,
+}) => {
+  const [orders, setOrders] = useState<Order[]>(initialOrders);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [factoryFilter, setFactoryFilter] = useState<string>("all");
-  const [selectedOrder, setSelectedOrder] = useState<FactoryOrder | null>(null);
+  const [partyFilter, setPartyFilter] = useState<string>("all");
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [showOrderDialog, setShowOrderDialog] = useState(false);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [showRateDialog, setShowRateDialog] = useState(false);
   const [cancellationReason, setCancellationReason] = useState("");
+  const [rating, setRating] = useState(5);
+  const [review, setReview] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
 
-  // Get unique factories for filter
-  const factories = Array.from(
-    new Set(orders.map((o) => o.factoryName)),
-  ).sort();
+  // Get unique parties for filter
+  const parties = Array.from(new Set(orders.map((o) => o.partyName))).sort();
 
   // Filter orders
   const filteredOrders = orders.filter((order) => {
     const matchesSearch =
       searchQuery === "" ||
       order.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      order.poNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      order.factoryName.toLowerCase().includes(searchQuery.toLowerCase());
+      order.orderNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      order.partyName.toLowerCase().includes(searchQuery.toLowerCase());
 
     const matchesStatus =
       statusFilter === "all" || order.status === statusFilter;
-    const matchesFactory =
-      factoryFilter === "all" || order.factoryName === factoryFilter;
+    const matchesParty =
+      partyFilter === "all" || order.partyName === partyFilter;
 
-    return matchesSearch && matchesStatus && matchesFactory;
+    return matchesSearch && matchesStatus && matchesParty;
   });
 
   // Sort orders by date (newest first)
@@ -479,63 +255,47 @@ const FactoryOrdersPage: React.FC = () => {
   const currentOrders = sortedOrders.slice(indexOfFirstItem, indexOfLastItem);
   const totalPages = Math.ceil(sortedOrders.length / itemsPerPage);
 
-  // Stats
-  const pendingOrders = orders.filter((o) => o.status === "pending").length;
-  const confirmedOrders = orders.filter((o) => o.status === "confirmed").length;
-  const shippedOrders = orders.filter((o) => o.status === "shipped").length;
-  const totalSpent = orders
-    .filter((o) => o.status !== "cancelled")
-    .reduce((sum, o) => sum + o.total, 0);
-
-  const cancelOrder = (orderId: string) => {
-    setOrders((prev) =>
-      prev.map((o) =>
-        o.id === orderId
-          ? {
-              ...o,
-              status: "cancelled",
-              paymentStatus: "refunded",
-              cancellationReason:
-                cancellationReason || "Cancelled by distributor",
-              cancelledDate: new Date().toISOString().split("T")[0],
-            }
-          : o,
-      ),
-    );
+  const handleCancelOrder = () => {
+    if (selectedOrder && onCancelOrder) {
+      onCancelOrder(selectedOrder.id, cancellationReason);
+      setOrders((prev) =>
+        prev.map((o) =>
+          o.id === selectedOrder.id
+            ? {
+                ...o,
+                status: "cancelled",
+                paymentStatus: "refunded",
+                cancellationReason,
+                cancelledDate: new Date().toISOString().split("T")[0],
+              }
+            : o,
+        ),
+      );
+    }
     setShowCancelDialog(false);
     setSelectedOrder(null);
     setCancellationReason("");
   };
 
-  const formatPrice = (price: number) => {
-    return `ETB ${price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
-  };
-
-  const formatDateTime = (dateString: string) => {
-    return new Date(dateString).toLocaleString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
-
-  const getInitials = (name: string) => {
-    return name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2);
+  const handleRate = () => {
+    if (selectedOrder && onRate) {
+      onRate(selectedOrder.id, rating, review);
+      setOrders((prev) =>
+        prev.map((o) =>
+          o.id === selectedOrder.id
+            ? {
+                ...o,
+                rating,
+                review,
+              }
+            : o,
+        ),
+      );
+    }
+    setShowRateDialog(false);
+    setSelectedOrder(null);
+    setRating(5);
+    setReview("");
   };
 
   const getStatusProgress = (status: string) => {
@@ -557,6 +317,8 @@ const FactoryOrdersPage: React.FC = () => {
     }
   };
 
+  const PartyIcon = config.icon;
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -564,78 +326,106 @@ const FactoryOrdersPage: React.FC = () => {
         <div>
           <div className="flex items-center gap-3">
             <h1 className="text-3xl font-bold tracking-tight">
-              Factory Orders
+              {config.title}
             </h1>
             <Badge
               variant="outline"
               className="bg-blue-50 text-blue-700 border-blue-200"
             >
-              <Factory className="h-3 w-3 mr-1" />
+              <Package className="h-3 w-3 mr-1" />
               {orders.length} Total Orders
             </Badge>
           </div>
-          <p className="text-muted-foreground mt-1">
-            Track and manage orders placed with factories and manufacturers
-          </p>
+          <p className="text-muted-foreground mt-1">{config.description}</p>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm">
             <Download className="h-4 w-4 mr-2" />
             Export
           </Button>
-          <Button asChild>
-            <Link to="/distributor/factory-products">
-              <Factory className="h-4 w-4 mr-2" />
-              Order More
-            </Link>
-          </Button>
         </div>
+      </div>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        <StatsCard
+          title="Total Spent"
+          value={formatPrice(config.stats.totalSpent)}
+          icon={DollarSign}
+          iconBg="bg-green-100"
+          iconColor="text-green-600"
+        />
+        <StatsCard
+          title="Pending"
+          value={config.stats.pending}
+          icon={Clock}
+          iconBg="bg-yellow-100"
+          iconColor="text-yellow-600"
+        />
+        <StatsCard
+          title="Processing"
+          value={config.stats.processing}
+          icon={Package}
+          iconBg="bg-blue-100"
+          iconColor="text-blue-600"
+        />
+        <StatsCard
+          title="Shipped"
+          value={config.stats.shipped}
+          icon={Truck}
+          iconBg="bg-purple-100"
+          iconColor="text-purple-600"
+        />
+        <StatsCard
+          title="Delivered"
+          value={config.stats.delivered}
+          icon={CheckCircle2}
+          iconBg="bg-green-100"
+          iconColor="text-green-600"
+        />
       </div>
 
       {/* Filters */}
       <Card>
         <CardContent className="p-4">
-          <div className="flex flex-col lg:flex-row gap-4">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search by PO number, factory name..."
-                className="pl-9"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
-            <div className="flex items-center gap-2">
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-[150px]">
-                  <SelectValue placeholder="Order Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="confirmed">Confirmed</SelectItem>
-                  <SelectItem value="processing">Processing</SelectItem>
-                  <SelectItem value="shipped">Shipped</SelectItem>
-                  <SelectItem value="delivered">Delivered</SelectItem>
-                  <SelectItem value="cancelled">Cancelled</SelectItem>
-                </SelectContent>
-              </Select>
+          <SearchFilter
+            placeholder={`Search by order number, ${config.partyLabel.toLowerCase()}...`}
+            onSearch={setSearchQuery}
+            filterComponent={
+              <div className="flex items-center gap-2">
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="w-[150px]">
+                    <SelectValue placeholder="Order Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Status</SelectItem>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="confirmed">Confirmed</SelectItem>
+                    <SelectItem value="processing">Processing</SelectItem>
+                    <SelectItem value="shipped">Shipped</SelectItem>
+                    <SelectItem value="delivered">Delivered</SelectItem>
+                    <SelectItem value="cancelled">Cancelled</SelectItem>
+                  </SelectContent>
+                </Select>
 
-              <Select value={factoryFilter} onValueChange={setFactoryFilter}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="All Factories" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Factories</SelectItem>
-                  {factories.map((factory) => (
-                    <SelectItem key={factory} value={factory}>
-                      {factory}
+                <Select value={partyFilter} onValueChange={setPartyFilter}>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder={`All ${config.partyLabel}s`} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">
+                      All {config.partyLabel}s
                     </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+                    {parties.map((party) => (
+                      <SelectItem key={party} value={party}>
+                        {party}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            }
+          />
         </CardContent>
       </Card>
 
@@ -644,7 +434,7 @@ const FactoryOrdersPage: React.FC = () => {
         <div className="text-sm text-muted-foreground">
           Showing {indexOfFirstItem + 1}-
           {Math.min(indexOfLastItem, sortedOrders.length)} of{" "}
-          {sortedOrders.length} factory orders
+          {sortedOrders.length} orders
         </div>
         <Badge variant="outline" className="px-3 py-1">
           <Package className="h-3 w-3 mr-1" />
@@ -654,22 +444,13 @@ const FactoryOrdersPage: React.FC = () => {
 
       {/* Orders List */}
       {sortedOrders.length === 0 ? (
-        <Card className="py-12">
-          <div className="text-center">
-            <Factory className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">
-              No factory orders found
-            </h3>
-            <p className="text-muted-foreground mb-4">
-              You haven't placed any orders with factories yet
-            </p>
-            <Button asChild>
-              <Link to="/distributor/factory-products">
-                Browse Factory Products
-              </Link>
-            </Button>
-          </div>
-        </Card>
+        <EmptyState
+          icon={Package}
+          title={`No ${config.type === "purchases" ? "purchase" : "sales"} orders found`}
+          description={`You haven't placed any orders with ${config.partyLabel.toLowerCase()}s yet`}
+          actionLabel={`Browse ${config.partyLabel}s`}
+          actionHref={`/${config.role}${config.partyPath}`}
+        />
       ) : (
         <div className="space-y-4">
           {currentOrders.map((order) => (
@@ -717,39 +498,26 @@ const FactoryOrdersPage: React.FC = () => {
                       )}
                     </div>
                     <div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <Link
-                          to={`/distributor/factory-orders/${order.id}`}
+                          to={`/${config.role}/${config.type === "purchases" ? "purchase-orders" : "orders"}/${order.id}`}
                           className="text-lg font-semibold hover:text-primary"
                         >
-                          {order.poNumber}
+                          {order.orderNumber}
                         </Link>
-                        <Badge
-                          variant="outline"
-                          className={statusColors[order.status]}
-                        >
-                          {order.status.charAt(0).toUpperCase() +
-                            order.status.slice(1)}
-                        </Badge>
-                        <Badge
-                          variant="outline"
-                          className={priorityColors[order.priority]}
-                        >
-                          {order.priority.charAt(0).toUpperCase() +
-                            order.priority.slice(1)}{" "}
-                          Priority
-                        </Badge>
+                        <StatusBadge status={order.status} />
+                        <StatusBadge status={order.priority} />
                       </div>
-                      <div className="flex items-center gap-3 mt-1">
+                      <div className="flex items-center gap-3 mt-1 flex-wrap">
                         <div className="flex items-center gap-2">
                           <div className="h-6 w-6 bg-blue-100 rounded-full flex items-center justify-center">
-                            <Factory className="h-3 w-3 text-blue-600" />
+                            <PartyIcon className="h-3 w-3 text-blue-600" />
                           </div>
                           <Link
-                            to={`/distributor/factories/${order.factoryId}`}
+                            to={`/${config.role}${config.partyPath}/${order.partyId}`}
                             className="text-sm font-medium hover:text-primary"
                           >
-                            {order.factoryName}
+                            {order.partyName}
                           </Link>
                         </div>
                         <span className="text-xs text-muted-foreground">•</span>
@@ -760,7 +528,7 @@ const FactoryOrdersPage: React.FC = () => {
                         <span className="text-xs text-muted-foreground">•</span>
                         <span className="text-xs text-muted-foreground flex items-center">
                           <MapPin className="h-3 w-3 mr-1" />
-                          {order.factoryLocation}
+                          {order.partyLocation}
                         </span>
                       </div>
                     </div>
@@ -890,22 +658,26 @@ const FactoryOrdersPage: React.FC = () => {
                           </p>
                         </div>
                       </div>
-                      {order.rating ? (
+                      {config.showRating && order.rating ? (
                         <div className="flex items-center gap-1 bg-white px-2 py-1 rounded">
                           <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
                           <span className="text-xs font-medium">
                             {order.rating}
                           </span>
                         </div>
-                      ) : (
+                      ) : config.showRating && !order.rating ? (
                         <Button
                           size="sm"
                           variant="outline"
                           className="h-7 text-xs bg-white"
+                          onClick={() => {
+                            setSelectedOrder(order);
+                            setShowRateDialog(true);
+                          }}
                         >
                           Rate Order
                         </Button>
-                      )}
+                      ) : null}
                     </div>
                   </div>
                 )}
@@ -932,6 +704,14 @@ const FactoryOrdersPage: React.FC = () => {
                   </div>
                 )}
 
+                {/* Notes */}
+                {order.notes && (
+                  <div className="bg-amber-50 border border-amber-100 rounded-lg p-3 mb-4">
+                    <p className="text-xs font-medium text-amber-800">Note</p>
+                    <p className="text-xs text-amber-700">{order.notes}</p>
+                  </div>
+                )}
+
                 {/* Actions */}
                 <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t">
                   <div className="flex items-center gap-2">
@@ -945,8 +725,8 @@ const FactoryOrdersPage: React.FC = () => {
                     )}
                   </div>
 
-                  <div className="flex items-center gap-2">
-                    {order.status === "pending" && (
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {config.showCancel && order.status === "pending" && (
                       <Button
                         size="sm"
                         variant="outline"
@@ -961,17 +741,10 @@ const FactoryOrdersPage: React.FC = () => {
                       </Button>
                     )}
 
-                    {order.status === "delivered" && !order.rating && (
-                      <Button size="sm" variant="outline">
-                        <Star className="h-4 w-4 mr-2" />
-                        Rate & Review
-                      </Button>
-                    )}
-
-                    {order.status === "delivered" && (
+                    {config.showReorder && order.status === "delivered" && (
                       <Button size="sm" variant="outline" asChild>
                         <Link
-                          to={`/distributor/factory-products?reorder=${order.id}`}
+                          to={`/${config.role}${config.partyPath}?reorder=${order.id}`}
                         >
                           <Repeat className="h-4 w-4 mr-2" />
                           Reorder
@@ -1014,7 +787,7 @@ const FactoryOrdersPage: React.FC = () => {
                         </DropdownMenuItem>
                         <DropdownMenuItem>
                           <Phone className="h-4 w-4 mr-2" />
-                          Contact Factory
+                          Contact {config.partyLabel}
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -1026,64 +799,11 @@ const FactoryOrdersPage: React.FC = () => {
 
           {/* Pagination */}
           {totalPages > 1 && (
-            <Pagination className="mt-6">
-              <PaginationContent>
-                <PaginationItem>
-                  <PaginationPrevious
-                    href="#"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      setCurrentPage((prev) => Math.max(prev - 1, 1));
-                    }}
-                  />
-                </PaginationItem>
-
-                {Array.from({ length: totalPages }).map((_, i) => {
-                  const pageNumber = i + 1;
-                  if (
-                    pageNumber === 1 ||
-                    pageNumber === totalPages ||
-                    (pageNumber >= currentPage - 1 &&
-                      pageNumber <= currentPage + 1)
-                  ) {
-                    return (
-                      <PaginationItem key={pageNumber}>
-                        <PaginationLink
-                          href="#"
-                          isActive={currentPage === pageNumber}
-                          onClick={(e) => {
-                            e.preventDefault();
-                            setCurrentPage(pageNumber);
-                          }}
-                        >
-                          {pageNumber}
-                        </PaginationLink>
-                      </PaginationItem>
-                    );
-                  } else if (
-                    pageNumber === currentPage - 2 ||
-                    pageNumber === currentPage + 2
-                  ) {
-                    return (
-                      <PaginationItem key={pageNumber}>
-                        <PaginationEllipsis />
-                      </PaginationItem>
-                    );
-                  }
-                  return null;
-                })}
-
-                <PaginationItem>
-                  <PaginationNext
-                    href="#"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      setCurrentPage((prev) => Math.min(prev + 1, totalPages));
-                    }}
-                  />
-                </PaginationItem>
-              </PaginationContent>
-            </Pagination>
+            <PaginationBar
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+            />
           )}
         </div>
       )}
@@ -1093,29 +813,30 @@ const FactoryOrdersPage: React.FC = () => {
         <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
             <DialogTitle>
-              Factory Order Details - {selectedOrder?.poNumber}
+              Order Details - {selectedOrder?.orderNumber}
             </DialogTitle>
             <DialogDescription>
-              Complete order information and factory details
+              Complete order information and {config.partyLabel.toLowerCase()}{" "}
+              details
             </DialogDescription>
           </DialogHeader>
 
           {selectedOrder && (
             <ScrollArea className="h-[500px] pr-4">
               <div className="space-y-6 py-2">
-                {/* Factory Information */}
+                {/* Party Information */}
                 <div className="space-y-3">
                   <h4 className="text-sm font-medium flex items-center gap-2">
-                    <Factory className="h-4 w-4" />
-                    Factory Information
+                    <PartyIcon className="h-4 w-4" />
+                    {config.partyLabel} Information
                   </h4>
                   <div className="bg-muted/50 rounded-lg p-3 space-y-2">
                     <div className="flex justify-between">
                       <span className="text-xs text-muted-foreground">
-                        Factory Name
+                        {config.partyLabel} Name
                       </span>
                       <span className="text-xs font-medium">
-                        {selectedOrder.factoryName}
+                        {selectedOrder.partyName}
                       </span>
                     </div>
                     <div className="flex justify-between">
@@ -1123,7 +844,7 @@ const FactoryOrdersPage: React.FC = () => {
                         Contact Person
                       </span>
                       <span className="text-xs font-medium">
-                        {selectedOrder.factoryContact}
+                        {selectedOrder.partyContact}
                       </span>
                     </div>
                     <div className="flex justify-between">
@@ -1131,7 +852,7 @@ const FactoryOrdersPage: React.FC = () => {
                         Phone
                       </span>
                       <span className="text-xs font-medium">
-                        {selectedOrder.factoryPhone}
+                        {selectedOrder.partyPhone}
                       </span>
                     </div>
                     <div className="flex justify-between">
@@ -1139,7 +860,7 @@ const FactoryOrdersPage: React.FC = () => {
                         Location
                       </span>
                       <span className="text-xs font-medium">
-                        {selectedOrder.factoryLocation}
+                        {selectedOrder.partyLocation}
                       </span>
                     </div>
                   </div>
@@ -1154,10 +875,10 @@ const FactoryOrdersPage: React.FC = () => {
                   <div className="bg-muted/50 rounded-lg p-3 space-y-2">
                     <div className="flex justify-between">
                       <span className="text-xs text-muted-foreground">
-                        PO Number
+                        Order Number
                       </span>
                       <span className="text-xs font-medium">
-                        {selectedOrder.poNumber}
+                        {selectedOrder.orderNumber}
                       </span>
                     </div>
                     <div className="flex justify-between">
@@ -1269,7 +990,9 @@ const FactoryOrdersPage: React.FC = () => {
               Close
             </Button>
             <Button asChild>
-              <Link to={`/distributor/factory-orders/${selectedOrder?.id}`}>
+              <Link
+                to={`/${config.role}/${config.type === "purchases" ? "purchase-orders" : "orders"}/${selectedOrder?.id}`}
+              >
                 View Full Order
               </Link>
             </Button>
@@ -1281,10 +1004,10 @@ const FactoryOrdersPage: React.FC = () => {
       <AlertDialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Cancel Factory Order</AlertDialogTitle>
+            <AlertDialogTitle>Cancel Order</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to cancel order {selectedOrder?.poNumber}{" "}
-              from {selectedOrder?.factoryName}?
+              Are you sure you want to cancel order {selectedOrder?.orderNumber}{" "}
+              from {selectedOrder?.partyName}?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="py-4">
@@ -1324,7 +1047,7 @@ const FactoryOrdersPage: React.FC = () => {
           <AlertDialogFooter>
             <AlertDialogCancel>Keep Order</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => selectedOrder && cancelOrder(selectedOrder.id)}
+              onClick={handleCancelOrder}
               className="bg-red-600 hover:bg-red-700"
               disabled={!cancellationReason}
             >
@@ -1333,8 +1056,62 @@ const FactoryOrdersPage: React.FC = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Rate Order Dialog */}
+      <AlertDialog open={showRateDialog} onOpenChange={setShowRateDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Rate & Review</AlertDialogTitle>
+            <AlertDialogDescription>
+              Share your feedback about order {selectedOrder?.orderNumber}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="py-4 space-y-4">
+            <div className="space-y-2">
+              <Label>Rating</Label>
+              <div className="flex items-center gap-2">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <Button
+                    key={star}
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="p-1"
+                    onClick={() => setRating(star)}
+                  >
+                    <Star
+                      className={`h-6 w-6 ${
+                        star <= rating
+                          ? "fill-yellow-400 text-yellow-400"
+                          : "text-gray-300"
+                      }`}
+                    />
+                  </Button>
+                ))}
+                <span className="text-sm ml-2">{rating}/5</span>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="review">Review (Optional)</Label>
+              <Input
+                id="review"
+                placeholder="Write your review..."
+                value={review}
+                onChange={(e) => setReview(e.target.value)}
+              />
+            </div>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleRate}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              Submit Review
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
-
-export default FactoryOrdersPage;

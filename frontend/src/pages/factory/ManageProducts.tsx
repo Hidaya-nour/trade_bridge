@@ -1,21 +1,19 @@
 import React from "react";
 import { ProductManagement } from "@/components/shared/ProductManagement";
-import { initialProducts, categories, suppliers } from "./data";
+import { factoryProducts, categories } from "./data"; // Factory-specific data
 
-const DistributorManageProductsPage: React.FC = () => {
+const FactoryManageProductsPage: React.FC = () => {
   return (
     <ProductManagement
       config={{
-        role: "distributor",
+        role: "factory",
         title: "Manage Products",
-        description: "Add, edit, and manage your product inventory",
+        description: "Add, edit, and manage your product catalog",
         addButtonLabel: "Add Product",
-        showSupplier: true,
-        supplierPath: "/suppliers",
+        showSupplier: false, // Factory doesn't have suppliers
       }}
-      products={initialProducts}
+      products={factoryProducts}
       categories={["All Categories", ...categories]}
-      suppliers={suppliers}
       onAddProduct={(product) => console.log("Add", product)}
       onEditProduct={(id, product) => console.log("Edit", id, product)}
       onDeleteProduct={(id) => console.log("Delete", id)}
@@ -25,4 +23,4 @@ const DistributorManageProductsPage: React.FC = () => {
   );
 };
 
-export default DistributorManageProductsPage;
+export default FactoryManageProductsPage;
