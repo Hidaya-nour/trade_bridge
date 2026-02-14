@@ -25,6 +25,7 @@ import PurchaseOrdersPage from "./pages/distributor/PurchaseOrders";
 import MarketPlace from "./pages/distributor/MarketPlace";
 import ProductionAnalyticsPage from "./pages/factory/ProductionAnalytics";
 import FactoryDistributorPartnersPage from "./pages/factory/DistributorPartners";
+import AdminDashboard from "./pages/admin/Dashboard";
 
 function App() {
   return (
@@ -250,6 +251,14 @@ function App() {
           element={
             <DashboardLayout>
               <FactoryDistributorPartnersPage />
+            </DashboardLayout>
+          }
+        />
+        <Route
+          path="/admin/dashboard"
+          element={
+            <DashboardLayout>
+              <AdminDashboard />
             </DashboardLayout>
           }
         />

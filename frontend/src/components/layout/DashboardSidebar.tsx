@@ -40,7 +40,7 @@ import { PerformanceCard } from "@/components/shared/PerformanceCard";
 const mockUser = {
   name: "Abebe Kebede",
   email: "abebe@adama-wholesalers.com",
-  role: "distributor",
+  role: "retailer",
   avatar: "",
   verified: true,
   joinDate: "March 2023",
@@ -719,10 +719,14 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
                       </Badge>
                     )}
                   </div>
-                  <span className="flex items-center text-xs font-medium">
-                    <Star className="h-3 w-3 fill-yellow-500 text-yellow-500 mr-1" />
-                    {mockUser.rating}
-                  </span>
+                  {mockUser.role == "retailer" ? (
+                    ""
+                  ) : (
+                    <span className="flex items-center text-xs font-medium">
+                      <Star className="h-3 w-3 fill-yellow-500 text-yellow-500 mr-1" />
+                      {mockUser.rating}
+                    </span>
+                  )}
                 </div>
                 <div className="grid grid-cols-2 gap-2 pt-1">
                   <div className="rounded-md bg-muted/50 px-2 py-1.5">
@@ -803,14 +807,13 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
           </div>
 
           {/* Quick Stats Card - Using new PerformanceCard component */}
-          {!collapsed && (
+
+          {!collapsed && mockUser.role !== "retailer" && (
             <PerformanceCard
               metrics={[
                 { label: "Order Fulfillment", value: 94 },
                 { label: "On-time Delivery", value: 92 },
               ]}
-              footerLabel="Monthly Revenue"
-              footerValue={formatCompactPrice(845000)}
             />
           )}
         </div>
