@@ -30,6 +30,7 @@ import UserManagementPage from "./pages/admin/UserManagementPage";
 import VerificationsPage from "./pages/admin/VerificationsPage";
 import { DisputesManagementPage } from "./pages/admin/DisputesManagementPage";
 import { ReportsPage } from "./pages/admin/ReportsPage";
+import { DriverDashboard } from "./pages/driver/DashboardPage";
 
 function App() {
   return (
@@ -295,7 +296,14 @@ function App() {
           }
         />
         <Route path="/admin/approvals" element={<VerificationsPage />} />{" "}
-        {/* Alias */}
+        <Route
+          path="/driver/dashboard"
+          element={
+            <DashboardLayout>
+              <DriverDashboard />
+            </DashboardLayout>
+          }
+        />{" "}
       </Routes>
     </Router>
   );

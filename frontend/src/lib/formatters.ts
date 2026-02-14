@@ -55,6 +55,31 @@ export const formatTime = (dateString: string): string => {
   });
 };
 
+// ✅ NEW FUNCTION: Format phone number
+/**
+ * Format Ethiopian phone number
+ * Converts +251912345678 to +251 91 234 5678
+ */
+export const formatPhone = (phone: string): string => {
+  if (!phone) return "";
+  
+  // Remove any non-digit characters
+  const cleaned = phone.replace(/\D/g, "");
+  
+  // Ethiopian format: +251 XX XXX XXXX
+  if (cleaned.startsWith("251") && cleaned.length === 12) {
+    return `+251 ${cleaned.slice(3, 5)} ${cleaned.slice(5, 8)} ${cleaned.slice(8, 12)}`;
+  }
+  
+  // Local format: 0912345678
+  if (cleaned.startsWith("0") && cleaned.length === 10) {
+    return `+251 ${cleaned.slice(1, 3)} ${cleaned.slice(3, 6)} ${cleaned.slice(6, 10)}`;
+  }
+  
+  // If already formatted or unknown format, return as is
+  return phone;
+};
+
 /**
  * Get relative time (5 minutes ago, 2 hours ago, etc)
  */
@@ -71,10 +96,29 @@ export const getRelativeTime = (dateString: string): string => {
   return formatDate(dateString);
 };
 
-// ✅ ADD THIS FUNCTION
 /**
  * Format percentage with + sign for positive values
  */
 export const formatPercentage = (value: number): string => {
   return `${value > 0 ? '+' : ''}${value.toFixed(1)}%`;
+};
+
+/**
+ * Format number with commas (1,234,567)
+ */
+export const formatNumber = (value: number): string => {
+  return value.toLocaleString();
+};
+
+/**
+ * Format number in compact form (1.2M, 45K, etc)
+ */
+export const formatCompactNumber = (value: number): string => {
+  if (value >= 1_000_000) {
+    return `${(value / 1_000_000).toFixed(1)}M`;
+  }
+  if (value >= 1_000) {
+    return `${(value / 1_000).toFixed(0)}K`;
+  }
+  return value.toString();
 };
