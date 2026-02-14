@@ -22,7 +22,6 @@ export const retailerProducts: CatalogProduct[] = [
     reviews: 128,
     location: "Addis Ababa",
     deliveryTime: "2-3 days",
-    verified: true,
     description: "Premium Yirgacheffe coffee beans, washed process, grade 1. Known for its floral and citrus notes.",
     tags: ["Organic", "Fair Trade", "Premium"],
   },
@@ -42,7 +41,6 @@ export const retailerProducts: CatalogProduct[] = [
     reviews: 95,
     location: "Adama",
     deliveryTime: "1-2 days",
-    verified: true,
     description: "High-quality white teff flour, gluten-free, perfect for injera and baking.",
     tags: ["Gluten-Free", "Organic"],
   },
@@ -62,7 +60,6 @@ export const retailerProducts: CatalogProduct[] = [
     reviews: 67,
     location: "Addis Ababa",
     deliveryTime: "3-5 days",
-    verified: false,
     description: "100% cotton fabric, 120 GSM, available in various colors. Ideal for garments.",
     tags: ["Eco-Friendly"],
   },
@@ -82,7 +79,7 @@ export const retailerProducts: CatalogProduct[] = [
     reviews: 42,
     location: "Bahir Dar",
     deliveryTime: "2-4 days",
-    verified: true,
+    
     description: "100% pure white honey, raw and unfiltered. Harvested from the forests of Bahir Dar.",
     tags: ["Organic", "Raw"],
   },
@@ -102,7 +99,7 @@ export const retailerProducts: CatalogProduct[] = [
     reviews: 38,
     location: "Mekelle",
     deliveryTime: "5-7 days",
-    verified: true,
+    
     description: "High-tensile steel rebars, 12mm-32mm diameter. ASTM standards.",
     tags: ["Industrial"],
   },
@@ -122,7 +119,7 @@ export const retailerProducts: CatalogProduct[] = [
     reviews: 56,
     location: "Addis Ababa",
     deliveryTime: "2-3 days",
-    verified: true,
+    
     description: "Premium macadamia nuts, roasted and salted. Export quality.",
     tags: ["Premium", "Snacks"],
   },
@@ -142,7 +139,7 @@ export const retailerProducts: CatalogProduct[] = [
     reviews: 29,
     location: "Adama",
     deliveryTime: "3-4 days",
-    verified: false,
+    
     description: "Durable plastic chairs, stackable, various colors available.",
     tags: ["Household"],
   },
@@ -162,7 +159,7 @@ export const retailerProducts: CatalogProduct[] = [
     reviews: 73,
     location: "Adama",
     deliveryTime: "2-3 days",
-    verified: true,
+    
     description: "Double-concentrated tomato paste, 500g cans. Ethiopian grown tomatoes.",
     tags: ["Bulk"],
   },
@@ -182,7 +179,7 @@ export const retailerProducts: CatalogProduct[] = [
     reviews: 112,
     location: "Adama",
     deliveryTime: "1-2 days",
-    verified: true,
+    
     description: "70-page notebooks, ruled, soft cover. School supply quality.",
     tags: ["School"],
   },
@@ -202,7 +199,7 @@ export const retailerProducts: CatalogProduct[] = [
     reviews: 214,
     location: "Addis Ababa",
     deliveryTime: "2-3 days",
-    verified: true,
+    
     description: "Portland cement, 50kg bags. Grade 42.5R.",
     tags: ["Industrial", "Bulk"],
   },
@@ -222,7 +219,7 @@ export const retailerProducts: CatalogProduct[] = [
     reviews: 89,
     location: "Adama",
     deliveryTime: "1-2 days",
-    verified: true,
+    
     description: "Refined soybean oil, 5L bottles. Ethiopian standard.",
     tags: ["Cooking"],
   },
@@ -242,7 +239,7 @@ export const retailerProducts: CatalogProduct[] = [
     reviews: 47,
     location: "Addis Ababa",
     deliveryTime: "4-6 days",
-    verified: false,
+    
     description: "Genuine leather shoes, men's formal. Various sizes available.",
     tags: ["Leather", "Formal"],
   },

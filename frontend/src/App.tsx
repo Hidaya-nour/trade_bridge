@@ -25,7 +25,9 @@ import PurchaseOrdersPage from "./pages/distributor/PurchaseOrders";
 import MarketPlace from "./pages/distributor/MarketPlace";
 import ProductionAnalyticsPage from "./pages/factory/ProductionAnalytics";
 import FactoryDistributorPartnersPage from "./pages/factory/DistributorPartners";
-import AdminDashboard from "./pages/admin/Dashboard";
+import AdminDashboard from "./pages/admin/dashboard";
+import UserManagementPage from "./pages/admin/UserManagementPage";
+import VerificationsPage from "./pages/admin/VerificationsPage";
 
 function App() {
   return (
@@ -104,7 +106,6 @@ function App() {
             </DashboardLayout>
           }
         />
-
         <Route
           path="/retailer/compare"
           element={
@@ -121,7 +122,6 @@ function App() {
             </DashboardLayout>
           }
         />
-
         <Route
           path="/distributor/products"
           element={
@@ -130,7 +130,6 @@ function App() {
             </DashboardLayout>
           }
         />
-
         <Route
           path="/distributor/products/add"
           element={
@@ -147,7 +146,6 @@ function App() {
             </DashboardLayout>
           }
         />
-
         <Route
           path="/distributor/factory-cart"
           element={
@@ -180,7 +178,6 @@ function App() {
             </DashboardLayout>
           }
         />
-
         <Route
           path="/distributor/promotions"
           element={
@@ -197,7 +194,6 @@ function App() {
             </DashboardLayout>
           }
         />
-
         <Route
           path="/distributor/analytics"
           element={
@@ -262,6 +258,26 @@ function App() {
             </DashboardLayout>
           }
         />
+        <Route
+          path="/admin/users"
+          element={
+            <DashboardLayout>
+              <UserManagementPage />
+            </DashboardLayout>
+          }
+        />
+        {/* <Route path="/admin/users/:userId" element={<UserDetailPage />} /> */}
+        // In your router configuration
+        <Route
+          path="/admin/verifications"
+          element={
+            <DashboardLayout>
+              <VerificationsPage />
+            </DashboardLayout>
+          }
+        />
+        <Route path="/admin/approvals" element={<VerificationsPage />} />{" "}
+        {/* Alias */}
       </Routes>
     </Router>
   );
