@@ -28,6 +28,8 @@ import FactoryDistributorPartnersPage from "./pages/factory/DistributorPartners"
 import AdminDashboard from "./pages/admin/dashboard";
 import UserManagementPage from "./pages/admin/UserManagementPage";
 import VerificationsPage from "./pages/admin/VerificationsPage";
+import { DisputesManagementPage } from "./pages/admin/DisputesManagementPage";
+import { ReportsPage } from "./pages/admin/ReportsPage";
 
 function App() {
   return (
@@ -273,6 +275,22 @@ function App() {
           element={
             <DashboardLayout>
               <VerificationsPage />
+            </DashboardLayout>
+          }
+        />
+        <Route
+          path="/admin/dispute"
+          element={
+            <DashboardLayout>
+              <DisputesManagementPage />
+            </DashboardLayout>
+          }
+        />
+        <Route
+          path="/admin/report"
+          element={
+            <DashboardLayout>
+              <ReportsPage />
             </DashboardLayout>
           }
         />
