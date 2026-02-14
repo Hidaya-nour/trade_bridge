@@ -19,6 +19,7 @@ import {
   Check,
   X,
   Minus,
+  Plus,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -42,6 +43,16 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 
 // Mock supplier data (same as directory)
@@ -103,6 +114,34 @@ const suppliers = [
     warranty: "Not applicable",
   },
   {
+    id: 103,
+    name: "Ethiopian Textile Industry",
+    logo: null,
+    category: "Textiles",
+    location: "Addis Ababa",
+    established: "2010",
+    verified: true,
+    rating: 4.5,
+    reviews: 67,
+    products: 120,
+    responseTime: "< 4 hours",
+    deliveryTime: "3-5 days",
+    minOrder: "ETB 10,000",
+    priceLevel: "$$$",
+    totalOrders: 540,
+    completionRate: 97.8,
+    onTimeDelivery: 96.5,
+    qualityRating: 4.6,
+    communicationRating: 4.4,
+    description: "Leading textile manufacturer in Ethiopia.",
+    tags: ["Textiles", "Fabrics", "Garments"],
+    badges: ["Verified"],
+    paymentTerms: ["Credit", "Bank Transfer"],
+    shippingMethods: ["Standard"],
+    returnPolicy: "14 days",
+    warranty: "6 months",
+  },
+  {
     id: 104,
     name: "Bahir Dar Honey",
     logo: null,
@@ -131,6 +170,90 @@ const suppliers = [
     warranty: "Quality guarantee",
   },
   {
+    id: 105,
+    name: "Addis Pharmaceutical",
+    logo: null,
+    category: "Pharmaceuticals",
+    location: "Addis Ababa",
+    established: "2012",
+    verified: true,
+    rating: 4.9,
+    reviews: 156,
+    products: 340,
+    responseTime: "< 1 hour",
+    deliveryTime: "1-2 days",
+    minOrder: "ETB 8,000",
+    priceLevel: "$$$",
+    totalOrders: 2100,
+    completionRate: 99.5,
+    onTimeDelivery: 99.1,
+    qualityRating: 5.0,
+    communicationRating: 4.9,
+    description: "Leading pharmaceutical distributor.",
+    tags: ["Medicine", "Healthcare", "Medical Supplies"],
+    badges: ["Top Rated", "Verified", "Industry Leader"],
+    paymentTerms: ["Credit", "Bank Transfer", "Mobile"],
+    shippingMethods: ["Standard", "Express", "Refrigerated"],
+    returnPolicy: "No returns on medicine",
+    warranty: "Manufacturer warranty",
+  },
+  {
+    id: 106,
+    name: "Oromia Dairy",
+    logo: null,
+    category: "Food",
+    location: "Adama",
+    established: "2017",
+    verified: true,
+    rating: 4.6,
+    reviews: 78,
+    products: 45,
+    responseTime: "< 2 hours",
+    deliveryTime: "1-2 days",
+    minOrder: "ETB 4,000",
+    priceLevel: "$$",
+    totalOrders: 680,
+    completionRate: 98.7,
+    onTimeDelivery: 98.2,
+    qualityRating: 4.7,
+    communicationRating: 4.5,
+    description: "Fresh dairy products from Oromia.",
+    tags: ["Dairy", "Milk", "Cheese", "Yogurt"],
+    badges: ["Verified", "Fast Shipper"],
+    paymentTerms: ["Cash", "Mobile", "Credit"],
+    shippingMethods: ["Standard", "Express", "Refrigerated"],
+    returnPolicy: "3 days",
+    warranty: "Freshness guarantee",
+  },
+  {
+    id: 107,
+    name: "Tigray Construction",
+    logo: null,
+    category: "Construction",
+    location: "Mekelle",
+    established: "2014",
+    verified: true,
+    rating: 4.4,
+    reviews: 112,
+    products: 65,
+    responseTime: "< 3 hours",
+    deliveryTime: "3-6 days",
+    minOrder: "ETB 20,000",
+    priceLevel: "$$$",
+    totalOrders: 890,
+    completionRate: 97.5,
+    onTimeDelivery: 95.8,
+    qualityRating: 4.5,
+    communicationRating: 4.3,
+    description: "Construction materials supplier.",
+    tags: ["Construction", "Building Materials", "Hardware"],
+    badges: ["Verified"],
+    paymentTerms: ["Credit", "Bank Transfer"],
+    shippingMethods: ["Standard", "Bulk"],
+    returnPolicy: "7 days",
+    warranty: "Varies by product",
+  },
+  {
     id: 108,
     name: "Mugher Cement",
     logo: null,
@@ -157,6 +280,62 @@ const suppliers = [
     shippingMethods: ["Standard", "Bulk"],
     returnPolicy: "No returns",
     warranty: "Manufacturer warranty",
+  },
+  {
+    id: 109,
+    name: "Hawassa Fish",
+    logo: null,
+    category: "Food",
+    location: "Hawassa",
+    established: "2020",
+    verified: false,
+    rating: 4.2,
+    reviews: 23,
+    products: 12,
+    responseTime: "< 5 hours",
+    deliveryTime: "2-3 days",
+    minOrder: "ETB 5,000",
+    priceLevel: "$$",
+    totalOrders: 145,
+    completionRate: 96.5,
+    onTimeDelivery: 94.2,
+    qualityRating: 4.3,
+    communicationRating: 4.1,
+    description: "Fresh fish from Lake Hawassa.",
+    tags: ["Fish", "Seafood", "Fresh"],
+    badges: ["New"],
+    paymentTerms: ["Cash", "Mobile"],
+    shippingMethods: ["Standard", "Refrigerated"],
+    returnPolicy: "2 days",
+    warranty: "Freshness guarantee",
+  },
+  {
+    id: 110,
+    name: "Dire Dawa Logistics",
+    logo: null,
+    category: "Logistics",
+    location: "Dire Dawa",
+    established: "2016",
+    verified: true,
+    rating: 4.5,
+    reviews: 89,
+    products: 25,
+    responseTime: "< 2 hours",
+    deliveryTime: "1-3 days",
+    minOrder: "ETB 7,000",
+    priceLevel: "$$",
+    totalOrders: 720,
+    completionRate: 98.9,
+    onTimeDelivery: 98.5,
+    qualityRating: 4.4,
+    communicationRating: 4.6,
+    description: "Logistics and distribution services.",
+    tags: ["Logistics", "Transport", "Warehousing"],
+    badges: ["Verified", "Fast Shipper"],
+    paymentTerms: ["Credit", "Cash", "Bank Transfer"],
+    shippingMethods: ["Standard", "Express", "Bulk"],
+    returnPolicy: "N/A",
+    warranty: "Insurance available",
   },
 ];
 
@@ -193,8 +372,12 @@ const comparisonFeatures = [
 ];
 
 const CompareSuppliersPage: React.FC = () => {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [selectedSuppliers, setSelectedSuppliers] = useState<any[]>([]);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [tempSelectedIds, setTempSelectedIds] = useState<number[]>([]);
 
   useEffect(() => {
     const ids = searchParams.get("ids")?.split(",").map(Number) || [];
@@ -202,8 +385,30 @@ const CompareSuppliersPage: React.FC = () => {
     setSelectedSuppliers(filtered);
   }, [searchParams]);
 
+  // Update URL when selected suppliers change
+  useEffect(() => {
+    const ids = selectedSuppliers.map((s) => s.id).join(",");
+    const newSearchParams = new URLSearchParams(searchParams);
+    newSearchParams.set("ids", ids);
+    setSearchParams(newSearchParams);
+  }, [selectedSuppliers, searchParams, setSearchParams]);
+
   const removeSupplier = (supplierId: number) => {
     setSelectedSuppliers((prev) => prev.filter((s) => s.id !== supplierId));
+  };
+
+  const addSuppliers = () => {
+    const newSuppliers = suppliers.filter(
+      (s) =>
+        tempSelectedIds.includes(s.id) &&
+        !selectedSuppliers.some((selected) => selected.id === s.id),
+    );
+
+    setSelectedSuppliers((prev) => [...prev, ...newSuppliers]);
+    setTempSelectedIds([]);
+    setIsAddModalOpen(false);
+    setSearchQuery("");
+    setSelectedCategory("all");
   };
 
   const getInitials = (name: string) => {
@@ -213,6 +418,25 @@ const CompareSuppliersPage: React.FC = () => {
       .join("")
       .toUpperCase()
       .slice(0, 2);
+  };
+
+  // Filter suppliers for modal
+  const availableSuppliers = suppliers.filter(
+    (s) =>
+      !selectedSuppliers.some((selected) => selected.id === s.id) &&
+      (selectedCategory === "all" || s.category === selectedCategory) &&
+      (searchQuery === "" ||
+        s.name.toLowerCase().includes(searchQuery.toLowerCase())),
+  );
+
+  const categories = ["all", ...new Set(suppliers.map((s) => s.category))];
+
+  const toggleSupplierSelection = (supplierId: number) => {
+    setTempSelectedIds((prev) =>
+      prev.includes(supplierId)
+        ? prev.filter((id) => id !== supplierId)
+        : [...prev, supplierId],
+    );
   };
 
   const renderValue = (supplier: any, key: string) => {
@@ -303,13 +527,135 @@ const CompareSuppliersPage: React.FC = () => {
             </p>
           </div>
         </div>
-        <Button asChild>
-          <Link to="/retailer/suppliers">
-            <Scale className="h-4 w-4 mr-2" />
-            Add More Suppliers
-          </Link>
+        <Button onClick={() => setIsAddModalOpen(true)}>
+          <Plus className="h-4 w-4 mr-2" />
+          Add More Suppliers
         </Button>
       </div>
+
+      {/* Add Suppliers Modal */}
+      <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Add Suppliers to Compare</DialogTitle>
+            <DialogDescription>
+              Select additional suppliers to add to your comparison. You can
+              compare up to 4 suppliers at once.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            {/* Search and Filter */}
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <Input
+                  placeholder="Search suppliers..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full"
+                />
+              </div>
+              <select
+                className="px-3 py-2 border rounded-md bg-background"
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+              >
+                {categories.map((cat) => (
+                  <option key={cat} value={cat}>
+                    {cat === "all" ? "All Categories" : cat}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Suppliers List */}
+            <ScrollArea className="h-[300px] border rounded-md p-4">
+              <div className="space-y-2">
+                {availableSuppliers.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    No suppliers available to add
+                  </div>
+                ) : (
+                  availableSuppliers.map((supplier) => (
+                    <div
+                      key={supplier.id}
+                      className={cn(
+                        "flex items-center space-x-3 p-3 rounded-lg border cursor-pointer hover:bg-muted/50 transition-colors",
+                        tempSelectedIds.includes(supplier.id) &&
+                          "border-primary bg-primary/5",
+                      )}
+                      onClick={() => toggleSupplierSelection(supplier.id)}
+                    >
+                      <Checkbox
+                        checked={tempSelectedIds.includes(supplier.id)}
+                        onCheckedChange={() =>
+                          toggleSupplierSelection(supplier.id)
+                        }
+                      />
+                      <Avatar className="h-10 w-10">
+                        <AvatarFallback className="bg-primary/10 text-primary">
+                          {getInitials(supplier.name)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between">
+                          <p className="font-medium">{supplier.name}</p>
+                          <Badge variant="outline">{supplier.category}</Badge>
+                        </div>
+                        <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
+                          <span className="flex items-center">
+                            <MapPin className="h-3 w-3 mr-1" />
+                            {supplier.location}
+                          </span>
+                          <span className="flex items-center">
+                            <Star className="h-3 w-3 fill-yellow-400 text-yellow-400 mr-1" />
+                            {supplier.rating} ({supplier.reviews})
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </ScrollArea>
+
+            {/* Selection Summary */}
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">
+                {tempSelectedIds.length} suppliers selected
+              </span>
+              {selectedSuppliers.length + tempSelectedIds.length > 4 && (
+                <span className="text-destructive">
+                  Maximum 4 suppliers allowed
+                </span>
+              )}
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsAddModalOpen(false);
+                setTempSelectedIds([]);
+                setSearchQuery("");
+                setSelectedCategory("all");
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={addSuppliers}
+              disabled={
+                tempSelectedIds.length === 0 ||
+                selectedSuppliers.length + tempSelectedIds.length > 4
+              }
+            >
+              Add Selected ({tempSelectedIds.length})
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {selectedSuppliers.length === 0 ? (
         <Card className="py-12">
@@ -370,24 +716,23 @@ const CompareSuppliersPage: React.FC = () => {
               </Card>
             ))}
 
-            {/* Add More Placeholder */}
+            {/* Add More Placeholder - Shows when less than 4 suppliers */}
             {selectedSuppliers.length < 4 && (
-              <Card className="border-dashed hover:border-primary/50 transition-colors">
+              <Card
+                className="border-dashed hover:border-primary/50 transition-colors cursor-pointer"
+                onClick={() => setIsAddModalOpen(true)}
+              >
                 <CardContent className="p-6 h-full flex items-center justify-center">
-                  <Button variant="ghost" asChild className="h-auto py-6">
-                    <Link
-                      to="/retailer/suppliers"
-                      className="flex flex-col items-center gap-2"
-                    >
-                      <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center">
-                        <Scale className="h-6 w-6 text-muted-foreground" />
-                      </div>
-                      <p className="text-sm font-medium">Add Supplier</p>
-                      <p className="text-xs text-muted-foreground">
-                        Compare up to 4 suppliers
-                      </p>
-                    </Link>
-                  </Button>
+                  <div className="flex flex-col items-center gap-2 text-center">
+                    <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center">
+                      <Plus className="h-6 w-6 text-muted-foreground" />
+                    </div>
+                    <p className="text-sm font-medium">Add Supplier</p>
+                    <p className="text-xs text-muted-foreground">
+                      {4 - selectedSuppliers.length} more slot
+                      {4 - selectedSuppliers.length !== 1 ? "s" : ""} available
+                    </p>
+                  </div>
                 </CardContent>
               </Card>
             )}
@@ -466,7 +811,6 @@ const CompareSuppliersPage: React.FC = () => {
             <Button variant="outline" asChild>
               <Link to="/retailer/suppliers">Back to Directory</Link>
             </Button>
-            <Button>Select Best Match</Button>
           </div>
         </div>
       )}

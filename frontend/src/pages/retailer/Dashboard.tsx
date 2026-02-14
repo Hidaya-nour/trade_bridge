@@ -70,15 +70,6 @@ const mockStats = [
     iconColor: "text-purple-600",
     iconBg: "bg-purple-100",
   },
-  {
-    title: "Saved Suppliers",
-    value: "24",
-    change: "+3",
-    trend: "up" as const,
-    icon: Users,
-    iconColor: "text-amber-600",
-    iconBg: "bg-amber-100",
-  },
 ];
 
 // Mock recent orders
@@ -238,7 +229,7 @@ const RetailerDashboard: React.FC = () => {
       <WelcomeHeader user={user} />
 
       {/* Stats Grid - Using shared StatsCard */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {mockStats.map((stat, index) => (
           <StatsCard key={index} {...stat} />
         ))}
@@ -293,8 +284,22 @@ const RetailerDashboard: React.FC = () => {
                         </p>
                       </div>
                     </div>
-                    <Button variant="ghost" size="sm" asChild>
-                      <Link to={`/retailer/tracking/${order.id}`}>Track</Link>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      asChild={order.status === "shipped"}
+                      disabled={order.status !== "shipped"}
+                      className={
+                        order.status !== "shipped"
+                          ? "opacity-50 cursor-not-allowed"
+                          : ""
+                      }
+                    >
+                      {order.status === "shipped" ? (
+                        <Link to={`/retailer/tracking/${order.id}`}>Track</Link>
+                      ) : (
+                        <span>Track</span>
+                      )}
                     </Button>
                   </div>
                 ))}

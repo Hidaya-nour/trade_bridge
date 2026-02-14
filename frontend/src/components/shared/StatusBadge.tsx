@@ -5,7 +5,7 @@ export type StatusType =
   // Order statuses
   | "pending"
   | "approved"
-  | "confirmed" // ✅ ADD THIS
+  | "confirmed"
   | "processing"
   | "shipped"
   | "delivered"
@@ -30,22 +30,38 @@ export type StatusType =
   | "paid"
   | "refunded"
   | "pending-payment"
+  // User statuses - ✅ ADD THESE
+  | "active"
+  | "pending"
+  | "suspended"
   // Priority types
   | "high"
   | "medium"
   | "low"
+  // User roles
+  | "retailer"
+  | "distributor"
+  | "factory"
+  | "driver"
+  | "admin"
+  | "supplier"
   // Promotion types
   | "discount"
   | "bogo"
   | "free-shipping"
   | "bundle"
-  | "clearance";
+  | "clearance"
+  // Dispute statuses - ✅ ADD THESE
+  | "open"
+  | "investigating"
+  | "resolved"
+  | "escalated";
 
 export const statusColorMap: Record<StatusType, string> = {
   // Order statuses
   pending: "bg-yellow-100 text-yellow-800 border-yellow-200",
   approved: "bg-green-100 text-green-800 border-green-200",
-  confirmed: "bg-blue-100 text-blue-800 border-blue-200", // ✅ ADD THIS
+  confirmed: "bg-blue-100 text-blue-800 border-blue-200",
   processing: "bg-indigo-100 text-indigo-800 border-indigo-200",
   shipped: "bg-purple-100 text-purple-800 border-purple-200",
   delivered: "bg-green-100 text-green-800 border-green-200",
@@ -64,7 +80,7 @@ export const statusColorMap: Record<StatusType, string> = {
   completed: "bg-gray-100 text-gray-800 border-gray-200",
 
   // Product/Promotion statuses
-  active: "bg-green-100 text-green-800 border-green-200",
+  active: "bg-green-100 text-green-800 border-green-200", // ✅ Already exists
   inactive: "bg-gray-100 text-gray-800 border-gray-200",
   draft: "bg-gray-100 text-gray-800 border-gray-200",
   scheduled: "bg-blue-100 text-blue-800 border-blue-200",
@@ -75,10 +91,21 @@ export const statusColorMap: Record<StatusType, string> = {
   refunded: "bg-gray-100 text-gray-800 border-gray-200",
   "pending-payment": "bg-yellow-100 text-yellow-800 border-yellow-200",
 
+  // User statuses - ✅ ONLY ADD THE NEW ONE
+  suspended: "bg-red-100 text-red-800 border-red-200", // ✅ Only this is new
+
   // Priority types
   high: "bg-red-100 text-red-800 border-red-200",
   medium: "bg-amber-100 text-amber-800 border-amber-200",
   low: "bg-green-100 text-green-800 border-green-200",
+
+  // User roles
+  retailer: "bg-blue-100 text-blue-800 border-blue-200",
+  distributor: "bg-purple-100 text-purple-800 border-purple-200",
+  factory: "bg-green-100 text-green-800 border-green-200",
+  driver: "bg-amber-100 text-amber-800 border-amber-200",
+  admin: "bg-gray-100 text-gray-800 border-gray-200",
+  supplier: "bg-indigo-100 text-indigo-800 border-indigo-200", // ✅ ADD THIS
 
   // Promotion types
   discount: "bg-green-100 text-green-800 border-green-200",
@@ -86,6 +113,12 @@ export const statusColorMap: Record<StatusType, string> = {
   "free-shipping": "bg-blue-100 text-blue-800 border-blue-200",
   bundle: "bg-amber-100 text-amber-800 border-amber-200",
   clearance: "bg-red-100 text-red-800 border-red-200",
+
+  // Dispute statuses
+  open: "bg-yellow-100 text-yellow-800 border-yellow-200",
+  investigating: "bg-blue-100 text-blue-800 border-blue-200",
+  resolved: "bg-green-100 text-green-800 border-green-200",
+  escalated: "bg-red-100 text-red-800 border-red-200",
 };
 
 export const statusLabelMap: Partial<Record<StatusType, string>> = {
@@ -107,6 +140,10 @@ export const statusLabelMap: Partial<Record<StatusType, string>> = {
   "picked-up": "Picked Up",
   "in-progress": "In Progress",
   "pending-payment": "Pending Payment",
+
+  // Dispute - ✅ ADD THESE
+  investigating: "Investigating",
+  escalated: "Escalated",
 };
 
 interface StatusBadgeProps {
