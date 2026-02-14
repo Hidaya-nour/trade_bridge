@@ -23,6 +23,13 @@ import {
   CreditCard,
   FileText,
   ShieldAlert,
+  Truck,
+  Star,
+  MapPin,
+  Calendar,
+  Filter,
+  MoreHorizontal,
+  Search,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -48,6 +55,22 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 import {
   StatsCard,
@@ -67,12 +90,12 @@ import { getInitials, cn } from "@/lib/utils";
 interface PlatformStats {
   totalUsers: number;
   totalOrders: number;
-  totalRevenue: number;
   pendingApprovals: number;
   activeDisputes: number;
   platformGrowth: number;
   userGrowth: number;
   orderGrowth: number;
+  totalSuppliers: number;
 }
 
 interface RecentUser {
@@ -118,13 +141,14 @@ interface Dispute {
 // ============================================================================
 
 const platformStats: PlatformStats = {
+  totalUsers: 1250,
   totalOrders: 15680,
-  totalRevenue: 45200000,
   pendingApprovals: 24,
   activeDisputes: 8,
   platformGrowth: 18.5,
   userGrowth: 12.3,
   orderGrowth: 22.7,
+  totalSuppliers: 245,
 };
 
 const recentUsers: RecentUser[] = [
@@ -176,6 +200,16 @@ const recentUsers: RecentUser[] = [
     business: "Bole Superstore",
     status: "active",
     joinedDate: "2026-02-06",
+    verified: true,
+  },
+  {
+    id: 6,
+    name: "Dawit Mekonnen",
+    email: "dawit@driver.com",
+    role: "driver",
+    business: "Independent Driver",
+    status: "active",
+    joinedDate: "2026-02-05",
     verified: true,
   },
 ];
@@ -286,6 +320,12 @@ const disputeStatusColors = {
   escalated: "bg-red-100 text-red-800 border-red-200",
 };
 
+const activityStatusColors = {
+  success: "bg-green-100 text-green-800",
+  warning: "bg-yellow-100 text-yellow-800",
+  error: "bg-red-100 text-red-800",
+};
+
 // ============================================================================
 // COMPONENT
 // ============================================================================
@@ -323,18 +363,19 @@ const AdminDashboard: React.FC = () => {
       iconBg: "bg-green-100",
       iconColor: "text-green-600",
     },
-    {
-      title: "Total Revenue",
-      value: formatCompactPrice(platformStats.totalRevenue),
-      change: `+${platformStats.platformGrowth}%`,
-      trend: "up" as const,
-      icon: DollarSign,
-      iconBg: "bg-purple-100",
-      iconColor: "text-purple-600",
-    },
+
     {
       title: "Pending Approvals",
       value: platformStats.pendingApprovals,
+      change: "+8",
+      trend: "up" as const,
+      icon: Clock,
+      iconBg: "bg-amber-100",
+      iconColor: "text-amber-600",
+    },
+    {
+      title: "Suppliers",
+      value: platformStats.totalSuppliers,
       change: "+8",
       trend: "up" as const,
       icon: Clock,
@@ -399,7 +440,7 @@ const AdminDashboard: React.FC = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {recentUsers.map((user) => (
+                  {recentUsers.slice(0, 5).map((user) => (
                     <div
                       key={user.id}
                       className="flex items-center justify-between p-2 hover:bg-accent/50 rounded-lg transition-colors"
@@ -422,7 +463,7 @@ const AdminDashboard: React.FC = () => {
                           </AvatarFallback>
                         </Avatar>
                         <div>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <Link
                               to={`/admin/users/${user.id}`}
                               className="text-sm font-medium hover:text-primary"
@@ -446,12 +487,22 @@ const AdminDashboard: React.FC = () => {
                           </p>
                         </div>
                       </div>
-                      <Button size="sm" variant="ghost" asChild>
-                        <Link to={`/admin/users/${user.id}`}>
-                          <Eye className="h-3 w-3 mr-1" />
-                          View
-                        </Link>
-                      </Button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button size="sm" variant="ghost">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem asChild>
+                            <Link to={`/admin/users/${user.id}`}>
+                              View Details
+                            </Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem>Suspend User</DropdownMenuItem>
+                          <DropdownMenuItem>Send Message</DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   ))}
                 </div>
@@ -560,7 +611,7 @@ const AdminDashboard: React.FC = () => {
                   className="h-auto py-4 flex-col gap-2"
                   asChild
                 >
-                  <Link to="/admin/approve">
+                  <Link to="/admin/approvals">
                     <Shield className="h-5 w-5" />
                     <span className="text-xs">Review Approvals</span>
                     {platformStats.pendingApprovals > 0 && (
@@ -634,7 +685,7 @@ const AdminDashboard: React.FC = () => {
                             <Package className="h-5 w-5 text-purple-600" />
                           )}
                           {approval.type === "driver" && (
-                            <Users className="h-5 w-5 text-amber-600" />
+                            <Truck className="h-5 w-5 text-amber-600" />
                           )}
                           {approval.type === "supplier" && (
                             <Store className="h-5 w-5 text-blue-600" />
@@ -646,7 +697,18 @@ const AdminDashboard: React.FC = () => {
                               {approval.name}
                             </h3>
                             <StatusBadge status={approval.type} />
-                            <StatusBadge status={approval.priority} />
+                            <Badge
+                              className={cn(
+                                "text-xs",
+                                approval.priority === "high"
+                                  ? "bg-red-100 text-red-800"
+                                  : approval.priority === "medium"
+                                    ? "bg-yellow-100 text-yellow-800"
+                                    : "bg-green-100 text-green-800",
+                              )}
+                            >
+                              {approval.priority} priority
+                            </Badge>
                           </div>
                           <p className="text-sm text-muted-foreground mt-1">
                             {approval.business} • {approval.email} •{" "}
@@ -660,13 +722,13 @@ const AdminDashboard: React.FC = () => {
                       </div>
                       <div className="flex items-center gap-2">
                         <Button size="sm" variant="outline">
-                          <Eye className="h-4 w-4 mr-2" />
-                          Review
+                          <FileText className="h-4 w-4 mr-2" />
+                          Review Docs
                         </Button>
                         <Button
                           size="sm"
                           variant="outline"
-                          className="text-red-600"
+                          className="text-red-600 hover:text-red-700"
                         >
                           <XCircle className="h-4 w-4 mr-2" />
                           Reject
@@ -707,7 +769,18 @@ const AdminDashboard: React.FC = () => {
                             Dispute #{dispute.id}
                           </h3>
                           <StatusBadge status={dispute.status} />
-                          <StatusBadge status={dispute.priority} />
+                          <Badge
+                            className={cn(
+                              "text-xs",
+                              dispute.priority === "high"
+                                ? "bg-red-100 text-red-800"
+                                : dispute.priority === "medium"
+                                  ? "bg-yellow-100 text-yellow-800"
+                                  : "bg-green-100 text-green-800",
+                            )}
+                          >
+                            {dispute.priority} priority
+                          </Badge>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
