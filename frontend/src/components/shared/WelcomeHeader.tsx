@@ -1,13 +1,20 @@
 import { Badge } from "@/components/ui/badge";
-import { Store, Package, Factory, Shield } from "lucide-react";
+import { Store, Package, Factory, Shield, Users, Settings } from "lucide-react";
+
+export type UserRole =
+  | "retailer"
+  | "distributor"
+  | "factory"
+  | "admin"
+  | "driver";
 
 interface WelcomeHeaderProps {
   user: {
     name: string;
     business: string;
     id: string;
+    role: UserRole;
     verified?: boolean;
-    role: "retailer" | "distributor" | "factory";
   };
 }
 
@@ -15,12 +22,16 @@ const roleIcons = {
   retailer: Store,
   distributor: Package,
   factory: Factory,
+  admin: Shield,
+  driver: Users,
 };
 
 const roleTitles = {
   retailer: "retail business",
   distributor: "distribution business",
   factory: "production facility",
+  admin: "platform administration",
+  driver: "delivery service",
 };
 
 export const WelcomeHeader = ({ user }: WelcomeHeaderProps) => {
@@ -53,9 +64,6 @@ export const WelcomeHeader = ({ user }: WelcomeHeaderProps) => {
         <Badge variant="outline" className="px-3 py-1">
           <RoleIcon className="h-3.5 w-3.5 mr-1" />
           {user.business}
-        </Badge>
-        <Badge variant="secondary" className="px-3 py-1">
-          ID: {user.id}
         </Badge>
       </div>
     </div>

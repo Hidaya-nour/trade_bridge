@@ -81,7 +81,6 @@ export interface CatalogProduct {
   reviews: number;
   location: string;
   deliveryTime: string;
-  verified: boolean;
   description: string;
   tags: string[];
   image?: string | null;
@@ -140,8 +139,10 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
   const [selectedLocation, setSelectedLocation] = useState<string>("");
   const [priceRange, setPriceRange] = useState([0, 10000]);
   const [sortBy, setSortBy] = useState("recommended");
-  const [verifiedOnly, setVerifiedOnly] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [manualInputValue, setManualInputValue] = useState<{
+    [key: number]: string;
+  }>({});
   const itemsPerPage = 9;
 
   // Get unique suppliers for filter
@@ -175,15 +176,12 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
     const matchesPrice =
       product.price >= priceRange[0] && product.price <= priceRange[1];
 
-    const matchesVerified = !verifiedOnly || product.verified;
-
     return (
       matchesSearch &&
       matchesCategory &&
       matchesSupplier &&
       matchesLocation &&
-      matchesPrice &&
-      matchesVerified
+      matchesPrice
     );
   });
 
@@ -208,6 +206,43 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentItems = sortedProducts.slice(indexOfFirstItem, indexOfLastItem);
   const totalPages = Math.ceil(sortedProducts.length / itemsPerPage);
+
+  // Handle manual quantity input change
+  const handleManualInputChange = (
+    productId: number,
+    value: string,
+    minOrder: number,
+  ) => {
+    setManualInputValue((prev) => ({ ...prev, [productId]: value }));
+  };
+
+  // Handle manual quantity input blur
+  const handleManualInputBlur = (productId: number, minOrder: number) => {
+    const value = manualInputValue[productId];
+    if (value && value !== "") {
+      const numValue = parseInt(value);
+      if (!isNaN(numValue) && numValue >= minOrder) {
+        onAddToCart(productId, numValue);
+      }
+    }
+    // Clear manual input after processing
+    setManualInputValue((prev) => {
+      const newState = { ...prev };
+      delete newState[productId];
+      return newState;
+    });
+  };
+
+  // Handle manual input key press (Enter key)
+  const handleManualInputKeyDown = (
+    e: React.KeyboardEvent,
+    productId: number,
+    minOrder: number,
+  ) => {
+    if (e.key === "Enter") {
+      handleManualInputBlur(productId, minOrder);
+    }
+  };
 
   const SupplierIcon = config.icon;
 
@@ -285,14 +320,12 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
                     Filters
                     {(selectedCategory !== "All Categories" ||
                       selectedSupplier ||
-                      selectedLocation ||
-                      verifiedOnly) && (
+                      selectedLocation) && (
                       <Badge className="ml-1 h-5 w-5 p-0 flex items-center justify-center">
                         {[
                           selectedCategory !== "All Categories" ? 1 : 0,
                           selectedSupplier ? 1 : 0,
                           selectedLocation ? 1 : 0,
-                          verifiedOnly ? 1 : 0,
                         ].reduce((a, b) => a + b, 0)}
                       </Badge>
                     )}
@@ -408,20 +441,6 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
                           </div>
                         </div>
                       </div>
-
-                      {/* Verified Only */}
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="verified"
-                          checked={verifiedOnly}
-                          onCheckedChange={(checked) =>
-                            setVerifiedOnly(checked as boolean)
-                          }
-                        />
-                        <Label htmlFor="verified" className="text-sm">
-                          Verified {config.supplierLabel}s only
-                        </Label>
-                      </div>
                     </div>
                   </ScrollArea>
 
@@ -435,7 +454,6 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
                           setSelectedSupplier("");
                           setSelectedLocation("");
                           setPriceRange([0, 10000]);
-                          setVerifiedOnly(false);
                         }}
                       >
                         Reset
@@ -475,8 +493,7 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
       {/* Active Filters */}
       {(selectedCategory !== "All Categories" ||
         selectedSupplier ||
-        selectedLocation ||
-        verifiedOnly) && (
+        selectedLocation) && (
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-xs text-muted-foreground">Active filters:</span>
 
@@ -514,16 +531,6 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
             </Badge>
           )}
 
-          {verifiedOnly && (
-            <Badge variant="secondary" className="gap-1">
-              Verified Only
-              <X
-                className="h-3 w-3 ml-1 cursor-pointer"
-                onClick={() => setVerifiedOnly(false)}
-              />
-            </Badge>
-          )}
-
           <Button
             variant="ghost"
             size="sm"
@@ -533,7 +540,6 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
               setSelectedSupplier("");
               setSelectedLocation("");
               setPriceRange([0, 10000]);
-              setVerifiedOnly(false);
             }}
           >
             Clear all
@@ -561,7 +567,6 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
             setSelectedSupplier("");
             setSelectedLocation("");
             setPriceRange([0, 10000]);
-            setVerifiedOnly(false);
           }}
         />
       ) : viewMode === "grid" ? (
@@ -573,12 +578,6 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
             >
               <div className="relative h-40 bg-gradient-to-br from-primary/5 to-primary/10 flex items-center justify-center">
                 <Package className="h-16 w-16 text-primary/30" />
-                {product.verified && (
-                  <Badge className="absolute top-3 left-3 bg-primary text-white border-0">
-                    <CheckCircle2 className="h-3 w-3 mr-1" />
-                    Verified
-                  </Badge>
-                )}
                 <Badge className="absolute top-3 right-3 bg-white/90 text-foreground border-0">
                   Min: {product.minOrder}+
                 </Badge>
@@ -617,7 +616,7 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
                   </span>
                   <span className="text-xs text-muted-foreground">•</span>
                   <span className="text-xs text-muted-foreground flex items-center">
-                    <Clock className="h-3 w-3 mr-1" />
+                    <Truck className="h-3 w-3 mr-1" />
                     {product.deliveryTime}
                   </span>
                 </div>
@@ -673,9 +672,36 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
                         >
                           <Minus className="h-3 w-3" />
                         </Button>
-                        <span className="w-8 text-center text-sm">
-                          {getCartQuantity(product.id)}
-                        </span>
+
+                        {/* Manual Input Field */}
+                        <Input
+                          type="number"
+                          min={product.minOrder}
+                          value={
+                            manualInputValue[product.id] !== undefined
+                              ? manualInputValue[product.id]
+                              : getCartQuantity(product.id)
+                          }
+                          onChange={(e) =>
+                            handleManualInputChange(
+                              product.id,
+                              e.target.value,
+                              product.minOrder,
+                            )
+                          }
+                          onBlur={() =>
+                            handleManualInputBlur(product.id, product.minOrder)
+                          }
+                          onKeyDown={(e) =>
+                            handleManualInputKeyDown(
+                              e,
+                              product.id,
+                              product.minOrder,
+                            )
+                          }
+                          className="w-16 h-8 text-center rounded-none border-0 focus-visible:ring-0 focus-visible:ring-offset-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        />
+
                         <Button
                           size="icon"
                           variant="ghost"
@@ -688,10 +714,12 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
                     ) : (
                       <Button
                         size="sm"
-                        onClick={() => onAddToCart(product.id, 1)}
+                        onClick={() =>
+                          onAddToCart(product.id, product.minOrder)
+                        }
                       >
                         <ShoppingCart className="h-4 w-4 mr-2" />
-                        Add
+                        Add (Min: {product.minOrder})
                       </Button>
                     )}
                   </div>
@@ -724,11 +752,6 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
                           >
                             {product.name}
                           </Link>
-                          {product.verified && (
-                            <Badge variant="outline" className="bg-primary/5">
-                              Verified
-                            </Badge>
-                          )}
                         </div>
                         <div className="flex items-center gap-3 mt-1">
                           <Link
@@ -798,9 +821,39 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
                           >
                             <Minus className="h-3 w-3" />
                           </Button>
-                          <span className="w-8 text-center text-sm">
-                            {getCartQuantity(product.id)}
-                          </span>
+
+                          {/* Manual Input Field for List View */}
+                          <Input
+                            type="number"
+                            min={product.minOrder}
+                            value={
+                              manualInputValue[product.id] !== undefined
+                                ? manualInputValue[product.id]
+                                : getCartQuantity(product.id)
+                            }
+                            onChange={(e) =>
+                              handleManualInputChange(
+                                product.id,
+                                e.target.value,
+                                product.minOrder,
+                              )
+                            }
+                            onBlur={() =>
+                              handleManualInputBlur(
+                                product.id,
+                                product.minOrder,
+                              )
+                            }
+                            onKeyDown={(e) =>
+                              handleManualInputKeyDown(
+                                e,
+                                product.id,
+                                product.minOrder,
+                              )
+                            }
+                            className="w-16 h-8 text-center rounded-none border-0 focus-visible:ring-0 focus-visible:ring-offset-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                          />
+
                           <Button
                             size="sm"
                             variant="ghost"
@@ -813,10 +866,12 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
                       ) : (
                         <Button
                           size="sm"
-                          onClick={() => onAddToCart(product.id, 1)}
+                          onClick={() =>
+                            onAddToCart(product.id, product.minOrder)
+                          }
                         >
                           <ShoppingCart className="h-4 w-4 mr-2" />
-                          Add to Cart
+                          Add to Cart (Min: {product.minOrder})
                         </Button>
                       )}
 
