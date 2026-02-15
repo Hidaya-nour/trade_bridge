@@ -31,6 +31,11 @@ import VerificationsPage from "./pages/admin/VerificationsPage";
 import { DisputesManagementPage } from "./pages/admin/DisputesManagementPage";
 import { ReportsPage } from "./pages/admin/ReportsPage";
 import { DriverDashboard } from "./pages/driver/DashboardPage";
+import PaymentsPage from "./components/shared/Payments";
+import DistributorOrderDetailsPage from "./pages/distributor/DistributorOrderDetails";
+import OrderDetailsPage from "./pages/retailer/OrderDetails";
+import RetailerProductDetailPage from "./pages/retailer/ProductDetail";
+import SupplierProfilePage from "./pages/retailer/SupplierProfile";
 
 function App() {
   return (
@@ -303,7 +308,56 @@ function App() {
               <DriverDashboard />
             </DashboardLayout>
           }
-        />{" "}
+        />
+        <Route
+          path="/retailer/orders/:id"
+          element={
+            <DashboardLayout>
+              <OrderDetailsPage />
+            </DashboardLayout>
+          }
+        />
+        <Route
+          path="/retailer/product/:id"
+          element={
+            <DashboardLayout>
+              <RetailerProductDetailPage />
+            </DashboardLayout>
+          }
+        />
+        <Route
+          path="/retailer/supplier/:id"
+          element={
+            <DashboardLayout>
+              <SupplierProfilePage />
+            </DashboardLayout>
+          }
+        />
+        <Route
+          path="/retailer/payments"
+          element={
+            <DashboardLayout>
+              <PaymentsPage role="retailer" />
+            </DashboardLayout>
+          }
+        />
+        // Distributor routes
+        <Route
+          path="/distributor/orders/:id"
+          element={
+            <DashboardLayout>
+              <DistributorOrderDetailsPage />
+            </DashboardLayout>
+          }
+        />
+        <Route
+          path="/distributor/payments"
+          element={
+            <DashboardLayout>
+              <PaymentsPage role="distributor" />
+            </DashboardLayout>
+          }
+        />
       </Routes>
     </Router>
   );

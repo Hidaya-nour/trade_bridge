@@ -1,0 +1,697 @@
+import React, { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import {
+  Package,
+  Star,
+  Truck,
+  Clock,
+  MapPin,
+  CheckCircle2,
+  XCircle,
+  Shield,
+  Building2,
+  Phone,
+  Mail,
+  ChevronRight,
+  Plus,
+  Minus,
+  ShoppingCart,
+  Heart,
+  Share2,
+  Award,
+  TrendingUp,
+  Scale,
+  FileText,
+  Factory,
+  Store,
+} from "lucide-react";
+
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Separator } from "@/components/ui/separator";
+import { Progress } from "@/components/ui/progress";
+
+import { StatusBadge } from "@/components/shared";
+import { formatPrice } from "@/lib/formatters";
+import { getInitials, cn } from "@/lib/utils";
+
+// ============================================================================
+// TYPES
+// ============================================================================
+
+export type ProductDetailRole = "retailer" | "distributor" | "factory";
+
+export interface ProductDetailProps {
+  role: ProductDetailRole;
+  product: {
+    id: number;
+    name: string;
+    sku: string;
+    category: string;
+    subcategory?: string;
+    price: number;
+    unit: string;
+    minOrder: number;
+    maxOrder?: number;
+    stock: number;
+    reserved?: number;
+    available?: number;
+    description: string;
+    specifications?: Record<string, string>;
+    tags: string[];
+    images?: string[];
+
+    // Supplier info
+    supplierId?: number;
+    supplierName?: string;
+    supplierType?: "factory" | "distributor";
+    supplierRating?: number;
+    supplierVerified?: boolean;
+    supplierLocation?: string;
+    supplierEstablished?: string;
+
+    // Factory info (for factory's own products)
+    productionTime?: string;
+    batchSize?: number;
+    rawMaterials?: { name: string; quantity: number; unit: string }[];
+
+    // Delivery options
+    deliveryOptions?: {
+      offered: boolean;
+      cost?: number;
+      freeThreshold?: number;
+      estimatedDays: string;
+      pickupAvailable: boolean;
+    };
+
+    // Bulk discounts
+    bulkDiscounts?: {
+      quantity: number;
+      discount: number;
+    }[];
+
+    // Reviews
+    rating: number;
+    reviewCount: number;
+    reviews?: {
+      id: number;
+      user: string;
+      rating: number;
+      comment: string;
+      date: string;
+    }[];
+
+    // Related products
+    relatedProducts?: {
+      id: number;
+      name: string;
+      price: number;
+      unit: string;
+      rating: number;
+    }[];
+  };
+
+  onAddToCart: (quantity: number) => void;
+  onViewSupplier?: () => void;
+  onCompare?: () => void;
+}
+
+// ============================================================================
+// COMPONENT
+// ============================================================================
+
+export const ProductDetail: React.FC<ProductDetailProps> = ({
+  role,
+  product,
+  onAddToCart,
+  onViewSupplier,
+  onCompare,
+}) => {
+  const navigate = useNavigate();
+  const [quantity, setQuantity] = useState(product.minOrder);
+  const [activeTab, setActiveTab] = useState("description");
+
+  const getRoleIcon = () => {
+    switch (role) {
+      case "retailer":
+        return Store;
+      case "distributor":
+        return Factory;
+      case "factory":
+        return Package;
+      default:
+        return Package;
+    }
+  };
+
+  const getSupplierPath = () => {
+    switch (role) {
+      case "retailer":
+        return `/retailer/suppliers/${product.supplierId}`;
+      case "distributor":
+        return `/distributor/factories/${product.supplierId}`;
+      default:
+        return "#";
+    }
+  };
+
+  const RoleIcon = getRoleIcon();
+
+  const incrementQuantity = () => {
+    setQuantity((prev) =>
+      Math.min(
+        prev + product.minOrder,
+        product.maxOrder || prev + product.minOrder,
+      ),
+    );
+  };
+
+  const decrementQuantity = () => {
+    setQuantity((prev) => Math.max(prev - product.minOrder, product.minOrder));
+  };
+
+  const handleAddToCart = () => {
+    onAddToCart(quantity);
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Breadcrumb */}
+      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <Link to={`/${role}/products`} className="hover:text-primary">
+          Products
+        </Link>
+        <ChevronRight className="h-4 w-4" />
+        <span className="text-foreground font-medium">{product.name}</span>
+      </div>
+
+      {/* Main Product Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Product Image */}
+        <div className="lg:col-span-1">
+          <div className="aspect-square bg-gradient-to-br from-primary/5 to-primary/10 rounded-xl flex items-center justify-center border">
+            {product.images && product.images[0] ? (
+              <img
+                src={product.images[0]}
+                alt={product.name}
+                className="w-full h-full object-cover rounded-xl"
+              />
+            ) : (
+              <Package className="h-32 w-32 text-primary/30" />
+            )}
+          </div>
+        </div>
+
+        {/* Product Info */}
+        <div className="lg:col-span-2 space-y-6">
+          <div>
+            <div className="flex items-start justify-between">
+              <div>
+                <h1 className="text-3xl font-bold">{product.name}</h1>
+                <p className="text-sm text-muted-foreground mt-1">
+                  SKU: {product.sku} • Category: {product.category}
+                  {product.subcategory && ` / ${product.subcategory}`}
+                </p>
+              </div>
+              {product.supplierVerified && (
+                <Badge variant="outline" className="bg-green-50 text-green-700">
+                  <Shield className="h-3 w-3 mr-1" />
+                  Verified
+                </Badge>
+              )}
+            </div>
+
+            {/* Rating */}
+            <div className="flex items-center gap-2 mt-2">
+              <div className="flex items-center">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <Star
+                    key={star}
+                    className={cn(
+                      "h-4 w-4",
+                      star <= product.rating
+                        ? "fill-yellow-400 text-yellow-400"
+                        : "text-gray-300",
+                    )}
+                  />
+                ))}
+              </div>
+              <span className="text-sm font-medium">{product.rating}</span>
+              <span className="text-sm text-muted-foreground">
+                ({product.reviewCount} reviews)
+              </span>
+            </div>
+
+            {/* Price */}
+            <div className="mt-4">
+              <div className="flex items-baseline gap-2">
+                <span className="text-3xl font-bold text-primary">
+                  {formatPrice(product.price)}
+                </span>
+                <span className="text-sm text-muted-foreground">
+                  / {product.unit}
+                </span>
+              </div>
+              <p className="text-sm text-muted-foreground mt-1">
+                Minimum order: {product.minOrder} {product.unit}
+              </p>
+            </div>
+
+            {/* Stock Status */}
+            <div className="mt-4">
+              {product.available !== undefined ? (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium">Availability:</span>
+                    {product.available > product.minOrder * 2 ? (
+                      <Badge className="bg-green-100 text-green-800">
+                        In Stock
+                      </Badge>
+                    ) : product.available > 0 ? (
+                      <Badge className="bg-amber-100 text-amber-800">
+                        Low Stock
+                      </Badge>
+                    ) : (
+                      <Badge className="bg-red-100 text-red-800">
+                        Out of Stock
+                      </Badge>
+                    )}
+                  </div>
+                  <Progress
+                    value={(product.available / product.stock) * 100}
+                    className="h-1.5 w-48"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    {product.available} of {product.stock} available
+                  </p>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium">Availability:</span>
+                  <Badge className="bg-green-100 text-green-800">
+                    In Stock
+                  </Badge>
+                  <span className="text-xs text-muted-foreground">
+                    {product.stock} units available
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Quantity Selector */}
+            <div className="mt-6">
+              <label className="text-sm font-medium mb-2 block">Quantity</label>
+              <div className="flex items-center gap-4">
+                <div className="flex items-center border rounded-md">
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-10 w-10 rounded-r-none"
+                    onClick={decrementQuantity}
+                    disabled={quantity <= product.minOrder}
+                  >
+                    <Minus className="h-4 w-4" />
+                  </Button>
+                  <span className="w-20 text-center font-medium">
+                    {quantity}
+                  </span>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-10 w-10 rounded-l-none"
+                    onClick={incrementQuantity}
+                    disabled={
+                      product.maxOrder ? quantity >= product.maxOrder : false
+                    }
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+                <span className="text-sm text-muted-foreground">
+                  {product.unit}
+                </span>
+              </div>
+            </div>
+
+            {/* Bulk Discounts */}
+            {product.bulkDiscounts && product.bulkDiscounts.length > 0 && (
+              <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+                <p className="text-xs font-medium text-blue-800 mb-2">
+                  Volume Discounts
+                </p>
+                <div className="space-y-1">
+                  {product.bulkDiscounts.map((discount, index) => (
+                    <div key={index} className="flex justify-between text-xs">
+                      <span className="text-blue-700">
+                        {discount.quantity}+ units
+                      </span>
+                      <span className="font-medium text-blue-800">
+                        {discount.discount}% off
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Action Buttons */}
+            <div className="flex gap-3 mt-6">
+              <Button size="lg" className="flex-1" onClick={handleAddToCart}>
+                <ShoppingCart className="h-4 w-4 mr-2" />
+                Add to Cart
+              </Button>
+              <Button size="lg" variant="outline">
+                <Heart className="h-4 w-4" />
+              </Button>
+              <Button size="lg" variant="outline">
+                <Share2 className="h-4 w-4" />
+              </Button>
+            </div>
+
+            {/* Compare Button */}
+            {role === "retailer" && onCompare && (
+              <Button
+                variant="link"
+                className="mt-2 w-full"
+                onClick={onCompare}
+              >
+                <Scale className="h-4 w-4 mr-2" />
+                Compare with similar products
+              </Button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Supplier Information */}
+      {product.supplierName && (
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <Avatar className="h-16 w-16">
+                  <AvatarFallback className="bg-primary/10 text-primary text-lg">
+                    {getInitials(product.supplierName)}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-lg font-semibold">
+                      {product.supplierName}
+                    </h3>
+                    {product.supplierVerified && (
+                      <Badge
+                        variant="outline"
+                        className="bg-green-50 text-green-700"
+                      >
+                        Verified
+                      </Badge>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-4 mt-1">
+                    <div className="flex items-center">
+                      <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                      <span className="text-xs ml-1">
+                        {product.supplierRating}
+                      </span>
+                    </div>
+                    {product.supplierLocation && (
+                      <>
+                        <span className="text-xs text-muted-foreground">•</span>
+                        <span className="text-xs text-muted-foreground flex items-center">
+                          <MapPin className="h-3 w-3 mr-1" />
+                          {product.supplierLocation}
+                        </span>
+                      </>
+                    )}
+                    {product.supplierEstablished && (
+                      <>
+                        <span className="text-xs text-muted-foreground">•</span>
+                        <span className="text-xs text-muted-foreground">
+                          Est. {product.supplierEstablished}
+                        </span>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+              <Button
+                variant="outline"
+                onClick={onViewSupplier}
+                asChild={!!onViewSupplier}
+              >
+                {onViewSupplier ? (
+                  <Link to={getSupplierPath()}>
+                    View Profile
+                    <ChevronRight className="h-4 w-4 ml-2" />
+                  </Link>
+                ) : (
+                  <span>View Profile</span>
+                )}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Tabs for Details */}
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="grid w-full grid-cols-3 lg:w-[400px]">
+          <TabsTrigger value="description">Description</TabsTrigger>
+          <TabsTrigger value="specifications">Specifications</TabsTrigger>
+          <TabsTrigger value="reviews">
+            Reviews ({product.reviewCount})
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="description" className="mt-6">
+          <Card>
+            <CardContent className="p-6">
+              <p className="text-sm leading-relaxed">{product.description}</p>
+
+              {/* Tags */}
+              <div className="flex flex-wrap gap-2 mt-4">
+                {product.tags.map((tag) => (
+                  <Badge key={tag} variant="secondary">
+                    {tag}
+                  </Badge>
+                ))}
+              </div>
+
+              {/* Delivery Info */}
+              {product.deliveryOptions && (
+                <div className="mt-6 p-4 bg-muted/50 rounded-lg">
+                  <h4 className="text-sm font-semibold mb-3">
+                    Delivery Information
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="flex items-center gap-2">
+                      <Truck className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm">
+                        {product.deliveryOptions.estimatedDays}
+                      </span>
+                    </div>
+                    {product.deliveryOptions.offered && (
+                      <div className="flex items-center gap-2">
+                        <Clock className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm">
+                          {product.deliveryOptions.cost
+                            ? formatPrice(product.deliveryOptions.cost)
+                            : "Free Delivery"}
+                        </span>
+                      </div>
+                    )}
+                    {product.deliveryOptions.freeThreshold && (
+                      <div className="flex items-center gap-2">
+                        <Award className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm">
+                          Free over{" "}
+                          {formatPrice(product.deliveryOptions.freeThreshold)}
+                        </span>
+                      </div>
+                    )}
+                    {product.deliveryOptions.pickupAvailable && (
+                      <div className="flex items-center gap-2">
+                        <Building2 className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm">Pickup available</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="specifications" className="mt-6">
+          <Card>
+            <CardContent className="p-6">
+              {product.specifications ? (
+                <div className="space-y-3">
+                  {Object.entries(product.specifications).map(
+                    ([key, value]) => (
+                      <div
+                        key={key}
+                        className="grid grid-cols-3 gap-4 py-2 border-b last:border-0"
+                      >
+                        <span className="text-sm font-medium text-muted-foreground">
+                          {key}
+                        </span>
+                        <span className="text-sm col-span-2">{value}</span>
+                      </div>
+                    ),
+                  )}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  No specifications available.
+                </p>
+              )}
+
+              {/* For factory - production info */}
+              {role === "factory" && product.productionTime && (
+                <div className="mt-6 p-4 bg-blue-50 rounded-lg">
+                  <h4 className="text-sm font-semibold mb-3">
+                    Production Information
+                  </h4>
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">
+                        Production Time
+                      </span>
+                      <span className="font-medium">
+                        {product.productionTime}
+                      </span>
+                    </div>
+                    {product.batchSize && (
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">
+                          Batch Size
+                        </span>
+                        <span className="font-medium">
+                          {product.batchSize} units
+                        </span>
+                      </div>
+                    )}
+                    {product.rawMaterials && (
+                      <div className="mt-3">
+                        <p className="text-xs font-medium mb-2">
+                          Raw Materials
+                        </p>
+                        {product.rawMaterials.map((material, idx) => (
+                          <div
+                            key={idx}
+                            className="flex justify-between text-xs"
+                          >
+                            <span>{material.name}</span>
+                            <span>
+                              {material.quantity} {material.unit}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="reviews" className="mt-6">
+          <Card>
+            <CardContent className="p-6">
+              {product.reviews && product.reviews.length > 0 ? (
+                <div className="space-y-4">
+                  {product.reviews.map((review) => (
+                    <div
+                      key={review.id}
+                      className="border-b last:border-0 pb-4 last:pb-0"
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="font-medium">{review.user}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {new Date(review.date).toLocaleDateString()}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="flex">
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <Star
+                              key={star}
+                              className={cn(
+                                "h-3 w-3",
+                                star <= review.rating
+                                  ? "fill-yellow-400 text-yellow-400"
+                                  : "text-gray-300",
+                              )}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                      <p className="text-sm">{review.comment}</p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <Star className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
+                  <h3 className="font-medium mb-1">No reviews yet</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Be the first to review this product
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+
+      {/* Related Products */}
+      {product.relatedProducts && product.relatedProducts.length > 0 && (
+        <div className="mt-8">
+          <h2 className="text-xl font-semibold mb-4">You might also like</h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {product.relatedProducts.map((related) => (
+              <Link
+                key={related.id}
+                to={`/${role}/products/${related.id}`}
+                className="group"
+              >
+                <Card className="overflow-hidden hover:shadow-md transition-shadow">
+                  <div className="aspect-square bg-muted flex items-center justify-center">
+                    <Package className="h-8 w-8 text-muted-foreground/30" />
+                  </div>
+                  <CardContent className="p-3">
+                    <p className="text-sm font-medium line-clamp-1 group-hover:text-primary">
+                      {related.name}
+                    </p>
+                    <div className="flex items-center gap-1 mt-1">
+                      <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                      <span className="text-xs">{related.rating}</span>
+                    </div>
+                    <p className="text-sm font-semibold mt-1">
+                      {formatPrice(related.price)}
+                      <span className="text-xs text-muted-foreground ml-1">
+                        /{related.unit}
+                      </span>
+                    </p>
+                  </CardContent>
+                </Card>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};

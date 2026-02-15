@@ -20,7 +20,14 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardFooter,
+} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
@@ -133,17 +140,52 @@ const initialCartItems = [
 
 // Payment methods
 const paymentMethods = [
-  { id: "cash", name: "Cash on Delivery", icon: Wallet, description: "Pay when you receive your order" },
-  { id: "credit", name: "Credit", icon: CreditCard, description: "Pay with credit (30 days terms)" },
-  { id: "cheque", name: "Cheque", icon: Building, description: "Pay by cheque" },
-  { id: "mobile", name: "Mobile Banking", icon: Wallet, description: "Pay with mobile money" },
-  { id: "online", name: "Online Payment", icon: CreditCard, description: "Pay with Chapa, Telebirr, etc." },
+  {
+    id: "cash",
+    name: "Cash on Delivery",
+    icon: Wallet,
+    description: "Pay when you receive your order",
+  },
+  {
+    id: "credit",
+    name: "Credit",
+    icon: CreditCard,
+    description: "Pay with credit (30 days terms)",
+  },
+  {
+    id: "cheque",
+    name: "Cheque",
+    icon: Building,
+    description: "Pay by cheque",
+  },
+  {
+    id: "mobile",
+    name: "Mobile Banking",
+    icon: Wallet,
+    description: "Pay with mobile money",
+  },
+  {
+    id: "online",
+    name: "Online Payment",
+    icon: CreditCard,
+    description: "Pay with Chapa, Telebirr, etc.",
+  },
 ];
 
 // Delivery options
 const deliveryOptions = [
-  { id: "standard", name: "Standard Delivery", days: "3-5 business days", cost: "Included" },
-  { id: "express", name: "Express Delivery", days: "1-2 business days", cost: "ETB 500" },
+  {
+    id: "standard",
+    name: "Standard Delivery",
+    days: "3-5 business days",
+    cost: "Included",
+  },
+  {
+    id: "express",
+    name: "Express Delivery",
+    days: "1-2 business days",
+    cost: "ETB 500",
+  },
 ];
 
 const CartPage: React.FC = () => {
@@ -156,67 +198,73 @@ const CartPage: React.FC = () => {
   const [checkoutDialogOpen, setCheckoutDialogOpen] = useState(false);
 
   // Calculate selected items
-  const selectedItems = cartItems.filter(item => item.selected);
-  
+  const selectedItems = cartItems.filter((item) => item.selected);
+
   // Calculate subtotal
   const subtotal = selectedItems.reduce(
     (sum, item) => sum + item.price * item.quantity,
-    0
+    0,
   );
 
   // Calculate shipping
   const shipping = selectedItems.reduce(
     (sum, item) => sum + (item.selected ? item.shippingCost : 0),
-    0
+    0,
   );
 
   // Calculate discount (mock)
   const discount = promoApplied ? subtotal * 0.1 : 0;
-  
+
   // Calculate tax (15% VAT in Ethiopia)
   const tax = (subtotal - discount) * 0.15;
-  
+
   // Calculate total
   const total = subtotal + shipping + tax - discount;
 
   // Update quantity
   const updateQuantity = (itemId: number, newQuantity: number) => {
-    setCartItems(prev =>
-      prev.map(item =>
+    setCartItems((prev) =>
+      prev.map((item) =>
         item.id === itemId
-          ? { ...item, quantity: Math.max(item.minOrder, Math.min(newQuantity, item.maxOrder)) }
-          : item
-      )
+          ? {
+              ...item,
+              quantity: Math.max(
+                item.minOrder,
+                Math.min(newQuantity, item.maxOrder),
+              ),
+            }
+          : item,
+      ),
     );
   };
 
   // Toggle item selection
   const toggleItem = (itemId: number) => {
-    setCartItems(prev =>
-      prev.map(item =>
-        item.id === itemId ? { ...item, selected: !item.selected } : item
-      )
+    setCartItems((prev) =>
+      prev.map((item) =>
+        item.id === itemId ? { ...item, selected: !item.selected } : item,
+      ),
     );
-    setSelectAll(cartItems.every(item => item.selected));
+    setSelectAll(cartItems.every((item) => item.selected));
   };
 
   // Toggle select all
   const toggleSelectAll = () => {
     const newSelectAll = !selectAll;
     setSelectAll(newSelectAll);
-    setCartItems(prev =>
-      prev.map(item => ({ ...item, selected: newSelectAll }))
+    setCartItems((prev) =>
+      prev.map((item) => ({ ...item, selected: newSelectAll })),
     );
   };
 
   // Remove item
   const removeItem = (itemId: number) => {
-    setCartItems(prev => prev.filter(item => item.id !== itemId));
+    setCartItems((prev) => prev.filter((item) => item.id !== itemId));
   };
 
   // Remove selected items
   const removeSelected = () => {
-    setCartItems(prev => prev.filter(item => !item.selected));
+    setCartItems((prev) => prev.filter((item) => !item.selected));
     setSelectAll(false);
   };
 
@@ -233,22 +281,25 @@ const CartPage: React.FC = () => {
   };
 
   // Get cart summary by supplier
-  const supplierGroups = selectedItems.reduce((groups, item) => {
-    const key = item.supplierId;
-    if (!groups[key]) {
-      groups[key] = {
-        supplierId: item.supplierId,
-        supplierName: item.supplier,
-        items: [],
-        subtotal: 0,
-        shipping: 0,
-      };
-    }
-    groups[key].items.push(item);
-    groups[key].subtotal += item.price * item.quantity;
-    groups[key].shipping += item.shippingCost;
-    return groups;
-  }, {} as Record<string, any>);
+  const supplierGroups = selectedItems.reduce(
+    (groups, item) => {
+      const key = item.supplierId;
+      if (!groups[key]) {
+        groups[key] = {
+          supplierId: item.supplierId,
+          supplierName: item.supplier,
+          items: [],
+          subtotal: 0,
+          shipping: 0,
+        };
+      }
+      groups[key].items.push(item);
+      groups[key].subtotal += item.price * item.quantity;
+      groups[key].shipping += item.shippingCost;
+      return groups;
+    },
+    {} as Record<string, any>,
+  );
 
   return (
     <div className="space-y-6">
@@ -284,13 +335,11 @@ const CartPage: React.FC = () => {
             </div>
             <h3 className="text-lg font-semibold mb-2">Your cart is empty</h3>
             <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-              Looks like you haven't added any products to your cart yet.
-              Start browsing products from verified suppliers.
+              Looks like you haven't added any products to your cart yet. Start
+              browsing products from verified suppliers.
             </p>
             <Button size="lg" asChild>
-              <Link to="/retailer/products">
-                Browse Products
-              </Link>
+              <Link to="/retailer/products">Browse Products</Link>
             </Button>
           </div>
         </Card>
@@ -334,21 +383,32 @@ const CartPage: React.FC = () => {
                     <div className="flex items-center gap-2">
                       <Avatar className="h-8 w-8">
                         <AvatarFallback className="bg-primary/10 text-primary text-xs">
-                          {group.supplierName.split(" ").map((n: string) => n[0]).join("").slice(0, 2)}
+                          {group.supplierName
+                            .split(" ")
+                            .map((n: string) => n[0])
+                            .join("")
+                            .slice(0, 2)}
                         </AvatarFallback>
                       </Avatar>
                       <div>
                         <CardTitle className="text-base">
-                          <Link to={`/retailer/suppliers/${group.supplierId}`} className="hover:text-primary">
+                          <Link
+                            to={`/retailer/suppliers/${group.supplierId}`}
+                            className="hover:text-primary"
+                          >
                             {group.supplierName}
                           </Link>
                         </CardTitle>
                         <CardDescription>
-                          {group.items.length} items • Shipping: {formatPrice(group.shipping)}
+                          {group.items.length} items • Shipping:{" "}
+                          {formatPrice(group.shipping)}
                         </CardDescription>
                       </div>
                     </div>
-                    <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                    <Badge
+                      variant="outline"
+                      className="bg-green-50 text-green-700 border-green-200"
+                    >
                       Verified Supplier
                     </Badge>
                   </div>
@@ -356,12 +416,15 @@ const CartPage: React.FC = () => {
                 <CardContent className="pb-3">
                   <div className="space-y-4">
                     {group.items.map((item: any) => (
-                      <div key={item.id} className="flex items-start gap-4 py-2">
+                      <div
+                        key={item.id}
+                        className="flex items-start gap-4 py-2"
+                      >
                         <Checkbox
                           checked={item.selected}
                           onCheckedChange={() => toggleItem(item.id)}
                         />
-                        
+
                         {/* Product Image Placeholder */}
                         <div className="h-16 w-16 bg-gradient-to-br from-primary/5 to-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
                           <Package className="h-8 w-8 text-primary/30" />
@@ -371,7 +434,7 @@ const CartPage: React.FC = () => {
                         <div className="flex-1">
                           <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-2">
                             <div>
-                              <Link 
+                              <Link
                                 to={`/retailer/products/${item.productId}`}
                                 className="text-sm font-medium hover:text-primary"
                               >
@@ -379,17 +442,24 @@ const CartPage: React.FC = () => {
                               </Link>
                               <div className="flex items-center gap-2 mt-1">
                                 <span className="text-xs text-muted-foreground">
-                                  Unit Price: {formatPrice(item.price)}/{item.unit}
+                                  Unit Price: {formatPrice(item.price)}/
+                                  {item.unit}
                                 </span>
-                                <Badge variant="outline" className="text-[10px]">
+                                <Badge
+                                  variant="outline"
+                                  className="text-[10px]"
+                                >
                                   Min: {item.minOrder}
                                 </Badge>
-                                <Badge variant="outline" className="text-[10px] bg-green-50">
+                                <Badge
+                                  variant="outline"
+                                  className="text-[10px] bg-green-50"
+                                >
                                   In Stock: {item.stock}
                                 </Badge>
                               </div>
                             </div>
-                            
+
                             <div className="flex items-center gap-3">
                               {/* Quantity Selector */}
                               <div className="flex items-center border rounded-md">
@@ -397,7 +467,12 @@ const CartPage: React.FC = () => {
                                   size="icon"
                                   variant="ghost"
                                   className="h-8 w-8 rounded-r-none"
-                                  onClick={() => updateQuantity(item.id, item.quantity - item.minOrder)}
+                                  onClick={() =>
+                                    updateQuantity(
+                                      item.id,
+                                      item.quantity - item.minOrder,
+                                    )
+                                  }
                                   disabled={item.quantity <= item.minOrder}
                                 >
                                   <Minus className="h-3 w-3" />
@@ -409,7 +484,12 @@ const CartPage: React.FC = () => {
                                   size="icon"
                                   variant="ghost"
                                   className="h-8 w-8 rounded-l-none"
-                                  onClick={() => updateQuantity(item.id, item.quantity + item.minOrder)}
+                                  onClick={() =>
+                                    updateQuantity(
+                                      item.id,
+                                      item.quantity + item.minOrder,
+                                    )
+                                  }
                                   disabled={item.quantity >= item.maxOrder}
                                 >
                                   <Plus className="h-3 w-3" />
@@ -453,15 +533,19 @@ const CartPage: React.FC = () => {
                     <AlertCircle className="h-4 w-4 text-blue-600" />
                   </div>
                   <div className="flex-1">
-                    <p className="text-sm font-medium">Bulk Order Discount Available</p>
+                    <p className="text-sm font-medium">
+                      Bulk Order Discount Available
+                    </p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      Add more items to qualify for volume discounts. 
-                      Spend ETB 15,000 more to get 10% off.
+                      Add more items to qualify for volume discounts. Spend ETB
+                      15,000 more to get 10% off.
                     </p>
                     <div className="mt-2 h-2 w-full bg-muted rounded-full overflow-hidden">
-                      <div 
+                      <div
                         className="h-full bg-primary rounded-full"
-                        style={{ width: `${Math.min((subtotal / 50000) * 100, 100)}%` }}
+                        style={{
+                          width: `${Math.min((subtotal / 50000) * 100, 100)}%`,
+                        }}
                       />
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">
@@ -521,8 +605,8 @@ const CartPage: React.FC = () => {
                       onChange={(e) => setPromoCode(e.target.value)}
                       disabled={promoApplied}
                     />
-                    <Button 
-                      variant="outline" 
+                    <Button
+                      variant="outline"
                       onClick={applyPromo}
                       disabled={promoApplied || !promoCode}
                     >
@@ -538,8 +622,8 @@ const CartPage: React.FC = () => {
                 </div>
               </CardContent>
               <CardFooter className="flex-col gap-3">
-                <Button 
-                  className="w-full" 
+                <Button
+                  className="w-full"
                   size="lg"
                   disabled={selectedItems.length === 0}
                   onClick={() => setCheckoutDialogOpen(true)}
@@ -548,7 +632,8 @@ const CartPage: React.FC = () => {
                   <ChevronRight className="h-4 w-4 ml-2" />
                 </Button>
                 <p className="text-xs text-muted-foreground text-center">
-                  By placing this order, you agree to our Terms of Service and Return Policy
+                  By placing this order, you agree to our Terms of Service and
+                  Return Policy
                 </p>
               </CardFooter>
             </Card>
@@ -556,7 +641,9 @@ const CartPage: React.FC = () => {
             {/* Delivery Info */}
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium">Delivery Information</CardTitle>
+                <CardTitle className="text-sm font-medium">
+                  Delivery Information
+                </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="flex items-start gap-3">
@@ -564,7 +651,9 @@ const CartPage: React.FC = () => {
                   <div>
                     <p className="text-xs font-medium">Estimated Delivery</p>
                     <p className="text-xs text-muted-foreground">
-                      {deliveryOption === "standard" ? "3-5 business days" : "1-2 business days"}
+                      {deliveryOption === "standard"
+                        ? "3-5 business days"
+                        : "1-2 business days"}
                     </p>
                   </div>
                 </div>
@@ -581,40 +670,56 @@ const CartPage: React.FC = () => {
             </Card>
 
             {/* Saved for Later */}
-            {cartItems.filter(item => !item.selected).length > 0 && (
+            {cartItems.filter((item) => !item.selected).length > 0 && (
               <Card>
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium">Saved for Later</CardTitle>
+                  <CardTitle className="text-sm font-medium">
+                    Saved for Later
+                  </CardTitle>
                   <CardDescription>
-                    {cartItems.filter(item => !item.selected).length} items
+                    {cartItems.filter((item) => !item.selected).length} items
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-2">
-                    {cartItems.filter(item => !item.selected).slice(0, 2).map(item => (
-                      <div key={item.id} className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <div className="h-8 w-8 bg-muted rounded flex items-center justify-center">
-                            <Package className="h-4 w-4 text-muted-foreground" />
-                          </div>
-                          <div>
-                            <p className="text-xs font-medium">{item.name}</p>
-                            <p className="text-xs text-muted-foreground">{formatPrice(item.price)}</p>
-                          </div>
-                        </div>
-                        <Button 
-                          size="sm" 
-                          variant="ghost" 
-                          className="h-7 text-xs"
-                          onClick={() => toggleItem(item.id)}
+                    {cartItems
+                      .filter((item) => !item.selected)
+                      .slice(0, 2)
+                      .map((item) => (
+                        <div
+                          key={item.id}
+                          className="flex items-center justify-between"
                         >
-                          Move to Cart
-                        </Button>
-                      </div>
-                    ))}
-                    {cartItems.filter(item => !item.selected).length > 2 && (
-                      <Button variant="link" size="sm" className="text-xs w-full">
-                        View {cartItems.filter(item => !item.selected).length - 2} more items
+                          <div className="flex items-center gap-2">
+                            <div className="h-8 w-8 bg-muted rounded flex items-center justify-center">
+                              <Package className="h-4 w-4 text-muted-foreground" />
+                            </div>
+                            <div>
+                              <p className="text-xs font-medium">{item.name}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {formatPrice(item.price)}
+                              </p>
+                            </div>
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-7 text-xs"
+                            onClick={() => toggleItem(item.id)}
+                          >
+                            Move to Cart
+                          </Button>
+                        </div>
+                      ))}
+                    {cartItems.filter((item) => !item.selected).length > 2 && (
+                      <Button
+                        variant="link"
+                        size="sm"
+                        className="text-xs w-full"
+                      >
+                        View{" "}
+                        {cartItems.filter((item) => !item.selected).length - 2}{" "}
+                        more items
                       </Button>
                     )}
                   </div>
@@ -637,7 +742,7 @@ const CartPage: React.FC = () => {
 
           <div className="space-y-6 py-4">
             {/* Order Items Summary */}
-            <div>
+            {/* <div>
               <h4 className="text-sm font-medium mb-3">Order Items</h4>
               <ScrollArea className="h-[200px] pr-4">
                 <div className="space-y-3">
@@ -654,23 +759,32 @@ const CartPage: React.FC = () => {
                   ))}
                 </div>
               </ScrollArea>
-            </div>
+            </div> */}
 
             <Separator />
 
             {/* Delivery Options */}
             <div className="space-y-3">
               <h4 className="text-sm font-medium">Delivery Option</h4>
-              <RadioGroup value={deliveryOption} onValueChange={setDeliveryOption}>
+              <RadioGroup
+                value={deliveryOption}
+                onValueChange={setDeliveryOption}
+              >
                 {deliveryOptions.map((option) => (
                   <div key={option.id} className="flex items-center space-x-2">
                     <RadioGroupItem value={option.id} id={option.id} />
                     <Label htmlFor={option.id} className="flex-1">
                       <div className="flex justify-between">
-                        <span className="text-sm font-medium">{option.name}</span>
-                        <span className="text-sm text-muted-foreground">{option.cost}</span>
+                        <span className="text-sm font-medium">
+                          {option.name}
+                        </span>
+                        <span className="text-sm text-muted-foreground">
+                          {option.cost}
+                        </span>
                       </div>
-                      <p className="text-xs text-muted-foreground">{option.days}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {option.days}
+                      </p>
                     </Label>
                   </div>
                 ))}
@@ -680,14 +794,19 @@ const CartPage: React.FC = () => {
             {/* Payment Methods */}
             <div className="space-y-3">
               <h4 className="text-sm font-medium">Payment Method</h4>
-              <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod}>
+              <RadioGroup
+                value={paymentMethod}
+                onValueChange={setPaymentMethod}
+              >
                 {paymentMethods.map((method) => (
                   <div key={method.id} className="flex items-center space-x-2">
                     <RadioGroupItem value={method.id} id={method.id} />
                     <Label htmlFor={method.id} className="flex-1">
                       <div className="flex items-center gap-2">
                         <method.icon className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm font-medium">{method.name}</span>
+                        <span className="text-sm font-medium">
+                          {method.name}
+                        </span>
                       </div>
                       <p className="text-xs text-muted-foreground ml-6">
                         {method.description}
@@ -729,13 +848,18 @@ const CartPage: React.FC = () => {
           </div>
 
           <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setCheckoutDialogOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setCheckoutDialogOpen(false)}
+            >
               Cancel
             </Button>
-            <Button onClick={() => {
-              setCheckoutDialogOpen(false);
-              // Navigate to order confirmation or process order
-            }}>
+            <Button
+              onClick={() => {
+                setCheckoutDialogOpen(false);
+                // Navigate to order confirmation or process order
+              }}
+            >
               Place Order
             </Button>
           </DialogFooter>

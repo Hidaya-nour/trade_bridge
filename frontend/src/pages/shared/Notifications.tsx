@@ -253,7 +253,7 @@ const NotificationsPage: React.FC = () => {
             <CheckCheck className="h-4 w-4 mr-2" />
             Mark All as Read
           </Button>
-          <DropdownMenu>
+          {/* <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="icon">
                 <Settings className="h-4 w-4" />
@@ -289,7 +289,7 @@ const NotificationsPage: React.FC = () => {
                 </Link>
               </DropdownMenuItem>
             </DropdownMenuContent>
-          </DropdownMenu>
+          </DropdownMenu> */}
         </div>
       </div>
 

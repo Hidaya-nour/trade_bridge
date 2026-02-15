@@ -74,15 +74,6 @@ const stats = [
     color: "text-red-600",
     bg: "bg-red-100",
   },
-  {
-    title: "Active Suppliers",
-    value: "18",
-    change: "+2",
-    trend: "up" as const,
-    icon: Store,
-    color: "text-purple-600",
-    bg: "bg-purple-100",
-  },
 ];
 
 // Mock incoming orders
@@ -261,7 +252,7 @@ const DistributorDashboard: React.FC = () => {
       <WelcomeHeader user={user} />
 
       {/* Stats Grid - Using shared StatsCard */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {stats.map((stat, index) => (
           <StatsCard key={index} {...stat} />
         ))}
@@ -657,12 +648,7 @@ const DistributorDashboard: React.FC = () => {
                   </span>
                   <span className="text-sm font-medium">8</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-muted-foreground">
-                    Total Retailers
-                  </span>
-                  <span className="text-sm font-medium">45</span>
-                </div>
+
                 <div className="flex justify-between">
                   <span className="text-sm text-muted-foreground">
                     Avg. Order Value

@@ -40,7 +40,7 @@ import { PerformanceCard } from "@/components/shared/PerformanceCard";
 const mockUser = {
   name: "Abebe Kebede",
   email: "abebe@adama-wholesalers.com",
-  role: "retailer",
+  role: "distributor",
   avatar: "",
   verified: true,
   joinDate: "March 2023",
