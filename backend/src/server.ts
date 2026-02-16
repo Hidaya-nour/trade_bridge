@@ -1,67 +1,76 @@
-import express, { Application } from "express";
-import dotenv from "dotenv";
-import cors from "cors";
-import sequelize from "./db";
+import express from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
+import morgan from 'morgan';
+import dotenv from 'dotenv';
+import sequelize, { testConnection } from './config/database';
+import authRoutes from './routes/auth.routes';
+import logger from './utils/logger';
 
-// 🔗 Import associations (VERY IMPORTANT)
-import "./db";
+// 1️⃣ FIRST: Import models (order doesn't matter now)
+import './models/user.model';
+import './models/RefreshToken.model';
 
-// Routes
-import authRoutes from "./routes/auth.routes";
-// import productRoutes from "./routes/product.routes";
-// import orderRoutes from "./routes/order.routes";
-import feedbackRoutes from "./routes/feedback.routes";
-import messageRoutes from "./routes/message.routes";
-import errorMiddleware from "./middleware/error.middleware";
-
-import { protect } from "./middleware/auth.middleware";
+// 2️⃣ SECOND: Setup associations AFTER models are loaded
+import { setupAssociations } from './models/associations';
 
 dotenv.config();
 
-const app: Application = express();
-const PORT = Number(process.env.PORT) || 3000;
+const app = express();
+const PORT = process.env.PORT || 5000;
 
-/*  MIDDLEWARE */
-app.use(cors());
+// 3️⃣ THIRD: Call setup function
+setupAssociations();
+
+// Middleware
+app.use(helmet());
+app.use(cors({
+  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  credentials: true
+}));
 app.use(express.json());
-app.use(errorMiddleware);
+app.use(express.urlencoded({ extended: true }));
+app.use(morgan('dev'));
 
+// Routes
+app.use('/api/auth', authRoutes);
 
+// Health check
+app.get('/api/health', (req, res) => {
+  res.json({ 
+    success: true, 
+    message: 'Server is running',
+    timestamp: new Date().toISOString()
+  });
+});
 
+// Error handler
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  logger.error(err.stack);
+  res.status(500).json({ 
+    success: false, 
+    message: 'Internal server error',
+    error: process.env.NODE_ENV === 'development' ? err.message : undefined
+  });
+});
 
-/*  ROUTES  */
-app.use("/api/auth", authRoutes);
-// app.use("/api/products", protect, productRoutes);
-// app.use("/api/orders", protect, orderRoutes);
-app.use("/api/feedback", protect, feedbackRoutes);
-app.use("/api/messages", protect, messageRoutes);
-
-
-
-
-
-
-
-
-
-/* 
- SERVER START 
- */
+// Start server
 const startServer = async () => {
-  try {
-    await sequelize.authenticate();
-    console.log("✅ MySQL connected");
-
-    await sequelize.sync({ alter: true });
-    console.log("✅ Models synced");
-
-    app.listen(PORT, () => {
-      console.log(`🚀 Server running on port ${PORT}`);
-    });
-  } catch (error) {
-    console.error("❌ Server failed to start:", error);
+  const dbConnected = await testConnection();
+  
+  if (!dbConnected) {
+    logger.error('❌ Failed to connect to database. Exiting...');
     process.exit(1);
   }
+
+  if (process.env.NODE_ENV === 'development') {
+    await sequelize.sync({ alter: true });
+    logger.info('✅ Database synced');
+  }
+
+  app.listen(PORT, () => {
+    logger.info(`🚀 Server running on port ${PORT}`);
+  });
 };
 
 startServer();

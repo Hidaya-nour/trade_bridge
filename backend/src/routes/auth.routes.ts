@@ -1,11 +1,69 @@
-import { Router } from "express";
-import { AuthController } from "../controllers/auth.controller";
-import { protect } from "../middleware/auth.middleware";
+import express from 'express';
+import rateLimit from 'express-rate-limit';
+import { AuthController } from '../controllers/auth.controller';
+import { authenticate } from '../middleware/auth.middleware';
+import { validate } from '../middleware/validation.middleware';
+import {
+  registerSchema,
+  loginSchema,
+  refreshTokenSchema,
+  emailSchema,
+  resetPasswordSchema
+} from '../validations/auth.validation';
 
-const router = Router();
+const router = express.Router();
+const authController = new AuthController();
 
-router.post("/register", AuthController.register);
-router.post("/login", AuthController.login);
-router.get("/me", protect, AuthController.getMe);
+// Rate limiting for auth routes
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // 5 attempts per window
+  message: { success: false, message: 'Too many login attempts. Please try again later.' }
+});
+
+const registerLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 3, // 3 registrations per hour
+  message: { success: false, message: 'Too many registration attempts. Please try again later.' }
+});
+
+// Public routes
+router.post(
+  '/register',
+  registerLimiter,
+//   validate(registerSchema),
+  authController.register
+);
+
+router.post(
+  '/login',
+//   loginLimiter,
+  validate(loginSchema),
+  authController.login
+);
+
+router.post(
+  '/refresh',
+  validate(refreshTokenSchema),
+  authController.refreshToken
+);
+
+router.post('/logout', authController.logout);
+
+// router.post(
+//   '/password-reset-request',
+//   validate(emailSchema),
+//   authController.requestPasswordReset
+// );
+
+// router.post(
+//   '/password-reset',
+//   validate(resetPasswordSchema),
+//   authController.resetPassword
+// );
+
+// Protected routes
+router.get('/me', authenticate, authController.getMe);
+router.post('/logout-all', authenticate, authController.logoutAll);
 
 export default router;

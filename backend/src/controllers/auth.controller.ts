@@ -1,33 +1,173 @@
-import { Request, Response } from "express";
-import { AuthService } from "../services/auth.service";
-import { AuthRequest } from "../middleware/auth.middleware";
+import { Request, Response } from 'express';
+import { AuthService } from '../services/auth/auth.service';
+import { AppError } from '../utils/errors';
+import logger from '../utils/logger';
 
 export class AuthController {
-    static async register(req: Request, res: Response) {
-        try {
-            const result = await AuthService.register(req.body);
-            return res.status(201).json(result);
-        } catch (error: any) {
-            return res.status(400).json({ message: error.message });
-        }
+  private authService = new AuthService();
+
+  register = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const result = await this.authService.register(req.body);
+      res.status(201).json({
+        success: true,
+        message: 'Registration successful. Please wait for admin approval.',
+        data: result
+      });
+    } catch (error) {
+      if (error instanceof AppError) {
+        res.status(error.statusCode).json({ success: false, message: error.message });
+      } else {
+        logger.error('Registration error:', error);
+        res.status(500).json({ success: false, message: 'Internal server error' });
+      }
     }
+  };
 
-    static async login(req: Request, res: Response) {
-        try {
-            const { email, password } = req.body;
-            const result = await AuthService.login(email, password);
-            return res.json(result);
-        } catch (error: any) {
-            return res.status(401).json({ message: error.message });
-        }
+  login = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { email, password } = req.body;
+      const userAgent = req.get('User-Agent');
+      const ipAddress = req.ip;
+
+      const result = await this.authService.login({
+        email,
+        password,
+        userAgent,
+        ipAddress
+      });
+
+      res.json({
+        success: true,
+        message: 'Login successful',
+        data: result
+      });
+    } catch (error) {
+      if (error instanceof AppError) {
+        res.status(error.statusCode).json({ success: false, message: error.message });
+      } else {
+        logger.error('Login error:', error);
+        res.status(500).json({ success: false, message: 'Internal server error' });
+      }
     }
+  };
 
-    static async getMe(req: AuthRequest, res: Response) {
-        if (!req.user) {
-            return res.status(401).json({ message: "Not authenticated" });
-        }
+  refreshToken = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { refreshToken } = req.body;
+      const result = await this.authService.refreshToken(refreshToken);
 
-        res.json({ user: req.user });
-    };
+      res.json({
+        success: true,
+        data: result
+      });
+    } catch (error) {
+      if (error instanceof AppError) {
+        res.status(error.statusCode).json({ success: false, message: error.message });
+      } else {
+        logger.error('Refresh token error:', error);
+        res.status(500).json({ success: false, message: 'Internal server error' });
+      }
+    }
+  };
 
+  logout = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { refreshToken } = req.body;
+      const userId = req.user?.id;
+
+      if (refreshToken && userId) {
+        await this.authService.logout(refreshToken, userId);
+      }
+
+      res.json({
+        success: true,
+        message: 'Logout successful'
+      });
+    } catch (error) {
+      if (error instanceof AppError) {
+        res.status(error.statusCode).json({ success: false, message: error.message });
+      } else {
+        logger.error('Logout error:', error);
+        res.status(500).json({ success: false, message: 'Internal server error' });
+      }
+    }
+  };
+
+  logoutAll = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const userId = req.user?.id;
+
+      if (userId) {
+        await this.authService.logoutAll(userId);
+      }
+
+      res.json({
+        success: true,
+        message: 'Logged out from all devices'
+      });
+    } catch (error) {
+      if (error instanceof AppError) {
+        res.status(error.statusCode).json({ success: false, message: error.message });
+      } else {
+        logger.error('Logout all error:', error);
+        res.status(500).json({ success: false, message: 'Internal server error' });
+      }
+    }
+  };
+
+  getMe = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const user = req.user;
+      res.json({
+        success: true,
+        data: { user }
+      });
+    } catch (error) {
+      if (error instanceof AppError) {
+        res.status(error.statusCode).json({ success: false, message: error.message });
+      } else {
+        logger.error('Get me error:', error);
+        res.status(500).json({ success: false, message: 'Internal server error' });
+      }
+    }
+  };
+
+  requestPasswordReset = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { email } = req.body;
+      await this.authService.requestPasswordReset(email);
+
+      res.json({
+        success: true,
+        message: 'If the email exists, a reset link has been sent'
+      });
+    } catch (error) {
+      if (error instanceof AppError) {
+        res.status(error.statusCode).json({ success: false, message: error.message });
+      } else {
+        logger.error('Password reset request error:', error);
+        res.status(500).json({ success: false, message: 'Internal server error' });
+      }
+    }
+  };
+
+  resetPassword = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { token, newPassword } = req.body;
+      await this.authService.resetPassword(token, newPassword);
+
+      res.json({
+        success: true,
+        message: 'Password reset successful'
+      });
+    } catch (error) {
+      if (error instanceof AppError) {
+        res.status(error.statusCode).json({ success: false, message: error.message });
+      } else {
+        logger.error('Password reset error:', error);
+        res.status(500).json({ success: false, message: 'Internal server error' });
+      }
+    }
+  };
 }

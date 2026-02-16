@@ -1,81 +1,123 @@
-import { DataTypes, Model, Optional } from "sequelize";
-import sequelize from "../db";
+import { DataTypes, Model, Optional } from 'sequelize';
+import sequelize from '../config/database';
+import { IUser, UserRole, UserStatus } from '../types/auth.types';
 
-export type UserRole = "shop" | "distributor" | "factory" | "admin";
-export type UserStatus = "active" | "inactive" | "suspended";
+interface UserCreationAttributes extends Optional<IUser, 'id' | 'created_at' | 'updated_at' | 'verified'> {}
 
-interface UserAttributes {
-    user_id: string;
-    full_name: string;
-    role: UserRole;
-    phone?: string;
-    email: string;
-    password_hash: string;
-    status: UserStatus;
-    created_at?: Date;
-    updated_at?: Date;
-    deleted_at?: Date;
-}
+export class User extends Model<IUser, UserCreationAttributes> implements IUser {
+  public id!: string;
+  public email!: string;
+  public full_name!: string;
+  public role!: UserRole;
+  public status!: UserStatus;
+  public phone?: string;
+  public password_hash!: string;
+  public business_name?: string;
+  public business_address?: string;
+  public tin_number?: string;
+  public profile_image?: string;
+  public verified!: boolean;
+  public created_at!: Date;
+  public updated_at!: Date;
+  public deleted_at?: Date;
+  public approved_at?: Date;
+  public approved_by?: string;
+  public last_login?: Date;
 
-interface UserCreationAttributes
-    extends Optional<UserAttributes, "created_at" | "updated_at"> { }
-
-class User extends Model<UserAttributes, UserCreationAttributes>
-    implements UserAttributes {
-    public user_id!: string;
-    public full_name!: string;
-    public role!: UserRole;
-    public phone?: string;
-    public email!: string;
-    public password_hash!: string;
-    public status!: UserStatus;
-
-    public readonly created_at!: Date;
-    public readonly updated_at!: Date;
+  // Will be populated by association
+  public readonly refreshTokens?: any[];
 }
 
 User.init(
-    {
-        user_id: {
-            type: DataTypes.CHAR(36),
-            primaryKey: true,
-        },
-        full_name: {
-            type: DataTypes.STRING(100),
-            allowNull: false,
-        },
-        role: {
-            type: DataTypes.ENUM("shop", "distributor", "factory", "admin"),
-            allowNull: false,
-        },
-        phone: {
-            type: DataTypes.STRING(20),
-        },
-        email: {
-            type: DataTypes.STRING(100),
-            allowNull: false,
-            unique: true,
-        },
-        password_hash: {
-            type: DataTypes.STRING(255),
-            allowNull: false,
-        },
-        status: {
-            type: DataTypes.ENUM("active", "inactive", "suspended"),
-            defaultValue: "active",
-        },
-        deleted_at: {
-            type: DataTypes.DATE,
-        },
+  {
+    id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      primaryKey: true,
     },
-    {
-        sequelize,
-        tableName: "users",
-        timestamps: true,
-        underscored: true,
-        paranoid: true,
-        deletedAt: "deleted_at",
-    }
+    email: {
+      type: DataTypes.STRING(255),
+      allowNull: false,
+      unique: true,
+      validate: { isEmail: true },
+    },
+    full_name: {
+      type: DataTypes.STRING(105),
+      allowNull: false,
+    },
+    role: {
+      type: DataTypes.ENUM('retailer', 'distributor', 'factory', 'driver', 'admin'),
+      allowNull: false,
+    },
+    status: {
+      type: DataTypes.ENUM('pending', 'active', 'suspended', 'rejected'),
+      defaultValue: 'pending',
+    },
+    phone: {
+      type: DataTypes.STRING(20),
+      allowNull: true,
+    },
+    password_hash: {
+      type: DataTypes.STRING(255),
+      allowNull: false,
+    },
+    business_name: {
+      type: DataTypes.STRING(100),
+      allowNull: true,
+    },
+    business_address: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    tin_number: {
+      type: DataTypes.STRING(50),
+      allowNull: true,
+    },
+    profile_image: {
+      type: DataTypes.STRING(500),
+      allowNull: true,
+    },
+    verified: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+    },
+    created_at: {
+      type: DataTypes.DATE,
+      defaultValue: DataTypes.NOW,
+    },
+    updated_at: {
+      type: DataTypes.DATE,
+      defaultValue: DataTypes.NOW,
+    },
+    deleted_at: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
+    approved_at: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
+    approved_by: {
+      type: DataTypes.UUID,
+      allowNull: true,
+    },
+    last_login: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
+  },
+  {
+    sequelize,
+    modelName: 'User',
+    tableName: 'users',
+    timestamps: true,
+    createdAt: 'created_at',
+    updatedAt: 'updated_at',
+    deletedAt: 'deleted_at',
+    paranoid: true,
+  }
 );
+
+// ✅ NO ASSOCIATIONS HERE
 
 export default User;
