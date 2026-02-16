@@ -28,7 +28,8 @@ export const LoginPage: React.FC = () => {
       await login(email, password);
 
       // Get user from store after successful login
-      const user = useAuthStore.getState().user;
+      const user = useAuthStore.getState().user; // now properly defined
+      if (!user) return;
       if (user) {
         // Redirect based on role
         switch (user.role) {

@@ -17,12 +17,14 @@ interface AuthState {
   isLoading: boolean;
   error: string | null;
   
-  login: (email: string, password: string) => Promise<void>;
+  // ✅ Return login data
+  login: (email: string, password: string) => Promise<{ user: User; tokens: { accessToken: string; refreshToken: string } }>;
   register: (data: any) => Promise<void>;
   logout: () => Promise<void>;
   refreshAccessToken: () => Promise<void>;
   clearError: () => void;
 }
+
 
 export const useAuthStore = create<AuthState>()(
   persist(
@@ -37,17 +39,24 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true, error: null });
         try {
           const response = await authService.login({ email, password });
+
+          // 🔑 Destructure correctly
+          const { user, tokens } = response.data;
+
           set({
-            user: response.data.user,
-            accessToken: response.data.tokens.accessToken,
-            refreshToken: response.data.tokens.refreshToken,
+            user,
+            accessToken: tokens.accessToken,
+            refreshToken: tokens.refreshToken,
             isLoading: false
           });
+
+          return { user, tokens };
+
         } catch (error: any) {
-          set({
-            error: error.response?.data?.message || 'Login failed',
-            isLoading: false
-          });
+          const message =
+            error.response?.data?.message || error.message || 'Login failed';
+          set({ error: message, isLoading: false });
+          throw new Error(message);
         }
       },
 
@@ -55,19 +64,21 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true, error: null });
         try {
           const response = await authService.register(data);
+
           set({ isLoading: false });
-          return response.data;
+          return response.data; // return for success handling
+
         } catch (error: any) {
-          set({
-            error: error.response?.data?.message || 'Registration failed',
-            isLoading: false
-          });
+          const message =
+            error.response?.data?.message || error.message || 'Registration failed';
+          set({ error: message, isLoading: false });
+          throw new Error(message);
         }
       },
 
       logout: async () => {
-        const { refreshToken } = get();
-        if (refreshToken) {
+        const { refreshToken, user } = get();
+        if (refreshToken && user) {
           try {
             await authService.logout(refreshToken);
           } catch (error) {
@@ -83,8 +94,13 @@ export const useAuthStore = create<AuthState>()(
 
         try {
           const response = await authService.refreshToken(refreshToken);
-          set({ accessToken: response.data.accessToken });
+
+          // 🔑 Unwrap data
+          const { accessToken } = response.data;
+          set({ accessToken });
+
         } catch (error) {
+          console.error('Refresh token failed:', error);
           get().logout();
         }
       },
