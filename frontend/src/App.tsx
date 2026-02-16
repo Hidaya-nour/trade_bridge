@@ -36,10 +36,17 @@ import DistributorOrderDetailsPage from "./pages/distributor/DistributorOrderDet
 import OrderDetailsPage from "./pages/retailer/OrderDetails";
 import RetailerProductDetailPage from "./pages/retailer/ProductDetail";
 import SupplierProfilePage from "./pages/retailer/SupplierProfile";
+import { RegisterPage } from "./pages/auth/Register";
+import { LoginPage } from "./pages/auth/Login";
 
 function App() {
   return (
     <Router>
+      <Routes>
+        {/* Public Auth Routes */}
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
+      </Routes>
       <Routes>
         {/* Dashboard Routes */}
         <Route
