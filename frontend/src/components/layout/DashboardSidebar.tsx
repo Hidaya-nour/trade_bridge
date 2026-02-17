@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   Package,
@@ -236,17 +236,30 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
   onToggle,
 }) => {
   const { user, logout } = useAuthStore();
-
-  if (!user) return null; // or loading spinner
-  console.log("User in DashboardSidebar:", user);
   const location = useLocation();
-  const userRole = user.role as keyof typeof roleNavigation;
+  const navigate = useNavigate();
+
+  const userRole = user?.role as keyof typeof roleNavigation;
   const isDistributor = userRole === "distributor";
 
-  const isActive = (href: string) => {
-    return location.pathname === href;
-  };
+  const isActive = (href: string) => location.pathname === href;
+
+  // Now hooks have already been called → safe to continue
+  console.log("User in DashboardSidebar:", user);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  // Render null content if no user
+  if (!user) {
+    return (
+      <div
+        className={cn(
+          "flex flex-col bg-sidebar/99 border-r border-border/40 transition-all duration-300 h-screen",
+        )}
+      >
+        <p className="p-4 text-muted-foreground text-sm">Loading...</p>
+      </div>
+    );
+  }
+
   const renderDistributorNav = () => {
     const nav = roleNavigation.distributor;
 
@@ -822,24 +835,30 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
             variant="ghost"
             size="icon"
             className="h-10 w-10 mx-auto text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-            asChild
+            // asChild
+            onClick={async () => {
+              await useAuthStore.getState().logout(); // clear Zustand store
+              navigate("/login"); // redirect to login page
+            }}
           >
-            <Link to="/logout">
-              <LogOut className="h-4 w-4" />
-            </Link>
+            <LogOut className="mr-2 h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+            Logout
           </Button>
         ) : (
           <div className="space-y-3">
             <Button
               variant="ghost"
               className="w-full justify-start text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors group"
-              asChild
+              // asChild
+              onClick={async () => {
+                await useAuthStore.getState().logout(); // clear Zustand store
+                navigate("/login"); // redirect to login page
+              }}
             >
-              <Link to="/logout">
-                <LogOut className="mr-2 h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-                Logout
-              </Link>
+              <LogOut className="mr-2 h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+              Logout
             </Button>
+
             <div className="flex items-center justify-between">
               <p className="text-[10px] text-muted-foreground/60">
                 © 2026 TradeBridge
