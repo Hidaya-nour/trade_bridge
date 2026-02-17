@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   Bell,
   MessageSquare,
@@ -58,16 +58,7 @@ import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
-// Mock user data from documentation
-const mockUser = {
-  name: "Hidaya Nurmeika",
-  email: "hidaya@tradebridge.com",
-  role: "retailer",
-  avatar: "",
-  verified: true,
-  business: "ABC Retail Shop",
-  location: "Adama, Ethiopia",
-};
+import { useAuthStore } from "@/stores/auth.store";
 
 // Notification data
 const notifications = [
@@ -150,6 +141,9 @@ interface DashboardHeaderProps {
 }
 
 const DashboardHeader: React.FC<DashboardHeaderProps> = ({ onMenuClick }) => {
+  const { user, logout } = useAuthStore();
+  const location = useLocation();
+
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [isDarkMode, setIsDarkMode] = useState(false);
@@ -169,6 +163,17 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ onMenuClick }) => {
 
   const unreadNotifications = notifications.filter((n) => !n.read).length;
   const unreadMessages = messages.filter((m) => m.unread).length;
+  if (!user) {
+    return (
+      <div
+        className={cn(
+          "flex flex-col bg-sidebar/99 border-r border-border/40 transition-all duration-300 h-screen",
+        )}
+      >
+        <p className="p-4 text-muted-foreground text-sm">Loading...</p>
+      </div>
+    );
+  }
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-border/40 bg-sidebar/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -227,7 +232,7 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ onMenuClick }) => {
         <div className="flex items-center gap-1.5">
           {/* Quick Actions */}
           <div className="hidden md:flex items-center gap-1">
-            {mockUser.role === "retailer" && (
+            {user.role === "retailer" && (
               <TooltipProvider>
                 <Tooltip delayDuration={300}>
                   <TooltipTrigger asChild>
@@ -237,7 +242,7 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ onMenuClick }) => {
                       className="relative h-9 w-9 text-muted-foreground hover:text-foreground hover:bg-accent/50"
                       asChild
                     >
-                      <Link to="/cart">
+                      <Link to="/retailer/cart">
                         <ShoppingCart className="h-5 w-5" />
                         <Badge className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center bg-primary text-[10px] font-medium text-primary-foreground ring-2 ring-background">
                           3
@@ -405,9 +410,9 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ onMenuClick }) => {
                 className="relative h-9 gap-2 px-2 hover:bg-accent/50 transition-colors"
               >
                 <Avatar className="h-7 w-7 ring-1 ring-primary/20 ring-offset-1 ring-offset-background transition-all hover:ring-primary/30">
-                  <AvatarImage src={mockUser.avatar} />
+                  <AvatarImage src={user.profile_image} />
                   <AvatarFallback className="bg-primary/10 text-primary text-xs font-medium">
-                    {getInitials(mockUser.name)}
+                    {getInitials(user.full_name)}
                   </AvatarFallback>
                 </Avatar>
 
@@ -418,17 +423,17 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ onMenuClick }) => {
               <DropdownMenuLabel className="p-3 font-normal">
                 <div className="flex items-center gap-3">
                   <Avatar className="h-10 w-10 ring-2 ring-primary/20">
-                    <AvatarImage src={mockUser.avatar} />
+                    <AvatarImage src={user.profile_image} />
                     <AvatarFallback className="bg-primary/10 text-primary font-medium">
-                      {getInitials(mockUser.name)}
+                      {getInitials(user.full_name)}
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex-1 space-y-1">
                     <div className="flex items-center gap-2">
                       <p className="text-sm font-medium leading-none">
-                        {mockUser.name}
+                        {user.full_name}
                       </p>
-                      {mockUser.verified && (
+                      {user.verified && (
                         <Badge
                           variant="outline"
                           className="h-5 px-1.5 text-[10px] border-green-200 bg-green-50 text-green-700 dark:bg-green-950/20 dark:text-green-400 dark:border-green-800"
@@ -438,10 +443,10 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ onMenuClick }) => {
                       )}
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      {mockUser.email}
+                      {user.email}
                     </p>
                     <p className="text-[11px] text-muted-foreground/70">
-                      {mockUser.business} • {mockUser.location}
+                      {user.business_name} • {user.business_address}
                     </p>
                   </div>
                 </div>
@@ -452,7 +457,7 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ onMenuClick }) => {
                   asChild
                   className="cursor-pointer rounded-md py-2 px-2 text-sm focus:bg-accent/50"
                 >
-                  <Link to="/profile">
+                  <Link to="/settings">
                     <User className="mr-2 h-4 w-4 text-muted-foreground" />
                     <span>Profile</span>
                     <DropdownMenuShortcut className="text-muted-foreground/70">
@@ -485,7 +490,10 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ onMenuClick }) => {
               <DropdownMenuSeparator className="my-1" />
               <DropdownMenuItem
                 className="cursor-pointer rounded-md py-2 px-2 text-sm text-destructive focus:text-destructive focus:bg-destructive/10"
-                onClick={() => navigate("/logout")}
+                onClick={async () => {
+                  await useAuthStore.getState().logout(); // clear Zustand store
+                  navigate("/login"); // redirect to login page
+                }}
               >
                 <LogOut className="mr-2 h-4 w-4" />
                 <span>Log out</span>

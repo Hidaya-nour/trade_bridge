@@ -82,6 +82,7 @@ import {
 } from "@/components/shared";
 import { formatPrice, formatCompactPrice, formatDate } from "@/lib/formatters";
 import { getInitials, cn } from "@/lib/utils";
+import { useAuthStore } from "@/stores/auth.store";
 
 // ============================================================================
 // TYPES
@@ -334,13 +335,16 @@ const AdminDashboard: React.FC = () => {
   const [timeRange, setTimeRange] = useState("week");
   const [activeTab, setActiveTab] = useState("overview");
 
-  // Mock user
+  const authUser = useAuthStore((state) => state.user);
+
+  if (!authUser) return null; // prevent crash if not loaded
+
   const user = {
-    name: "Admin User",
-    business: "TradeBridge Platform",
-    id: "ADMIN/001",
-    role: "admin" as const,
-    verified: true,
+    name: authUser.full_name,
+    business: authUser.business_name ?? "No Business Name",
+    id: authUser.id,
+    role: authUser.role,
+    verified: authUser.verified,
   };
 
   // Calculate stats for cards

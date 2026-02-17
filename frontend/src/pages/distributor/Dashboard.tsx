@@ -44,6 +44,7 @@ import {
 } from "@/components/shared";
 import { formatPrice, formatCompactPrice, formatDate } from "@/lib/formatters";
 import { getInitials } from "@/lib/utils";
+import { useAuthStore } from "@/stores/auth.store";
 
 // Mock distributor stats
 const stats = [
@@ -237,13 +238,16 @@ const getStockStatus = (stock: number, minStock: number) => {
 const DistributorDashboard: React.FC = () => {
   const [timeRange, setTimeRange] = useState("month");
 
-  // Mock user
+  const authUser = useAuthStore((state) => state.user);
+
+  if (!authUser) return null; // prevent crash if not loaded
+
   const user = {
-    name: "Abebe Kebede",
-    business: "Adama Wholesalers",
-    id: "DIS/102/21",
-    role: "distributor" as const,
-    verified: true,
+    name: authUser.full_name,
+    business: authUser.business_name ?? "No Business Name",
+    id: authUser.id,
+    role: authUser.role,
+    verified: authUser.verified,
   };
 
   return (

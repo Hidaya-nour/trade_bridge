@@ -48,6 +48,7 @@ import {
 } from "@/components/shared";
 import { formatPrice, formatCompactPrice, formatDate } from "@/lib/formatters";
 import { getInitials } from "@/lib/utils";
+import { useAuthStore } from "@/stores/auth.store";
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -405,15 +406,17 @@ const getDemandTrendIcon = (trend: string) => {
 };
 
 const FactoryDashboard: React.FC = () => {
-  // Mock user
-  const user = {
-    name: "Tadesse Haile",
-    business: "Mugher Cement",
-    id: "FAC/501/15",
-    role: "factory" as const,
-    verified: true,
-  };
+  const authUser = useAuthStore((state) => state.user);
 
+  if (!authUser) return null; // prevent crash if not loaded
+
+  const user = {
+    name: authUser.full_name,
+    business: authUser.business_name ?? "No Business Name",
+    id: authUser.id,
+    role: authUser.role,
+    verified: authUser.verified,
+  };
   return (
     <div className="space-y-6">
       {/* Welcome Header - Using shared component */}

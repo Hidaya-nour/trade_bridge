@@ -40,6 +40,7 @@ import {
 } from "@/components/shared";
 import { formatPrice, formatDate } from "@/lib/formatters";
 import { getInitials } from "@/lib/utils";
+import { useAuthStore } from "@/stores/auth.store";
 
 // Mock data for retailer dashboard
 const mockStats = [
@@ -205,15 +206,17 @@ const frequentProducts = [
 ];
 
 const RetailerDashboard: React.FC = () => {
-  // Mock user
-  const user = {
-    name: "Hidaya Nurmeika",
-    business: "ABC Retail Shop",
-    id: "UGR/25677/14",
-    role: "retailer" as const,
-    verified: true,
-  };
+  const authUser = useAuthStore((state) => state.user);
 
+  if (!authUser) return null; // prevent crash if not loaded
+
+  const user = {
+    name: authUser.full_name,
+    business: authUser.business_name ?? "No Business Name",
+    id: authUser.id,
+    role: authUser.role,
+    verified: authUser.verified,
+  };
   // Order summary data
   const orderSummary = {
     delivered: 45,

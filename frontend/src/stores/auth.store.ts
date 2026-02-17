@@ -1,12 +1,27 @@
-import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
-import { authService } from '../services/auth.service';
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
+import { authService } from "../services/auth.service";
 
-interface User {
+/* =========================
+   User Role Type
+========================= */
+
+export type UserRole =
+  | "retailer"
+  | "distributor"
+  | "factory"
+  | "driver"
+  | "admin";
+
+/* =========================
+   User Interface
+========================= */
+
+export interface User {
   id: string;
   email: string;
   full_name: string;
-  role: string;
+  role: UserRole; // ✅ FIXED (no longer string)
   status: string;
   phone?: string;
   business_name?: string;
@@ -16,8 +31,20 @@ interface User {
   verified: boolean;
   created_at: string;
   last_login?: string;
-  
 }
+
+/* =========================
+   Tokens Interface
+========================= */
+
+interface Tokens {
+  accessToken: string;
+  refreshToken: string;
+}
+
+/* =========================
+   Auth State Interface
+========================= */
 
 interface AuthState {
   user: User | null;
@@ -25,16 +52,22 @@ interface AuthState {
   refreshToken: string | null;
   isLoading: boolean;
   error: string | null;
-  
-  // ✅ Return login data
-  login: (email: string, password: string) => Promise<{ user: User; tokens: { accessToken: string; refreshToken: string } }>;
+
+  login: (
+    email: string,
+    password: string
+  ) => Promise<{ user: User; tokens: Tokens }>;
+
   register: (data: any) => Promise<void>;
   logout: () => Promise<void>;
   refreshAccessToken: () => Promise<void>;
   fetchUser: () => Promise<void>;
   clearError: () => void;
-  
 }
+
+/* =========================
+   Store
+========================= */
 
 export const useAuthStore = create<AuthState>()(
   persist(
@@ -45,95 +78,127 @@ export const useAuthStore = create<AuthState>()(
       isLoading: false,
       error: null,
 
+      /* ================= LOGIN ================= */
+
       login: async (email, password) => {
         set({ isLoading: true, error: null });
+
         try {
           const response = await authService.login({ email, password });
 
-          // 🔑 Destructure correctly
-          const { user, tokens } = response.data;
+          const { user, tokens } = response.data as {
+            user: User;
+            tokens: Tokens;
+          };
 
           set({
             user,
             accessToken: tokens.accessToken,
             refreshToken: tokens.refreshToken,
-            isLoading: false
+            isLoading: false,
           });
 
           return { user, tokens };
-
         } catch (error: any) {
           const message =
-            error.response?.data?.message || error.message || 'Login failed';
+            error.response?.data?.message ||
+            error.message ||
+            "Login failed";
+
           set({ error: message, isLoading: false });
           throw new Error(message);
         }
       },
+
+      /* ================= REGISTER ================= */
 
       register: async (data) => {
         set({ isLoading: true, error: null });
+
         try {
-          const response = await authService.register(data);
-
+          await authService.register(data);
           set({ isLoading: false });
-          return response.data; // return for success handling
-
         } catch (error: any) {
           const message =
-            error.response?.data?.message || error.message || 'Registration failed';
+            error.response?.data?.message ||
+            error.message ||
+            "Registration failed";
+
           set({ error: message, isLoading: false });
           throw new Error(message);
         }
       },
 
+      /* ================= LOGOUT ================= */
+
       logout: async () => {
-        const { refreshToken, user } = get();
-        if (refreshToken && user) {
-          try {
+        const { refreshToken } = get();
+
+        try {
+          if (refreshToken) {
             await authService.logout(refreshToken);
-          } catch (error) {
-            console.error('Logout error:', error);
           }
+        } catch (error) {
+          console.error("Logout API error:", error);
         }
-        set({ user: null, accessToken: null, refreshToken: null });
+
+        // Always clear state
+        set({
+          user: null,
+          accessToken: null,
+          refreshToken: null,
+        });
       },
+
+      /* ================= FETCH USER ================= */
+
       fetchUser: async () => {
         try {
           const response = await authService.getCurrentUser();
-          const { user } = response.data;
+
+          const { user } = response.data as { user: User };
 
           set({ user });
         } catch (error) {
-          get().logout();
+          console.error("Fetch user failed:", error);
+          await get().logout();
         }
-      }
-      ,
+      },
+
+      /* ================= REFRESH TOKEN ================= */
+
       refreshAccessToken: async () => {
         const { refreshToken } = get();
+
         if (!refreshToken) return;
 
         try {
           const response = await authService.refreshToken(refreshToken);
 
-          // 🔑 Unwrap data
-          const { accessToken } = response.data;
-          set({ accessToken });
+          const { accessToken } = response.data as {
+            accessToken: string;
+          };
 
+          set({ accessToken });
         } catch (error) {
-          console.error('Refresh token failed:', error);
-          get().logout();
+          console.error("Refresh token failed:", error);
+          await get().logout();
         }
       },
 
-      clearError: () => set({ error: null })
+      /* ================= CLEAR ERROR ================= */
+
+      clearError: () => set({ error: null }),
     }),
     {
-      name: 'auth-storage',
+      name: "auth-storage",
+
+      // Only persist safe data
       partialize: (state) => ({
         user: state.user,
         accessToken: state.accessToken,
-        refreshToken: state.refreshToken
-      })
+        refreshToken: state.refreshToken,
+      }),
     }
   )
 );
