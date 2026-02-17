@@ -13,6 +13,7 @@ import './models/RefreshToken.model';
 
 // 2️⃣ SECOND: Setup associations AFTER models are loaded
 import { setupAssociations } from './models/associations';
+import productRoutes from './routes/product.routes';
 
 dotenv.config();
 
@@ -34,6 +35,8 @@ app.use(morgan('dev'));
 
 // Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/products', productRoutes);
+
 
 // Health check
 app.get('/api/health', (req, res) => {

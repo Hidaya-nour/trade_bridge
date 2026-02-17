@@ -1,3 +1,4 @@
+import { Product } from './product.model';
 import RefreshToken from './RefreshToken.model';
 import { User } from './user.model';
 
@@ -16,6 +17,17 @@ export const setupAssociations = () => {
   RefreshToken.belongsTo(User, {
     foreignKey: 'user_id',
     as: 'user'
+  });
+
+  // User - Product (Supplier)
+  User.hasMany(Product, {
+    foreignKey: 'supplier_id',
+    as: 'products',
+    onDelete: 'CASCADE'
+  });
+  Product.belongsTo(User, {
+    foreignKey: 'supplier_id',
+    as: 'supplier'
   });
 
   console.log('✅ Associations defined successfully');
