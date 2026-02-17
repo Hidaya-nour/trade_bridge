@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import RetailerDashboard from "./pages/retailer/Dashboard";
@@ -38,8 +38,17 @@ import RetailerProductDetailPage from "./pages/retailer/ProductDetail";
 import SupplierProfilePage from "./pages/retailer/SupplierProfile";
 import { RegisterPage } from "./pages/auth/Register";
 import { LoginPage } from "./pages/auth/Login";
+import { useAuthStore } from "./stores/auth.store";
 
 function App() {
+  // const { accessToken, fetchUser } = useAuthStore();
+
+  // useEffect(() => {
+  //   if (accessToken) {
+  //     fetchUser();
+  //   }
+  // }, [accessToken]);
+
   return (
     <Router>
       <Routes>

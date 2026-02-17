@@ -25,6 +25,7 @@ import {
   Shield,
   AlertCircle,
   Menu,
+  User,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -35,21 +36,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn, getInitials } from "@/lib/utils";
 import { formatCompactPrice } from "@/lib/formatters";
 import { PerformanceCard } from "@/components/shared/PerformanceCard";
-
-// Mock user - will be replaced with auth
-const mockUser = {
-  name: "Abebe Kebede",
-  email: "abebe@adama-wholesalers.com",
-  role: "distributor",
-  avatar: "",
-  verified: true,
-  joinDate: "March 2023",
-  business: "Adama Wholesalers",
-  rating: 4.7,
-  totalOrders: 890,
-};
-
-// ✅ DELETE lines 36-45 (getInitials function) - now imported from utils
+import { useAuthStore } from "@/stores/auth.store";
 
 // Role-specific navigation based on your documentation
 const roleNavigation = {
@@ -248,16 +235,18 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
   collapsed = false,
   onToggle,
 }) => {
-  const location = useLocation();
-  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const { user, logout } = useAuthStore();
 
-  const userRole = mockUser.role as keyof typeof roleNavigation;
+  if (!user) return null; // or loading spinner
+  console.log("User in DashboardSidebar:", user);
+  const location = useLocation();
+  const userRole = user.role as keyof typeof roleNavigation;
   const isDistributor = userRole === "distributor";
 
   const isActive = (href: string) => {
     return location.pathname === href;
   };
-
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
   const renderDistributorNav = () => {
     const nav = roleNavigation.distributor;
 
@@ -672,9 +661,9 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
         {collapsed ? (
           <div className="flex justify-center">
             <Avatar className="h-10 w-10 ring-2 ring-primary/10 ring-offset-2 ring-offset-sidebar transition-all hover:ring-primary/30">
-              <AvatarImage src={mockUser.avatar} />
+              <AvatarImage src={user.profile_image} />
               <AvatarFallback className="bg-primary/10 text-primary font-medium">
-                {getInitials(mockUser.name)}
+                {getInitials(user.full_name)}
               </AvatarFallback>
             </Avatar>
           </div>
@@ -685,17 +674,17 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
               className="flex w-full items-center gap-3 rounded-lg p-2 transition-all hover:bg-accent/50 group"
             >
               <Avatar className="h-10 w-10 ring-2 ring-primary/10 ring-offset-2 ring-offset-sidebar">
-                <AvatarImage src={mockUser.avatar} />
+                <AvatarImage src={user.profile_image} />
                 <AvatarFallback className="bg-primary/10 text-primary font-medium">
-                  {getInitials(mockUser.name)}
+                  {getInitials(user.full_name)}
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1 text-left">
                 <p className="text-sm font-semibold leading-none">
-                  {mockUser.name}
+                  {user.full_name}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  {mockUser.business}
+                  {user.business_name || user.email}
                 </p>
               </div>
             </button>
@@ -708,9 +697,9 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
                       variant="secondary"
                       className="px-2 py-0.5 text-[11px] font-medium bg-primary/5 capitalize"
                     >
-                      {mockUser.role}
+                      {user.role}
                     </Badge>
-                    {mockUser.verified && (
+                    {user?.verified && (
                       <Badge
                         variant="outline"
                         className="px-2 py-0.5 text-[11px] border-green-200 bg-green-50 text-green-700 dark:bg-green-950/20 dark:text-green-400 dark:border-green-800"
@@ -719,25 +708,27 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
                       </Badge>
                     )}
                   </div>
-                  {mockUser.role == "retailer" ? (
+                  {user.role == "retailer" ? (
                     ""
                   ) : (
                     <span className="flex items-center text-xs font-medium">
                       <Star className="h-3 w-3 fill-yellow-500 text-yellow-500 mr-1" />
-                      {mockUser.rating}
+                      {/* {user.rating ? user.rating.toFixed(1) : "N/A"} */}
                     </span>
                   )}
                 </div>
                 <div className="grid grid-cols-2 gap-2 pt-1">
                   <div className="rounded-md bg-muted/50 px-2 py-1.5">
                     <p className="text-[10px] text-muted-foreground">Orders</p>
-                    <p className="text-xs font-semibold">
-                      {mockUser.totalOrders}
-                    </p>
+                    {/* <p className="text-xs font-semibold">{user.totalOrders}</p> */}
                   </div>
                   <div className="rounded-md bg-muted/50 px-2 py-1.5">
                     <p className="text-[10px] text-muted-foreground">Joined</p>
-                    <p className="text-xs font-semibold">{mockUser.joinDate}</p>
+                    <p className="text-xs font-semibold">
+                      {user?.created_at
+                        ? new Date(user.created_at).toLocaleDateString()
+                        : ""}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -808,7 +799,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
 
           {/* Quick Stats Card - Using new PerformanceCard component */}
 
-          {!collapsed && mockUser.role !== "retailer" && (
+          {!collapsed && user.role !== "retailer" && (
             <PerformanceCard
               metrics={[
                 { label: "Order Fulfillment", value: 94 },

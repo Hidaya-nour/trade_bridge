@@ -8,6 +8,15 @@ interface User {
   full_name: string;
   role: string;
   status: string;
+  phone?: string;
+  business_name?: string;
+  business_address?: string;
+  tin_number?: string;
+  profile_image?: string;
+  verified: boolean;
+  created_at: string;
+  last_login?: string;
+  
 }
 
 interface AuthState {
@@ -22,9 +31,10 @@ interface AuthState {
   register: (data: any) => Promise<void>;
   logout: () => Promise<void>;
   refreshAccessToken: () => Promise<void>;
+  fetchUser: () => Promise<void>;
   clearError: () => void;
+  
 }
-
 
 export const useAuthStore = create<AuthState>()(
   persist(
@@ -87,7 +97,17 @@ export const useAuthStore = create<AuthState>()(
         }
         set({ user: null, accessToken: null, refreshToken: null });
       },
+      fetchUser: async () => {
+        try {
+          const response = await authService.getCurrentUser();
+          const { user } = response.data;
 
+          set({ user });
+        } catch (error) {
+          get().logout();
+        }
+      }
+      ,
       refreshAccessToken: async () => {
         const { refreshToken } = get();
         if (!refreshToken) return;
