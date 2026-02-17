@@ -23,7 +23,7 @@ export class ProductRepository extends BaseRepository<Product> {
 
   async findAllWithFilters(filters: IProductFilters) {
     // ✅ FIX: Use undefined instead of null for deleted_at
-    const where: any = { deleted_at: undefined };
+    const where: any = { };
     const limit = filters.limit || 20;
     const offset = ((filters.page || 1) - 1) * limit;
 
@@ -82,11 +82,9 @@ export class ProductRepository extends BaseRepository<Product> {
   }
 
   async findBySupplier(supplierId: string): Promise<Product[]> {
-    // ✅ FIX: Use undefined for deleted_at
     return this.model.findAll({
       where: { 
         supplier_id: supplierId, 
-        deleted_at: undefined 
       },
       order: [['created_at', 'DESC']]
     });
@@ -135,7 +133,6 @@ export class ProductRepository extends BaseRepository<Product> {
         where: { 
           id: productId, 
           stock_quantity: { [Op.gte]: quantity },
-          deleted_at: undefined  // ✅ FIX
         } 
       }
     );
@@ -151,7 +148,6 @@ export class ProductRepository extends BaseRepository<Product> {
       { 
         where: { 
           id: productId,
-          deleted_at: undefined  // ✅ FIX
         } 
       }
     );
@@ -161,7 +157,6 @@ export class ProductRepository extends BaseRepository<Product> {
   async getCategories(): Promise<string[]> {
     const categories = await this.model.findAll({
       attributes: [[sequelize.fn('DISTINCT', sequelize.col('category')), 'category']],
-      where: { deleted_at: undefined },  // ✅ FIX
       order: [['category', 'ASC']]
     });
     return categories.map(c => c.category);
@@ -171,7 +166,6 @@ export class ProductRepository extends BaseRepository<Product> {
     return this.model.findAll({
       where: {
         stock_quantity: { [Op.lte]: threshold },
-        deleted_at: undefined,  // ✅ FIX
         is_available: 1
       },
       include: [{
@@ -186,7 +180,6 @@ export class ProductRepository extends BaseRepository<Product> {
     return this.model.findAll({
       where: {
         stock_quantity: 0,
-        deleted_at: undefined  // ✅ FIX
       },
       include: [{
         model: User,
@@ -209,7 +202,6 @@ export class ProductRepository extends BaseRepository<Product> {
       { 
         where: { 
           id: productId,
-          deleted_at: undefined  // ✅ FIX
         } 
       }
     );
