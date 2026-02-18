@@ -1,59 +1,144 @@
-import { DataTypes, Model } from "sequelize";
-import sequelize from "../db";
+import { DataTypes, Model, Optional } from 'sequelize';
+import sequelize from '../config/database';
+import { IPayment, PaymentStatus } from '../types/order.types';
+// import Order from './Order.model';
+// import User from './User.model';
 
-export type PaymentMethod = "cash" | "card" | "mobile";
-export type PaymentStatus = "pending" | "paid" | "failed";
+interface PaymentCreationAttributes extends Optional<IPayment, 'id' | 'created_at' | 'updated_at'> {}
 
-class Payment extends Model {
-    public payment_id!: number;
-    public order_id!: string;
-    public payment_method!: PaymentMethod;
-    public transaction_reference!: string;
-    public amount_paid!: number;
-    public payment_date!: Date;
-    public payment_status!: PaymentStatus;
-    public deleted_at?: Date;
+export class Payment extends Model<IPayment, PaymentCreationAttributes> implements IPayment {
+  public id!: string;
+  public order_id!: string;
+  public payment_method!: 'cash' | 'credit' | 'cheque' | 'mobile_banking' | 'bank_transfer' | 'chapa';
+  public total_amount!: number;
+  public amount_paid!: number;
+  public payment_status!: PaymentStatus; // ✅ Now using the specific type
+  public cheque_number?: string;
+  public cheque_bank?: string;
+  public cheque_date?: Date;
+  public cheque_status?: string;
+  public chapa_transaction_id?: string;
+  public chapa_payment_url?: string;
+  public proof_document_id?: string;
+  public refund_amount?: number;
+  public refund_reason?: string;
+  public refund_date?: Date;
+  public refunded_by?: string;
+  public payment_date?: Date;
+  public notes?: string;
+  public created_at!: Date;
+  public updated_at!: Date;
+  public deleted_at?: Date;
 }
 
 Payment.init(
-    {
-        payment_id: {
-            type: DataTypes.INTEGER,
-            autoIncrement: true,
-            primaryKey: true,
-        },
-        order_id: {
-            type: DataTypes.CHAR(36),
-            allowNull: false,
-        },
-        payment_method: {
-            type: DataTypes.ENUM("cash", "card", "mobile"),
-            allowNull: false,
-        },
-        transaction_reference: {
-            type: DataTypes.STRING(100),
-        },
-        amount_paid: {
-            type: DataTypes.DECIMAL(10, 2),
-            allowNull: false,
-        },
-        payment_date: {
-            type: DataTypes.DATE,
-            allowNull: false,
-        },
-        payment_status: {
-            type: DataTypes.ENUM("pending", "paid", "failed"),
-            allowNull: false,
-        },
-        deleted_at: {
-            type: DataTypes.DATE,
-        },
+  {
+    id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      primaryKey: true,
     },
-    {
-        sequelize,
-        tableName: "payments",
-        timestamps: false,
-    }
+    order_id: {
+      type: DataTypes.UUID,
+      allowNull: false,
+      unique: true,
+      references: {
+        model: 'orders',
+        key: 'id'
+      },
+    },
+    payment_method: {
+      type: DataTypes.ENUM('cash', 'credit', 'cheque', 'mobile_banking', 'bank_transfer', 'chapa'),
+      allowNull: false,
+    },
+    total_amount: {
+      type: DataTypes.DECIMAL(12, 2),
+      allowNull: false,
+    },
+    amount_paid: {
+      type: DataTypes.DECIMAL(10, 2),
+      allowNull: false,
+      defaultValue: 0,
+    },
+    payment_status: {
+      type: DataTypes.ENUM('pending', 'processing', 'completed', 'failed', 'refunded'), // ✅ Use ENUM
+      defaultValue: 'pending',
+    },
+    cheque_number: {
+      type: DataTypes.STRING(50),
+      allowNull: true,
+    },
+    cheque_bank: {
+      type: DataTypes.STRING(100),
+      allowNull: true,
+    },
+    cheque_date: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
+    cheque_status: {
+      type: DataTypes.STRING(30),
+      allowNull: true,
+    },
+    chapa_transaction_id: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+    },
+    chapa_payment_url: {
+      type: DataTypes.STRING(500),
+      allowNull: true,
+    },
+    proof_document_id: {
+      type: DataTypes.STRING(36),
+      allowNull: true,
+    },
+    refund_amount: {
+      type: DataTypes.DECIMAL(10, 2),
+      allowNull: true,
+    },
+    refund_reason: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    refund_date: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
+    refunded_by: {
+      type: DataTypes.UUID,
+      allowNull: true,
+    },
+    payment_date: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
+    notes: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    created_at: {
+      type: DataTypes.DATE,
+      defaultValue: DataTypes.NOW,
+    },
+    updated_at: {
+      type: DataTypes.DATE,
+      defaultValue: DataTypes.NOW,
+    },
+    deleted_at: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
+  },
+  {
+    sequelize,
+    modelName: 'Payment',
+    tableName: 'payments',
+    timestamps: true,
+    createdAt: 'created_at',
+    updatedAt: 'updated_at',
+    deletedAt: 'deleted_at',
+    paranoid: true,
+  }
 );
 
 export default Payment;
