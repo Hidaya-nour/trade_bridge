@@ -1,5 +1,7 @@
 import { DataTypes, Model, Optional } from 'sequelize';
 import sequelize from '../config/database';
+import Order from './order.model';
+import Notification from './notification.model';
 import { IPayment, PaymentStatus } from '../types/order.types';
 // import Order from './Order.model';
 // import User from './User.model';
@@ -138,6 +140,37 @@ Payment.init(
     updatedAt: 'updated_at',
     deletedAt: 'deleted_at',
     paranoid: true,
+    hooks: {
+      afterUpdate: async (payment: any) => {
+        try {
+          if (payment.changed('payment_status') && payment.payment_status === 'completed') {
+            const order = await Order.findByPk(payment.order_id);
+            if (order) {
+              // notify buyer
+              await Notification.create({
+                user_id: order.buyer_id,
+                type: 'payment',
+                title: 'Payment Confirmed',
+                message: `Payment for order ${order.id} has been confirmed.`,
+                is_read: 0
+              } as any);
+
+              // notify supplier
+              await Notification.create({
+                user_id: order.supplier_id,
+                type: 'payment',
+                title: 'Payment Received',
+                message: `Payment for order ${order.id} has been received.`,
+                is_read: 0
+              } as any);
+            }
+          }
+        } catch (err) {
+          // logging omitted to avoid circular import issues
+          console.error('Payment hook notification error', err);
+        }
+      }
+    }
   }
 );
 

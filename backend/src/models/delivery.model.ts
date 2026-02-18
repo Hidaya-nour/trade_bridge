@@ -1,6 +1,8 @@
 import { DataTypes, Model, Optional } from 'sequelize';
 import sequelize from '../config/database';
 import { IDelivery, DeliveryStatus } from '../types/order.types';
+import Order from './order.model';
+import Notification from './notification.model';
 // import Order from './Order.model';
 // import User from './User.model';
 
@@ -91,6 +93,31 @@ Delivery.init(
     updatedAt: 'updated_at',
     deletedAt: 'deleted_at',
     paranoid: true,
+    hooks: {
+      afterUpdate: async (delivery: any) => {
+        try {
+          if (delivery.changed('status')) {
+            const status = delivery.status;
+            const order = await Order.findByPk(delivery.order_id);
+            if (!order) return;
+
+            if (status === 'picked_up' || status === 'in_transit' || status === 'assigned') {
+              // Delivery started - notify buyer and supplier
+              await Notification.create({ user_id: order.buyer_id, type: 'delivery', title: 'Delivery Started', message: `Delivery for order ${order.id} has started.`, is_read: 0 } as any);
+              await Notification.create({ user_id: order.supplier_id, type: 'delivery', title: 'Delivery Started', message: `Delivery for order ${order.id} has started.`, is_read: 0 } as any);
+            }
+
+            if (status === 'delivered') {
+              // Order completed
+              await Notification.create({ user_id: order.buyer_id, type: 'order', title: 'Order Delivered', message: `Your order ${order.id} has been delivered.`, is_read: 0 } as any);
+              await Notification.create({ user_id: order.supplier_id, type: 'order', title: 'Order Completed', message: `Order ${order.id} has been marked delivered.`, is_read: 0 } as any);
+            }
+          }
+        } catch (err) {
+          console.error('Delivery hook notification error', err);
+        }
+      }
+    }
   }
 );
 

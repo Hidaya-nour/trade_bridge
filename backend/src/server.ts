@@ -13,6 +13,10 @@ import './models/RefreshToken.model';
 import { setupAssociations } from './models/associations';
 import productRoutes from './routes/product.routes';
 import orderRoutes from './routes/order.routes';
+import notificationRoutes from './routes/notification.routes';
+import disputeRoutes from './routes/dispute.routes';
+import paymentRoutes from './routes/payment.routes';
+import deliveryRoutes from './routes/delivery.routes';
 
 dotenv.config();
 
@@ -36,6 +40,10 @@ app.use(morgan('dev'));
 app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/orders', orderRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/disputes', disputeRoutes);
+app.use('/api/payments', paymentRoutes);
+app.use('/api/deliveries', deliveryRoutes);
 
 
 // Health check

@@ -1,0 +1,42 @@
+import { Request, Response } from 'express';
+import deliveryService from '../services/delivery/delivery.service';
+import logger from '../utils/logger';
+
+class DeliveryController {
+  async create(req: Request, res: Response): Promise<any> {
+    try {
+      const { order_id, pickup_location, dropoff_location } = req.body;
+      const delivery = await deliveryService.createDelivery(order_id, pickup_location, dropoff_location);
+      return res.status(201).json({ success: true, data: { delivery } });
+    } catch (err) {
+      logger.error('Create delivery error', err);
+      return res.status(500).json({ success: false, message: 'Internal server error' });
+    }
+  }
+  async updateStatus(req: Request, res: Response): Promise<any> {
+    try {
+      const { id } = req.params;
+      const { status } = req.body;
+      const delivery = await deliveryService.updateDeliveryStatus(id, status);
+      if (!delivery) return res.status(404).json({ success: false, message: 'Delivery not found' });
+      return res.json({ success: true, data: { delivery } });
+    } catch (err) {
+      logger.error('Update delivery status error', err);
+      return res.status(500).json({ success: false, message: 'Internal server error' });
+    }
+  }
+  async assignDriver(req: Request, res: Response): Promise<any> {
+    try {
+      const { id } = req.params;
+      const { driver_id } = req.body;
+      const delivery = await deliveryService.assignDriver(id, driver_id);
+      if (!delivery) return res.status(404).json({ success: false, message: 'Delivery not found' });
+      return res.json({ success: true, data: { delivery } });
+    } catch (err) {
+      logger.error('Assign driver error', err);
+      return res.status(500).json({ success: false, message: 'Internal server error' });
+    }
+  }
+}
+
+export default new DeliveryController();

@@ -6,6 +6,7 @@ import { Payment } from './payment.model';
 import { Product } from './product.model';
 import RefreshToken from './RefreshToken.model';
 import { User } from './user.model';
+import Notification from './notification.model';
 
 // This function must be called AFTER all models are imported
 export const setupAssociations = () => {
@@ -115,6 +116,17 @@ export const setupAssociations = () => {
   Delivery.belongsTo(User, {
     foreignKey: 'driver_id',
     as: 'driver'
+  });
+  
+  // User - Notifications
+  User.hasMany(Notification, {
+    foreignKey: 'user_id',
+    as: 'notifications',
+    onDelete: 'CASCADE'
+  });
+  Notification.belongsTo(User, {
+    foreignKey: 'user_id',
+    as: 'user'
   });
   console.log('✅ Associations defined successfully');
 };

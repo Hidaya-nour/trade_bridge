@@ -11,6 +11,7 @@ import {
 } from '../../types/order.types';
 import logger from '../../utils/logger';
 import { Op } from 'sequelize';
+import notificationService from '../../services/notification/notification.service';
 
 export class OrderService {
   private orderRepo = new OrderRepository();
@@ -172,17 +173,38 @@ export class OrderService {
 
     logger.info(`Order created: ${order.id} by buyer: ${buyerId}`);
 
+    // Notify supplier about new order
+    try {
+      const buyer = await this.userRepo.findById(buyerId);
+      await notificationService.createNotification({
+        user_id: supplier_id,
+        type: 'order',
+        title: 'New Order Received',
+        message: `New order ${order.id} placed by ${buyer?.full_name || buyerId}`
+      });
+      // Optionally notify buyer (order placed)
+      await notificationService.createNotification({
+        user_id: buyerId,
+        type: 'order',
+        title: 'Order Placed',
+        message: `Your order ${order.id} was placed successfully`
+      });
+    } catch (err) {
+      logger.error('Failed to create notifications for order creation', err);
+    }
+
     return this.orderRepo.findByIdWithDetails(order.id);
   }
 
   private async createPaymentRecord(orderId: string, amount: number, method: string) {
-    // Implementation in PaymentService (placeholder ID generator)
-    return { id: `${Date.now()}-${Math.random().toString(36).slice(2,8)}`, orderId, amount, method };
+    const paymentService = await import('../payment/payment.service');
+    return paymentService.default.createPayment(orderId, amount, method);
   }
 
   private async createDeliveryRecord(orderId: string, address: string) {
-    // Implementation in DeliveryService (placeholder ID generator)
-    return { id: `${Date.now()}-${Math.random().toString(36).slice(2,8)}`, orderId, address, status: 'pending' };
+    const deliveryService = await import('../delivery/delivery.service');
+    // address currently stored as dropoff_location, pickup left empty
+    return deliveryService.default.createDelivery(orderId, '', address);
   }
 
   // ========================================================================
@@ -216,6 +238,25 @@ export class OrderService {
     }
 
     logger.info(`Order ${orderId} status updated to ${statusData.status} by user ${userId}`);
+
+    // Notify parties about status change
+    try {
+      await notificationService.createNotification({
+        user_id: order.buyer_id,
+        type: 'order',
+        title: `Order ${statusData.status}`,
+        message: `Order ${orderId} status changed to ${statusData.status}`
+      });
+
+      await notificationService.createNotification({
+        user_id: order.supplier_id,
+        type: 'order',
+        title: `Order ${statusData.status}`,
+        message: `Order ${orderId} status changed to ${statusData.status}`
+      });
+    } catch (err) {
+      logger.error('Failed to create notifications for status change', err);
+    }
 
     return this.orderRepo.findByIdWithDetails(orderId);
   }
@@ -275,6 +316,13 @@ export class OrderService {
     }
 
     logger.info(`Order ${orderId} cancelled by user ${userId}. Reason: ${reason || 'Not provided'}`);
+
+    try {
+      await notificationService.createNotification({ user_id: order.buyer_id, type: 'order', title: 'Order Cancelled', message: `Order ${orderId} has been cancelled.`, } as any);
+      await notificationService.createNotification({ user_id: order.supplier_id, type: 'order', title: 'Order Cancelled', message: `Order ${orderId} has been cancelled.`, } as any);
+    } catch (err) {
+      logger.error('Failed to notify about order cancellation', err);
+    }
 
     return { success: true, message: 'Order cancelled successfully' };
   }
