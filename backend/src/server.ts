@@ -6,13 +6,13 @@ import dotenv from 'dotenv';
 import sequelize, { testConnection } from './config/database';
 import authRoutes from './routes/auth.routes';
 import logger from './utils/logger';
-
-// 1️⃣ FIRST: Import models (order doesn't matter now)
 import './models/user.model';
 import './models/RefreshToken.model';
 
-// 2️⃣ SECOND: Setup associations AFTER models are loaded
+
 import { setupAssociations } from './models/associations';
+import productRoutes from './routes/product.routes';
+import orderRoutes from './routes/order.routes';
 
 dotenv.config();
 
@@ -34,11 +34,14 @@ app.use(morgan('dev'));
 
 // Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/products', productRoutes);
+app.use('/api/orders', orderRoutes);
+
 
 // Health check
 app.get('/api/health', (req, res) => {
-  res.json({ 
-    success: true, 
+  res.json({
+    success: true,
     message: 'Server is running',
     timestamp: new Date().toISOString()
   });
@@ -47,8 +50,8 @@ app.get('/api/health', (req, res) => {
 // Error handler
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
   logger.error(err.stack);
-  res.status(500).json({ 
-    success: false, 
+  res.status(500).json({
+    success: false,
     message: 'Internal server error',
     error: process.env.NODE_ENV === 'development' ? err.message : undefined
   });
@@ -57,7 +60,7 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 // Start server
 const startServer = async () => {
   const dbConnected = await testConnection();
-  
+
   if (!dbConnected) {
     logger.error('❌ Failed to connect to database. Exiting...');
     process.exit(1);

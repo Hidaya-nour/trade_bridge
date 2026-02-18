@@ -1,0 +1,242 @@
+import { create } from 'zustand';
+import {  OrderFilters } from '../types/order.types';
+import {Order} from '../types/order.types';
+import orderService from '../services/order.service';
+
+interface OrderState {
+  // Data
+  orders: Order[];
+  currentOrder: Order | null;
+  totalOrders: number;
+  currentPage: number;
+  totalPages: number;
+  isLoading: boolean;
+  error: string | null;
+  filters: OrderFilters;
+  stats: any;
+
+  // Actions - Buyer
+  fetchMyOrders: (filters?: OrderFilters) => Promise<void>;
+  fetchOrdersAsBuyer: (filters?: OrderFilters) => Promise<void>;
+  fetchOrderById: (id: string) => Promise<Order | null>;
+  
+  // Actions - Supplier
+  fetchOrdersAsSupplier: (filters?: OrderFilters) => Promise<void>;
+  updateOrderStatus: (id: string, status: any) => Promise<boolean>;
+  
+  // Common Actions
+  createOrder: (data: any) => Promise<Order | null>;
+  cancelOrder: (id: string, reason?: string) => Promise<boolean>;
+  fetchOrderSummary: (id: string) => Promise<any>;
+  fetchOrderStats: () => Promise<void>;
+  
+  setFilters: (filters: OrderFilters) => void;
+  clearFilters: () => void;
+  clearError: () => void;
+}
+
+export const useOrderStore = create<OrderState>((set, get) => ({
+  orders: [],
+  currentOrder: null,
+  totalOrders: 0,
+  currentPage: 1,
+  totalPages: 1,
+  isLoading: false,
+  error: null,
+  filters: {},
+  stats: null,
+
+  // ========================================================================
+  // Buyer Actions
+  // ========================================================================
+
+  fetchMyOrders: async (filters?: OrderFilters) => {
+    set({ isLoading: true, error: null });
+    try {
+      const mergedFilters = { ...get().filters, ...filters };
+      const response = await orderService.getMyOrders(mergedFilters);
+      
+      set({
+        orders: response.data.orders,
+        totalOrders: response.data.total,
+        currentPage: response.data.page,
+        totalPages: response.data.totalPages,
+        filters: mergedFilters,
+        isLoading: false,
+      });
+    } catch (error: any) {
+      set({
+        error: error.response?.data?.message || 'Failed to fetch orders',
+        isLoading: false,
+      });
+    }
+  },
+
+  fetchOrdersAsBuyer: async (filters?: OrderFilters) => {
+    set({ isLoading: true, error: null });
+    try {
+      const mergedFilters = { ...get().filters, ...filters };
+      const response = await orderService.getOrdersAsBuyer(mergedFilters);
+      
+      set({
+        orders: response.data.orders,
+        totalOrders: response.data.total,
+        currentPage: response.data.page,
+        totalPages: response.data.totalPages,
+        filters: mergedFilters,
+        isLoading: false,
+      });
+    } catch (error: any) {
+      set({
+        error: error.response?.data?.message || 'Failed to fetch orders',
+        isLoading: false,
+      });
+    }
+  },
+
+  fetchOrderById: async (id: string) => {
+    set({ isLoading: true, error: null, currentOrder: null });
+    try {
+      const response = await orderService.getOrderById(id);
+      set({ currentOrder: response.data.order, isLoading: false });
+      return response.data.order;
+    } catch (error: any) {
+      set({
+        error: error.response?.data?.message || 'Failed to fetch order',
+        isLoading: false,
+      });
+      return null;
+    }
+  },
+
+  // ========================================================================
+  // Supplier Actions
+  // ========================================================================
+
+  fetchOrdersAsSupplier: async (filters?: OrderFilters) => {
+    set({ isLoading: true, error: null });
+    try {
+      const mergedFilters = { ...get().filters, ...filters };
+      const response = await orderService.getOrdersAsSupplier(mergedFilters);
+      
+      set({
+        orders: response.data.orders,
+        totalOrders: response.data.total,
+        currentPage: response.data.page,
+        totalPages: response.data.totalPages,
+        filters: mergedFilters,
+        isLoading: false,
+      });
+    } catch (error: any) {
+      set({
+        error: error.response?.data?.message || 'Failed to fetch orders',
+        isLoading: false,
+      });
+    }
+  },
+
+  updateOrderStatus: async (id: string, statusData: any) => {
+    set({ isLoading: true, error: null });
+    try {
+      const response = await orderService.updateOrderStatus(id, statusData);
+      
+      // Update order in list
+      const orders = get().orders.map(o => 
+        o.id === id ? response.data.order : o
+      );
+      
+      set({ orders, isLoading: false });
+      return true;
+    } catch (error: any) {
+      set({
+        error: error.response?.data?.message || 'Failed to update order status',
+        isLoading: false,
+      });
+      return false;
+    }
+  },
+
+  // ========================================================================
+  // Common Actions
+  // ========================================================================
+
+  createOrder: async (data: any) => {
+    set({ isLoading: true, error: null });
+    try {
+      const response = await orderService.createOrder(data);
+      
+      // Refresh orders list
+      await get().fetchMyOrders();
+      
+      set({ isLoading: false });
+      return response.data.order;
+    } catch (error: any) {
+      set({
+        error: error.response?.data?.message || 'Failed to create order',
+        isLoading: false,
+      });
+      return null;
+    }
+  },
+
+  cancelOrder: async (id: string, reason?: string) => {
+    set({ isLoading: true, error: null });
+    try {
+      await orderService.cancelOrder(id, { reason });
+      
+      // Update order status in list
+      const orders = get().orders.map(o => 
+        o.id === id ? { ...o, order_status: 'cancelled' as const } : o
+      );
+      
+      set({ orders, isLoading: false });
+      return true;
+    } catch (error: any) {
+      set({
+        error: error.response?.data?.message || 'Failed to cancel order',
+        isLoading: false,
+      });
+      return false;
+    }
+  },
+
+  fetchOrderSummary: async (id: string) => {
+    set({ isLoading: true, error: null });
+    try {
+      const response = await orderService.getOrderSummary(id);
+      set({ isLoading: false });
+      return response.data.summary;
+    }
+    catch (error: any) {
+      set({
+        error: error.response?.data?.message || 'Failed to fetch order summary',
+        isLoading: false,
+      });
+      return null;
+    }
+    },
+
+    fetchOrderStats: async () => {
+        set({ isLoading: true, error: null });
+    try {      const response = await orderService.getOrderStats();
+      set({ stats: response.data.stats, isLoading: false });
+    } catch (error: any) {
+      set({
+        error: error.response?.data?.message || 'Failed to fetch order stats',
+        isLoading: false,
+      });
+    }
+    },
+
+    setFilters: (filters: OrderFilters) => {
+        set({ filters });
+    },
+
+    clearFilters: () => {
+        set({ filters: {} });
+    },
+
+    clearError: () => {
+        set({ error: null });
+    },
+}));
