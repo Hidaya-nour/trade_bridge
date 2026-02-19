@@ -8,11 +8,13 @@ import authRoutes from './routes/auth.routes';
 import logger from './utils/logger';
 import './models/user.model';
 import './models/RefreshToken.model';
-
+import './models/cart.model';
+import './models/cart-item.model';
 
 import { setupAssociations } from './models/associations';
 import productRoutes from './routes/product.routes';
 import orderRoutes from './routes/order.routes';
+import cartRoutes from './routes/cart.routes';
 import notificationRoutes from './routes/notification.routes';
 import disputeRoutes from './routes/dispute.routes';
 import paymentRoutes from './routes/payment.routes';
@@ -40,6 +42,7 @@ app.use(morgan('dev'));
 app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/orders', orderRoutes);
+app.use('/api/cart', cartRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/disputes', disputeRoutes);
 app.use('/api/payments', paymentRoutes);
