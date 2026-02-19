@@ -10,6 +10,7 @@ import './models/user.model';
 import './models/RefreshToken.model';
 import './models/cart.model';
 import './models/cart-item.model';
+import './models/promotion.model';
 
 import { setupAssociations } from './models/associations';
 import productRoutes from './routes/product.routes';
@@ -19,6 +20,7 @@ import notificationRoutes from './routes/notification.routes';
 import disputeRoutes from './routes/dispute.routes';
 import paymentRoutes from './routes/payment.routes';
 import deliveryRoutes from './routes/delivery.routes';
+import promotionRoutes from './routes/promotion.routes';
 
 dotenv.config();
 
@@ -47,6 +49,7 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/disputes', disputeRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/deliveries', deliveryRoutes);
+app.use('/api/promotions', promotionRoutes);
 
 
 // Health check

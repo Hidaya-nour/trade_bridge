@@ -3,7 +3,6 @@ import { CartService } from '../services/cart/cart.service';
 import { AppError } from '../utils/errors';
 import logger from '../utils/logger';
 import { AddToCartDTO, UpdateCartItemDTO } from '../types/cart.types';
-import { body, param, query } from 'express-validator';
 
 const cartService = new CartService();
 
@@ -16,7 +15,8 @@ export class CartController {
     try {
       const userId = req.user?.id;
       if (!userId) {
-        return res.status(401).json({ success: false, message: 'User not authenticated' });
+        res.status(401).json({ success: false, message: 'User not authenticated' });
+        return;
       }
 
       const cart = await cartService.getCart(userId);
@@ -28,7 +28,10 @@ export class CartController {
           user_id: userId,
           items: [],
           total_items: 0,
-          total_price: 0,
+          original_total: 0,
+          discount_total: 0,
+          final_total: 0,
+          applied_promotions: [],
           created_at: null,
           updated_at: null
         }
@@ -51,7 +54,8 @@ export class CartController {
     try {
       const userId = req.user?.id;
       if (!userId) {
-        return res.status(401).json({ success: false, message: 'User not authenticated' });
+        res.status(401).json({ success: false, message: 'User not authenticated' });
+        return;
       }
 
       const itemData: AddToCartDTO = req.body;
@@ -81,7 +85,8 @@ export class CartController {
     try {
       const userId = req.user?.id;
       if (!userId) {
-        return res.status(401).json({ success: false, message: 'User not authenticated' });
+        res.status(401).json({ success: false, message: 'User not authenticated' });
+        return;
       }
 
       const { productId } = req.params;
@@ -112,7 +117,8 @@ export class CartController {
     try {
       const userId = req.user?.id;
       if (!userId) {
-        return res.status(401).json({ success: false, message: 'User not authenticated' });
+        res.status(401).json({ success: false, message: 'User not authenticated' });
+        return;
       }
 
       const { productId } = req.params;
@@ -142,7 +148,8 @@ export class CartController {
     try {
       const userId = req.user?.id;
       if (!userId) {
-        return res.status(401).json({ success: false, message: 'User not authenticated' });
+        res.status(401).json({ success: false, message: 'User not authenticated' });
+        return;
       }
 
       const result = await cartService.clearCart(userId);
@@ -166,7 +173,8 @@ export class CartController {
     try {
       const userId = req.user?.id;
       if (!userId) {
-        return res.status(401).json({ success: false, message: 'User not authenticated' });
+        res.status(401).json({ success: false, message: 'User not authenticated' });
+        return;
       }
 
       const result = await cartService.validateCartForCheckout(userId);
