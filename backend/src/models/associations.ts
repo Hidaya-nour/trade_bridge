@@ -7,6 +7,8 @@ import { Product } from './product.model';
 import RefreshToken from './RefreshToken.model';
 import { User } from './user.model';
 import Notification from './notification.model';
+import Cart from './cart.model';
+import CartItem from './cart-item.model';
 
 // This function must be called AFTER all models are imported
 export const setupAssociations = () => {
@@ -128,5 +130,38 @@ export const setupAssociations = () => {
     foreignKey: 'user_id',
     as: 'user'
   });
+
+  // User - Cart
+  User.hasOne(Cart, {
+    foreignKey: 'user_id',
+    as: 'cart',
+    onDelete: 'CASCADE'
+  });
+  Cart.belongsTo(User, {
+    foreignKey: 'user_id',
+    as: 'user'
+  });
+
+  // Cart - CartItems
+  Cart.hasMany(CartItem, {
+    foreignKey: 'cart_id',
+    as: 'items',
+    onDelete: 'CASCADE'
+  });
+  CartItem.belongsTo(Cart, {
+    foreignKey: 'cart_id',
+    as: 'cart'
+  });
+
+  // CartItem - Product
+  CartItem.belongsTo(Product, {
+    foreignKey: 'product_id',
+    as: 'product'
+  });
+  Product.hasMany(CartItem, {
+    foreignKey: 'product_id',
+    as: 'cartItems'
+  });
+
   console.log('✅ Associations defined successfully');
 };
