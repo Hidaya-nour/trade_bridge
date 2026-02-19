@@ -3,7 +3,6 @@ import { OrderService } from '../services/order/order.service';
 import { AppError } from '../utils/errors';
 import logger from '../utils/logger';
 import { OrderFilters } from '../types/order.types';
-import { Op } from 'sequelize';
 
 const orderService = new OrderService();
 

@@ -2,9 +2,13 @@ import { BaseRepository } from "./base.repository";
 import { Cart } from "../models/cart.model";
 import { CartItem } from "../models/cart-item.model";
 import { Product } from "../models/product.model";
-import { CartWithItems, CartItemWithProduct } from "../types/cart.types";
+import { CartWithItems } from "../types/cart.types";
+import { PromotionService } from "../services/promotion/promotion.service";
+import { UserRole } from "../types/auth.types";
 
 export class CartRepository extends BaseRepository<Cart> {
+  private promotionService = new PromotionService();
+
   constructor() {
     super(Cart);
   }
@@ -13,7 +17,7 @@ export class CartRepository extends BaseRepository<Cart> {
   // Find Cart with Items
   // ============================================================
 
-  async findCartWithItems(userId: string): Promise<CartWithItems | null> {
+  async findCartWithItems(userId: string, userRole?: UserRole, region?: string): Promise<CartWithItems | null> {
     const cart = await this.model.findOne({
       where: { user_id: userId },
       include: [
@@ -36,16 +40,35 @@ export class CartRepository extends BaseRepository<Cart> {
     // Calculate totals
     const items = (cart as any).items || [];
     const total_items = items.reduce((sum: number, item: any) => sum + item.quantity, 0);
-    const total_price = items.reduce((sum: number, item: any) =>
+    const original_total = items.reduce((sum: number, item: any) =>
       sum + (item.product?.price || 0) * item.quantity, 0
     );
+
+    let discount_total = 0;
+    let final_total = original_total;
+    let applied_promotions: any[] = [];
+
+    // Apply promotions if user info is provided
+    if (userRole && region) {
+      const promotionResult = await this.promotionService.calculateCartTotalWithPromotions(
+        userRole,
+        region,
+        original_total
+      );
+      discount_total = promotionResult.discount_total;
+      final_total = promotionResult.final_total;
+      applied_promotions = promotionResult.applied_promotions;
+    }
 
     return {
       id: cart.id,
       user_id: cart.user_id,
       items: items,
       total_items,
-      total_price,
+      original_total,
+      discount_total,
+      final_total,
+      applied_promotions,
       created_at: cart.created_at,
       updated_at: cart.updated_at
     };

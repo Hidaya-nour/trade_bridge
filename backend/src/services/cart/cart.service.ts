@@ -1,5 +1,6 @@
 import { CartRepository, CartItemRepository } from '../../repositories/cart.repository';
 import { ProductRepository } from '../../repositories/product.repository';
+import { UserRepository } from '../../repositories/user.repository';
 import { AppError } from '../../utils/errors';
 import { AddToCartDTO, UpdateCartItemDTO, CartWithItems } from '../../types/cart.types';
 import logger from '../../utils/logger';
@@ -8,13 +9,30 @@ export class CartService {
   private cartRepo = new CartRepository();
   private cartItemRepo = new CartItemRepository();
   private productRepo = new ProductRepository();
+  private userRepo = new UserRepository();
+
+  // ============================================================
+  // HELPER: Get User Info
+  // ============================================================
+
+  private async getUserInfo(userId: string) {
+    const user = await this.userRepo.findById(userId);
+    if (!user) {
+      throw new AppError('User not found', 404);
+    }
+    return {
+      role: user.role,
+      region: 'all' // Can be extended to get from user profile
+    };
+  }
 
   // ============================================================
   // GET CART
   // ============================================================
 
   async getCart(userId: string): Promise<CartWithItems | null> {
-    return this.cartRepo.findCartWithItems(userId);
+    const { role, region } = await this.getUserInfo(userId);
+    return this.cartRepo.findCartWithItems(userId, role, region);
   }
 
   // ============================================================
@@ -70,7 +88,8 @@ export class CartService {
     logger.info(`User ${userId} added ${quantity} of product ${product_id} to cart`);
 
     // Return updated cart
-    const updatedCart = await this.cartRepo.findCartWithItems(userId);
+    const { role, region } = await this.getUserInfo(userId);
+    const updatedCart = await this.cartRepo.findCartWithItems(userId, role, region);
     if (!updatedCart) {
       throw new AppError('Failed to retrieve updated cart', 500);
     }
@@ -123,7 +142,8 @@ export class CartService {
     logger.info(`User ${userId} updated cart item ${productId} quantity to ${quantity}`);
 
     // Return updated cart
-    const updatedCart = await this.cartRepo.findCartWithItems(userId);
+    const { role, region } = await this.getUserInfo(userId);
+    const updatedCart = await this.cartRepo.findCartWithItems(userId, role, region);
     if (!updatedCart) {
       throw new AppError('Failed to retrieve updated cart', 500);
     }
@@ -151,7 +171,8 @@ export class CartService {
     logger.info(`User ${userId} removed product ${productId} from cart`);
 
     // Return updated cart
-    const updatedCart = await this.cartRepo.findCartWithItems(userId);
+    const { role, region } = await this.getUserInfo(userId);
+    const updatedCart = await this.cartRepo.findCartWithItems(userId, role, region);
     if (!updatedCart) {
       throw new AppError('Failed to retrieve updated cart', 500);
     }
@@ -190,12 +211,13 @@ export class CartService {
     issues: string[];
     cart: CartWithItems;
   }> {
-    const cart = await this.cartRepo.findCartWithItems(userId);
+    const { role, region } = await this.getUserInfo(userId);
+    const cart = await this.cartRepo.findCartWithItems(userId, role, region);
     if (!cart || cart.items.length === 0) {
       return {
         valid: false,
         issues: ['Cart is empty'],
-        cart: cart || { id: '', user_id: userId, items: [], total_items: 0, total_price: 0, created_at: new Date(), updated_at: new Date() }
+        cart: cart || { id: '', user_id: userId, items: [], total_items: 0, original_total: 0, discount_total: 0, final_total: 0, applied_promotions: [], created_at: new Date(), updated_at: new Date() }
       };
     }
 

@@ -1,4 +1,4 @@
-import { Model, ModelCtor, WhereOptions, FindOptions, Order } from 'sequelize';
+import { Model, ModelCtor, WhereOptions, FindOptions } from 'sequelize';
 
 export abstract class BaseRepository<T extends Model> {
   constructor(protected readonly model: ModelCtor<T>) {}
