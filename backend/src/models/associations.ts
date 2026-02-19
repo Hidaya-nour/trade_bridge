@@ -9,6 +9,7 @@ import { User } from './user.model';
 import Notification from './notification.model';
 import Cart from './cart.model';
 import CartItem from './cart-item.model';
+import InventoryMovement from './inventory-movement.model';
 
 // This function must be called AFTER all models are imported
 export const setupAssociations = () => {
@@ -161,6 +162,26 @@ export const setupAssociations = () => {
   Product.hasMany(CartItem, {
     foreignKey: 'product_id',
     as: 'cartItems'
+  });
+
+  // InventoryMovement - Product
+  InventoryMovement.belongsTo(Product, {
+    foreignKey: 'product_id',
+    as: 'product'
+  });
+  Product.hasMany(InventoryMovement, {
+    foreignKey: 'product_id',
+    as: 'inventoryMovements'
+  });
+
+  // InventoryMovement - User
+  InventoryMovement.belongsTo(User, {
+    foreignKey: 'user_id',
+    as: 'user'
+  });
+  User.hasMany(InventoryMovement, {
+    foreignKey: 'user_id',
+    as: 'inventoryMovements'
   });
 
   console.log('✅ Associations defined successfully');

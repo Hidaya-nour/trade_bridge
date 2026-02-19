@@ -11,6 +11,7 @@ import './models/RefreshToken.model';
 import './models/cart.model';
 import './models/cart-item.model';
 import './models/promotion.model';
+import './models/inventory-movement.model';
 
 import { setupAssociations } from './models/associations';
 import productRoutes from './routes/product.routes';
@@ -21,6 +22,7 @@ import disputeRoutes from './routes/dispute.routes';
 import paymentRoutes from './routes/payment.routes';
 import deliveryRoutes from './routes/delivery.routes';
 import promotionRoutes from './routes/promotion.routes';
+import inventoryMovementRoutes from './routes/inventory-movement.routes';
 
 dotenv.config();
 
@@ -50,6 +52,7 @@ app.use('/api/disputes', disputeRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/deliveries', deliveryRoutes);
 app.use('/api/promotions', promotionRoutes);
+app.use('/api/inventory-movements', inventoryMovementRoutes);
 
 
 // Health check
