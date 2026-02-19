@@ -12,6 +12,8 @@ import './models/cart.model';
 import './models/cart-item.model';
 import './models/promotion.model';
 import './models/inventory-movement.model';
+import './models/chat-message.model';
+import './models/login-attempt.model';
 
 import { setupAssociations } from './models/associations';
 import productRoutes from './routes/product.routes';
@@ -23,6 +25,8 @@ import paymentRoutes from './routes/payment.routes';
 import deliveryRoutes from './routes/delivery.routes';
 import promotionRoutes from './routes/promotion.routes';
 import inventoryMovementRoutes from './routes/inventory-movement.routes';
+import messageRoutes from './routes/message.routes';
+import loginAttemptRoutes from './routes/login-attempt.routes';
 
 dotenv.config();
 
@@ -53,6 +57,8 @@ app.use('/api/payments', paymentRoutes);
 app.use('/api/deliveries', deliveryRoutes);
 app.use('/api/promotions', promotionRoutes);
 app.use('/api/inventory-movements', inventoryMovementRoutes);
+app.use('/api/messages', messageRoutes);
+app.use('/api/login-attempts', loginAttemptRoutes);
 
 
 // Health check

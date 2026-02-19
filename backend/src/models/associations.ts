@@ -10,6 +10,7 @@ import Notification from './notification.model';
 import Cart from './cart.model';
 import CartItem from './cart-item.model';
 import InventoryMovement from './inventory-movement.model';
+import ChatMessage from './chat-message.model';
 
 // This function must be called AFTER all models are imported
 export const setupAssociations = () => {
@@ -182,6 +183,36 @@ export const setupAssociations = () => {
   User.hasMany(InventoryMovement, {
     foreignKey: 'user_id',
     as: 'inventoryMovements'
+  });
+
+  // ChatMessage - User (sender)
+  ChatMessage.belongsTo(User, {
+    foreignKey: 'sender_id',
+    as: 'sender'
+  });
+  User.hasMany(ChatMessage, {
+    foreignKey: 'sender_id',
+    as: 'sentMessages'
+  });
+
+  // ChatMessage - User (receiver)
+  ChatMessage.belongsTo(User, {
+    foreignKey: 'receiver_id',
+    as: 'receiver'
+  });
+  User.hasMany(ChatMessage, {
+    foreignKey: 'receiver_id',
+    as: 'receivedMessages'
+  });
+
+  // ChatMessage - Order
+  ChatMessage.belongsTo(Order, {
+    foreignKey: 'order_id',
+    as: 'order'
+  });
+  Order.hasMany(ChatMessage, {
+    foreignKey: 'order_id',
+    as: 'chatMessages'
   });
 
   console.log('✅ Associations defined successfully');

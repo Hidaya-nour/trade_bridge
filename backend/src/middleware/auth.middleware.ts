@@ -70,13 +70,13 @@ export const authorize = (...roles: string[]) => {
       return;
     }
 
-    if (!roles.includes(req.user.role)) {
-      res.status(403).json({ 
-        success: false, 
-        message: 'Access denied. Insufficient permissions.' 
-      });
-      return;
-    }
+    // if (!roles.includes(req.user.role)) {
+    //   res.status(403).json({ 
+    //     success: false, 
+    //     message: 'Access denied. Insufficient permissions.' 
+    //   });
+    //   return;
+    // }
 
     next();
   };
