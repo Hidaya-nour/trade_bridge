@@ -142,6 +142,13 @@ export class ProductService {
     return { productId, stock_quantity: quantity };
   }
 
+  async updateProductStock(productId: string, newStock: number): Promise<boolean> {
+    if (newStock < 0) {
+      throw new AppError('Stock quantity cannot be negative', 400);
+    }
+    return this.productRepo.updateStock(productId, newStock);
+  }
+
   async reserveStock(productId: string, quantity: number) {
     const product = await this.productRepo.findById(productId);
     if (!product) {
