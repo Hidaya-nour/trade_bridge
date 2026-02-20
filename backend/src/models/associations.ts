@@ -11,6 +11,8 @@ import Cart from './cart.model';
 import CartItem from './cart-item.model';
 import InventoryMovement from './inventory-movement.model';
 import ChatMessage from './chat-message.model';
+import Document from './document.model';
+import Address from './address.model';
 
 // This function must be called AFTER all models are imported
 export const setupAssociations = () => {
@@ -213,6 +215,26 @@ export const setupAssociations = () => {
   Order.hasMany(ChatMessage, {
     foreignKey: 'order_id',
     as: 'chatMessages'
+  });
+
+  // User - Documents
+  Document.belongsTo(User, {
+    foreignKey: 'user_id',
+    as: 'user'
+  });
+  User.hasMany(Document, {
+    foreignKey: 'user_id',
+    as: 'documents'
+  });
+
+  // User - Addresses
+  Address.belongsTo(User, {
+    foreignKey: 'user_id',
+    as: 'user'
+  });
+  User.hasMany(Address, {
+    foreignKey: 'user_id',
+    as: 'addresses'
   });
 
   console.log('✅ Associations defined successfully');

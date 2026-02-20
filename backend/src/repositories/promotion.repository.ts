@@ -1,6 +1,6 @@
 import { BaseRepository } from "./base.repository";
 import { Promotion } from "../models/promotion.model";
-import { IPromotion, CreatePromotionDTO, UpdatePromotionDTO } from "../types/promotion.types";
+import { CreatePromotionDTO, UpdatePromotionDTO } from "../types/promotion.types";
 import { Op } from "sequelize";
 
 export class PromotionRepository extends BaseRepository<Promotion> {
@@ -19,9 +19,7 @@ export class PromotionRepository extends BaseRepository<Promotion> {
       end_date: { [Op.gte]: currentDate },
       [Op.or]: [
         { target_role: userRole },
-        { target_role: 'all' }
-      ],
-      [Op.or]: [
+        { target_role: 'all' },
         { target_region: region },
         { target_region: 'all' }
       ]
