@@ -15,6 +15,8 @@ import Document from './document.model';
 import Address from './address.model';
 import DriverLocation from './driver-location.model';
 import AuditLog from './audit-log.model';
+import SupplierPaymentMethod from './supplier-payment-method.model';
+import FactoryAgent from './factory-agent.model';
 
 // This function must be called AFTER all models are imported
 export const setupAssociations = () => {
@@ -267,6 +269,40 @@ export const setupAssociations = () => {
   User.hasMany(AuditLog, {
     foreignKey: 'user_id',
     as: 'auditLogs'
+  // User - SupplierPaymentMethods
+  SupplierPaymentMethod.belongsTo(User, {
+    foreignKey: 'supplier_id',
+    as: 'supplier'
+  });
+  User.hasMany(SupplierPaymentMethod, {
+    foreignKey: 'supplier_id',
+    as: 'supplierPaymentMethods'
+  });
+
+  // FactoryAgent - Factory (User)
+  FactoryAgent.belongsTo(User, {
+    foreignKey: 'factory_id',
+    as: 'factory'
+  });
+  User.hasMany(FactoryAgent, {
+    foreignKey: 'factory_id',
+    as: 'factoryAgents'
+  });
+
+  // FactoryAgent - Agent (User)
+  FactoryAgent.belongsTo(User, {
+    foreignKey: 'agent_id',
+    as: 'agent'
+  });
+  User.hasMany(FactoryAgent, {
+    foreignKey: 'agent_id',
+    as: 'agentContracts'
+  });
+
+  // FactoryAgent - Creator (User)
+  FactoryAgent.belongsTo(User, {
+    foreignKey: 'created_by',
+    as: 'creator'
   });
 
   console.log('✅ Associations defined successfully');
