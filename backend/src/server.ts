@@ -16,6 +16,8 @@ import './models/chat-message.model';
 import './models/login-attempt.model';
 import './models/document.model';
 import './models/address.model';
+import './models/driver-location.model';
+import './models/audit-log.model';
 
 import { setupAssociations } from './models/associations';
 import productRoutes from './routes/product.routes';
@@ -31,6 +33,8 @@ import messageRoutes from './routes/message.routes';
 import loginAttemptRoutes from './routes/login-attempt.routes';
 import documentRoutes from './routes/document.routes';
 import addressRoutes from './routes/address.routes';
+import driverLocationRoutes from './routes/driver-location.routes';
+import auditLogRoutes from './routes/audit-log.routes';
 
 dotenv.config();
 
@@ -65,6 +69,8 @@ app.use('/api/messages', messageRoutes);
 app.use('/api/login-attempts', loginAttemptRoutes);
 app.use('/api/documents', documentRoutes);
 app.use('/api/addresses', addressRoutes);
+app.use('/api/driver-locations', driverLocationRoutes);
+app.use('/api/audit-logs', auditLogRoutes);
 
 
 // Health check

@@ -13,6 +13,8 @@ import InventoryMovement from './inventory-movement.model';
 import ChatMessage from './chat-message.model';
 import Document from './document.model';
 import Address from './address.model';
+import DriverLocation from './driver-location.model';
+import AuditLog from './audit-log.model';
 
 // This function must be called AFTER all models are imported
 export const setupAssociations = () => {
@@ -235,6 +237,36 @@ export const setupAssociations = () => {
   User.hasMany(Address, {
     foreignKey: 'user_id',
     as: 'addresses'
+  });
+
+  // User - DriverLocations
+  DriverLocation.belongsTo(User, {
+    foreignKey: 'driver_id',
+    as: 'driver'
+  });
+  User.hasMany(DriverLocation, {
+    foreignKey: 'driver_id',
+    as: 'driverLocations'
+  });
+
+  // DriverLocation - Order
+  DriverLocation.belongsTo(Order, {
+    foreignKey: 'order_id',
+    as: 'order'
+  });
+  Order.hasMany(DriverLocation, {
+    foreignKey: 'order_id',
+    as: 'driverLocations'
+  });
+
+  // User - AuditLogs
+  AuditLog.belongsTo(User, {
+    foreignKey: 'user_id',
+    as: 'user'
+  });
+  User.hasMany(AuditLog, {
+    foreignKey: 'user_id',
+    as: 'auditLogs'
   });
 
   console.log('✅ Associations defined successfully');
