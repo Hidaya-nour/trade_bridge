@@ -16,8 +16,17 @@ export class NotificationController {
       logger.error('Get notifications error:', error);
       res.status(500).json({ success: false, message: 'Internal server error' });
     }
+  };
+ async getNotificationCounts(req: Request, res: Response) {
+  try {
+    const userId = req.user?.id as string;
+    const counts = await notificationService.getNotificationCounts(userId);
+    res.json({ success: true, data: counts });
+  } catch (error) {
+    logger.error('Get notification counts error:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
   }
-
+};
   async createNotification(req: Request, res: Response) {
     try {
       const payload = req.body;

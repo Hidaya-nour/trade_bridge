@@ -21,7 +21,7 @@ export interface User {
   id: string;
   email: string;
   full_name: string;
-  role: UserRole; // ✅ FIXED (no longer string)
+  role: UserRole; 
   status: string;
   phone?: string;
   business_name?: string;

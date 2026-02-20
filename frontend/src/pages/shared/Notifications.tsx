@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   Bell,
@@ -21,6 +21,7 @@ import {
   X,
   Smartphone,
   Mail,
+  MessageSquare,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -48,184 +49,151 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
-
-// Mock notifications
-const allNotifications = [
-  {
-    id: 1,
-    type: "order",
-    title: "Order Confirmed",
-    description:
-      "Order #TB-2026-0892 has been confirmed by Ethiopia Coffee Export.",
-    time: "5 minutes ago",
-    read: false,
-    icon: CheckCircle2,
-    color: "text-green-600",
-    bg: "bg-green-100",
-    link: "/retailer/orders/TB-2026-0892",
-    actionable: true,
-    actionLabel: "View Order",
-  },
-  {
-    id: 2,
-    type: "shipping",
-    title: "Order Shipped",
-    description: "Order #TB-2026-0885 has been shipped. Tracking: TRK-7885-02",
-    time: "2 hours ago",
-    read: false,
-    icon: Truck,
-    color: "text-blue-600",
-    bg: "bg-blue-100",
-    link: "/retailer/tracking/TB-2026-0885",
-    actionable: true,
-    actionLabel: "Track Order",
-  },
-  {
-    id: 3,
-    type: "promotion",
-    title: "Flash Sale! 20% Off",
-    description:
-      "Selected electronics at Adama Wholesalers. Limited time offer.",
-    time: "5 hours ago",
-    read: true,
-    icon: TrendingUp,
-    color: "text-purple-600",
-    bg: "bg-purple-100",
-    link: "/retailer/products?sale=flash",
-    actionable: true,
-    actionLabel: "Shop Now",
-  },
-  {
-    id: 4,
-    type: "payment",
-    title: "Payment Successful",
-    description:
-      "Your payment of ETB 12,500 for order #TB-2026-0892 has been processed.",
-    time: "1 day ago",
-    read: true,
-    icon: CreditCard,
-    color: "text-emerald-600",
-    bg: "bg-emerald-100",
-    link: "/retailer/orders/TB-2026-0892",
-    actionable: false,
-  },
-  {
-    id: 5,
-    type: "review",
-    title: "Review Request",
-    description:
-      "How was your order from Ethiopia Coffee Export? Share your feedback.",
-    time: "1 day ago",
-    read: false,
-    icon: Star,
-    color: "text-yellow-600",
-    bg: "bg-yellow-100",
-    link: "/retailer/reviews?order=TB-2026-0892",
-    actionable: true,
-    actionLabel: "Write Review",
-  },
-  {
-    id: 6,
-    type: "supplier",
-    title: "New Supplier",
-    description: "Bahir Dar Honey is now verified and available in your area.",
-    time: "2 days ago",
-    read: true,
-    icon: Store,
-    color: "text-indigo-600",
-    bg: "bg-indigo-100",
-    link: "/retailer/suppliers/104",
-    actionable: true,
-    actionLabel: "View Supplier",
-  },
-  {
-    id: 7,
-    type: "inventory",
-    title: "Low Stock Alert",
-    description: "Yirgacheffe Coffee is running low. Restock soon.",
-    time: "2 days ago",
-    read: true,
-    icon: AlertCircle,
-    color: "text-amber-600",
-    bg: "bg-amber-100",
-    link: "/retailer/products/1",
-    actionable: true,
-    actionLabel: "Reorder",
-  },
-  {
-    id: 8,
-    type: "order",
-    title: "Order Delivered",
-    description: "Order #TB-2026-0851 has been delivered successfully.",
-    time: "3 days ago",
-    read: true,
-    icon: CheckCircle2,
-    color: "text-green-600",
-    bg: "bg-green-100",
-    link: "/retailer/orders/TB-2026-0851",
-    actionable: true,
-    actionLabel: "Review Order",
-  },
-  {
-    id: 9,
-    type: "system",
-    title: "Maintenance Scheduled",
-    description: "Platform maintenance on Feb 15, 2026 from 2:00 AM - 4:00 AM.",
-    time: "3 days ago",
-    read: true,
-    icon: Clock,
-    color: "text-gray-600",
-    bg: "bg-gray-100",
-    link: "/support/announcements",
-    actionable: false,
-  },
-];
-
-const notificationGroups = {
-  today: allNotifications.filter(
-    (n) => n.time.includes("minute") || n.time.includes("hour"),
-  ),
-  yesterday: allNotifications.filter(
-    (n) => n.time.includes("yesterday") || n.time.includes("day"),
-  ),
-  earlier: allNotifications.filter(
-    (n) => n.time.includes("days") || n.time.includes("week"),
-  ),
-};
-
-const getIcon = (notification: any) => {
-  const Icon = notification.icon;
-  return (
-    <div className={cn("p-2 rounded-full", notification.bg)}>
-      <Icon className={cn("h-4 w-4", notification.color)} />
-    </div>
-  );
-};
+import { useNotificationStore } from "@/stores/notification.store";
 
 const NotificationsPage: React.FC = () => {
-  const [notifications, setNotifications] = useState(allNotifications);
+  // Get notifications from store
+  const {
+    notifications,
+    fetchCounts,
+    counts,
+    fetchNotifications,
+    markAsRead,
+    markAllRead,
+    isLoading,
+    deleteNotification,
+  } = useNotificationStore();
+
+  // Fetch notifications on mount
+  useEffect(() => {
+    fetchNotifications();
+    fetchCounts(); // Add this to fetch counts
+
+    // Optional: Poll for count updates every 30 seconds
+    const interval = setInterval(() => {
+      fetchCounts();
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, [fetchNotifications, fetchCounts]);
+
+  // Function to get icon based on notification type
+  const getIconForType = (type: string) => {
+    switch (type?.toLowerCase()) {
+      case "order":
+      case "order_created":
+      case "order_confirmed":
+      case "order_processing":
+        return Package;
+      case "delivery":
+      case "order_shipped":
+      case "delivery_assigned":
+      case "delivery_in_transit":
+        return Truck;
+      case "payment":
+      case "payment_received":
+      case "payment_successful":
+        return CreditCard;
+      case "promotion":
+      case "trending":
+        return TrendingUp;
+      case "message":
+      case "message_received":
+        return MessageSquare;
+      default:
+        return Bell;
+    }
+  };
+
+  // Function to get colors based on notification type
+  const getColorsForType = (type: string) => {
+    switch (type?.toLowerCase()) {
+      case "order":
+      case "order_created":
+      case "order_confirmed":
+        return {
+          color: "text-blue-500",
+          bg: "bg-blue-100 dark:bg-blue-950/30",
+        };
+      case "payment":
+      case "payment_received":
+      case "payment_successful":
+        return {
+          color: "text-green-500",
+          bg: "bg-green-100 dark:bg-green-950/30",
+        };
+      case "delivery":
+      case "order_shipped":
+      case "delivery_in_transit":
+        return {
+          color: "text-purple-500",
+          bg: "bg-purple-100 dark:bg-purple-950/30",
+        };
+      case "message":
+      case "message_received":
+        return {
+          color: "text-indigo-500",
+          bg: "bg-indigo-100 dark:bg-indigo-950/30",
+        };
+      case "promotion":
+      case "trending":
+        return {
+          color: "text-yellow-500",
+          bg: "bg-yellow-100 dark:bg-yellow-950/30",
+        };
+      case "alert":
+      case "error":
+        return { color: "text-red-500", bg: "bg-red-100 dark:bg-red-950/30" };
+      case "success":
+        return {
+          color: "text-green-500",
+          bg: "bg-green-100 dark:bg-green-950/30",
+        };
+      case "pending":
+        return {
+          color: "text-orange-500",
+          bg: "bg-orange-100 dark:bg-orange-950/30",
+        };
+      default:
+        return { color: "text-gray-500", bg: "bg-gray-100 dark:bg-gray-800" };
+    }
+  };
+
+  // Format time ago from ISO string
+  const formatTimeAgo = (dateString: string): string => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+    if (seconds < 60) return "just now";
+
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `${minutes} minute${minutes > 1 ? "s" : ""} ago`;
+
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours} hour${hours > 1 ? "s" : ""} ago`;
+
+    const days = Math.floor(hours / 24);
+    if (days < 7) return `${days} day${days > 1 ? "s" : ""} ago`;
+
+    const weeks = Math.floor(days / 7);
+    if (weeks < 4) return `${weeks} week${weeks > 1 ? "s" : ""} ago`;
+
+    const months = Math.floor(days / 30);
+    if (months < 12) return `${months} month${months > 1 ? "s" : ""} ago`;
+
+    const years = Math.floor(days / 365);
+    return `${years} year${years > 1 ? "s" : ""} ago`;
+  };
+
   const [filterType, setFilterType] = useState("all");
   const [showRead, setShowRead] = useState(true);
 
-  const unreadCount = notifications.filter((n) => !n.read).length;
-
-  const markAsRead = (id: number) => {
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, read: true } : n)),
-    );
-  };
-
-  const markAllAsRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
-  };
-
-  const deleteNotification = (id: number) => {
-    setNotifications((prev) => prev.filter((n) => n.id !== id));
-  };
+  const unreadCount = notifications.filter((n) => !n.is_read).length;
 
   const filteredNotifications = notifications.filter((n) => {
     if (filterType !== "all" && n.type !== filterType) return false;
-    if (!showRead && n.read) return false;
+    if (!showRead && n.is_read) return false;
     return true;
   });
 
@@ -247,7 +215,7 @@ const NotificationsPage: React.FC = () => {
         <div className="flex items-center gap-2">
           <Button
             variant="outline"
-            onClick={markAllAsRead}
+            onClick={markAllRead}
             disabled={unreadCount === 0}
           >
             <CheckCheck className="h-4 w-4 mr-2" />
@@ -324,7 +292,7 @@ const NotificationsPage: React.FC = () => {
             </div>
             <div className="flex items-center gap-2">
               <Badge variant="outline" className="px-3 py-1">
-                {filteredNotifications.length} notifications
+                {filteredNotifications.length - counts.unread} notifications
               </Badge>
             </div>
           </div>
@@ -362,11 +330,28 @@ const NotificationsPage: React.FC = () => {
                         key={notification.id}
                         className={cn(
                           "p-6 hover:bg-accent/50 transition-colors relative",
-                          !notification.read && "bg-primary/5",
+                          !notification.is_read && "bg-primary/5",
                         )}
                       >
                         <div className="flex items-start gap-4">
-                          {getIcon(notification)}
+                          {getIconForType(notification.type) && (
+                            <div
+                              className={cn(
+                                getColorsForType(notification.type).bg,
+                                "p-2 rounded-full",
+                              )}
+                            >
+                              {React.createElement(
+                                getIconForType(notification.type),
+                                {
+                                  className: cn(
+                                    "h-4 w-4",
+                                    getColorsForType(notification.type).color,
+                                  ),
+                                },
+                              )}
+                            </div>
+                          )}
 
                           <div className="flex-1 min-w-0">
                             <div className="flex items-start justify-between gap-4">
@@ -375,7 +360,7 @@ const NotificationsPage: React.FC = () => {
                                   <h4 className="text-sm font-semibold">
                                     {notification.title}
                                   </h4>
-                                  {!notification.read && (
+                                  {!notification.is_read && (
                                     <Badge
                                       variant="secondary"
                                       className="h-5 text-xs"
@@ -385,11 +370,13 @@ const NotificationsPage: React.FC = () => {
                                   )}
                                 </div>
                                 <p className="text-sm text-muted-foreground mt-1">
-                                  {notification.description}
+                                  {notification.message}
                                 </p>
                                 <div className="flex items-center gap-2 mt-2">
                                   <span className="text-xs text-muted-foreground">
-                                    {notification.time}
+                                    {notification.created_at
+                                      ? formatTimeAgo(notification.created_at)
+                                      : ""}
                                   </span>
                                   <Badge
                                     variant="outline"
@@ -401,13 +388,13 @@ const NotificationsPage: React.FC = () => {
                               </div>
 
                               <div className="flex items-center gap-2">
-                                {notification.actionable && (
+                                {/* {notification.actionable && (
                                   <Button size="sm" variant="outline" asChild>
                                     <Link to={notification.link}>
                                       {notification.actionLabel || "View"}
                                     </Link>
                                   </Button>
-                                )}
+                                )} */}
 
                                 <DropdownMenu>
                                   <DropdownMenuTrigger asChild>
@@ -420,7 +407,7 @@ const NotificationsPage: React.FC = () => {
                                     </Button>
                                   </DropdownMenuTrigger>
                                   <DropdownMenuContent align="end">
-                                    {!notification.read && (
+                                    {!notification.is_read && (
                                       <DropdownMenuItem
                                         onClick={() =>
                                           markAsRead(notification.id)
@@ -454,7 +441,8 @@ const NotificationsPage: React.FC = () => {
 
             <TabsContent value="unread">
               <ScrollArea className="h-[600px]">
-                {filteredNotifications.filter((n) => !n.read).length === 0 ? (
+                {filteredNotifications.filter((n) => !n.is_read).length ===
+                0 ? (
                   <div className="flex flex-col items-center justify-center py-12">
                     <CheckCheck className="h-12 w-12 text-muted-foreground mb-4" />
                     <h3 className="text-lg font-semibold mb-2">

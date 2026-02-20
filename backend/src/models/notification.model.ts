@@ -64,6 +64,7 @@ Notification.init(
   },
   {
     sequelize,
+    paranoid: true,
     modelName: 'Notification',
     tableName: 'notifications',
     timestamps: false,

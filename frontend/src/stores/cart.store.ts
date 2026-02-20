@@ -1,107 +1,149 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 import cartService from '@/services/cart.service';
+import type { CartItem, CartStoreState } from '@/types/cart.types';
 
-interface CartState {
-  items: any[];
-  currentItem: any | null;
-  isLoading: boolean;
-  error: string | null;
-  
-  fetchAll: (params?: any) => Promise<void>;
-  fetchById: (id: string) => Promise<any | null>;
-  create: (data: any) => Promise<any | null>;
-  update: (id: string, data: any) => Promise<any | null>;
-  delete: (id: string) => Promise<boolean>;
-  clearError: () => void;
-}
+export const useCartStore = create<CartStoreState>()(
+  persist(
+    (set, get) => ({
+      cart: null,
+      items: [],
+      currentItem: null,
+      totalItems: 0,
+      totalPrice: 0,
+      isLoading: false,
+      error: null,
 
-export const useCartStore = create<CartState>((set, get) => ({
-  items: [],
-  currentItem: null,
-  isLoading: false,
-  error: null,
+      fetchCart: async () => {
+        set({ isLoading: true, error: null });
+        try {
+          const response = await cartService.getAll();
+          
+          // Handle different response structures
+          const data = response.data?.data || response.data || response;
+          const cart = data.cart || null;
+          const items = data.items || data || [];
+          
+          // Calculate totals
+          const totalItems = items.reduce((sum: number, item: CartItem) => 
+            sum + item.quantity, 0
+          );
+          
+          const totalPrice = items.reduce((sum: number, item: CartItem) => {
+            const price = item.product?.price || 0;
+            return sum + (price * item.quantity);
+          }, 0);
 
-  fetchAll: async (params?: any) => {
-    set({ isLoading: true, error: null });
-    try {
-      const response = await cartService.getAll(params);
-      set({ items: response.data || response, isLoading: false });
-    } catch (error: any) {
-      set({
-        error: error.response?.data?.message || 'Failed to fetch items',
-        isLoading: false,
-      });
+          set({ 
+            cart,
+            items: Array.isArray(items) ? items : [],
+            totalItems,
+            totalPrice,
+            isLoading: false 
+          });
+        } catch (error: any) {
+          set({
+            error: error.response?.data?.message || 'Failed to fetch cart',
+            isLoading: false,
+          });
+        }
+      },
+
+      addToCart: async (productId: string, quantity: number) => {
+        set({ isLoading: true, error: null });
+        try {
+          const response = await cartService.create({ 
+            product_id: productId, 
+            quantity 
+          });
+          
+          const newItem = response.data?.data || response.data || response;
+          
+          // Refresh cart
+          await get().fetchCart();
+          
+          set({ isLoading: false });
+          return newItem;
+        } catch (error: any) {
+          set({
+            error: error.response?.data?.message || 'Failed to add to cart',
+            isLoading: false,
+          });
+          return null;
+        }
+      },
+
+      updateQuantity: async (itemId: string, quantity: number) => {
+        set({ isLoading: true, error: null });
+        try {
+          const response = await cartService.update(itemId, { quantity });
+          const updatedItem = response.data?.data || response.data || response;
+          
+          // Refresh cart to get updated totals
+          await get().fetchCart();
+          
+          set({ isLoading: false });
+          return updatedItem;
+        } catch (error: any) {
+          set({
+            error: error.response?.data?.message || 'Failed to update quantity',
+            isLoading: false,
+          });
+          return null;
+        }
+      },
+
+      removeFromCart: async (itemId: string) => {
+        set({ isLoading: true, error: null });
+        try {
+          await cartService.delete(itemId);
+          
+          // Refresh cart
+          await get().fetchCart();
+          
+          set({ isLoading: false });
+          return true;
+        } catch (error: any) {
+          set({
+            error: error.response?.data?.message || 'Failed to remove item',
+            isLoading: false,
+          });
+          return false;
+        }
+      },
+
+      clearCart: async () => {
+        set({ isLoading: true, error: null });
+        try {
+          const { items } = get();
+          await Promise.all(items.map(item => cartService.delete(item.id)));
+          
+          set({ 
+            items: [], 
+            cart: null, 
+            totalItems: 0,
+            totalPrice: 0,
+            isLoading: false 
+          });
+          return true;
+        } catch (error: any) {
+          set({
+            error: error.response?.data?.message || 'Failed to clear cart',
+            isLoading: false,
+          });
+          return false;
+        }
+      },
+
+      clearError: () => set({ error: null }),
+    }),
+    {
+      name: 'cart-storage',
+      partialize: (state) => ({
+        // Only persist non-sensitive data if needed
+        // cart: state.cart,
+        // items: state.items,
+      }),
     }
-  },
-
-  fetchById: async (id: string) => {
-    set({ isLoading: true, error: null });
-    try {
-      const response = await cartService.getById(id);
-      set({ currentItem: response.data || response, isLoading: false });
-      return response.data || response;
-    } catch (error: any) {
-      set({
-        error: error.response?.data?.message || 'Failed to fetch item',
-        isLoading: false,
-      });
-      return null;
-    }
-  },
-
-  create: async (data: any) => {
-    set({ isLoading: true, error: null });
-    try {
-      const response = await cartService.create(data);
-      // Optional: Refresh list
-      // await get().fetchAll();
-      set({ isLoading: false });
-      return response.data || response;
-    } catch (error: any) {
-      set({
-        error: error.response?.data?.message || 'Failed to create item',
-        isLoading: false,
-      });
-      return null;
-    }
-  },
-
-  update: async (id: string, data: any) => {
-    set({ isLoading: true, error: null });
-    try {
-      const response = await cartService.update(id, data);
-      
-      const items = get().items.map(p => 
-        p.id === id ? (response.data || response) : p
-      );
-      
-      set({ items, currentItem: response.data || response, isLoading: false });
-      return response.data || response;
-    } catch (error: any) {
-      set({
-        error: error.response?.data?.message || 'Failed to update item',
-        isLoading: false,
-      });
-      return null;
-    }
-  },
-
-  delete: async (id: string) => {
-    set({ isLoading: true, error: null });
-    try {
-      await cartService.delete(id);
-      
-      const items = get().items.filter(p => p.id !== id);
-      set({ items, isLoading: false });
-      return true;
-    } catch (error: any) {
-      set({
-        error: error.response?.data?.message || 'Failed to delete item',
-        isLoading: false,
-      });
-      return false;
-    }
-  },
-
-  clearError: () => set({ error: null }),
-}));
+  )
+);

@@ -4,7 +4,7 @@ import { useAuthStore } from "../../stores/auth.store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-// import { Alert, AlertDescription } from "@/components/ui/alert";
+import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
 
 export const LoginPage: React.FC = () => {
   const [email, setEmail] = useState("");
@@ -14,7 +14,7 @@ export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault(); // ✅ THIS IS CRITICAL - prevents page reload
+    e.preventDefault();
     setLocalError("");
     clearError();
 
@@ -60,7 +60,9 @@ export const LoginPage: React.FC = () => {
 
   // Combine local error and store error
   const displayError = localError || error;
-
+  if (isLoading) {
+    return <LoadingSpinner fullScreen text="Loading your data..." />;
+  }
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
       <Card className="w-full max-w-md">

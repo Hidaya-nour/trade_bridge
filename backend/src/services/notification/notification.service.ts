@@ -18,6 +18,10 @@ export class NotificationService {
       totalPages: Math.ceil(count / limit)
     };
   }
+async getNotificationCounts(userId: string) {
+    const unreadCount = await Notification.count({ where: { user_id: userId, is_read: 0 } });
+    return { unread_count: unreadCount };
+  }
 
   async createNotification(data: CreateNotificationDTO) {
     const created = await Notification.create({
@@ -36,6 +40,10 @@ export class NotificationService {
     const [updated] = await Notification.update({ is_read: 1 }, { where: { user_id: userId, is_read: 0 } });
     return updated > 0;
   }
-}
 
+  async deleteNotification(id: string) {
+    const deleted = await Notification.destroy({ where: { id } });
+    return deleted > 0;
+  } 
+}
 export default new NotificationService();

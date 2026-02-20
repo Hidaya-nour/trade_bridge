@@ -18,14 +18,10 @@ import {
   FileText,
   Star,
   CreditCard,
-  ChevronLeft,
-  ChevronRight,
   LogOut,
-  UserCircle,
   Shield,
   AlertCircle,
   Menu,
-  User,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -34,7 +30,6 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn, getInitials } from "@/lib/utils";
-import { formatCompactPrice } from "@/lib/formatters";
 import { PerformanceCard } from "@/components/shared/PerformanceCard";
 import { useAuthStore } from "@/stores/auth.store";
 

@@ -1,27 +1,21 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   Bell,
   MessageSquare,
   Search,
   Filter,
-  Download,
-  Calendar,
   ChevronDown,
   User,
   Settings,
   HelpCircle,
   LogOut,
-  Moon,
-  Sun,
   Menu,
   ShoppingCart,
   Package,
   Truck,
   TrendingUp,
   CreditCard,
-  ChevronLeft,
-  ChevronRight,
 } from "lucide-react";
 
 import { cn, getInitials } from "@/lib/utils";
@@ -53,62 +47,14 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 import { useAuthStore } from "@/stores/auth.store";
+import { useNotificationStore } from "@/stores/notification.store";
 
-// Notification data
-const notifications = [
-  {
-    id: 1,
-    type: "order",
-    title: "Order #TB-2026-0892 Confirmed",
-    description: "Your order has been confirmed and is being processed.",
-    time: "5 minutes ago",
-    read: false,
-    icon: Package,
-    color: "text-blue-500",
-    bg: "bg-blue-100 dark:bg-blue-950/30",
-  },
-  {
-    id: 2,
-    type: "delivery",
-    title: "Order #TB-2026-0885 Shipped",
-    description: "Your order is out for delivery. Expected today.",
-    time: "2 hours ago",
-    read: false,
-    icon: Truck,
-    color: "text-green-500",
-    bg: "bg-green-100 dark:bg-green-950/30",
-  },
-  {
-    id: 3,
-    type: "promotion",
-    title: "Flash Sale! 20% Off",
-    description: "Selected electronics. Limited time offer.",
-    time: "5 hours ago",
-    read: true,
-    icon: TrendingUp,
-    color: "text-purple-500",
-    bg: "bg-purple-100 dark:bg-purple-950/30",
-  },
-  {
-    id: 4,
-    type: "payment",
-    title: "Payment Successful",
-    description: "Your payment of ETB 15,200 has been processed.",
-    time: "1 day ago",
-    read: true,
-    icon: CreditCard,
-    color: "text-emerald-500",
-    bg: "bg-emerald-100 dark:bg-emerald-950/30",
-  },
-];
-
-// Message data
+// Keep messages mock for now (you can replace with real message store later)
 const messages = [
   {
     id: 1,
@@ -143,12 +89,144 @@ interface DashboardHeaderProps {
 const DashboardHeader: React.FC<DashboardHeaderProps> = ({ onMenuClick }) => {
   const { user, logout } = useAuthStore();
   const location = useLocation();
-
   const navigate = useNavigate();
+
   const [searchQuery, setSearchQuery] = useState("");
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [showNotificationSheet, setShowNotificationSheet] = useState(false);
-  const [showMessageSheet, setShowMessageSheet] = useState(false);
+
+  // Get notifications from store
+  const {
+    notifications,
+    fetchCounts,
+    counts,
+    fetchNotifications,
+    markAsRead,
+    markAllRead,
+    isLoading,
+  } = useNotificationStore();
+
+  // Fetch notifications on mount
+  useEffect(() => {
+    fetchNotifications();
+    fetchCounts(); // Add this to fetch counts
+
+    // Optional: Poll for count updates every 30 seconds
+    const interval = setInterval(() => {
+      fetchCounts();
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, [fetchNotifications, fetchCounts]);
+
+  // Function to get icon based on notification type
+  const getIconForType = (type: string) => {
+    switch (type?.toLowerCase()) {
+      case "order":
+      case "order_created":
+      case "order_confirmed":
+      case "order_processing":
+        return Package;
+      case "delivery":
+      case "order_shipped":
+      case "delivery_assigned":
+      case "delivery_in_transit":
+        return Truck;
+      case "payment":
+      case "payment_received":
+      case "payment_successful":
+        return CreditCard;
+      case "promotion":
+      case "trending":
+        return TrendingUp;
+      case "message":
+      case "message_received":
+        return MessageSquare;
+      default:
+        return Bell;
+    }
+  };
+
+  // Function to get colors based on notification type
+  const getColorsForType = (type: string) => {
+    switch (type?.toLowerCase()) {
+      case "order":
+      case "order_created":
+      case "order_confirmed":
+        return {
+          color: "text-blue-500",
+          bg: "bg-blue-100 dark:bg-blue-950/30",
+        };
+      case "payment":
+      case "payment_received":
+      case "payment_successful":
+        return {
+          color: "text-green-500",
+          bg: "bg-green-100 dark:bg-green-950/30",
+        };
+      case "delivery":
+      case "order_shipped":
+      case "delivery_in_transit":
+        return {
+          color: "text-purple-500",
+          bg: "bg-purple-100 dark:bg-purple-950/30",
+        };
+      case "message":
+      case "message_received":
+        return {
+          color: "text-indigo-500",
+          bg: "bg-indigo-100 dark:bg-indigo-950/30",
+        };
+      case "promotion":
+      case "trending":
+        return {
+          color: "text-yellow-500",
+          bg: "bg-yellow-100 dark:bg-yellow-950/30",
+        };
+      case "alert":
+      case "error":
+        return { color: "text-red-500", bg: "bg-red-100 dark:bg-red-950/30" };
+      case "success":
+        return {
+          color: "text-green-500",
+          bg: "bg-green-100 dark:bg-green-950/30",
+        };
+      case "pending":
+        return {
+          color: "text-orange-500",
+          bg: "bg-orange-100 dark:bg-orange-950/30",
+        };
+      default:
+        return { color: "text-gray-500", bg: "bg-gray-100 dark:bg-gray-800" };
+    }
+  };
+
+  // Format time ago from ISO string
+  const formatTimeAgo = (dateString: string): string => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+    if (seconds < 60) return "just now";
+
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `${minutes} minute${minutes > 1 ? "s" : ""} ago`;
+
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours} hour${hours > 1 ? "s" : ""} ago`;
+
+    const days = Math.floor(hours / 24);
+    if (days < 7) return `${days} day${days > 1 ? "s" : ""} ago`;
+
+    const weeks = Math.floor(days / 7);
+    if (weeks < 4) return `${weeks} week${weeks > 1 ? "s" : ""} ago`;
+
+    const months = Math.floor(days / 30);
+    if (months < 12) return `${months} month${months > 1 ? "s" : ""} ago`;
+
+    const years = Math.floor(days / 365);
+    return `${years} year${years > 1 ? "s" : ""} ago`;
+  };
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -161,16 +239,26 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ onMenuClick }) => {
     document.documentElement.classList.toggle("dark");
   };
 
-  const unreadNotifications = notifications.filter((n) => !n.read).length;
+  const handleMarkAsRead = async (notificationId?: string) => {
+    if (notificationId) {
+      await markAsRead(notificationId);
+    }
+  };
+
+  const handleMarkAllAsRead = async () => {
+    await markAllRead();
+  };
+
   const unreadMessages = messages.filter((m) => m.unread).length;
+
   if (!user) {
     return (
       <div
         className={cn(
-          "flex flex-col bg-sidebar/99 border-r border-border/40 transition-all duration-300 h-screen",
+          "flex items-center justify-center h-16 bg-sidebar border-b border-border/40",
         )}
       >
-        <p className="p-4 text-muted-foreground text-sm">Loading...</p>
+        <p className="text-muted-foreground text-sm">Loading...</p>
       </div>
     );
   }
@@ -178,7 +266,7 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ onMenuClick }) => {
   return (
     <header className="sticky top-0 z-40 w-full border-b border-border/40 bg-sidebar/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="flex h-16 items-center px-4 gap-3 lg:px-6">
-        {/* Mobile Menu Button - Hidden by default, shown via props */}
+        {/* Mobile Menu Button */}
         {onMenuClick && (
           <Button
             variant="ghost"
@@ -190,7 +278,7 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ onMenuClick }) => {
           </Button>
         )}
 
-        {/* Search Bar - Enhanced */}
+        {/* Search Bar */}
         <div className="flex-1 lg:max-w-md lg:mx-auto">
           <form onSubmit={handleSearch}>
             <div className="relative group">
@@ -263,7 +351,7 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ onMenuClick }) => {
             />
           </div>
 
-          {/* Notifications Sheet - Enhanced */}
+          {/* Notifications Sheet */}
           <Sheet
             open={showNotificationSheet}
             onOpenChange={setShowNotificationSheet}
@@ -275,9 +363,9 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ onMenuClick }) => {
                 className="relative h-9 w-9 text-muted-foreground hover:text-foreground hover:bg-accent/50"
               >
                 <Bell className="h-5 w-5" />
-                {unreadNotifications > 0 && (
+                {counts.unread > 0 && (
                   <Badge className="absolute -top-1 -right-1 h-5 min-w-[1.25rem] px-1 flex items-center justify-center bg-primary text-[10px] font-medium text-primary-foreground ring-2 ring-background">
-                    {unreadNotifications}
+                    {counts.unread}
                   </Badge>
                 )}
               </Button>
@@ -289,13 +377,16 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ onMenuClick }) => {
                     <Bell className="h-5 w-5 text-primary" />
                     Notifications
                   </span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-8 px-2.5 text-xs font-medium text-muted-foreground hover:text-foreground"
-                  >
-                    Mark all as read
-                  </Button>
+                  {counts.unread > 0 && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 px-2.5 text-xs font-medium text-muted-foreground hover:text-foreground"
+                      onClick={handleMarkAllAsRead}
+                    >
+                      Mark all as read
+                    </Button>
+                  )}
                 </SheetTitle>
                 <SheetDescription className="sr-only">
                   View and manage your notifications
@@ -315,12 +406,12 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ onMenuClick }) => {
                       className="text-xs data-[state=active]:bg-background data-[state=active]:shadow-sm"
                     >
                       Unread
-                      {unreadNotifications > 0 && (
+                      {counts.unread > 0 && (
                         <Badge
                           variant="secondary"
                           className="ml-1.5 h-4 px-1 text-[10px]"
                         >
-                          {unreadNotifications}
+                          {counts.unread}
                         </Badge>
                       )}
                     </TabsTrigger>
@@ -335,57 +426,122 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ onMenuClick }) => {
                 <TabsContent value="all" className="mt-0 flex-1">
                   <ScrollArea className="h-[calc(100vh-200px)] px-6 pb-6">
                     <div className="space-y-1 pt-2">
-                      {notifications.map((notification) => (
-                        <div
-                          key={notification.id}
-                          className={cn(
-                            "flex items-start gap-3 p-3 rounded-lg transition-all hover:bg-accent/50 cursor-pointer",
-                            !notification.read && "bg-muted/30",
-                          )}
-                        >
-                          <div
-                            className={cn(
-                              "rounded-full p-2 shrink-0",
-                              notification.bg,
-                            )}
-                          >
-                            <notification.icon
-                              className={cn("h-4 w-4", notification.color)}
-                            />
-                          </div>
-                          <div className="flex-1 space-y-1 min-w-0">
-                            <div className="flex items-start justify-between gap-2">
-                              <p className="text-sm font-medium leading-none">
-                                {notification.title}
-                              </p>
-                              {!notification.read && (
-                                <div className="h-2 w-2 rounded-full bg-primary shrink-0 mt-1" />
-                              )}
-                            </div>
-                            <p className="text-xs text-muted-foreground line-clamp-2">
-                              {notification.description}
-                            </p>
-                            <p className="text-[11px] text-muted-foreground/70">
-                              {notification.time}
-                            </p>
-                          </div>
+                      {isLoading ? (
+                        <div className="flex items-center justify-center py-8">
+                          <p className="text-sm text-muted-foreground">
+                            Loading notifications...
+                          </p>
                         </div>
-                      ))}
+                      ) : notifications.length > 0 ? (
+                        notifications.map((notification) => {
+                          const Icon = getIconForType(notification.type);
+                          const colors = getColorsForType(notification.type);
+
+                          return (
+                            <div
+                              key={notification.id}
+                              className={cn(
+                                "flex items-start gap-3 p-3 rounded-lg transition-all hover:bg-accent/50 cursor-pointer",
+                                !notification.is_read && "bg-muted/30",
+                              )}
+                              onClick={() => handleMarkAsRead(notification.id)}
+                            >
+                              <div
+                                className={cn(
+                                  "rounded-full p-2 shrink-0",
+                                  colors.bg,
+                                )}
+                              >
+                                <Icon className={cn("h-4 w-4", colors.color)} />
+                              </div>
+                              <div className="flex-1 space-y-1 min-w-0">
+                                <div className="flex items-start justify-between gap-2">
+                                  <p className="text-sm font-medium leading-none">
+                                    {notification.title}
+                                  </p>
+                                  {!notification.is_read && (
+                                    <div className="h-2 w-2 rounded-full bg-primary shrink-0 mt-1" />
+                                  )}
+                                </div>
+                                <p className="text-xs text-muted-foreground line-clamp-2">
+                                  {notification.message}
+                                </p>
+                                <p className="text-[11px] text-muted-foreground/70">
+                                  {formatTimeAgo(notification.created_at)}
+                                </p>
+                              </div>
+                            </div>
+                          );
+                        })
+                      ) : (
+                        <div className="flex flex-col items-center justify-center py-12 text-center">
+                          <Bell className="h-12 w-12 text-muted-foreground/30 mb-3" />
+                          <p className="text-sm font-medium">
+                            No notifications
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            You're all caught up!
+                          </p>
+                        </div>
+                      )}
                     </div>
                   </ScrollArea>
                 </TabsContent>
                 <TabsContent value="unread" className="mt-0">
-                  <div className="flex h-[400px] flex-col items-center justify-center gap-2 text-center px-6">
-                    <div className="rounded-full bg-muted p-3">
-                      <Bell className="h-6 w-6 text-muted-foreground/50" />
+                  <ScrollArea className="h-[calc(100vh-200px)] px-6 pb-6">
+                    <div className="space-y-1 pt-2">
+                      {notifications.filter((n) => !n.is_read).length > 0 ? (
+                        notifications
+                          .filter((n) => !n.is_read)
+                          .map((notification) => {
+                            const Icon = getIconForType(notification.type);
+                            const colors = getColorsForType(notification.type);
+
+                            return (
+                              <div
+                                key={notification.id}
+                                className="flex items-start gap-3 p-3 rounded-lg transition-all hover:bg-accent/50 cursor-pointer bg-muted/30"
+                                onClick={() =>
+                                  handleMarkAsRead(notification.id)
+                                }
+                              >
+                                <div
+                                  className={cn(
+                                    "rounded-full p-2 shrink-0",
+                                    colors.bg,
+                                  )}
+                                >
+                                  <Icon
+                                    className={cn("h-4 w-4", colors.color)}
+                                  />
+                                </div>
+                                <div className="flex-1 space-y-1">
+                                  <p className="text-sm font-medium">
+                                    {notification.title}
+                                  </p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {notification.message}
+                                  </p>
+                                  <p className="text-[11px] text-muted-foreground/70">
+                                    {formatTimeAgo(notification.created_at)}
+                                  </p>
+                                </div>
+                              </div>
+                            );
+                          })
+                      ) : (
+                        <div className="flex flex-col items-center justify-center py-12 text-center">
+                          <Bell className="h-12 w-12 text-muted-foreground/30 mb-3" />
+                          <p className="text-sm font-medium">
+                            No unread notifications
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            You're all caught up!
+                          </p>
+                        </div>
+                      )}
                     </div>
-                    <p className="text-sm font-medium">
-                      No unread notifications
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      You're all caught up!
-                    </p>
-                  </div>
+                  </ScrollArea>
                 </TabsContent>
                 <TabsContent value="mentions" className="mt-0">
                   <div className="flex h-[400px] flex-col items-center justify-center gap-2 text-center px-6">
@@ -402,7 +558,7 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ onMenuClick }) => {
             </SheetContent>
           </Sheet>
 
-          {/* User Menu - Enhanced */}
+          {/* User Menu */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
@@ -415,7 +571,6 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ onMenuClick }) => {
                     {getInitials(user.full_name)}
                   </AvatarFallback>
                 </Avatar>
-
                 <ChevronDown className="hidden lg:block h-4 w-4 text-muted-foreground/60" />
               </Button>
             </DropdownMenuTrigger>
@@ -446,7 +601,7 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ onMenuClick }) => {
                       {user.email}
                     </p>
                     <p className="text-[11px] text-muted-foreground/70">
-                      {user.business_name} • {user.business_address}
+                      {user.business_name}
                     </p>
                   </div>
                 </div>
@@ -491,8 +646,8 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ onMenuClick }) => {
               <DropdownMenuItem
                 className="cursor-pointer rounded-md py-2 px-2 text-sm text-destructive focus:text-destructive focus:bg-destructive/10"
                 onClick={async () => {
-                  await useAuthStore.getState().logout(); // clear Zustand store
-                  navigate("/login"); // redirect to login page
+                  await logout();
+                  navigate("/login");
                 }}
               >
                 <LogOut className="mr-2 h-4 w-4" />
@@ -506,7 +661,7 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ onMenuClick }) => {
         </div>
       </div>
 
-      {/* Mobile Search - Collapsible */}
+      {/* Mobile Search */}
       <div className="lg:hidden px-4 pb-3 animate-in slide-in-from-top-2 duration-200">
         <form onSubmit={handleSearch}>
           <div className="relative">

@@ -28,6 +28,40 @@ export interface Product {
   };
 }
 
+export interface CatalogProduct {
+  id: string | number;
+  name: string;
+  supplier: string;
+  supplierId: string;
+  supplierName?: string; // Alias for supplier
+  price: number;
+  category: string;
+  image: string;
+  rating: number;
+  reviews: number;
+  location: string;
+  minOrder: number;
+  unit: string;
+  description: string;
+  stock: number;
+  isAvailable: boolean;
+  deliveryTime?: string;
+  tags?: string[];
+}
+
+export interface CatalogConfig {
+  role: 'retailer' | 'distributor' | 'factory';
+  title: string;
+  description: string;
+  supplierLabel: string;
+  supplierPath: string;
+  icon: React.ElementType;
+  categories: string[];
+  locations: string[];
+  showVolumeDiscount: boolean;
+  cartPath: string;
+  ordersPath: string;
+}
 // ============================================================================
 // Filter Types
 // ============================================================================
