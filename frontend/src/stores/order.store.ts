@@ -1,7 +1,7 @@
 import { create } from 'zustand';
-import {  OrderFilters } from '../types/order.types';
-import {Order} from '../types/order.types';
+
 import orderService from '../services/order.service';
+import type { Order, OrderFilters } from '@/types/order.types';
 
 interface OrderState {
   // Data

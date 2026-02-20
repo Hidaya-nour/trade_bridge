@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   Package,
@@ -41,77 +41,8 @@ import {
 import { formatPrice, formatDate } from "@/lib/formatters";
 import { getInitials } from "@/lib/utils";
 import { useAuthStore } from "@/stores/auth.store";
-
-// Mock data for retailer dashboard
-const mockStats = [
-  {
-    title: "Total Orders",
-    value: "156",
-    change: "+12%",
-    trend: "up" as const,
-    icon: Package,
-    iconColor: "text-blue-600",
-    iconBg: "bg-blue-100",
-  },
-  {
-    title: "Active Orders",
-    value: "8",
-    change: "+2",
-    trend: "up" as const,
-    icon: ShoppingBag,
-    iconColor: "text-green-600",
-    iconBg: "bg-green-100",
-  },
-  {
-    title: "Total Spent",
-    value: "ETB 45,200",
-    change: "+18%",
-    trend: "up" as const,
-    icon: DollarSign,
-    iconColor: "text-purple-600",
-    iconBg: "bg-purple-100",
-  },
-];
-
-// Mock recent orders
-const recentOrders = [
-  {
-    id: "TB-2026-0892",
-    date: "2026-02-10",
-    supplier: "Ethiopia Coffee Export",
-    supplierId: 101,
-    items: 3,
-    total: 12500,
-    status: "delivered" as const,
-  },
-  {
-    id: "TB-2026-0885",
-    date: "2026-02-09",
-    supplier: "Adama Wholesalers",
-    supplierId: 102,
-    items: 5,
-    total: 8750,
-    status: "shipped" as const,
-  },
-  {
-    id: "TB-2026-0878",
-    date: "2026-02-08",
-    supplier: "Ethiopian Textile",
-    supplierId: 103,
-    items: 2,
-    total: 3200,
-    status: "processing" as const,
-  },
-  {
-    id: "TB-2026-0862",
-    date: "2026-02-07",
-    supplier: "Bahir Dar Honey",
-    supplierId: 104,
-    items: 1,
-    total: 950,
-    status: "pending" as const,
-  },
-];
+import { useOrderStore } from "@/stores/order.store";
+import orderService from "@/services/order.service";
 
 // Mock recommended suppliers
 const recommendedSuppliers = [
@@ -207,7 +138,73 @@ const frequentProducts = [
 
 const RetailerDashboard: React.FC = () => {
   const authUser = useAuthStore((state) => state.user);
+  const { stats: orderStats, fetchOrderStats, isLoading } = useOrderStore();
+  const [recentOrders, setRecentOrders] = useState<any[]>([]);
 
+  // Fetch stats on component mount
+  useEffect(() => {
+    fetchOrderStats();
+  }, [fetchOrderStats]);
+
+  useEffect(() => {
+    const fetchOrders = async () => {
+      try {
+        const response = await orderService.getMyOrders({
+          limit: 4, // only recent 4
+          sortBy: "created_at",
+          sortOrder: "DESC",
+        });
+
+        // Adjust this depending on your backend structure
+        setRecentOrders(response.data.orders);
+      } catch (error) {
+        console.error("Failed to fetch orders:", error);
+      } finally {
+        isLoading;
+      }
+    };
+
+    fetchOrders();
+  }, []);
+
+  // Calculate stats cards data from real order stats
+  const statsCards = [
+    {
+      title: "Total Orders",
+      value: orderStats?.total_orders?.toString() || "0",
+      change: orderStats?.order_growth ? `+${orderStats.order_growth}%` : "+0%",
+      trend:
+        (orderStats?.order_growth || 0) > 0
+          ? ("up" as const)
+          : ("neutral" as const),
+      icon: Package,
+      iconColor: "text-blue-600",
+      iconBg: "bg-blue-100",
+    },
+    {
+      title: "Active Orders",
+      value: (
+        (orderStats?.processing_count || 0) + (orderStats?.shipped_count || 0)
+      ).toString(),
+      change: "+2", // You might want to calculate this dynamically
+      trend: "up" as const,
+      icon: ShoppingBag,
+      iconColor: "text-green-600",
+      iconBg: "bg-green-100",
+    },
+    {
+      title: "Total Spent",
+      value: formatPrice(orderStats?.total_spent || 0),
+      change: orderStats?.spent_growth ? `+${orderStats.spent_growth}%` : "+0%",
+      trend:
+        (orderStats?.spent_growth || 0) > 0
+          ? ("up" as const)
+          : ("neutral" as const),
+      icon: DollarSign,
+      iconColor: "text-purple-600",
+      iconBg: "bg-purple-100",
+    },
+  ];
   if (!authUser) return null; // prevent crash if not loaded
 
   const user = {
@@ -217,6 +214,7 @@ const RetailerDashboard: React.FC = () => {
     role: authUser.role,
     verified: authUser.verified,
   };
+
   // Order summary data
   const orderSummary = {
     delivered: 45,
@@ -233,7 +231,7 @@ const RetailerDashboard: React.FC = () => {
 
       {/* Stats Grid - Using shared StatsCard */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {mockStats.map((stat, index) => (
+        {statsCards.map((stat, index) => (
           <StatsCard key={index} {...stat} />
         ))}
       </div>

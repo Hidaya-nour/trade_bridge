@@ -1,13 +1,6 @@
+import type { CancelOrderData, CreateOrderData, OrderFilters, OrderResponse, OrdersResponse, UpdateOrderStatusData } from '@/types/order.types';
 import api from './api';
-import { 
-  Order, 
-  OrderFilters, 
-  OrdersResponse, 
-  OrderResponse,
-  CreateOrderData,
-  UpdateOrderStatusData,
-  CancelOrderData
-} from '../types/order.types';
+
 
 class OrderService {
   // ========================================================================
