@@ -20,7 +20,11 @@ export class NotificationService {
   }
 async getNotificationCounts(userId: string) {
     const unreadCount = await Notification.count({ where: { user_id: userId, is_read: 0 } });
-    return { unread_count: unreadCount };
+  const totalCount = await Notification.count({ where: { user_id: userId } });
+  return { 
+    unread: unreadCount,
+    total: totalCount 
+  };
   }
 
   async createNotification(data: CreateNotificationDTO) {

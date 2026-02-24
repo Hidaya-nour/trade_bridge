@@ -21,6 +21,7 @@ export interface Notification {
   message: string;                // TEXT
   is_read: number;                // TINYINT(1) - 0 or 1
   created_at: string;             // TIMESTAMP
+  updated_at: string;             // TIMESTAMP
   deleted_at?: string | null;     // TIMESTAMP
   
   // Relations (joined data)

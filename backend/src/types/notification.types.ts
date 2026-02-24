@@ -5,8 +5,7 @@ export interface INotification {
   title: string;
   message: string;
   is_read: number;
-  created_at: Date;
-  deleted_at?: Date;
+  
 }
 
 export interface CreateNotificationDTO {
