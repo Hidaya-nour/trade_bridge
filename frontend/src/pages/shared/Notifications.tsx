@@ -67,12 +67,11 @@ const NotificationsPage: React.FC = () => {
   // Fetch notifications on mount
   useEffect(() => {
     fetchNotifications();
-    fetchCounts(); // Add this to fetch counts
+    fetchCounts();
 
-    // Optional: Poll for count updates every 30 seconds
     const interval = setInterval(() => {
       fetchCounts();
-    }, 30000);
+    }, 300000);
 
     return () => clearInterval(interval);
   }, [fetchNotifications, fetchCounts]);
@@ -190,6 +189,7 @@ const NotificationsPage: React.FC = () => {
   const [showRead, setShowRead] = useState(true);
 
   const unreadCount = notifications.filter((n) => !n.is_read).length;
+  console.log(unreadCount);
 
   const filteredNotifications = notifications.filter((n) => {
     if (filterType !== "all" && n.type !== filterType) return false;
@@ -453,8 +453,119 @@ const NotificationsPage: React.FC = () => {
                     </p>
                   </div>
                 ) : (
-                  // Similar rendering for unread
-                  <div>Unread notifications content</div>
+                  <div className="divide-y">
+                    {filteredNotifications
+                      .filter((n) => !n.is_read)
+                      .map((notification) => (
+                        <div
+                          key={notification.id}
+                          className={cn(
+                            "p-6 hover:bg-accent/50 transition-colors relative",
+                            !notification.is_read && "bg-primary/5",
+                          )}
+                        >
+                          <div className="flex items-start gap-4">
+                            {getIconForType(notification.type) && (
+                              <div
+                                className={cn(
+                                  getColorsForType(notification.type).bg,
+                                  "p-2 rounded-full",
+                                )}
+                              >
+                                {React.createElement(
+                                  getIconForType(notification.type),
+                                  {
+                                    className: cn(
+                                      "h-4 w-4",
+                                      getColorsForType(notification.type).color,
+                                    ),
+                                  },
+                                )}
+                              </div>
+                            )}
+
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-start justify-between gap-4">
+                                <div>
+                                  <div className="flex items-center gap-2">
+                                    <h4 className="text-sm font-semibold">
+                                      {notification.title}
+                                    </h4>
+                                    {!notification.is_read && (
+                                      <Badge
+                                        variant="secondary"
+                                        className="h-5 text-xs"
+                                      >
+                                        New
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  <p className="text-sm text-muted-foreground mt-1">
+                                    {notification.message}
+                                  </p>
+                                  <div className="flex items-center gap-2 mt-2">
+                                    <span className="text-xs text-muted-foreground">
+                                      {notification.created_at
+                                        ? formatTimeAgo(notification.created_at)
+                                        : ""}
+                                    </span>
+                                    <Badge
+                                      variant="outline"
+                                      className="text-[10px] capitalize"
+                                    >
+                                      {notification.type}
+                                    </Badge>
+                                  </div>
+                                </div>
+
+                                <div className="flex items-center gap-2">
+                                  {/* {notification.actionable && (
+                                  <Button size="sm" variant="outline" asChild>
+                                    <Link to={notification.link}>
+                                      {notification.actionLabel || "View"}
+                                    </Link>
+                                  </Button>
+                                )} */}
+
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-8 w-8"
+                                      >
+                                        <MoreVertical className="h-4 w-4" />
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                      {!notification.is_read && (
+                                        <DropdownMenuItem
+                                          onClick={() =>
+                                            markAsRead(notification.id)
+                                          }
+                                        >
+                                          <Check className="h-4 w-4 mr-2" />
+                                          Mark as Read
+                                        </DropdownMenuItem>
+                                      )}
+                                      <DropdownMenuItem
+                                        className="text-destructive"
+                                        onClick={() =>
+                                          deleteNotification(notification.id)
+                                        }
+                                      >
+                                        <X className="h-4 w-4 mr-2" />
+                                        Delete
+                                      </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
                 )}
               </ScrollArea>
             </TabsContent>

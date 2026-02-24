@@ -3,7 +3,7 @@ import sequelize from '../config/database';
 import { INotification } from '../types/notification.types';
 import User from './user.model';
 
-interface NotificationCreationAttributes extends Optional<INotification, 'id' | 'created_at' | 'deleted_at'> {}
+interface NotificationCreationAttributes extends Optional<INotification, 'id'> {}
 
 export class Notification extends Model<INotification, NotificationCreationAttributes> implements INotification {
   public id!: string;
@@ -12,8 +12,7 @@ export class Notification extends Model<INotification, NotificationCreationAttri
   public title!: string;
   public message!: string;
   public is_read!: number;
-  public created_at!: Date;
-  public deleted_at?: Date;
+ 
 
   public readonly user?: User;
 }
@@ -53,21 +52,16 @@ Notification.init(
       defaultValue: 0,
       validate: { isIn: [[0, 1]] }
     },
-    created_at: {
-      type: DataTypes.DATE,
-      defaultValue: DataTypes.NOW
-    },
-    deleted_at: {
-      type: DataTypes.DATE,
-      allowNull: true
-    }
   },
   {
     sequelize,
     paranoid: true,
     modelName: 'Notification',
     tableName: 'notifications',
-    timestamps: false,
+    timestamps: true,
+    createdAt: 'created_at',
+    updatedAt: 'updated_at',
+    deletedAt: 'deleted_at',
   }
 );
 

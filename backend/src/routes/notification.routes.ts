@@ -20,4 +20,7 @@ router.patch('/:id/read', authenticate, notificationController.markAsRead);
 // Mark all as read
 router.patch('/mark-all-read', authenticate, notificationController.markAllRead);
 
+// Delete a notification
+router.delete('/:id', authenticate, notificationController.deleteNotification);
+
 export default router;

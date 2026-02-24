@@ -22,6 +22,7 @@ export class NotificationController {
     const userId = req.user?.id as string;
     const counts = await notificationService.getNotificationCounts(userId);
     res.json({ success: true, data: counts });
+    console.log("Notification counts:", counts);
   } catch (error) {
     logger.error('Get notification counts error:', error);
     res.status(500).json({ success: false, message: 'Internal server error' });
@@ -63,6 +64,21 @@ export class NotificationController {
     } catch (error) {
       logger.error('Mark all read error:', error);
       res.status(500).json({ success: false, message: 'Internal server error' });
+    }
+  }
+  async deleteNotification(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      const ok = await notificationService.deleteNotification(id);
+      if (!ok) throw new AppError('Not found or no permission', 404);
+      res.json({ success: true, message: 'Notification deleted' });
+    } catch (error) {
+      if (error instanceof AppError) {
+        res.status(error.statusCode).json({ success: false, message: error.message });
+      } else {
+        logger.error('Delete notification error:', error);
+        res.status(500).json({ success: false, message: 'Internal server error' });
+      }
     }
   }
 }

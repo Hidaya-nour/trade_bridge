@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -32,8 +32,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn, getInitials } from "@/lib/utils";
 import { PerformanceCard } from "@/components/shared/PerformanceCard";
 import { useAuthStore } from "@/stores/auth.store";
+import { useNotificationStore } from "@/stores/notification.store";
 
-// Role-specific navigation based on your documentation
 const roleNavigation = {
   retailer: [
     {
@@ -214,13 +214,6 @@ const roleNavigation = {
   ],
 };
 
-const secondaryNavigation = [
-  { name: "Messages", href: "/messages", icon: MessageSquare, badge: "2" },
-  { name: "Notifications", href: "/notifications", icon: Bell, badge: "4" },
-  { name: "Settings", href: "/settings", icon: Settings },
-  { name: "Help & Support", href: "/support", icon: HelpCircle },
-];
-
 interface DashboardSidebarProps {
   collapsed?: boolean;
   onToggle?: () => void;
@@ -233,16 +226,24 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
   const { user, logout } = useAuthStore();
   const location = useLocation();
   const navigate = useNavigate();
-
   const userRole = user?.role as keyof typeof roleNavigation;
   const isDistributor = userRole === "distributor";
-
   const isActive = (href: string) => location.pathname === href;
-
-  // Now hooks have already been called → safe to continue
-  console.log("User in DashboardSidebar:", user);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
-  // Render null content if no user
+
+  const { fetchCounts, counts } = useNotificationStore();
+
+  // Fetch notifications on mount
+  useEffect(() => {
+    fetchCounts();
+
+    const interval = setInterval(() => {
+      fetchCounts();
+    }, 300000);
+
+    return () => clearInterval(interval);
+  }, [fetchCounts]);
+
   if (!user) {
     return (
       <div
@@ -254,6 +255,23 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
       </div>
     );
   }
+  console.log("Notification counts in sidebar:", counts.unread);
+  const secondaryNavigation = [
+    {
+      name: "Messages",
+      href: "/messages",
+      icon: MessageSquare,
+      badge: counts.unread > 0 ? counts.unread.toString() : "0",
+    },
+    {
+      name: "Notifications",
+      href: "/notifications",
+      icon: Bell,
+      badge: counts.unread > 0 ? counts.unread.toString() : undefined,
+    },
+    { name: "Settings", href: "/settings", icon: Settings },
+    { name: "Help & Support", href: "/support", icon: HelpCircle },
+  ];
 
   const renderDistributorNav = () => {
     const nav = roleNavigation.distributor;

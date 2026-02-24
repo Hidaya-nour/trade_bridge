@@ -15,7 +15,7 @@ class NotificationService {
     const response = await api.patch('/notifications/mark-all-read');
     return response.data;
   }
-async getCounts() {
+async   getCounts() {
     const response = await api.get('/notifications/counts');
     return response.data;
   }
@@ -24,7 +24,9 @@ async getCounts() {
     return response.data;
   }
   async deleteNotification(id: string) {
+    console.log("Deleting notification:", id);
     const response = await api.delete(`/notifications/${id}`);
+    console.log("Deleting notification:", id);
     return response.data;
   }
 }
