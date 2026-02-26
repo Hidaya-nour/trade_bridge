@@ -16,6 +16,7 @@ export class Product extends Model<IProduct, ProductCreationAttributes> implemen
   public min_order_amount!: number;
   public unit_type!: string;
   public images!: any;
+  public rating!: number;
   public is_available!: number;
   public created_at!: Date;
   public updated_at!: Date;
@@ -94,6 +95,16 @@ Product.init(
         isIn: [[0, 1]],
       },
     },
+    rating: {
+      type: DataTypes.DECIMAL(3, 2),
+      allowNull: false,
+      defaultValue: 0.00,
+      validate: {
+        min: 0,
+        max: 5,
+      },
+    },
+    
     created_at: {
       type: DataTypes.DATE,
       defaultValue: DataTypes.NOW,
@@ -115,7 +126,7 @@ Product.init(
     createdAt: 'created_at',
     updatedAt: 'updated_at',
     deletedAt: 'deleted_at',
-    paranoid: true, // Enables soft deletes
+    paranoid: true, 
     indexes: [
       {
         fields: ['supplier_id'],

@@ -51,7 +51,7 @@ export const useCartStore = create<CartStoreState>()(
 
       addToCart: async (productId: string, quantity: number) => {
         set({ isLoading: true, error: null });
-        try {
+        try {  
           const response = await cartService.create({ 
             product_id: productId, 
             quantity 

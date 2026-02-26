@@ -10,6 +10,7 @@ import { useCartStore } from "@/stores/cart.store";
 // import { useAuthStore } from "@/stores/auth.store";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent } from "@/components/ui/card";
+import { useAuthStore } from "@/stores/auth.store";
 
 const categories = ["All Categories", "Beverages", "Food"];
 
@@ -23,7 +24,7 @@ const locations = [
 ];
 
 const RetailerProductsPage: React.FC = () => {
-  // const { user } = useAuthStore();
+  const { user } = useAuthStore();
   const {
     products,
     isLoading: productsLoading,
@@ -135,20 +136,10 @@ const RetailerProductsPage: React.FC = () => {
     ordersPath: "/retailer/orders",
   };
 
-  // Helper function to convert string to number hash
-  const stringToNumberHash = (str: string): number => {
-    let hash = 0;
-    for (let i = 0; i < str.length; i++) {
-      hash = (hash << 5) - hash + str.charCodeAt(i);
-      hash |= 0; // Convert to 32-bit integer
-    }
-    return Math.abs(hash);
-  };
-
   // Transform products to match CatalogProduct type
   const transformedProducts: CatalogProduct[] =
     products?.map((product) => ({
-      id: stringToNumberHash(product.id), // Convert string to number
+      id: product.id,
       name: product.name,
       supplier:
         product.supplier?.business_name ||

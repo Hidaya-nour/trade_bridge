@@ -29,6 +29,7 @@ class ProductService {
 
   // Get products by supplier
   async getProductsBySupplier(supplierId: string): Promise<ProductsResponse> {
+    
     const response = await api.get(`/products/supplier/${supplierId}`);
     return response.data;
   }

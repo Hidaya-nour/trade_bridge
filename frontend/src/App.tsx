@@ -55,8 +55,6 @@ function App() {
         {/* Public Auth Routes */}
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
-      </Routes>
-      <Routes>
         {/* Dashboard Routes */}
         <Route
           path="/retailer/dashboard"
@@ -71,6 +69,14 @@ function App() {
           element={
             <DashboardLayout>
               <ProductsPage />
+            </DashboardLayout>
+          }
+        />
+        <Route
+          path="/retailer/products/:id"
+          element={
+            <DashboardLayout>
+              <RetailerProductDetailPage />
             </DashboardLayout>
           }
         />
@@ -330,14 +336,6 @@ function App() {
           element={
             <DashboardLayout>
               <OrderDetailsPage />
-            </DashboardLayout>
-          }
-        />
-        <Route
-          path="/retailer/product/:id"
-          element={
-            <DashboardLayout>
-              <RetailerProductDetailPage />
             </DashboardLayout>
           }
         />

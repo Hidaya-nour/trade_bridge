@@ -255,7 +255,6 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
       </div>
     );
   }
-  console.log("Notification counts in sidebar:", counts.unread);
   const secondaryNavigation = [
     {
       name: "Messages",

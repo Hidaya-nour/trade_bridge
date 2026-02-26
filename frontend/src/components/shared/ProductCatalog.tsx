@@ -56,7 +56,6 @@ import {
   SearchFilter,
 } from "@/components/shared";
 import { formatPrice } from "@/lib/formatters";
-import { cn } from "@/lib/utils";
 
 // ============================================================================
 // TYPES
@@ -65,7 +64,7 @@ import { cn } from "@/lib/utils";
 export type CatalogRole = "retailer" | "distributor";
 
 export interface CatalogProduct {
-  id: number;
+  id: string;
   name: string;
   supplierId: number;
   supplierName: string;
@@ -112,9 +111,9 @@ export interface CatalogConfig {
 interface ProductCatalogProps {
   config: CatalogConfig;
   products: CatalogProduct[];
-  onAddToCart: (productId: number, quantity: number) => void;
-  onRemoveFromCart: (productId: number) => void;
-  getCartQuantity: (productId: number) => number;
+  onAddToCart: (productId: string, quantity: number) => void;
+  onRemoveFromCart: (productId: string) => void;
+  getCartQuantity: (productId: string) => number;
   getTotalCartItems: () => number;
   getTotalCartValue: () => number;
 }
@@ -141,7 +140,7 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
   const [sortBy, setSortBy] = useState("recommended");
   const [currentPage, setCurrentPage] = useState(1);
   const [manualInputValue, setManualInputValue] = useState<{
-    [key: number]: string;
+    [key: string]: string;
   }>({});
   const itemsPerPage = 9;
 
@@ -209,7 +208,7 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
 
   // Handle manual quantity input change
   const handleManualInputChange = (
-    productId: number,
+    productId: string,
     value: string,
     minOrder: number,
   ) => {
@@ -217,7 +216,7 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
   };
 
   // Handle manual quantity input blur
-  const handleManualInputBlur = (productId: number, minOrder: number) => {
+  const handleManualInputBlur = (productId: string, minOrder: number) => {
     const value = manualInputValue[productId];
     if (value && value !== "") {
       const numValue = parseInt(value);
@@ -236,7 +235,7 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
   // Handle manual input key press (Enter key)
   const handleManualInputKeyDown = (
     e: React.KeyboardEvent,
-    productId: number,
+    productId: string,
     minOrder: number,
   ) => {
     if (e.key === "Enter") {
@@ -572,249 +571,105 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
       ) : viewMode === "grid" ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {currentItems.map((product) => (
-            <Card
-              key={product.id}
-              className="overflow-hidden hover:shadow-lg transition-shadow"
-            >
-              <div className="relative h-40 bg-gradient-to-br from-primary/5 to-primary/10 flex items-center justify-center">
-                <Package className="h-16 w-16 text-primary/30" />
-                <Badge className="absolute top-3 right-3 bg-white/90 text-foreground border-0">
-                  Min: {product.minOrder}+
-                </Badge>
-              </div>
-
-              <CardContent className="p-4">
-                <div className="flex items-start justify-between mb-2">
-                  <div>
-                    <h3 className="font-semibold text-lg line-clamp-1">
-                      {product.name}
-                    </h3>
-                    <Link
-                      to={`/${config.role}${config.supplierPath}/${product.supplierId}`}
-                      className="text-sm text-muted-foreground hover:text-primary flex items-center gap-1 mt-1"
-                    >
-                      <SupplierIcon className="h-3 w-3" />
-                      {product.supplierName}
-                    </Link>
-                  </div>
+            <Link to={`/retailer/products/${product.id}`}>
+              <Card
+                key={product.id}
+                className="overflow-hidden hover:shadow-lg transition-shadow"
+              >
+                <div className="relative h-40 bg-gradient-to-br from-primary/5 to-primary/10 flex items-center justify-center">
+                  <Package className="h-16 w-16 text-primary/30" />
+                  <Badge className="absolute top-3 right-3 bg-white/90 text-foreground border-0">
+                    Min: {product.minOrder}+
+                  </Badge>
                 </div>
 
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="flex items-center">
-                    <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                    <span className="text-xs font-medium ml-1">
-                      {product.rating}
-                    </span>
-                    <span className="text-xs text-muted-foreground ml-1">
-                      ({product.reviews})
-                    </span>
-                  </div>
-                  <span className="text-xs text-muted-foreground">•</span>
-                  <span className="text-xs text-muted-foreground flex items-center">
-                    <MapPin className="h-3 w-3 mr-1" />
-                    {product.location}
-                  </span>
-                  <span className="text-xs text-muted-foreground">•</span>
-                  <span className="text-xs text-muted-foreground flex items-center">
-                    <Truck className="h-3 w-3 mr-1" />
-                    {product.deliveryTime}
-                  </span>
-                </div>
-
-                <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
-                  {product.description}
-                </p>
-
-                <div className="flex flex-wrap gap-1 mb-3">
-                  {product.tags.slice(0, 2).map((tag) => (
-                    <Badge key={tag} variant="outline" className="text-[10px]">
-                      {tag}
-                    </Badge>
-                  ))}
-                  {product.tags.length > 2 && (
-                    <Badge variant="outline" className="text-[10px]">
-                      +{product.tags.length - 2}
-                    </Badge>
-                  )}
-                </div>
-
-                {config.showVolumeDiscount && product.volumeDiscount && (
-                  <div className="bg-blue-50/50 rounded-lg p-2 mb-3">
-                    <p className="text-xs font-medium text-blue-700">
-                      {product.volumeDiscount}
-                    </p>
-                  </div>
-                )}
-
-                <div className="flex items-end justify-between">
-                  <div>
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-xl font-bold text-primary">
-                        {formatPrice(product.price)}
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        /{product.unit}
-                      </span>
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Min. order: {product.minOrder} {product.unit}
-                    </p>
-                  </div>
-
-                  <div className="flex items-center gap-1">
-                    {getCartQuantity(product.id) > 0 ? (
-                      <div className="flex items-center border rounded-md">
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-8 w-8 rounded-r-none"
-                          onClick={() => onRemoveFromCart(product.id)}
-                        >
-                          <Minus className="h-3 w-3" />
-                        </Button>
-
-                        {/* Manual Input Field */}
-                        <Input
-                          type="number"
-                          min={product.minOrder}
-                          value={
-                            manualInputValue[product.id] !== undefined
-                              ? manualInputValue[product.id]
-                              : getCartQuantity(product.id)
-                          }
-                          onChange={(e) =>
-                            handleManualInputChange(
-                              product.id,
-                              e.target.value,
-                              product.minOrder,
-                            )
-                          }
-                          onBlur={() =>
-                            handleManualInputBlur(product.id, product.minOrder)
-                          }
-                          onKeyDown={(e) =>
-                            handleManualInputKeyDown(
-                              e,
-                              product.id,
-                              product.minOrder,
-                            )
-                          }
-                          className="w-16 h-8 text-center rounded-none border-0 focus-visible:ring-0 focus-visible:ring-offset-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                        />
-
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-8 w-8 rounded-l-none"
-                          onClick={() => onAddToCart(product.id, 1)}
-                        >
-                          <Plus className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    ) : (
-                      <Button
-                        size="sm"
-                        onClick={() =>
-                          onAddToCart(product.id, product.minOrder)
-                        }
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between mb-2">
+                    <div>
+                      <h3 className="font-semibold text-lg line-clamp-1">
+                        {product.name}
+                      </h3>
+                      <Link
+                        to={`/${config.role}${config.supplierPath}/${product.supplierId}`}
+                        className="text-sm text-muted-foreground hover:text-primary flex items-center gap-1 mt-1"
                       >
-                        <ShoppingCart className="h-4 w-4 mr-2" />
-                        Add (Min: {product.minOrder})
-                      </Button>
+                        <SupplierIcon className="h-3 w-3" />
+                        {product.supplierName}
+                      </Link>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="flex items-center">
+                      <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                      <span className="text-xs font-medium ml-1">
+                        {product.rating}
+                      </span>
+                      <span className="text-xs text-muted-foreground ml-1">
+                        ({product.reviews})
+                      </span>
+                    </div>
+                    <span className="text-xs text-muted-foreground">•</span>
+                    <span className="text-xs text-muted-foreground flex items-center">
+                      <MapPin className="h-3 w-3 mr-1" />
+                      {product.location}
+                    </span>
+                    <span className="text-xs text-muted-foreground">•</span>
+                    <span className="text-xs text-muted-foreground flex items-center">
+                      <Truck className="h-3 w-3 mr-1" />
+                      {product.deliveryTime}
+                    </span>
+                  </div>
+
+                  <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
+                    {product.description}
+                  </p>
+
+                  <div className="flex flex-wrap gap-1 mb-3">
+                    {product.tags.slice(0, 2).map((tag) => (
+                      <Badge
+                        key={tag}
+                        variant="outline"
+                        className="text-[10px]"
+                      >
+                        {tag}
+                      </Badge>
+                    ))}
+                    {product.tags.length > 2 && (
+                      <Badge variant="outline" className="text-[10px]">
+                        +{product.tags.length - 2}
+                      </Badge>
                     )}
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      ) : (
-        // List View
-        <div className="space-y-4">
-          {currentItems.map((product) => (
-            <Card
-              key={product.id}
-              className="overflow-hidden hover:shadow-md transition-shadow"
-            >
-              <CardContent className="p-6">
-                <div className="flex flex-col md:flex-row gap-6">
-                  <div className="md:w-32 h-32 bg-gradient-to-br from-primary/5 to-primary/10 rounded-lg flex items-center justify-center">
-                    <Package className="h-12 w-12 text-primary/30" />
-                  </div>
 
-                  <div className="flex-1">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <Link
-                            to={`/${config.role}/products/${product.id}`}
-                            className="text-lg font-semibold hover:text-primary"
-                          >
-                            {product.name}
-                          </Link>
-                        </div>
-                        <div className="flex items-center gap-3 mt-1">
-                          <Link
-                            to={`/${config.role}${config.supplierPath}/${product.supplierId}`}
-                            className="text-sm text-muted-foreground hover:text-primary"
-                          >
-                            {product.supplierName}
-                          </Link>
-                          <span className="text-xs text-muted-foreground">
-                            •
-                          </span>
-                          <span className="text-xs text-muted-foreground">
-                            {product.location}
-                          </span>
-                        </div>
-                      </div>
+                  {config.showVolumeDiscount && product.volumeDiscount && (
+                    <div className="bg-blue-50/50 rounded-lg p-2 mb-3">
+                      <p className="text-xs font-medium text-blue-700">
+                        {product.volumeDiscount}
+                      </p>
+                    </div>
+                  )}
 
-                      <div className="text-right">
-                        <div className="text-xl font-bold text-primary">
+                  <div className="flex items-end justify-between">
+                    <div>
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-xl font-bold text-primary">
                           {formatPrice(product.price)}
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          /{product.unit} • Min: {product.minOrder}
-                        </div>
-                      </div>
-                    </div>
-
-                    <p className="text-sm text-muted-foreground mt-2 line-clamp-2">
-                      {product.description}
-                    </p>
-
-                    <div className="flex items-center gap-4 mt-4">
-                      <div className="flex items-center">
-                        <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                        <span className="text-sm font-medium ml-1">
-                          {product.rating}
                         </span>
-                        <span className="text-xs text-muted-foreground ml-1">
-                          ({product.reviews} reviews)
+                        <span className="text-xs text-muted-foreground">
+                          /{product.unit}
                         </span>
                       </div>
-                      <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                        <Truck className="h-4 w-4" />
-                        {product.deliveryTime}
-                      </div>
-                      <div className="text-sm text-muted-foreground">
-                        Stock: {product.stock.toLocaleString()}
-                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Min. order: {product.minOrder} {product.unit}
+                      </p>
                     </div>
 
-                    {config.showVolumeDiscount && product.volumeDiscount && (
-                      <div className="mt-3 bg-blue-50 p-2 rounded-lg">
-                        <p className="text-xs font-medium text-blue-700">
-                          {product.volumeDiscount}
-                        </p>
-                      </div>
-                    )}
-
-                    <div className="flex items-center gap-2 mt-4">
+                    <div className="flex items-center gap-1">
                       {getCartQuantity(product.id) > 0 ? (
                         <div className="flex items-center border rounded-md">
                           <Button
-                            size="sm"
+                            size="icon"
                             variant="ghost"
                             className="h-8 w-8 rounded-r-none"
                             onClick={() => onRemoveFromCart(product.id)}
@@ -822,7 +677,7 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
                             <Minus className="h-3 w-3" />
                           </Button>
 
-                          {/* Manual Input Field for List View */}
+                          {/* Manual Input Field */}
                           <Input
                             type="number"
                             min={product.minOrder}
@@ -855,7 +710,7 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
                           />
 
                           <Button
-                            size="sm"
+                            size="icon"
                             variant="ghost"
                             className="h-8 w-8 rounded-l-none"
                             onClick={() => onAddToCart(product.id, 1)}
@@ -871,21 +726,177 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
                           }
                         >
                           <ShoppingCart className="h-4 w-4 mr-2" />
-                          Add to Cart (Min: {product.minOrder})
+                          Add (Min: {product.minOrder})
                         </Button>
                       )}
-
-                      <Button size="sm" variant="outline" asChild>
-                        <Link to={`/${config.role}/products/${product.id}`}>
-                          <Eye className="h-4 w-4 mr-2" />
-                          View Details
-                        </Link>
-                      </Button>
                     </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </Link>
+          ))}
+        </div>
+      ) : (
+        // List View
+
+        <div className="space-y-4">
+          {currentItems.map((product) => (
+            <Link to={`/retailer/products/${product.id}`}>
+              <Card
+                key={product.id}
+                className="overflow-hidden hover:shadow-md transition-shadow"
+              >
+                <CardContent className="p-6">
+                  <div className="flex flex-col md:flex-row gap-6">
+                    <div className="md:w-32 h-32 bg-gradient-to-br from-primary/5 to-primary/10 rounded-lg flex items-center justify-center">
+                      <Package className="h-12 w-12 text-primary/30" />
+                    </div>
+
+                    <div className="flex-1">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <Link
+                              to={`/${config.role}/products/${product.id}`}
+                              className="text-lg font-semibold hover:text-primary"
+                            >
+                              {product.name}
+                            </Link>
+                          </div>
+                          <div className="flex items-center gap-3 mt-1">
+                            <Link
+                              to={`/${config.role}${config.supplierPath}/${product.supplierId}`}
+                              className="text-sm text-muted-foreground hover:text-primary"
+                            >
+                              {product.supplierName}
+                            </Link>
+                            <span className="text-xs text-muted-foreground">
+                              •
+                            </span>
+                            <span className="text-xs text-muted-foreground">
+                              {product.location}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="text-right">
+                          <div className="text-xl font-bold text-primary">
+                            {formatPrice(product.price)}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            /{product.unit} • Min: {product.minOrder}
+                          </div>
+                        </div>
+                      </div>
+
+                      <p className="text-sm text-muted-foreground mt-2 line-clamp-2">
+                        {product.description}
+                      </p>
+
+                      <div className="flex items-center gap-4 mt-4">
+                        <div className="flex items-center">
+                          <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                          <span className="text-sm font-medium ml-1">
+                            {product.rating}
+                          </span>
+                          <span className="text-xs text-muted-foreground ml-1">
+                            ({product.reviews} reviews)
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                          <Truck className="h-4 w-4" />
+                          {product.deliveryTime}
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          Stock: {product.stock.toLocaleString()}
+                        </div>
+                      </div>
+
+                      {config.showVolumeDiscount && product.volumeDiscount && (
+                        <div className="mt-3 bg-blue-50 p-2 rounded-lg">
+                          <p className="text-xs font-medium text-blue-700">
+                            {product.volumeDiscount}
+                          </p>
+                        </div>
+                      )}
+
+                      <div className="flex items-center gap-2 mt-4">
+                        {getCartQuantity(product.id) > 0 ? (
+                          <div className="flex items-center border rounded-md">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-8 w-8 rounded-r-none"
+                              onClick={() => onRemoveFromCart(product.id)}
+                            >
+                              <Minus className="h-3 w-3" />
+                            </Button>
+
+                            {/* Manual Input Field for List View */}
+                            <Input
+                              type="number"
+                              min={product.minOrder}
+                              value={
+                                manualInputValue[product.id] !== undefined
+                                  ? manualInputValue[product.id]
+                                  : getCartQuantity(product.id)
+                              }
+                              onChange={(e) =>
+                                handleManualInputChange(
+                                  product.id,
+                                  e.target.value,
+                                  product.minOrder,
+                                )
+                              }
+                              onBlur={() =>
+                                handleManualInputBlur(
+                                  product.id,
+                                  product.minOrder,
+                                )
+                              }
+                              onKeyDown={(e) =>
+                                handleManualInputKeyDown(
+                                  e,
+                                  product.id,
+                                  product.minOrder,
+                                )
+                              }
+                              className="w-16 h-8 text-center rounded-none border-0 focus-visible:ring-0 focus-visible:ring-offset-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                            />
+
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-8 w-8 rounded-l-none"
+                              onClick={() => onAddToCart(product.id, 1)}
+                            >
+                              <Plus className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <Button
+                            size="sm"
+                            onClick={() =>
+                              onAddToCart(product.id, product.minOrder)
+                            }
+                          >
+                            <ShoppingCart className="h-4 w-4 mr-2" />
+                            Add to Cart (Min: {product.minOrder})
+                          </Button>
+                        )}
+
+                        <Button size="sm" variant="outline" asChild>
+                          <Link to={`/${config.role}/products/${product.id}`}>
+                            <Eye className="h-4 w-4 mr-2" />
+                            View Details
+                          </Link>
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
           ))}
         </div>
       )}

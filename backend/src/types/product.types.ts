@@ -10,6 +10,7 @@ export interface IProduct {
   unit_type: string;
   images?: any; // JSON field
   is_available: number; // TINYINT(1) - 0 or 1
+  rating?: number; // Optional field for product rating
   created_at: Date;
   updated_at: Date;
   deleted_at?: Date;
@@ -26,7 +27,7 @@ export interface IProductFilters {
   limit?: number;
   sortBy?: string;
   sortOrder?: 'ASC' | 'DESC';
-}
+  } 
 
 export interface IProductResponse {
   id: string;

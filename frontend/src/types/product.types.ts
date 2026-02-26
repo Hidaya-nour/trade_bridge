@@ -13,10 +13,12 @@ export interface Product {
   min_order_amount: number;
   unit_type: string;
   images: string[];
-  is_available: number; // 0 or 1 (TINYINT)
+  is_available: number; 
+    rating: number;
   created_at: string;
   updated_at: string;
   deleted_at?: string | null;
+  
   
   // Joined data (optional)
   supplier?: {

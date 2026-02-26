@@ -4,6 +4,7 @@ import productService from '@/services/product.service';
 
 interface ProductState {
   products: Product[];
+  product: Product | null;
   totalProducts: number;
   currentPage: number;
   totalPages: number;
@@ -28,6 +29,7 @@ interface ProductState {
 
 export const useProductStore = create<ProductState>((set, get) => ({
   products: [],
+  product: null,
   totalProducts: 0,
   currentPage: 1,
   totalPages: 1,
@@ -62,7 +64,7 @@ export const useProductStore = create<ProductState>((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const response = await productService.getProductById(id);
-      set({ isLoading: false });
+      set({ isLoading: false, product: response.data.product });
       return response.data.product;
     } catch (error: any) {
       set({

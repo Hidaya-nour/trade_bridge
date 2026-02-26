@@ -55,23 +55,23 @@ export interface ProductDetailProps {
   product: {
     id: number;
     name: string;
-    sku: string;
+    // sku: string;
     category: string;
-    subcategory?: string;
     price: number;
-    unit: string;
-    minOrder: number;
+    unit_type: string;
+    min_order_amount: number;
     maxOrder?: number;
-    stock: number;
+    stock_quantity: number;
     reserved?: number;
-    available?: number;
+    is_available?: number;
     description: string;
     specifications?: Record<string, string>;
     tags: string[];
     images?: string[];
-
+    created_at: string;
+    updated_at: string;
     // Supplier info
-    supplierId?: number;
+    supplierId?: string;
     supplierName?: string;
     supplierType?: "factory" | "distributor";
     supplierRating?: number;
@@ -137,7 +137,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
   onCompare,
 }) => {
   const navigate = useNavigate();
-  const [quantity, setQuantity] = useState(product.minOrder);
+  const [quantity, setQuantity] = useState(product.min_order_amount);
   const [activeTab, setActiveTab] = useState("description");
 
   const getRoleIcon = () => {
@@ -169,14 +169,16 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
   const incrementQuantity = () => {
     setQuantity((prev) =>
       Math.min(
-        prev + product.minOrder,
-        product.maxOrder || prev + product.minOrder,
+        prev + product.min_order_amount,
+        product.maxOrder || prev + product.min_order_amount,
       ),
     );
   };
 
   const decrementQuantity = () => {
-    setQuantity((prev) => Math.max(prev - product.minOrder, product.minOrder));
+    setQuantity((prev) =>
+      Math.max(prev - product.min_order_amount, product.min_order_amount),
+    );
   };
 
   const handleAddToCart = () => {
@@ -218,8 +220,8 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
               <div>
                 <h1 className="text-3xl font-bold">{product.name}</h1>
                 <p className="text-sm text-muted-foreground mt-1">
-                  SKU: {product.sku} • Category: {product.category}
-                  {product.subcategory && ` / ${product.subcategory}`}
+                  {/* SKU: {product.sku} •  */}
+                  Category: {product.category}
                 </p>
               </div>
               {product.supplierVerified && (
@@ -258,25 +260,25 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
                   {formatPrice(product.price)}
                 </span>
                 <span className="text-sm text-muted-foreground">
-                  / {product.unit}
+                  / {product.unit_type}
                 </span>
               </div>
               <p className="text-sm text-muted-foreground mt-1">
-                Minimum order: {product.minOrder} {product.unit}
+                Minimum order: {product.min_order_amount} {product.unit_type}
               </p>
             </div>
 
             {/* Stock Status */}
             <div className="mt-4">
-              {product.available !== undefined ? (
+              {product.is_available !== undefined ? (
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-medium">Availability:</span>
-                    {product.available > product.minOrder * 2 ? (
+                    {product.is_available > product.min_order_amount * 2 ? (
                       <Badge className="bg-green-100 text-green-800">
                         In Stock
                       </Badge>
-                    ) : product.available > 0 ? (
+                    ) : product.is_available > 0 ? (
                       <Badge className="bg-amber-100 text-amber-800">
                         Low Stock
                       </Badge>
@@ -287,11 +289,13 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
                     )}
                   </div>
                   <Progress
-                    value={(product.available / product.stock) * 100}
+                    value={
+                      (product.is_available / product.stock_quantity) * 100
+                    }
                     className="h-1.5 w-48"
                   />
                   <p className="text-xs text-muted-foreground">
-                    {product.available} of {product.stock} available
+                    {product.is_available} of {product.stock_quantity} available
                   </p>
                 </div>
               ) : (
@@ -301,7 +305,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
                     In Stock
                   </Badge>
                   <span className="text-xs text-muted-foreground">
-                    {product.stock} units available
+                    {product.stock_quantity} units available
                   </span>
                 </div>
               )}
@@ -317,7 +321,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
                     variant="ghost"
                     className="h-10 w-10 rounded-r-none"
                     onClick={decrementQuantity}
-                    disabled={quantity <= product.minOrder}
+                    disabled={quantity <= product.min_order_amount}
                   >
                     <Minus className="h-4 w-4" />
                   </Button>
@@ -337,7 +341,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
                   </Button>
                 </div>
                 <span className="text-sm text-muted-foreground">
-                  {product.unit}
+                  {product.unit_type}
                 </span>
               </div>
             </div>

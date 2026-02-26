@@ -9,18 +9,21 @@ export class ProductController {
   // Get all products (with filters)
   async getAllProducts(req: Request, res: Response) {
     try {
-      const filters = {
-        category: req.query.category as string,
-        minPrice: req.query.minPrice ? Number(req.query.minPrice) : undefined,
-        maxPrice: req.query.maxPrice ? Number(req.query.maxPrice) : undefined,
-        supplier_id: req.query.supplierId as string,
-        search: req.query.search as string,
-        is_available: req.query.isAvailable === 'true',
-        page: req.query.page ? Number(req.query.page) : 1,
-        limit: req.query.limit ? Number(req.query.limit) : 20,
-        sortBy: req.query.sortBy as string,
-        sortOrder: req.query.sortOrder as 'ASC' | 'DESC' || 'ASC'
-      };
+     const filters = {
+  category: req.query.category as string | undefined,
+  minPrice: req.query.minPrice ? Number(req.query.minPrice) : undefined,
+  maxPrice: req.query.maxPrice ? Number(req.query.maxPrice) : undefined,
+  supplier_id: req.query.supplierId as string | undefined,
+  search: req.query.search as string | undefined,
+  is_available:
+    req.query.isAvailable !== undefined
+      ? req.query.isAvailable === 'true'
+      : undefined,
+  page: req.query.page ? Number(req.query.page) : 1,
+  limit: req.query.limit ? Number(req.query.limit) : 20,
+  sortBy: req.query.sortBy as string | undefined,
+  sortOrder: req.query.sortOrder === 'DESC' ? 'DESC'  as const: 'ASC' as const,
+};
 
       const result = await productService.getAllProducts(filters);
       res.json({ success: true, data: result });
@@ -39,6 +42,7 @@ export class ProductController {
     try {
       const { id } = req.params;
       const product = await productService.getProductById(id);
+      console.log(product)
       res.json({ success: true, data: { product } });
     } catch (error) {
       if (error instanceof AppError) {
