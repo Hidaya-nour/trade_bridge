@@ -31,7 +31,7 @@ export interface Product {
 }
 
 export interface CatalogProduct {
-  id: string | number;
+  id: string ;
   name: string;
   supplier: string;
   supplierId: string;

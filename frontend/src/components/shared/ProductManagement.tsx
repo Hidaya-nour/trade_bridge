@@ -1,9 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import {
   Package,
-  Search,
-  Filter,
   Plus,
   Edit,
   Trash2,
@@ -75,14 +73,11 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Progress } from "@/components/ui/progress";
 import { Switch } from "@/components/ui/switch";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
 
 import {
   StatsCard,
   StatusBadge,
-  EmptyState,
   PaginationBar,
   SearchFilter,
 } from "@/components/shared";
@@ -90,40 +85,28 @@ import { formatPrice } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 
 // ============================================================================
-// TYPES
+// TYPES (Aligned with Database Schema)
 // ============================================================================
 
 export type ProductRole = "distributor" | "factory";
 
 export interface Product {
-  id: number;
+  id: string;
   name: string;
-  sku: string;
   category: string;
-  subcategory?: string;
-  price: number;
-  unit: string;
-  minOrder: number;
-  stock: number;
-  reserved: number;
-  available: number;
-  status: "active" | "inactive";
-  verified: boolean;
-  image?: string | null;
-  rating: number;
-  reviews: number;
-  sales: number;
-  revenue: number;
-  lastOrdered?: string;
-  tags: string[];
   description: string;
+  price: number;
+  stock_quantity: number;
+  min_order_amount: number;
+  unit_type: string;
+  is_available: boolean; // Converted from TINYINT(1)
+  supplier_id: string;
 
-  // Distributor-specific (optional)
-  supplier?: string;
-  supplierId?: number;
-
-  // Factory-specific (optional)
-  // (can be added later if needed)
+  // Optional joined fields (from API response)
+  supplier_name?: string;
+  supplier_business?: string;
+  rating?: number;
+  images?: any;
 }
 
 export interface ProductManagementConfig {
@@ -131,8 +114,8 @@ export interface ProductManagementConfig {
   title: string;
   description: string;
   addButtonLabel: string;
-  showSupplier: boolean; // Distributor shows supplier, Factory doesn't
-  supplierPath?: string; // "/suppliers" for distributor
+  showSupplier: boolean;
+  supplierPath?: string;
 }
 
 // ============================================================================
@@ -143,12 +126,12 @@ interface ProductManagementProps {
   config: ProductManagementConfig;
   products: Product[];
   categories: string[];
-  suppliers?: { id: number; name: string }[]; // For distributor only
+  suppliers?: { id: string; name: string }[];
   onAddProduct: (product: any) => void;
-  onEditProduct: (id: number, product: any) => void;
-  onDeleteProduct: (id: number) => void;
+  onEditProduct: (id: string, product: any) => void;
+  onDeleteProduct: (id: string) => void;
   onDuplicateProduct: (product: Product) => void;
-  onToggleStatus: (id: number) => void;
+  onToggleStatus: (id: string) => void;
 }
 
 // ============================================================================
@@ -180,18 +163,21 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const itemsPerPage = 10;
 
-  // New product form state
+  // Update products when initialProducts changes
+  useEffect(() => {
+    setProducts(initialProducts);
+  }, [initialProducts]);
+
+  // New product form state (aligned with DB schema)
   const [newProduct, setNewProduct] = useState({
     name: "",
-    sku: "",
     category: "",
     price: "",
-    unit: "kg",
-    minOrder: "",
-    stock: "",
+    unit_type: "kg",
+    min_order_amount: "",
+    stock_quantity: "",
     description: "",
-    tags: [] as string[],
-    active: true,
+    is_available: true,
   });
 
   // Filter products
@@ -199,8 +185,7 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({
     const matchesSearch =
       searchQuery === "" ||
       product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      product.sku.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (product.supplier?.toLowerCase() || "").includes(
+      (product.supplier_name?.toLowerCase() || "").includes(
         searchQuery.toLowerCase(),
       );
 
@@ -209,18 +194,23 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({
       product.category === selectedCategory;
 
     const matchesSupplier =
-      !selectedSupplier || product.supplierId?.toString() === selectedSupplier;
+      !selectedSupplier || product.supplier_id === selectedSupplier;
 
     const matchesStatus =
-      statusFilter === "all" || product.status === statusFilter;
+      statusFilter === "all" ||
+      (statusFilter === "active" && product.is_available) ||
+      (statusFilter === "inactive" && !product.is_available);
+
+    const available = product.stock_quantity || 0;
+    const minOrder = product.min_order_amount || 1;
 
     let matchesStock = true;
     if (stockFilter === "low") {
-      matchesStock = product.available < product.minOrder * 2;
+      matchesStock = available < minOrder * 2;
     } else if (stockFilter === "critical") {
-      matchesStock = product.available < product.minOrder;
+      matchesStock = available < minOrder;
     } else if (stockFilter === "out") {
-      matchesStock = product.available === 0;
+      matchesStock = available === 0;
     }
 
     return (
@@ -243,11 +233,14 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({
 
   // Stats
   const totalProducts = products.length;
-  const activeProducts = products.filter((p) => p.status === "active").length;
+  const activeProducts = products.filter((p) => p.is_available).length;
   const lowStockItems = products.filter(
-    (p) => p.available < p.minOrder * 2,
+    (p) => (p.stock_quantity || 0) < (p.min_order_amount || 1) * 2,
   ).length;
-  const totalValue = products.reduce((sum, p) => sum + p.stock * p.price, 0);
+  const totalValue = products.reduce(
+    (sum, p) => sum + (p.stock_quantity || 0) * p.price,
+    0,
+  );
 
   const getStockStatus = (available: number, minOrder: number) => {
     const ratio = available / minOrder;
@@ -276,20 +269,25 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({
     };
   };
 
+  const calculateProgress = (stockQuantity: number): number => {
+    // Cap at 100% and ensure it's a valid number
+    const maxStock = 1000; // You can adjust this based on your typical stock levels
+    const percentage = Math.min((stockQuantity / maxStock) * 100, 100);
+    return isNaN(percentage) ? 0 : percentage;
+  };
+
   const handleAddProduct = () => {
     onAddProduct(newProduct);
     setShowAddDialog(false);
     setNewProduct({
       name: "",
-      sku: "",
       category: "",
       price: "",
-      unit: "kg",
-      minOrder: "",
-      stock: "",
+      unit_type: "kg",
+      min_order_amount: "",
+      stock_quantity: "",
       description: "",
-      tags: [],
-      active: true,
+      is_available: true,
     });
   };
 
@@ -323,6 +321,9 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({
       iconColor: "text-blue-600",
     },
   ];
+  console.log("currentItems");
+
+  console.log(currentItems);
 
   return (
     <div className="space-y-6">
@@ -355,7 +356,7 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({
       <Card>
         <CardContent className="p-4">
           <SearchFilter
-            placeholder="Search by product name, SKU, or supplier..."
+            placeholder="Search by product name or supplier..."
             onSearch={setSearchQuery}
             filterComponent={
               <div className="flex items-center gap-2 flex-wrap">
@@ -385,10 +386,7 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({
                     </SelectTrigger>
                     <SelectContent>
                       {suppliers.map((supplier) => (
-                        <SelectItem
-                          key={supplier.id}
-                          value={supplier.id.toString()}
-                        >
+                        <SelectItem key={supplier.id} value={supplier.id}>
                           {supplier.name}
                         </SelectItem>
                       ))}
@@ -463,11 +461,10 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({
               <TableHeader>
                 <TableRow>
                   <TableHead>Product</TableHead>
-                  <TableHead>SKU</TableHead>
                   <TableHead>Category</TableHead>
                   <TableHead>Price</TableHead>
                   <TableHead>Stock</TableHead>
-                  <TableHead>Available</TableHead>
+                  <TableHead>Min Order</TableHead>
                   <TableHead>Status</TableHead>
                   {config.showSupplier && <TableHead>Supplier</TableHead>}
                   <TableHead className="text-right">Actions</TableHead>
@@ -476,8 +473,8 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({
               <TableBody>
                 {currentItems.map((product) => {
                   const stockStatus = getStockStatus(
-                    product.available,
-                    product.minOrder,
+                    product.stock_quantity || 0,
+                    product.min_order_amount || 1,
                   );
                   return (
                     <TableRow key={product.id}>
@@ -488,29 +485,16 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({
                           </div>
                           <div>
                             <p className="font-medium">{product.name}</p>
-                            <div className="flex items-center gap-1 mt-0.5">
-                              {product.verified && (
-                                <Badge
-                                  variant="outline"
-                                  className="h-4 px-1 text-[10px] bg-green-50 text-green-700"
-                                >
-                                  Verified
-                                </Badge>
-                              )}
-                              <div className="flex items-center">
+                            {product.rating && product.rating > 0 && (
+                              <div className="flex items-center mt-0.5">
                                 <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
                                 <span className="text-xs ml-0.5">
                                   {product.rating}
                                 </span>
                               </div>
-                            </div>
+                            )}
                           </div>
                         </div>
-                      </TableCell>
-                      <TableCell>
-                        <code className="text-xs bg-muted px-2 py-1 rounded">
-                          {product.sku}
-                        </code>
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline">{product.category}</Badge>
@@ -521,7 +505,7 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({
                             {formatPrice(product.price)}
                           </p>
                           <p className="text-xs text-muted-foreground">
-                            / {product.unit}
+                            / {product.unit_type}
                           </p>
                         </div>
                       </TableCell>
@@ -529,41 +513,47 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({
                         <div className="space-y-1">
                           <div className="flex items-center gap-2">
                             <span className="text-sm font-medium">
-                              {product.stock}
+                              {product.stock_quantity || 0}
                             </span>
                             <span className="text-xs text-muted-foreground">
-                              units
+                              {product.unit_type}
                             </span>
                           </div>
                           <Progress
-                            value={(product.available / product.stock) * 100}
+                            value={calculateProgress(
+                              product.stock_quantity || 0,
+                            )}
                             className="h-1.5 w-20"
                           />
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge className={stockStatus.color}>
-                          {product.available}
+                        <Badge variant="outline">
+                          Min: {product.min_order_amount || 1}
                         </Badge>
                       </TableCell>
                       <TableCell>
                         <StatusBadge
-                          status={
-                            product.status === "active" ? "active" : "inactive"
-                          }
+                          status={product.is_available ? "active" : "inactive"}
                         />
                       </TableCell>
                       {config.showSupplier && (
                         <TableCell>
-                          {product.supplierId && config.supplierPath ? (
+                          {product.supplier_id && config.supplierPath ? (
                             <Link
-                              to={`/${config.role}${config.supplierPath}/${product.supplierId}`}
+                              to={`/${config.role}${config.supplierPath}/${product.supplier_id}`}
                               className="text-sm hover:text-primary"
                             >
-                              {product.supplier}
+                              {product.supplier_name ||
+                                product.supplier_business ||
+                                "Supplier"}
                             </Link>
                           ) : (
-                            <span className="text-sm">{product.supplier}</span>
+                            <span className="text-sm">
+                              {product.supplier_name ||
+                                product.supplier_business ||
+                                "N/A"}
+                            </span>
                           )}
                         </TableCell>
                       )}
@@ -594,7 +584,7 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({
                             <DropdownMenuItem
                               onClick={() => onToggleStatus(product.id)}
                             >
-                              {product.status === "active" ? (
+                              {product.is_available ? (
                                 <>
                                   <XCircle className="h-4 w-4 mr-2" />
                                   Deactivate
@@ -658,8 +648,8 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {currentItems.map((product) => {
               const stockStatus = getStockStatus(
-                product.available,
-                product.minOrder,
+                product.stock_quantity || 0,
+                product.min_order_amount || 1,
               );
               return (
                 <Card
@@ -671,12 +661,12 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({
                     <Badge
                       className={cn(
                         "absolute top-3 right-3",
-                        product.status === "active"
+                        product.is_available
                           ? "bg-green-100 text-green-800 border-green-200"
                           : "bg-gray-100 text-gray-800 border-gray-200",
                       )}
                     >
-                      {product.status}
+                      {product.is_available ? "active" : "inactive"}
                     </Badge>
                   </div>
                   <CardContent className="p-4">
@@ -684,13 +674,15 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({
                       <div>
                         <h3 className="font-semibold">{product.name}</h3>
                         <p className="text-xs text-muted-foreground mt-1">
-                          {product.supplier || config.role}
+                          {product.supplier_name || config.role}
                         </p>
                       </div>
-                      <div className="flex items-center">
-                        <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                        <span className="text-xs ml-1">{product.rating}</span>
-                      </div>
+                      {product.rating && product.rating > 0 && (
+                        <div className="flex items-center">
+                          <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                          <span className="text-xs ml-1">{product.rating}</span>
+                        </div>
+                      )}
                     </div>
 
                     <div className="flex items-center justify-between mb-3">
@@ -699,11 +691,11 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({
                           {formatPrice(product.price)}
                         </span>
                         <span className="text-xs text-muted-foreground ml-1">
-                          /{product.unit}
+                          /{product.unit_type}
                         </span>
                       </div>
                       <Badge variant="outline" className="text-xs">
-                        Min: {product.minOrder}
+                        Min: {product.min_order_amount || 1}
                       </Badge>
                     </div>
 
@@ -711,36 +703,19 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({
                       <div className="flex items-center justify-between text-xs">
                         <span className="text-muted-foreground">Stock</span>
                         <span className="font-medium">
-                          {product.stock} units
+                          {product.stock_quantity || 0} {product.unit_type}
                         </span>
                       </div>
                       <div className="flex items-center justify-between text-xs">
-                        <span className="text-muted-foreground">Available</span>
+                        <span className="text-muted-foreground">Status</span>
                         <Badge className={stockStatus.color}>
-                          {product.available}
+                          {stockStatus.label}
                         </Badge>
                       </div>
                       <Progress
-                        value={(product.available / product.stock) * 100}
+                        value={calculateProgress(product.stock_quantity || 0)}
                         className="h-1.5"
                       />
-                    </div>
-
-                    <div className="flex flex-wrap gap-1 mb-3">
-                      {product.tags.slice(0, 2).map((tag) => (
-                        <Badge
-                          key={tag}
-                          variant="outline"
-                          className="text-[10px]"
-                        >
-                          {tag}
-                        </Badge>
-                      ))}
-                      {product.tags.length > 2 && (
-                        <Badge variant="outline" className="text-[10px]">
-                          +{product.tags.length - 2}
-                        </Badge>
-                      )}
                     </div>
 
                     <div className="flex items-center gap-2">
@@ -797,7 +772,7 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({
           <ScrollArea className="h-[500px] pr-4">
             <div className="space-y-4 py-2">
               <div className="space-y-2">
-                <Label htmlFor="name">Product Name</Label>
+                <Label htmlFor="name">Product Name *</Label>
                 <Input
                   id="name"
                   placeholder="Enter product name"
@@ -805,23 +780,13 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({
                   onChange={(e) =>
                     setNewProduct({ ...newProduct, name: e.target.value })
                   }
+                  required
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="sku">SKU</Label>
-                  <Input
-                    id="sku"
-                    placeholder="Enter SKU"
-                    value={newProduct.sku}
-                    onChange={(e) =>
-                      setNewProduct({ ...newProduct, sku: e.target.value })
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="category">Category</Label>
+                  <Label htmlFor="category">Category *</Label>
                   <Select
                     value={newProduct.category}
                     onValueChange={(value) =>
@@ -842,27 +807,12 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({
                     </SelectContent>
                   </Select>
                 </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="price">Price (ETB)</Label>
-                  <Input
-                    id="price"
-                    type="number"
-                    placeholder="0.00"
-                    value={newProduct.price}
-                    onChange={(e) =>
-                      setNewProduct({ ...newProduct, price: e.target.value })
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="unit">Unit</Label>
+                  <Label htmlFor="unit_type">Unit Type *</Label>
                   <Select
-                    value={newProduct.unit}
+                    value={newProduct.unit_type}
                     onValueChange={(value) =>
-                      setNewProduct({ ...newProduct, unit: value })
+                      setNewProduct({ ...newProduct, unit_type: value })
                     }
                   >
                     <SelectTrigger>
@@ -881,27 +831,55 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="minOrder">Minimum Order</Label>
+                  <Label htmlFor="price">Price (ETB) *</Label>
                   <Input
-                    id="minOrder"
+                    id="price"
                     type="number"
-                    placeholder="1"
-                    value={newProduct.minOrder}
+                    min="0"
+                    step="0.01"
+                    placeholder="0.00"
+                    value={newProduct.price}
                     onChange={(e) =>
-                      setNewProduct({ ...newProduct, minOrder: e.target.value })
+                      setNewProduct({ ...newProduct, price: e.target.value })
                     }
+                    required
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="stock">Initial Stock</Label>
+                  <Label htmlFor="stock_quantity">Stock Quantity *</Label>
                   <Input
-                    id="stock"
+                    id="stock_quantity"
                     type="number"
+                    min="0"
                     placeholder="0"
-                    value={newProduct.stock}
+                    value={newProduct.stock_quantity}
                     onChange={(e) =>
-                      setNewProduct({ ...newProduct, stock: e.target.value })
+                      setNewProduct({
+                        ...newProduct,
+                        stock_quantity: e.target.value,
+                      })
                     }
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="min_order_amount">Minimum Order *</Label>
+                  <Input
+                    id="min_order_amount"
+                    type="number"
+                    min="1"
+                    placeholder="1"
+                    value={newProduct.min_order_amount}
+                    onChange={(e) =>
+                      setNewProduct({
+                        ...newProduct,
+                        min_order_amount: e.target.value,
+                      })
+                    }
+                    required
                   />
                 </div>
               </div>
@@ -924,13 +902,15 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({
 
               <div className="flex items-center space-x-2">
                 <Switch
-                  id="active"
-                  checked={newProduct.active}
+                  id="is_available"
+                  checked={newProduct.is_available}
                   onCheckedChange={(checked) =>
-                    setNewProduct({ ...newProduct, active: checked })
+                    setNewProduct({ ...newProduct, is_available: checked })
                   }
                 />
-                <Label htmlFor="active">Active (visible to customers)</Label>
+                <Label htmlFor="is_available">
+                  Active (visible to customers)
+                </Label>
               </div>
             </div>
           </ScrollArea>
@@ -956,7 +936,18 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({
             <div className="space-y-4 py-2">
               <div className="space-y-2">
                 <Label htmlFor="edit-name">Product Name</Label>
-                <Input id="edit-name" defaultValue={selectedProduct?.name} />
+                <Input
+                  id="edit-name"
+                  defaultValue={selectedProduct?.name}
+                  onChange={(e) => {
+                    if (selectedProduct) {
+                      setSelectedProduct({
+                        ...selectedProduct,
+                        name: e.target.value,
+                      });
+                    }
+                  }}
+                />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -965,15 +956,34 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({
                   <Input
                     id="edit-price"
                     type="number"
+                    min="0"
+                    step="0.01"
                     defaultValue={selectedProduct?.price}
+                    onChange={(e) => {
+                      if (selectedProduct) {
+                        setSelectedProduct({
+                          ...selectedProduct,
+                          price: parseFloat(e.target.value),
+                        });
+                      }
+                    }}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="edit-stock">Stock</Label>
+                  <Label htmlFor="edit-stock">Stock Quantity</Label>
                   <Input
                     id="edit-stock"
                     type="number"
-                    defaultValue={selectedProduct?.stock}
+                    min="0"
+                    defaultValue={selectedProduct?.stock_quantity}
+                    onChange={(e) => {
+                      if (selectedProduct) {
+                        setSelectedProduct({
+                          ...selectedProduct,
+                          stock_quantity: parseInt(e.target.value),
+                        });
+                      }
+                    }}
                   />
                 </div>
               </div>
@@ -984,13 +994,29 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({
                   id="edit-description"
                   defaultValue={selectedProduct?.description}
                   rows={4}
+                  onChange={(e) => {
+                    if (selectedProduct) {
+                      setSelectedProduct({
+                        ...selectedProduct,
+                        description: e.target.value,
+                      });
+                    }
+                  }}
                 />
               </div>
 
               <div className="flex items-center space-x-2">
                 <Switch
                   id="edit-active"
-                  defaultChecked={selectedProduct?.status === "active"}
+                  defaultChecked={selectedProduct?.is_available}
+                  onCheckedChange={(checked) => {
+                    if (selectedProduct) {
+                      setSelectedProduct({
+                        ...selectedProduct,
+                        is_available: checked,
+                      });
+                    }
+                  }}
                 />
                 <Label htmlFor="edit-active">Active</Label>
               </div>
@@ -1004,7 +1030,7 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({
             <Button
               onClick={() => {
                 if (selectedProduct) {
-                  onEditProduct(selectedProduct.id, {});
+                  onEditProduct(selectedProduct.id, selectedProduct);
                   setShowEditDialog(false);
                 }
               }}
