@@ -63,7 +63,7 @@ export interface ProductDetailProps {
     maxOrder?: number;
     stock_quantity: number;
     reserved?: number;
-    is_available?: number;
+    is_available?: boolean;
     description: string;
     specifications?: Record<string, string>;
     tags: string[];

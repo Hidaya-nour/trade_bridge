@@ -13,7 +13,7 @@ export interface Product {
   min_order_amount: number;
   unit_type: string;
   images: string[];
-  is_available: number; 
+  is_available: boolean; 
     rating: number;
   created_at: string;
   updated_at: string;
@@ -159,7 +159,7 @@ export interface AvailabilityToggleResponse {
   success: boolean;
   data: {
     productId: string;
-    is_available: number;
+    is_available: boolean;
   };
 }
 

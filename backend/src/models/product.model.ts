@@ -17,7 +17,7 @@ export class Product extends Model<IProduct, ProductCreationAttributes> implemen
   public unit_type!: string;
   public images!: any;
   public rating!: number;
-  public is_available!: number;
+  public is_available!: boolean;
   public created_at!: Date;
   public updated_at!: Date;
   public deleted_at?: Date;
@@ -88,7 +88,7 @@ Product.init(
       defaultValue: [],
     },
     is_available: {
-      type: DataTypes.TINYINT,
+      type: DataTypes.BOOLEAN,
       allowNull: false,
       defaultValue: 1,
       validate: {

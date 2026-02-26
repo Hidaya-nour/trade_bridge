@@ -9,8 +9,8 @@ export interface IProduct {
   min_order_amount: number;
   unit_type: string;
   images?: any; // JSON field
-  is_available: number; // TINYINT(1) - 0 or 1
-  rating?: number; // Optional field for product rating
+  is_available: boolean;
+  rating?: number;
   created_at: Date;
   updated_at: Date;
   deleted_at?: Date;

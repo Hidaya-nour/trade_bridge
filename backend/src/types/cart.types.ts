@@ -20,7 +20,7 @@ export interface CartItemWithProduct extends ICartItem {
     unit_type: string;
     images?: any;
     supplier_id: string;
-    is_available: number;
+    is_available: boolean;
     stock_quantity: number;
     min_order_amount: number;
   };
@@ -48,7 +48,7 @@ export interface CartItemWithProduct extends ICartItem {
     unit_type: string;
     images?: any;
     supplier_id: string;
-    is_available: number;
+    is_available: boolean;
     stock_quantity: number;
     min_order_amount: number;
   };
