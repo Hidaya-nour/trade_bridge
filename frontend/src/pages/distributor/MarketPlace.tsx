@@ -50,8 +50,8 @@ const DistributorMarketplacePage: React.FC = () => {
 
   // Fetch products and cart on component mount
   useEffect(() => {
-    fetchProducts({ is_available: true }); // Only fetch available products
-    fetchCart(); // Fetch existing cart items
+    fetchProducts({ is_available: true });
+    fetchCart();
   }, [fetchProducts, fetchCart]);
 
   // Transform store products to match ProductCatalog expected format

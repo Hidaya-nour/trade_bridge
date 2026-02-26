@@ -113,8 +113,8 @@ const roleNavigation = {
     ],
     purchasing: [
       {
-        name: "Source Products",
-        href: "/distributor/factory-products",
+        name: "purchase Products",
+        href: "/distributor/browse-products",
         icon: Factory,
         badge: "New",
       },
