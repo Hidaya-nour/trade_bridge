@@ -13,8 +13,8 @@ interface ProductState {
   filters: ProductFilters;
   categories: string[];
   
-  // Actions
-  fetchProducts: (filters?: ProductFilters) => Promise<void>;
+  // Actions - FIXED: Added options parameter
+  fetchProducts: (filters?: ProductFilters, options?: { replace?: boolean }) => Promise<void>;
   fetchProductById: (id: string) => Promise<Product | null>;
   fetchCategories: () => Promise<void>;
   createProduct: (data: any) => Promise<Product | null>;
@@ -38,21 +38,32 @@ export const useProductStore = create<ProductState>((set, get) => ({
   filters: {},
   categories: [],
 
-  fetchProducts: async (filters?: ProductFilters) => {
+  fetchProducts: async (filters?: ProductFilters, options?: { replace?: boolean }) => {
     set({ isLoading: true, error: null });
     try {
-      const mergedFilters = { ...get().filters, ...filters };
+      const mergedFilters = { 
+        ...(options?.replace ? {} : get().filters), 
+        ...filters 
+      };
+      
       const response = await productService.getProducts(mergedFilters);
       
+      // Handle different response structures
+      const productsData = response.data?.products || response.data || [];
+      const total = response.data?.total || productsData.length;
+      const page = response.data?.page || 1;
+      const totalPages = response.data?.totalPages || Math.ceil(total / (mergedFilters.limit || 20));
+      
       set({
-        products: response.data.products,
-        totalProducts: response.data.total,
-        currentPage: response.data.page,
-        totalPages: response.data.totalPages,
+        products: productsData,
+        totalProducts: total,
+        currentPage: page,
+        totalPages: totalPages,
         filters: mergedFilters,
         isLoading: false,
       });
     } catch (error: any) {
+      console.error("Fetch products error:", error);
       set({
         error: error.response?.data?.message || 'Failed to fetch products',
         isLoading: false,

@@ -7,6 +7,7 @@ import { useProductStore } from "@/stores/product.store";
 import { useCartStore } from "@/stores/cart.store";
 import { Factory } from "lucide-react";
 import toast from "react-hot-toast";
+import { useAuthStore } from "@/stores/auth.store";
 
 const categories = [
   "All Categories",
@@ -30,6 +31,7 @@ const locations = [
 
 const DistributorMarketplacePage: React.FC = () => {
   const [localProducts, setLocalProducts] = useState<any[]>([]);
+  const user = useAuthStore((state) => state.user);
 
   const {
     products: storeProducts,
@@ -49,10 +51,17 @@ const DistributorMarketplacePage: React.FC = () => {
   } = useCartStore();
 
   // Fetch products and cart on component mount
+
   useEffect(() => {
-    fetchProducts({ is_available: true });
+    fetchProducts(
+      {
+        is_available: true,
+        exclude_supplier_id: user?.id,
+      },
+      { replace: true },
+    );
     fetchCart();
-  }, [fetchProducts, fetchCart]);
+  }, [fetchProducts, fetchCart, user?.id]);
 
   // Transform store products to match ProductCatalog expected format
   useEffect(() => {

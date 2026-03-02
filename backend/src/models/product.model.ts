@@ -10,13 +10,16 @@ export class Product extends Model<IProduct, ProductCreationAttributes> implemen
   public supplier_id!: string;
   public name!: string;
   public category!: string;
+   public sku!: string;
   public description!: string;
+  public specifications?: string
   public price!: number;
   public stock_quantity!: number;
   public min_order_amount!: number;
   public unit_type!: string;
   public images!: any;
-  public rating!: number;
+  public rating?: number;
+  public reviews?: string;
   public is_available!: boolean;
   public created_at!: Date;
   public updated_at!: Date;
@@ -51,10 +54,22 @@ Product.init(
       type: DataTypes.STRING(30),
       allowNull: false,
     },
+    sku: { 
+      type: DataTypes.STRING(50),
+      allowNull: false,
+      unique: true, 
+      validate: {
+        notEmpty: true,
+      },
+    },
     description: {
       type: DataTypes.TEXT,
       allowNull: true,
     },
+   specifications: {
+  type: DataTypes.JSON,
+  allowNull: true,
+},
     price: {
       type: DataTypes.DECIMAL(10, 2),
       allowNull: false,
@@ -90,10 +105,8 @@ Product.init(
     is_available: {
       type: DataTypes.BOOLEAN,
       allowNull: false,
-      defaultValue: 1,
-      validate: {
-        isIn: [[0, 1]],
-      },
+      defaultValue: true,
+     
     },
     rating: {
       type: DataTypes.DECIMAL(3, 2),

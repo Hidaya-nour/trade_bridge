@@ -66,7 +66,6 @@ export interface ProductDetailProps {
     is_available?: boolean;
     description: string;
     specifications?: Record<string, string>;
-    tags: string[];
     images?: string[];
     created_at: string;
     updated_at: string;
@@ -77,7 +76,7 @@ export interface ProductDetailProps {
     supplierRating?: number;
     supplierVerified?: boolean;
     supplierLocation?: string;
-    supplierEstablished?: string;
+    supplierEstablished?: Date;
 
     // Factory info (for factory's own products)
     productionTime?: string;
@@ -274,11 +273,11 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-medium">Availability:</span>
-                    {product.is_available > product.min_order_amount * 2 ? (
+                    {product.stock_quantity > product.min_order_amount * 2 ? (
                       <Badge className="bg-green-100 text-green-800">
                         In Stock
                       </Badge>
-                    ) : product.is_available > 0 ? (
+                    ) : product.stock_quantity > 0 ? (
                       <Badge className="bg-amber-100 text-amber-800">
                         Low Stock
                       </Badge>
@@ -288,7 +287,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
                       </Badge>
                     )}
                   </div>
-                  <Progress
+                  {/* <Progress
                     value={
                       (product.is_available / product.stock_quantity) * 100
                     }
@@ -296,7 +295,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
                   />
                   <p className="text-xs text-muted-foreground">
                     {product.is_available} of {product.stock_quantity} available
-                  </p>
+                  </p> */}
                 </div>
               ) : (
                 <div className="flex items-center gap-2">
@@ -441,7 +440,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
                       <>
                         <span className="text-xs text-muted-foreground">•</span>
                         <span className="text-xs text-muted-foreground">
-                          Est. {product.supplierEstablished}
+                          {/* Est. {product.supplierEstablished} */}
                         </span>
                       </>
                     )}
@@ -481,15 +480,6 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
           <Card>
             <CardContent className="p-6">
               <p className="text-sm leading-relaxed">{product.description}</p>
-
-              {/* Tags */}
-              <div className="flex flex-wrap gap-2 mt-4">
-                {product.tags.map((tag) => (
-                  <Badge key={tag} variant="secondary">
-                    {tag}
-                  </Badge>
-                ))}
-              </div>
 
               {/* Delivery Info */}
               {product.deliveryOptions && (

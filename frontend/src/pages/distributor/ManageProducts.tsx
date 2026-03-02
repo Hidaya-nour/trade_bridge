@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from "react";
 import { ProductManagement } from "@/components/shared/ProductManagement";
 import { useProductStore } from "@/stores/product.store";
-import type { Product } from "@/components/shared/ProductManagement";
 // import { suppliers } from "./data";
 import toast from "react-hot-toast";
 import { authService } from "@/services/auth.service";
 import { useAuthStore } from "@/stores/auth.store";
+import type { Product } from "@/types/product.types";
 
 const suppliers = [
   { id: "101", name: "Ethiopia Coffee Export" },
@@ -47,25 +47,9 @@ const DistributorManageProductsPage: React.FC = () => {
     if (products && products.length > 0) {
       console.log("Store products:", products);
 
-      const transformedProducts: Product[] = products.map((p: any) => ({
-        id: p.id,
-        name: p.name || "",
-        category: p.category || "Uncategorized",
-        description: p.description || "",
-        price: p.price || 0,
-        stock_quantity: p.stock_quantity || 0,
-        min_order_amount: p.min_order_amount || 1,
-        unit_type: p.unit_type || "kg",
-        is_available: p.is_available === 1 || p.is_available === true,
-        supplier_id: p.supplier_id,
-
-        // Optional joined fields
-        supplier_name: p.supplier_name || p.supplier?.business_name,
-        supplier_business: p.supplier_business,
-        rating: p.rating || 0,
-        images: p.images,
+      const transformedProducts: Product[] = products.map((item: any) => ({
+        ...item,
       }));
-
       console.log("Transformed products:", transformedProducts);
       setLocalProducts(transformedProducts);
     } else {
@@ -210,7 +194,6 @@ const DistributorManageProductsPage: React.FC = () => {
         title: "Manage Products",
         description: "Add, edit, and manage your product inventory",
         addButtonLabel: "Add Product",
-        showSupplier: true,
         supplierPath: "/suppliers",
       }}
       products={localProducts}

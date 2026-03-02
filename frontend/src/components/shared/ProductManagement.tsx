@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   Package,
   Plus,
@@ -81,8 +81,16 @@ import {
   PaginationBar,
   SearchFilter,
 } from "@/components/shared";
-import { formatPrice } from "@/lib/formatters";
+import {
+  exportToCSV,
+  exportToExcel,
+  exportToPDF,
+  formatPrice,
+} from "@/lib/formatters";
 import { cn } from "@/lib/utils";
+import { useAuthStore } from "@/stores/auth.store";
+import { EditProductDialog } from "./EditProductDialog";
+import type { Product } from "@/types/product.types";
 
 // ============================================================================
 // TYPES (Aligned with Database Schema)
@@ -90,31 +98,11 @@ import { cn } from "@/lib/utils";
 
 export type ProductRole = "distributor" | "factory";
 
-export interface Product {
-  id: string;
-  name: string;
-  category: string;
-  description: string;
-  price: number;
-  stock_quantity: number;
-  min_order_amount: number;
-  unit_type: string;
-  is_available: boolean; // Converted from TINYINT(1)
-  supplier_id: string;
-
-  // Optional joined fields (from API response)
-  supplier_name?: string;
-  supplier_business?: string;
-  rating?: number;
-  images?: any;
-}
-
 export interface ProductManagementConfig {
   role: ProductRole;
   title: string;
   description: string;
   addButtonLabel: string;
-  showSupplier: boolean;
   supplierPath?: string;
 }
 
@@ -125,7 +113,7 @@ export interface ProductManagementConfig {
 interface ProductManagementProps {
   config: ProductManagementConfig;
   products: Product[];
-  categories: string[];
+  categories: string[]; // Categories for filtering (includes "All Categories")
   suppliers?: { id: string; name: string }[];
   onAddProduct: (product: any) => void;
   onEditProduct: (id: string, product: any) => void;
@@ -135,13 +123,37 @@ interface ProductManagementProps {
 }
 
 // ============================================================================
+// CONSTANTS
+// ============================================================================
+
+// Hardcoded product categories for adding new products
+const PRODUCT_CATEGORIES = ["Beverages", "Food Products"];
+
+const UNIT_TYPES = [
+  "kg",
+  "liter",
+  "piece",
+  "box",
+  "carton",
+  "dozen",
+  "meter",
+  "square meter",
+  "ton",
+  "gram",
+  "milliliter",
+  "set",
+  "pair",
+  "bundle",
+];
+
+// ============================================================================
 // COMPONENT
 // ============================================================================
 
 export const ProductManagement: React.FC<ProductManagementProps> = ({
   config,
   products: initialProducts,
-  categories,
+  categories: filterCategories, // Categories for filtering (from props)
   suppliers = [],
   onAddProduct,
   onEditProduct,
@@ -162,6 +174,8 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const itemsPerPage = 10;
+  const { user } = useAuthStore();
+  const navigate = useNavigate();
 
   // Update products when initialProducts changes
   useEffect(() => {
@@ -171,12 +185,13 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({
   // New product form state (aligned with DB schema)
   const [newProduct, setNewProduct] = useState({
     name: "",
-    category: "",
+    category: PRODUCT_CATEGORIES[0],
     price: "",
     unit_type: "kg",
     min_order_amount: "",
     stock_quantity: "",
     description: "",
+    specifications: "",
     is_available: true,
   });
 
@@ -184,17 +199,11 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({
   const filteredProducts = products.filter((product) => {
     const matchesSearch =
       searchQuery === "" ||
-      product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (product.supplier_name?.toLowerCase() || "").includes(
-        searchQuery.toLowerCase(),
-      );
+      product.name.toLowerCase().includes(searchQuery.toLowerCase());
 
     const matchesCategory =
       selectedCategory === "All Categories" ||
       product.category === selectedCategory;
-
-    const matchesSupplier =
-      !selectedSupplier || product.supplier_id === selectedSupplier;
 
     const matchesStatus =
       statusFilter === "all" ||
@@ -213,13 +222,7 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({
       matchesStock = available === 0;
     }
 
-    return (
-      matchesSearch &&
-      matchesCategory &&
-      matchesSupplier &&
-      matchesStatus &&
-      matchesStock
-    );
+    return matchesSearch && matchesCategory && matchesStatus && matchesStock;
   });
 
   // Pagination
@@ -277,20 +280,61 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({
   };
 
   const handleAddProduct = () => {
-    onAddProduct(newProduct);
+    onAddProduct({
+      ...newProduct,
+      price: parseFloat(newProduct.price),
+      stock_quantity: parseInt(newProduct.stock_quantity),
+      min_order_amount: parseInt(newProduct.min_order_amount),
+      specifications: newProduct.specifications || null,
+    });
     setShowAddDialog(false);
     setNewProduct({
       name: "",
-      category: "",
+      category: PRODUCT_CATEGORIES[0],
       price: "",
       unit_type: "kg",
       min_order_amount: "",
       stock_quantity: "",
       description: "",
+      specifications: "",
+
       is_available: true,
     });
   };
+  const handleExport = (format: "csv" | "excel" | "pdf") => {
+    const dataToExport = filteredProducts.map((product) => ({
+      "Product Name": product.name,
+      Category: product.category,
+      "Price (ETB)": product.price,
+      "Stock Quantity": product.stock_quantity,
+      "Unit Type": product.unit_type,
+      "Min Order": product.min_order_amount,
+      Status: product.is_available ? "Active" : "Inactive",
+      "Total Value (ETB)": (product.stock_quantity || 0) * product.price,
+      Rating: product.rating || "N/A",
+    }));
 
+    switch (format) {
+      case "csv":
+        exportToCSV(
+          dataToExport,
+          `products_export_${new Date().toISOString().split("T")[0]}.csv`,
+        );
+        break;
+      case "excel":
+        exportToExcel(
+          dataToExport,
+          `products_export_${new Date().toISOString().split("T")[0]}.xlsx`,
+        );
+        break;
+      case "pdf":
+        exportToPDF(
+          dataToExport,
+          `products_export_${new Date().toISOString().split("T")[0]}.pdf`,
+        );
+        break;
+    }
+  };
   const statsData = [
     {
       title: "Total Products",
@@ -313,17 +357,7 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({
       iconBg: "bg-amber-100",
       iconColor: "text-amber-600",
     },
-    {
-      title: "Inventory Value",
-      value: formatPrice(totalValue),
-      icon: DollarSign,
-      iconBg: "bg-blue-100",
-      iconColor: "text-blue-600",
-    },
   ];
-  console.log("currentItems");
-
-  console.log(currentItems);
 
   return (
     <div className="space-y-6">
@@ -334,10 +368,34 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({
           <p className="text-muted-foreground mt-1">{config.description}</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm">
-            <Download className="h-4 w-4 mr-2" />
-            Export
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm">
+                <Download className="h-4 w-4 mr-2" />
+                Export
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>Export As</DropdownMenuLabel>
+              <DropdownMenuItem onClick={() => handleExport("csv")}>
+                <span className="mr-2">📊</span>
+                CSV File
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExport("excel")}>
+                <span className="mr-2">📑</span>
+                Excel Spreadsheet
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExport("pdf")}>
+                <span className="mr-2">📄</span>
+                PDF Report
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => window.print()}>
+                <span className="mr-2">🖨️</span>
+                Print View
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Button onClick={() => setShowAddDialog(true)}>
             <Plus className="h-4 w-4 mr-2" />
             {config.addButtonLabel}
@@ -346,7 +404,7 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {statsData.map((stat, index) => (
           <StatsCard key={index} {...stat} />
         ))}
@@ -368,31 +426,13 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({
                     <SelectValue placeholder="Category" />
                   </SelectTrigger>
                   <SelectContent>
-                    {categories.map((category) => (
+                    {filterCategories.map((category) => (
                       <SelectItem key={category} value={category}>
                         {category}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-
-                {config.showSupplier && suppliers.length > 0 && (
-                  <Select
-                    value={selectedSupplier}
-                    onValueChange={setSelectedSupplier}
-                  >
-                    <SelectTrigger className="w-[180px]">
-                      <SelectValue placeholder="All Suppliers" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {suppliers.map((supplier) => (
-                        <SelectItem key={supplier.id} value={supplier.id}>
-                          {supplier.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
 
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
                   <SelectTrigger className="w-[130px]">
@@ -466,7 +506,6 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({
                   <TableHead>Stock</TableHead>
                   <TableHead>Min Order</TableHead>
                   <TableHead>Status</TableHead>
-                  {config.showSupplier && <TableHead>Supplier</TableHead>}
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -477,7 +516,18 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({
                     product.min_order_amount || 1,
                   );
                   return (
-                    <TableRow key={product.id}>
+                    <TableRow
+                      key={product.id}
+                      onClick={(e) => {
+                        // Prevent click if it came from a button
+                        if (
+                          user &&
+                          !(e.target as HTMLElement).closest("button")
+                        ) {
+                          navigate(`/${user.role}/my-products/${product.id}`);
+                        }
+                      }}
+                    >
                       <TableCell>
                         <div className="flex items-center gap-3">
                           <div className="h-10 w-10 bg-gradient-to-br from-primary/5 to-primary/10 rounded-lg flex items-center justify-center">
@@ -537,26 +587,6 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({
                           status={product.is_available ? "active" : "inactive"}
                         />
                       </TableCell>
-                      {config.showSupplier && (
-                        <TableCell>
-                          {product.supplier_id && config.supplierPath ? (
-                            <Link
-                              to={`/${config.role}${config.supplierPath}/${product.supplier_id}`}
-                              className="text-sm hover:text-primary"
-                            >
-                              {product.supplier_name ||
-                                product.supplier_business ||
-                                "Supplier"}
-                            </Link>
-                          ) : (
-                            <span className="text-sm">
-                              {product.supplier_name ||
-                                product.supplier_business ||
-                                "N/A"}
-                            </span>
-                          )}
-                        </TableCell>
-                      )}
                       <TableCell className="text-right">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -567,7 +597,8 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({
                           <DropdownMenuContent align="end">
                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
                             <DropdownMenuItem
-                              onClick={() => {
+                              onClick={(e) => {
+                                e.stopPropagation(); // Prevent the row click
                                 setSelectedProduct(product);
                                 setShowEditDialog(true);
                               }}
@@ -576,13 +607,19 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({
                               Edit
                             </DropdownMenuItem>
                             <DropdownMenuItem
-                              onClick={() => onDuplicateProduct(product)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onDuplicateProduct(product);
+                              }}
                             >
                               <Copy className="h-4 w-4 mr-2" />
                               Duplicate
                             </DropdownMenuItem>
                             <DropdownMenuItem
-                              onClick={() => onToggleStatus(product.id)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onToggleStatus(product.id);
+                              }}
                             >
                               {product.is_available ? (
                                 <>
@@ -598,16 +635,19 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem asChild>
-                              <Link
-                                to={`/${config.role}/products/${product.id}`}
-                              >
-                                <Eye className="h-4 w-4 mr-2" />
-                                View Details
-                              </Link>
+                              {user && (
+                                <Link
+                                  to={`/${user.role}/my-products/${product.id}`}
+                                >
+                                  <Eye className="h-4 w-4 mr-2" />
+                                  View Details
+                                </Link>
+                              )}
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               className="text-destructive"
-                              onClick={() => {
+                              onClick={(e) => {
+                                e.stopPropagation();
                                 setSelectedProduct(product);
                                 setShowDeleteDialog(true);
                               }}
@@ -653,6 +693,12 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({
               );
               return (
                 <Card
+                  onClick={(e) => {
+                    // Prevent click if it came from a button
+                    if (user && !(e.target as HTMLElement).closest("button")) {
+                      navigate(`/${user.role}/my-products/${product.id}`);
+                    }
+                  }}
                   key={product.id}
                   className="overflow-hidden hover:shadow-lg transition-shadow"
                 >
@@ -673,9 +719,6 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({
                     <div className="flex items-start justify-between mb-2">
                       <div>
                         <h3 className="font-semibold">{product.name}</h3>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {product.supplier_name || config.role}
-                        </p>
                       </div>
                       {product.rating && product.rating > 0 && (
                         <div className="flex items-center">
@@ -736,10 +779,12 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({
                         className="flex-1"
                         asChild
                       >
-                        <Link to={`/${config.role}/products/${product.id}`}>
-                          <Eye className="h-4 w-4 mr-2" />
-                          View
-                        </Link>
+                        {user && (
+                          <Link to={`/${user.role}/my-products/${product.id}`}>
+                            <Eye className="h-4 w-4 mr-2" />
+                            View
+                          </Link>
+                        )}
                       </Button>
                     </div>
                   </CardContent>
@@ -797,13 +842,11 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({
                       <SelectValue placeholder="Select category" />
                     </SelectTrigger>
                     <SelectContent>
-                      {categories
-                        .filter((c) => c !== "All Categories")
-                        .map((category) => (
-                          <SelectItem key={category} value={category}>
-                            {category}
-                          </SelectItem>
-                        ))}
+                      {PRODUCT_CATEGORIES.map((category) => (
+                        <SelectItem key={category} value={category}>
+                          {category}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -819,11 +862,11 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({
                       <SelectValue placeholder="Select unit" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="kg">kg</SelectItem>
-                      <SelectItem value="liter">liter</SelectItem>
-                      <SelectItem value="piece">piece</SelectItem>
-                      <SelectItem value="box">box</SelectItem>
-                      <SelectItem value="carton">carton</SelectItem>
+                      {UNIT_TYPES.map((unit) => (
+                        <SelectItem key={unit} value={unit}>
+                          {unit}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -900,6 +943,24 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({
                 />
               </div>
 
+              <div className="space-y-2">
+                <Label htmlFor="specifications">
+                  Specifications (Optional)
+                </Label>
+                <Textarea
+                  id="specifications"
+                  placeholder="Enter product specifications (technical details, dimensions, etc.)"
+                  rows={3}
+                  value={newProduct.specifications}
+                  onChange={(e) =>
+                    setNewProduct({
+                      ...newProduct,
+                      specifications: e.target.value,
+                    })
+                  }
+                />
+              </div>
+
               <div className="flex items-center space-x-2">
                 <Switch
                   id="is_available"
@@ -925,121 +986,13 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({
       </Dialog>
 
       {/* Edit Product Dialog */}
-      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-        <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader>
-            <DialogTitle>Edit Product</DialogTitle>
-            <DialogDescription>Update product information</DialogDescription>
-          </DialogHeader>
-
-          <ScrollArea className="h-[500px] pr-4">
-            <div className="space-y-4 py-2">
-              <div className="space-y-2">
-                <Label htmlFor="edit-name">Product Name</Label>
-                <Input
-                  id="edit-name"
-                  defaultValue={selectedProduct?.name}
-                  onChange={(e) => {
-                    if (selectedProduct) {
-                      setSelectedProduct({
-                        ...selectedProduct,
-                        name: e.target.value,
-                      });
-                    }
-                  }}
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="edit-price">Price (ETB)</Label>
-                  <Input
-                    id="edit-price"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    defaultValue={selectedProduct?.price}
-                    onChange={(e) => {
-                      if (selectedProduct) {
-                        setSelectedProduct({
-                          ...selectedProduct,
-                          price: parseFloat(e.target.value),
-                        });
-                      }
-                    }}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-stock">Stock Quantity</Label>
-                  <Input
-                    id="edit-stock"
-                    type="number"
-                    min="0"
-                    defaultValue={selectedProduct?.stock_quantity}
-                    onChange={(e) => {
-                      if (selectedProduct) {
-                        setSelectedProduct({
-                          ...selectedProduct,
-                          stock_quantity: parseInt(e.target.value),
-                        });
-                      }
-                    }}
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="edit-description">Description</Label>
-                <Textarea
-                  id="edit-description"
-                  defaultValue={selectedProduct?.description}
-                  rows={4}
-                  onChange={(e) => {
-                    if (selectedProduct) {
-                      setSelectedProduct({
-                        ...selectedProduct,
-                        description: e.target.value,
-                      });
-                    }
-                  }}
-                />
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="edit-active"
-                  defaultChecked={selectedProduct?.is_available}
-                  onCheckedChange={(checked) => {
-                    if (selectedProduct) {
-                      setSelectedProduct({
-                        ...selectedProduct,
-                        is_available: checked,
-                      });
-                    }
-                  }}
-                />
-                <Label htmlFor="edit-active">Active</Label>
-              </div>
-            </div>
-          </ScrollArea>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowEditDialog(false)}>
-              Cancel
-            </Button>
-            <Button
-              onClick={() => {
-                if (selectedProduct) {
-                  onEditProduct(selectedProduct.id, selectedProduct);
-                  setShowEditDialog(false);
-                }
-              }}
-            >
-              Save Changes
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <EditProductDialog
+        open={showEditDialog}
+        onOpenChange={setShowEditDialog}
+        product={selectedProduct}
+        onSave={onEditProduct}
+        mode="edit"
+      />
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>

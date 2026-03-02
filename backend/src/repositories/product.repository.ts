@@ -22,7 +22,6 @@ export class ProductRepository extends BaseRepository<Product> {
   }
 
   async findAllWithFilters(filters: IProductFilters) {
-    // ✅ FIX: Use undefined instead of null for deleted_at
     const where: any = { };
     const limit = filters.limit || 20;
     const offset = ((filters.page || 1) - 1) * limit;
@@ -31,9 +30,11 @@ export class ProductRepository extends BaseRepository<Product> {
       where.category = filters.category;
     }
 
-    if (filters.supplier_id) {
-      where.supplier_id = filters.supplier_id;
-    }
+if (filters.supplier_id) {
+  where.supplier_id = filters.supplier_id;
+} else if (filters.exclude_supplier_id) {
+  where.supplier_id = { [Op.ne]: filters.exclude_supplier_id };
+}
 
     if (filters.minPrice || filters.maxPrice) {
       where.price = {};
@@ -42,10 +43,8 @@ export class ProductRepository extends BaseRepository<Product> {
     }
 
     if (filters.is_available !== undefined) {
-      where.is_available = filters.is_available ? 1 : 0;
-    } else {
-      where.is_available = 1;
-    }
+    where.is_available = filters.is_available ? true : false;
+  }
 
     if (filters.search) {
       where[Op.or] = [
@@ -93,6 +92,7 @@ export class ProductRepository extends BaseRepository<Product> {
   async createProduct(data: Partial<Product>): Promise<Product> {
     const productData = {
       ...data,
+          sku: data.sku || `SKU-${Date.now()}`,
       created_at: new Date(),
       updated_at: new Date(),
     };
@@ -100,28 +100,28 @@ export class ProductRepository extends BaseRepository<Product> {
     return this.model.create(productData as any);
   }
 
-  async updateProduct(id: string, data: Partial<Product>): Promise<[number, Product[]]> {
-    const updateData = {
-      ...data,
-      updated_at: new Date(),
-    };
-    return this.model.update(updateData, {
-      where: { id },
-      returning: true,
-    });
-  }
+async updateProduct(id: string, data: Partial<Product>): Promise<Product | null> {
+  const product = await this.model.findByPk(id);
+  if (!product) return null;
 
-  async updateStock(productId: string, quantity: number): Promise<boolean> {
-    const [updated] = await this.model.update(
-      { 
-        stock_quantity: quantity,
-        updated_at: new Date(),
-        is_available: quantity > 0 ? 1 : 0
-      },
-      { where: { id: productId } }
-    );
-    return updated > 0;
-  }
+  await product.update({
+    ...data,
+    updated_at: new Date(),
+  });
+
+  return product;
+}
+async updateStock(productId: string, quantity: number): Promise<boolean> {
+  const [updated] = await this.model.update(
+    { 
+      stock_quantity: quantity,
+      updated_at: new Date(),
+      is_available: quantity > 0
+    },
+    { where: { id: productId } }
+  );
+  return updated > 0;
+}
 
   async decrementStock(productId: string, quantity: number): Promise<boolean> {
     const [updated] = await this.model.update(
@@ -166,7 +166,7 @@ export class ProductRepository extends BaseRepository<Product> {
     return this.model.findAll({
       where: {
         stock_quantity: { [Op.lte]: threshold },
-        is_available: 1
+        is_available: true
       },
       include: [{
         model: User,
@@ -193,7 +193,7 @@ export class ProductRepository extends BaseRepository<Product> {
     const product = await this.model.findByPk(productId);
     if (!product) return false;
 
-    const newAvailability = product.is_available === 1 ? 0 : 1;
+    const newAvailability = product.is_available === true ? false : true;
     const [updated] = await this.model.update(
       { 
         is_available: newAvailability,

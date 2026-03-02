@@ -39,6 +39,9 @@ import { RegisterPage } from "./pages/auth/Register";
 import { LoginPage } from "./pages/auth/Login";
 import { useAuthStore } from "./stores/auth.store";
 import { Toaster } from "react-hot-toast";
+import DistributorProductDetailPage from "./pages/distributor/ProductDetails";
+import DistributorMyProductDetailPage from "./pages/distributor/MyProductDetails";
+import FactoryMyProductDetailPage from "./pages/factory/ProductDetails";
 
 function App() {
   // const { accessToken, fetchUser } = useAuthStore();
@@ -370,6 +373,32 @@ function App() {
             element={
               <DashboardLayout>
                 <PaymentsPage role="distributor" />
+              </DashboardLayout>
+            }
+          />
+          {/* Distributor routes - buying from factories */}
+          <Route
+            path="/distributor/products/:id"
+            element={
+              <DashboardLayout>
+                <DistributorProductDetailPage />
+              </DashboardLayout>
+            }
+          />
+          {/* Distributor routes - managing their own products */}
+          <Route
+            path="/distributor/my-products/:id"
+            element={
+              <DashboardLayout>
+                <DistributorMyProductDetailPage />
+              </DashboardLayout>
+            }
+          />
+          <Route
+            path="/factory/my-products/:id"
+            element={
+              <DashboardLayout>
+                <FactoryMyProductDetailPage />
               </DashboardLayout>
             }
           />

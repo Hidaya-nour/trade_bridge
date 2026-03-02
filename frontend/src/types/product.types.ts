@@ -7,14 +7,17 @@ export interface Product {
   supplier_id: string;
   name: string;
   category: string;
+  sku:string;
   description: string;
+  specifications?: Record<string, string> | null;
   price: number;
   stock_quantity: number;
   min_order_amount: number;
   unit_type: string;
   images: string[];
   is_available: boolean; 
-    rating: number;
+  rating: number;
+  reviews:string;
   created_at: string;
   updated_at: string;
   deleted_at?: string | null;
@@ -27,6 +30,9 @@ export interface Product {
     business_name?: string;
     email?: string;
     phone?: string;
+    rating?:number;
+    created_at?:Date;
+    is_verified?: boolean;
   };
 }
 
@@ -74,6 +80,7 @@ export interface ProductFilters {
   maxPrice?: number;
   supplier_id?: string;
   search?: string;
+  exclude_supplier_id?: string;
   is_available?: boolean;
   page?: number;
   limit?: number;
