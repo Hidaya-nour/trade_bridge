@@ -1,5 +1,5 @@
 // components/shared/MyProductDetail.tsx
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react"; // Add useEffect
 import { useNavigate } from "react-router-dom";
 import {
   Package,
@@ -44,6 +44,7 @@ import { Separator } from "@/components/ui/separator";
 import { formatPrice } from "@/lib/formatters";
 import { EditProductDialog } from "./EditProductDialog";
 import type { Product } from "@/types/product.types";
+import toast from "react-hot-toast"; // Add toast import
 
 // ============================================================================
 // TYPES
@@ -57,10 +58,10 @@ export interface MyProductDetailProps {
     available: number;
     average_rating: number;
   };
-  onEdit: () => void;
-  onDelete: () => void;
-  onUpdateStock: (newStock: number) => void;
-  onUpdatePrice: (newPrice: number) => void;
+  onEdit: (updatedProduct: Partial<Product>) => Promise<void>; // Changed to accept product data
+  onDelete: () => Promise<void>; // Made async
+  onUpdateStock: (newStock: number) => Promise<void>; // Made async
+  onUpdatePrice: (newPrice: number) => Promise<void>; // Made async
 }
 
 // ============================================================================
@@ -154,8 +155,21 @@ export const MyProductDetail: React.FC<MyProductDetailProps> = ({
   const [showStockDialog, setShowStockDialog] = useState(false);
   const [showPriceDialog, setShowPriceDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false); // Add delete dialog state
   const [newStock, setNewStock] = useState(product.stock_quantity);
   const [newPrice, setNewPrice] = useState(product.price);
+
+  // Loading states
+  const [loadingStock, setLoadingStock] = useState(false);
+  const [loadingPrice, setLoadingPrice] = useState(false);
+  const [loadingDelete, setLoadingDelete] = useState(false);
+  const [loadingEdit, setLoadingEdit] = useState(false);
+
+  // Update local state when product prop changes
+  useEffect(() => {
+    setNewStock(product.stock_quantity);
+    setNewPrice(product.price);
+  }, [product]);
 
   const specifications = parseSpecifications(product.specifications);
 
@@ -185,19 +199,73 @@ export const MyProductDetail: React.FC<MyProductDetailProps> = ({
 
   const stockPercentage = (product.available / product.stock_quantity) * 100;
 
-  const handleStockUpdate = () => {
-    onUpdateStock(newStock);
-    setShowStockDialog(false);
+  // ========================================================================
+  // ACTION HANDLERS
+  // ========================================================================
+
+  const handleStockUpdate = async () => {
+    try {
+      setLoadingStock(true);
+      await onUpdateStock(newStock);
+      setShowStockDialog(false);
+      toast.success(`Stock updated to ${newStock} units`);
+    } catch (err) {
+      toast.error("Failed to update stock");
+      console.error(err);
+    } finally {
+      setLoadingStock(false);
+    }
   };
 
-  const handlePriceUpdate = () => {
-    onUpdatePrice(newPrice);
-    setShowPriceDialog(false);
+  const handlePriceUpdate = async () => {
+    try {
+      setLoadingPrice(true);
+      await onUpdatePrice(newPrice);
+      setShowPriceDialog(false);
+      toast.success(`Price updated to ${formatPrice(newPrice)}`);
+    } catch (err) {
+      toast.error("Failed to update price");
+      console.error(err);
+    } finally {
+      setLoadingPrice(false);
+    }
   };
 
-  const handleEditClick = () => {
-    setShowEditDialog(true);
+  const handleEditSave = async (
+    id: string,
+    updatedProduct: Partial<Product>,
+  ) => {
+    try {
+      setLoadingEdit(true);
+      await onEdit(updatedProduct);
+      setShowEditDialog(false);
+      toast.success("Product updated successfully");
+    } catch (err) {
+      toast.error("Failed to update product");
+      console.error(err);
+    } finally {
+      setLoadingEdit(false);
+    }
   };
+
+  const handleDelete = async () => {
+    try {
+      setLoadingDelete(true);
+      await onDelete();
+      setShowDeleteDialog(false);
+      toast.success("Product deleted successfully");
+      navigate(`/${role}/products`);
+    } catch (err) {
+      toast.error("Failed to delete product");
+      console.error(err);
+    } finally {
+      setLoadingDelete(false);
+    }
+  };
+
+  // ========================================================================
+  // RENDER
+  // ========================================================================
 
   return (
     <div className="space-y-6">
@@ -221,15 +289,20 @@ export const MyProductDetail: React.FC<MyProductDetailProps> = ({
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={onEdit}>
+          <Button
+            variant="outline"
+            onClick={() => setShowEditDialog(true)}
+            disabled={loadingEdit}
+          >
             <Edit className="h-4 w-4 mr-2" />
-            Edit Product
+            {loadingEdit ? "Updating..." : "Edit Product"}
           </Button>
-          <Dialog>
+
+          <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
             <DialogTrigger asChild>
-              <Button variant="destructive">
+              <Button variant="destructive" disabled={loadingDelete}>
                 <Trash2 className="h-4 w-4 mr-2" />
-                Delete
+                {loadingDelete ? "Deleting..." : "Delete"}
               </Button>
             </DialogTrigger>
             <DialogContent>
@@ -241,11 +314,19 @@ export const MyProductDetail: React.FC<MyProductDetailProps> = ({
                 </DialogDescription>
               </DialogHeader>
               <DialogFooter>
-                <Button variant="outline" onClick={() => {}}>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowDeleteDialog(false)}
+                  disabled={loadingDelete}
+                >
                   Cancel
                 </Button>
-                <Button variant="destructive" onClick={onDelete}>
-                  Delete
+                <Button
+                  variant="destructive"
+                  onClick={handleDelete}
+                  disabled={loadingDelete}
+                >
+                  {loadingDelete ? "Deleting..." : "Delete"}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -357,6 +438,7 @@ export const MyProductDetail: React.FC<MyProductDetailProps> = ({
                     variant="link"
                     className="px-0 mt-1"
                     onClick={() => setShowPriceDialog(true)}
+                    disabled={loadingPrice}
                   >
                     Update Price
                   </Button>
@@ -380,6 +462,7 @@ export const MyProductDetail: React.FC<MyProductDetailProps> = ({
                     variant="link"
                     className="px-0"
                     onClick={() => setShowStockDialog(true)}
+                    disabled={loadingStock}
                   >
                     Update Stock
                   </Button>
@@ -580,15 +663,22 @@ export const MyProductDetail: React.FC<MyProductDetailProps> = ({
                 value={newStock}
                 onChange={(e) => setNewStock(parseInt(e.target.value))}
                 min={0}
+                disabled={loadingStock}
               />
             </div>
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowStockDialog(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setShowStockDialog(false)}
+              disabled={loadingStock}
+            >
               Cancel
             </Button>
-            <Button onClick={handleStockUpdate}>Update Stock</Button>
+            <Button onClick={handleStockUpdate} disabled={loadingStock}>
+              {loadingStock ? "Updating..." : "Update Stock"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -613,18 +703,34 @@ export const MyProductDetail: React.FC<MyProductDetailProps> = ({
                 onChange={(e) => setNewPrice(parseFloat(e.target.value))}
                 min={0}
                 step={0.01}
+                disabled={loadingPrice}
               />
             </div>
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowPriceDialog(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setShowPriceDialog(false)}
+              disabled={loadingPrice}
+            >
               Cancel
             </Button>
-            <Button onClick={handlePriceUpdate}>Update Price</Button>
+            <Button onClick={handlePriceUpdate} disabled={loadingPrice}>
+              {loadingPrice ? "Updating..." : "Update Price"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Edit Product Dialog */}
+      <EditProductDialog
+        open={showEditDialog}
+        onOpenChange={setShowEditDialog}
+        product={product}
+        onSave={handleEditSave}
+        mode="edit"
+      />
     </div>
   );
 };

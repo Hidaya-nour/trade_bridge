@@ -148,6 +148,11 @@ const roleNavigation = {
   factory: [
     { name: "Dashboard", href: "/factory/dashboard", icon: LayoutDashboard },
     {
+      name: "Manage Products",
+      href: "/factory/products",
+      icon: Package,
+    },
+    {
       name: "Order Management",
       href: "/factory/orders",
       icon: Package,
