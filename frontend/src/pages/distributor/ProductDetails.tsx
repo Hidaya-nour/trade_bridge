@@ -60,7 +60,7 @@ const DistributorProductDetailPage: React.FC = () => {
   // Transform product for distributor view (buying from factories)
   const productForDetail = {
     ...product,
-    reviewCount: product.totalReviews || 0,
+    review_count: product.totalReviews || 0,
     maxOrder: product.stock_quantity,
     reserved: 0,
 

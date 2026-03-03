@@ -53,9 +53,9 @@ Review.init(
   },
 );
 
-Product.hasMany(Review, { foreignKey: 'product_id', as: 'reviews' });
-Review.belongsTo(Product, { foreignKey: 'product_id' });
-User.hasMany(Review, { foreignKey: 'user_id' });
-Review.belongsTo(User, { foreignKey: 'user_id' });
+// Product.hasMany(Review, { foreignKey: 'product_id', as: 'reviews' });
+// Review.belongsTo(Product, { foreignKey: 'product_id' });
+// User.hasMany(Review, { foreignKey: 'user_id' });
+// Review.belongsTo(User, { foreignKey: 'user_id' });
 
 export default Review;

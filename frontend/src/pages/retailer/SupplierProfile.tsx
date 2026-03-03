@@ -29,7 +29,7 @@ const mockSupplier = {
   categories: ["Coffee", "Nuts", "Spices"],
   products: 45,
   rating: 4.9,
-  reviewCount: 128,
+  review_count: 128,
   totalOrders: 312,
   totalValue: 7800000,
   avgOrderValue: 25000,

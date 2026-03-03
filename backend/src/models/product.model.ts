@@ -110,7 +110,7 @@ Product.init(
      
     },
     rating: {
-      type: DataTypes.DECIMAL(3, 2),
+      type: DataTypes.FLOAT,
       allowNull: false,
       defaultValue: 0.00,
       validate: {
@@ -119,6 +119,14 @@ Product.init(
       },
     },
     
+    review_count: {
+  type: DataTypes.INTEGER,
+  allowNull: false,
+  defaultValue: 0,
+  validate: {
+    min: 0,
+  },
+},
     created_at: {
       type: DataTypes.DATE,
       defaultValue: DataTypes.NOW,

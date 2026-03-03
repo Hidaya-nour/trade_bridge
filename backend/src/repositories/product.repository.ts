@@ -5,6 +5,7 @@ import sequelize from '../config/database';
 import { Product } from '../models/product.model';
 
 import { User } from '../models/user.model';
+import Review from '../models/rating-reviews.model';
 
 export class ProductRepository extends BaseRepository<Product> {
   constructor() {
@@ -13,11 +14,24 @@ export class ProductRepository extends BaseRepository<Product> {
 
   async findById(id: string): Promise<Product | null> {
     return this.model.findByPk(id, {
-      include: [{
-        model: User,
-        as: 'supplier',
-        attributes: ['id', 'full_name', 'business_name', 'email', 'phone']
-      }]
+      include: [
+    {
+      model: Review,
+      as: 'reviews',
+      include: [
+        {
+          model: User,
+          as: 'user',
+          attributes: ['id', 'full_name']
+        }
+      ]
+    },
+    {
+      model: User,
+      as: 'supplier',
+      attributes: ['id', 'full_name', 'business_name']
+    }
+  ]
     });
   }
 

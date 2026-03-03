@@ -13,6 +13,7 @@ import InventoryMovement from './inventory-movement.model';
 import ChatMessage from './chat-message.model';
 import Document from './document.model';
 import Address from './address.model';
+import Review from './rating-reviews.model';
 
 // This function must be called AFTER all models are imported
 export const setupAssociations = () => {
@@ -237,5 +238,27 @@ export const setupAssociations = () => {
     as: 'addresses'
   });
 
+  // Product - Reviews
+Product.hasMany(Review, {
+  foreignKey: 'product_id',
+  as: 'reviews',
+  onDelete: 'CASCADE'
+});
+
+Review.belongsTo(Product, {
+  foreignKey: 'product_id',
+  as: 'product'
+});
+
+// Review - User (review author)
+Review.belongsTo(User, {
+  foreignKey: 'user_id',
+  as: 'user'
+});
+
+User.hasMany(Review, {
+  foreignKey: 'user_id',
+  as: 'reviews'
+});
   console.log('✅ Associations defined successfully');
 };

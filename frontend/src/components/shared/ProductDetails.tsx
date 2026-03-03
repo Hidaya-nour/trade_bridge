@@ -100,7 +100,7 @@ export interface ProductDetailProps {
 
     // Reviews
     rating: number;
-    reviewCount: number;
+    review_count: number;
     reviews?: {
       id: string;
       user: string;
@@ -318,7 +318,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
               </div>
               <span className="text-sm font-medium">{product.rating}</span>
               <span className="text-sm text-muted-foreground">
-                ({product.reviewCount} reviews)
+                ({product.review_count} reviews)
               </span>
             </div>
 
@@ -542,7 +542,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
           <TabsTrigger value="description">Description</TabsTrigger>
           <TabsTrigger value="specifications">Specifications</TabsTrigger>
           <TabsTrigger value="reviews">
-            Reviews ({product.reviewCount})
+            Reviews ({product.review_count})
           </TabsTrigger>
         </TabsList>
 
@@ -723,7 +723,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
                       className="border-b last:border-0 pb-4 last:pb-0"
                     >
                       <div className="flex items-center justify-between mb-2">
-                        <span className="font-medium">{review.user}</span>
+                        {/* <span className="font-medium">{review.user}</span> */}
                         <span className="text-xs text-muted-foreground">
                           {new Date(review.date).toLocaleDateString()}
                         </span>

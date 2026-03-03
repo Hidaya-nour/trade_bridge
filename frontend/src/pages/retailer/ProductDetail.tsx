@@ -50,7 +50,7 @@ const RetailerProductDetailPage: React.FC = () => {
     rating: product.rating || 0,
 
     tags: [],
-    reviewCount: 0,
+    review_count: 0,
     maxOrder: product.stock_quantity,
     reserved: 0,
     supplier:
