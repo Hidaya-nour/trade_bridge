@@ -3,15 +3,17 @@ export interface IProduct {
   supplier_id: string;
   name: string;
   category: string;
-    sku: string; 
+  sku: string;
   description: string;
-  specifications?: Record<string, string> | null;  price: number;
+  specifications?: Record<string, string> | null;
+  price: number;
   stock_quantity: number;
   min_order_amount: number;
   unit_type: string;
   images?: any; // JSON field
   is_available: boolean;
-  rating?: number;
+  rating: number;
+  review_count?: number;
   created_at: Date;
   updated_at: Date;
   deleted_at?: Date;
@@ -36,14 +38,17 @@ export interface IProductResponse {
   supplier_id: string;
   name: string;
   category: string;
-  sku: string; 
+  sku: string;
   description: string;
+  specifications?: Record<string, string> | null;
   price: number;
   stock_quantity: number;
   min_order_amount: number;
   unit_type: string;
   images?: any;
   is_available: boolean;
+  rating: number;
+  review_count?: number;
   supplier_name?: string;
   supplier_business?: string;
 }

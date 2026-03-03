@@ -60,7 +60,7 @@ const DistributorProductDetailPage: React.FC = () => {
   // Transform product for distributor view (buying from factories)
   const productForDetail = {
     ...product,
-    reviewCount: 0,
+    reviewCount: product.totalReviews || 0,
     maxOrder: product.stock_quantity,
     reserved: 0,
 
@@ -76,8 +76,17 @@ const DistributorProductDetailPage: React.FC = () => {
     supplierEstablished: product.supplier?.created_at,
     created_at: product.created_at || new Date().toISOString(),
     updated_at: product.updated_at || new Date().toISOString(),
-  };
 
+    // Fix reviews typing for ProductDetail
+    reviews:
+      product.reviews?.map((r) => ({
+        id: r.id,
+        user: r.user_id,
+        rating: r.rating,
+        comment: r.comment || "",
+        date: new Date(r.created_at).toISOString(),
+      })) || [],
+  };
   return (
     <ProductDetail
       role="distributor"

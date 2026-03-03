@@ -17,8 +17,8 @@ export interface Product {
   images: string[];
   is_available: boolean; 
   rating: number;
-  reviews:string;
-  created_at: string;
+  totalReviews: number; 
+  reviews?: ReviewItem[];  created_at: string;
   updated_at: string;
   deleted_at?: string | null;
   
@@ -36,6 +36,15 @@ export interface Product {
   };
 }
 
+export interface ReviewItem {
+  id: string;
+  product_id: string;
+  user_id: string;
+  rating: number;
+  comment?: string;
+  created_at: string;
+  updated_at: string;
+}
 export interface CatalogProduct {
   id: string ;
   name: string;

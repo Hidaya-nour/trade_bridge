@@ -102,7 +102,7 @@ export interface ProductDetailProps {
     rating: number;
     reviewCount: number;
     reviews?: {
-      id: number;
+      id: string;
       user: string;
       rating: number;
       comment: string;
