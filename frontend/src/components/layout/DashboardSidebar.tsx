@@ -120,7 +120,7 @@ const roleNavigation = {
       },
       {
         name: "Purchase Cart",
-        href: "/distributor/factory-cart",
+        href: "/distributor/cart",
         icon: ShoppingCart,
         badge: "3",
       },

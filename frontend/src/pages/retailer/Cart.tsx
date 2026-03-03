@@ -1,5 +1,6 @@
-import React, { useState } from "react";
-import { Link } from "react-router-dom";
+// pages/retailer/cart.tsx
+import React, { useState, useEffect, useMemo } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import {
   ShoppingCart,
   Trash2,
@@ -36,107 +37,20 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-// Mock cart data
-const initialCartItems = [
-  {
-    id: 1,
-    productId: 1,
-    name: "Yirgacheffe Coffee",
-    supplier: "Ethiopia Coffee Export",
-    supplierId: 101,
-    price: 450,
-    unit: "kg",
-    quantity: 15,
-    minOrder: 10,
-    maxOrder: 100,
-    stock: 2450,
-    image: null,
-    verified: true,
-    deliveryTime: "2-3 days",
-    shippingCost: 250,
-    selected: true,
-  },
-  {
-    id: 2,
-    productId: 2,
-    name: "White Teff Flour",
-    supplier: "Adama Wholesalers",
-    supplierId: 102,
-    price: 120,
-    unit: "kg",
-    quantity: 50,
-    minOrder: 25,
-    maxOrder: 500,
-    stock: 5200,
-    image: null,
-    verified: true,
-    deliveryTime: "1-2 days",
-    shippingCost: 350,
-    selected: true,
-  },
-  {
-    id: 3,
-    productId: 4,
-    name: "Pure Honey",
-    supplier: "Bahir Dar Honey",
-    supplierId: 104,
-    price: 280,
-    unit: "jar",
-    quantity: 24,
-    minOrder: 12,
-    maxOrder: 200,
-    stock: 890,
-    image: null,
-    verified: true,
-    deliveryTime: "2-4 days",
-    shippingCost: 300,
-    selected: false,
-  },
-  {
-    id: 4,
-    productId: 8,
-    name: "Tomato Paste",
-    supplier: "Ethiopia Agri",
-    supplierId: 107,
-    price: 85,
-    unit: "can",
-    quantity: 200,
-    minOrder: 100,
-    maxOrder: 1000,
-    stock: 3500,
-    image: null,
-    verified: true,
-    deliveryTime: "2-3 days",
-    shippingCost: 400,
-    selected: true,
-  },
-];
+import { useCartStore } from "@/stores/cart.store";
+import { useSupplierStore } from "@/stores/supplier.store";
+import { formatPrice } from "@/lib/formatters";
+import { getInitials } from "@/lib/utils";
+import toast from "react-hot-toast";
 
 // Payment methods
 const paymentMethods = [
@@ -189,28 +103,93 @@ const deliveryOptions = [
 ];
 
 const CartPage: React.FC = () => {
-  const [cartItems, setCartItems] = useState(initialCartItems);
+  const navigate = useNavigate();
   const [selectAll, setSelectAll] = useState(true);
   const [paymentMethod, setPaymentMethod] = useState("cash");
   const [deliveryOption, setDeliveryOption] = useState("standard");
   const [promoCode, setPromoCode] = useState("");
   const [promoApplied, setPromoApplied] = useState(false);
   const [checkoutDialogOpen, setCheckoutDialogOpen] = useState(false);
+  const [itemSelection, setItemSelection] = useState<Record<string, boolean>>(
+    {},
+  );
+
+  // Get cart data from store
+  const {
+    items: cartItems,
+    totalItems,
+    totalPrice,
+    isLoading,
+    error,
+    fetchCart,
+    updateQuantity,
+    removeFromCart,
+    clearCart,
+  } = useCartStore();
+
+  const {
+    suppliers,
+    fetchSuppliers,
+    isLoading: suppliersLoading,
+  } = useSupplierStore();
+
+  // Fetch cart on mount
+  useEffect(() => {
+    fetchCart();
+  }, [fetchCart]);
+
+  // Fetch suppliers for cart items
+  useEffect(() => {
+    if (cartItems.length > 0) {
+      const supplierIds = cartItems
+        .map((item) => item.product?.supplier?.id)
+        .filter(Boolean) as string[];
+
+      if (supplierIds.length > 0) {
+        fetchSuppliers(supplierIds);
+      }
+    }
+  }, [cartItems, fetchSuppliers]);
+
+  // Initialize selection when cart items change
+  useEffect(() => {
+    if (cartItems.length > 0) {
+      const initialSelection = cartItems.reduce(
+        (acc, item) => {
+          acc[item.id] = true;
+          return acc;
+        },
+        {} as Record<string, boolean>,
+      );
+      setItemSelection(initialSelection);
+      setSelectAll(true);
+    }
+  }, [cartItems]);
+
+  // Show error toast
+  useEffect(() => {
+    if (error) {
+      toast.error(error);
+    }
+  }, [error]);
 
   // Calculate selected items
-  const selectedItems = cartItems.filter((item) => item.selected);
+  const selectedItems = useMemo(() => {
+    return cartItems.filter((item) => itemSelection[item.id]);
+  }, [cartItems, itemSelection]);
 
   // Calculate subtotal
-  const subtotal = selectedItems.reduce(
-    (sum, item) => sum + item.price * item.quantity,
-    0,
-  );
+  const subtotal = useMemo(() => {
+    return selectedItems.reduce((sum, item) => {
+      const price = item.product?.price || 0;
+      return sum + price * item.quantity;
+    }, 0);
+  }, [selectedItems]);
 
-  // Calculate shipping
-  const shipping = selectedItems.reduce(
-    (sum, item) => sum + (item.selected ? item.shippingCost : 0),
-    0,
-  );
+  // Calculate shipping (mock - you might get this from supplier)
+  const shipping = useMemo(() => {
+    return selectedItems.reduce((sum, item) => sum + 250, 0); // Mock shipping
+  }, [selectedItems]);
 
   // Calculate discount (mock)
   const discount = promoApplied ? subtotal * 0.1 : 0;
@@ -222,84 +201,121 @@ const CartPage: React.FC = () => {
   const total = subtotal + shipping + tax - discount;
 
   // Update quantity
-  const updateQuantity = (itemId: number, newQuantity: number) => {
-    setCartItems((prev) =>
-      prev.map((item) =>
-        item.id === itemId
-          ? {
-              ...item,
-              quantity: Math.max(
-                item.minOrder,
-                Math.min(newQuantity, item.maxOrder),
-              ),
-            }
-          : item,
-      ),
-    );
+  const handleUpdateQuantity = async (itemId: string, newQuantity: number) => {
+    const item = cartItems.find((i) => i.id === itemId);
+    if (!item) return;
+
+    const minOrder = item.product?.min_order_amount || 1;
+    const maxOrder = item.product?.stock_quantity || Infinity;
+
+    const quantity = Math.max(minOrder, Math.min(newQuantity, maxOrder));
+
+    const result = await updateQuantity(itemId, quantity);
+    if (result) {
+      toast.success("Quantity updated");
+    }
   };
 
   // Toggle item selection
-  const toggleItem = (itemId: number) => {
-    setCartItems((prev) =>
-      prev.map((item) =>
-        item.id === itemId ? { ...item, selected: !item.selected } : item,
-      ),
-    );
-    setSelectAll(cartItems.every((item) => item.selected));
+  const toggleItem = (itemId: string) => {
+    setItemSelection((prev) => {
+      const newSelection = { ...prev, [itemId]: !prev[itemId] };
+      const allSelected = cartItems.every((item) => newSelection[item.id]);
+      setSelectAll(allSelected);
+      return newSelection;
+    });
   };
 
   // Toggle select all
   const toggleSelectAll = () => {
     const newSelectAll = !selectAll;
     setSelectAll(newSelectAll);
-    setCartItems((prev) =>
-      prev.map((item) => ({ ...item, selected: newSelectAll })),
+
+    const newSelection = cartItems.reduce(
+      (acc, item) => {
+        acc[item.id] = newSelectAll;
+        return acc;
+      },
+      {} as Record<string, boolean>,
     );
+
+    setItemSelection(newSelection);
   };
 
   // Remove item
-  const removeItem = (itemId: number) => {
-    setCartItems((prev) => prev.filter((item) => item.id !== itemId));
+  const handleRemoveItem = async (itemId: string) => {
+    const success = await removeFromCart(itemId);
+    if (success) {
+      toast.success("Item removed from cart");
+
+      // Update selection
+      setItemSelection((prev) => {
+        const newSelection = { ...prev };
+        delete newSelection[itemId];
+        return newSelection;
+      });
+    }
   };
 
   // Remove selected items
-  const removeSelected = () => {
-    setCartItems((prev) => prev.filter((item) => !item.selected));
-    setSelectAll(false);
+  const handleRemoveSelected = async () => {
+    const selectedIds = Object.entries(itemSelection)
+      .filter(([_, selected]) => selected)
+      .map(([id]) => id);
+
+    await Promise.all(selectedIds.map((id) => removeFromCart(id)));
+    toast.success("Selected items removed");
   };
 
   // Apply promo code
   const applyPromo = () => {
     if (promoCode.toUpperCase() === "TRADE10") {
       setPromoApplied(true);
+      toast.success("Promo code applied!");
+    } else {
+      toast.error("Invalid promo code");
     }
   };
 
-  // Format price
-  const formatPrice = (price: number) => {
-    return `ETB ${price.toLocaleString()}`;
-  };
+  // Group items by supplier
+  const supplierGroups = useMemo(() => {
+    const groups: Record<string, any> = {};
 
-  // Get cart summary by supplier
-  const supplierGroups = selectedItems.reduce(
-    (groups, item) => {
-      const key = item.supplierId;
-      if (!groups[key]) {
-        groups[key] = {
-          supplierId: item.supplierId,
-          supplierName: item.supplier,
+    selectedItems.forEach((item) => {
+      const supplier = item.product?.supplier;
+      const supplierId = supplier?.id || "unknown";
+
+      if (!groups[supplierId]) {
+        groups[supplierId] = {
+          supplierId,
+          supplierName:
+            supplier?.business_name ||
+            supplier?.full_name ||
+            "Unknown Supplier",
+          supplierVerified: supplier?.is_verified || false,
           items: [],
           subtotal: 0,
-          shipping: 0,
+          shipping: 250, // Mock shipping per supplier
         };
       }
-      groups[key].items.push(item);
-      groups[key].subtotal += item.price * item.quantity;
-      groups[key].shipping += item.shippingCost;
-      return groups;
-    },
-    {} as Record<string, any>,
-  );
+
+      groups[supplierId].items.push(item);
+      groups[supplierId].subtotal += (item.product?.price || 0) * item.quantity;
+    });
+
+    return Object.values(groups);
+  }, [selectedItems]);
+
+  if (isLoading || suppliersLoading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4 text-muted-foreground">Loading cart...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -314,7 +330,7 @@ const CartPage: React.FC = () => {
         <div className="flex items-center gap-2">
           <Badge variant="outline" className="px-3 py-1">
             <ShoppingCart className="h-3.5 w-3.5 mr-1" />
-            {cartItems.reduce((sum, item) => sum + item.quantity, 0)} items
+            {totalItems} items
           </Badge>
           <Button variant="ghost" size="sm" asChild>
             <Link to="/retailer/products" className="gap-1">
@@ -365,7 +381,7 @@ const CartPage: React.FC = () => {
                     variant="ghost"
                     size="sm"
                     className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                    onClick={removeSelected}
+                    onClick={handleRemoveSelected}
                     disabled={selectedItems.length === 0}
                   >
                     <Trash2 className="h-4 w-4 mr-2" />
@@ -376,18 +392,14 @@ const CartPage: React.FC = () => {
             </Card>
 
             {/* Cart Items by Supplier */}
-            {Object.values(supplierGroups).map((group: any) => (
+            {supplierGroups.map((group: any) => (
               <Card key={group.supplierId}>
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <Avatar className="h-8 w-8">
                         <AvatarFallback className="bg-primary/10 text-primary text-xs">
-                          {group.supplierName
-                            .split(" ")
-                            .map((n: string) => n[0])
-                            .join("")
-                            .slice(0, 2)}
+                          {getInitials(group.supplierName)}
                         </AvatarFallback>
                       </Avatar>
                       <div>
@@ -405,12 +417,14 @@ const CartPage: React.FC = () => {
                         </CardDescription>
                       </div>
                     </div>
-                    <Badge
-                      variant="outline"
-                      className="bg-green-50 text-green-700 border-green-200"
-                    >
-                      Verified Supplier
-                    </Badge>
+                    {group.supplierVerified && (
+                      <Badge
+                        variant="outline"
+                        className="bg-green-50 text-green-700 border-green-200"
+                      >
+                        Verified Supplier
+                      </Badge>
+                    )}
                   </div>
                 </CardHeader>
                 <CardContent className="pb-3">
@@ -421,13 +435,21 @@ const CartPage: React.FC = () => {
                         className="flex items-start gap-4 py-2"
                       >
                         <Checkbox
-                          checked={item.selected}
+                          checked={itemSelection[item.id] || false}
                           onCheckedChange={() => toggleItem(item.id)}
                         />
 
                         {/* Product Image Placeholder */}
                         <div className="h-16 w-16 bg-gradient-to-br from-primary/5 to-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
-                          <Package className="h-8 w-8 text-primary/30" />
+                          {item.product?.images?.[0] ? (
+                            <img
+                              src={item.product.images[0]}
+                              alt={item.product.name}
+                              className="h-full w-full object-cover rounded-lg"
+                            />
+                          ) : (
+                            <Package className="h-8 w-8 text-primary/30" />
+                          )}
                         </div>
 
                         {/* Product Details */}
@@ -435,27 +457,28 @@ const CartPage: React.FC = () => {
                           <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-2">
                             <div>
                               <Link
-                                to={`/retailer/products/${item.productId}`}
+                                to={`/retailer/products/${item.product_id}`}
                                 className="text-sm font-medium hover:text-primary"
                               >
-                                {item.name}
+                                {item.product?.name}
                               </Link>
                               <div className="flex items-center gap-2 mt-1">
                                 <span className="text-xs text-muted-foreground">
-                                  Unit Price: {formatPrice(item.price)}/
-                                  {item.unit}
+                                  Unit Price:{" "}
+                                  {formatPrice(item.product?.price || 0)}/
+                                  {item.product?.unit_type}
                                 </span>
                                 <Badge
                                   variant="outline"
                                   className="text-[10px]"
                                 >
-                                  Min: {item.minOrder}
+                                  Min: {item.product?.min_order_amount}
                                 </Badge>
                                 <Badge
                                   variant="outline"
                                   className="text-[10px] bg-green-50"
                                 >
-                                  In Stock: {item.stock}
+                                  In Stock: {item.product?.stock_quantity}
                                 </Badge>
                               </div>
                             </div>
@@ -468,12 +491,16 @@ const CartPage: React.FC = () => {
                                   variant="ghost"
                                   className="h-8 w-8 rounded-r-none"
                                   onClick={() =>
-                                    updateQuantity(
+                                    handleUpdateQuantity(
                                       item.id,
-                                      item.quantity - item.minOrder,
+                                      item.quantity -
+                                        (item.product?.min_order_amount || 1),
                                     )
                                   }
-                                  disabled={item.quantity <= item.minOrder}
+                                  disabled={
+                                    item.quantity <=
+                                    (item.product?.min_order_amount || 1)
+                                  }
                                 >
                                   <Minus className="h-3 w-3" />
                                 </Button>
@@ -485,12 +512,16 @@ const CartPage: React.FC = () => {
                                   variant="ghost"
                                   className="h-8 w-8 rounded-l-none"
                                   onClick={() =>
-                                    updateQuantity(
+                                    handleUpdateQuantity(
                                       item.id,
-                                      item.quantity + item.minOrder,
+                                      item.quantity +
+                                        (item.product?.min_order_amount || 1),
                                     )
                                   }
-                                  disabled={item.quantity >= item.maxOrder}
+                                  disabled={
+                                    item.quantity >=
+                                    (item.product?.stock_quantity || Infinity)
+                                  }
                                 >
                                   <Plus className="h-3 w-3" />
                                 </Button>
@@ -499,10 +530,12 @@ const CartPage: React.FC = () => {
                               {/* Item Total */}
                               <div className="text-right min-w-[100px]">
                                 <div className="text-sm font-bold text-primary">
-                                  {formatPrice(item.price * item.quantity)}
+                                  {formatPrice(
+                                    (item.product?.price || 0) * item.quantity,
+                                  )}
                                 </div>
                                 <div className="text-xs text-muted-foreground">
-                                  +{formatPrice(item.shippingCost)} shipping
+                                  +{formatPrice(250)} shipping
                                 </div>
                               </div>
 
@@ -511,7 +544,7 @@ const CartPage: React.FC = () => {
                                 variant="ghost"
                                 size="icon"
                                 className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                                onClick={() => removeItem(item.id)}
+                                onClick={() => handleRemoveItem(item.id)}
                               >
                                 <Trash2 className="h-4 w-4" />
                               </Button>
@@ -668,64 +701,6 @@ const CartPage: React.FC = () => {
                 </div>
               </CardContent>
             </Card>
-
-            {/* Saved for Later */}
-            {cartItems.filter((item) => !item.selected).length > 0 && (
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium">
-                    Saved for Later
-                  </CardTitle>
-                  <CardDescription>
-                    {cartItems.filter((item) => !item.selected).length} items
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    {cartItems
-                      .filter((item) => !item.selected)
-                      .slice(0, 2)
-                      .map((item) => (
-                        <div
-                          key={item.id}
-                          className="flex items-center justify-between"
-                        >
-                          <div className="flex items-center gap-2">
-                            <div className="h-8 w-8 bg-muted rounded flex items-center justify-center">
-                              <Package className="h-4 w-4 text-muted-foreground" />
-                            </div>
-                            <div>
-                              <p className="text-xs font-medium">{item.name}</p>
-                              <p className="text-xs text-muted-foreground">
-                                {formatPrice(item.price)}
-                              </p>
-                            </div>
-                          </div>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="h-7 text-xs"
-                            onClick={() => toggleItem(item.id)}
-                          >
-                            Move to Cart
-                          </Button>
-                        </div>
-                      ))}
-                    {cartItems.filter((item) => !item.selected).length > 2 && (
-                      <Button
-                        variant="link"
-                        size="sm"
-                        className="text-xs w-full"
-                      >
-                        View{" "}
-                        {cartItems.filter((item) => !item.selected).length - 2}{" "}
-                        more items
-                      </Button>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
           </div>
         </div>
       )}
@@ -740,112 +715,124 @@ const CartPage: React.FC = () => {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-6 py-4">
-            {/* Order Items Summary */}
-            {/* <div>
-              <h4 className="text-sm font-medium mb-3">Order Items</h4>
-              <ScrollArea className="h-[200px] pr-4">
+          <ScrollArea className="max-h-[60vh] pr-4">
+            <div className="space-y-6 py-4">
+              {/* Order Items Summary */}
+              <div>
+                <h4 className="text-sm font-medium mb-3">Order Items</h4>
                 <div className="space-y-3">
                   {selectedItems.map((item) => (
                     <div key={item.id} className="flex justify-between text-sm">
                       <div>
-                        <span className="font-medium">{item.name}</span>
+                        <span className="font-medium">
+                          {item.product?.name}
+                        </span>
                         <span className="text-muted-foreground ml-2">
-                          x{item.quantity} {item.unit}
+                          x{item.quantity} {item.product?.unit_type}
                         </span>
                       </div>
-                      <span>{formatPrice(item.price * item.quantity)}</span>
+                      <span>
+                        {formatPrice(
+                          (item.product?.price || 0) * item.quantity,
+                        )}
+                      </span>
                     </div>
                   ))}
                 </div>
-              </ScrollArea>
-            </div> */}
+              </div>
 
-            <Separator />
+              <Separator />
 
-            {/* Delivery Options */}
-            <div className="space-y-3">
-              <h4 className="text-sm font-medium">Delivery Option</h4>
-              <RadioGroup
-                value={deliveryOption}
-                onValueChange={setDeliveryOption}
-              >
-                {deliveryOptions.map((option) => (
-                  <div key={option.id} className="flex items-center space-x-2">
-                    <RadioGroupItem value={option.id} id={option.id} />
-                    <Label htmlFor={option.id} className="flex-1">
-                      <div className="flex justify-between">
-                        <span className="text-sm font-medium">
-                          {option.name}
-                        </span>
-                        <span className="text-sm text-muted-foreground">
-                          {option.cost}
-                        </span>
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        {option.days}
-                      </p>
-                    </Label>
+              {/* Delivery Options */}
+              <div className="space-y-3">
+                <h4 className="text-sm font-medium">Delivery Option</h4>
+                <RadioGroup
+                  value={deliveryOption}
+                  onValueChange={setDeliveryOption}
+                >
+                  {deliveryOptions.map((option) => (
+                    <div
+                      key={option.id}
+                      className="flex items-center space-x-2"
+                    >
+                      <RadioGroupItem value={option.id} id={option.id} />
+                      <Label htmlFor={option.id} className="flex-1">
+                        <div className="flex justify-between">
+                          <span className="text-sm font-medium">
+                            {option.name}
+                          </span>
+                          <span className="text-sm text-muted-foreground">
+                            {option.cost}
+                          </span>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          {option.days}
+                        </p>
+                      </Label>
+                    </div>
+                  ))}
+                </RadioGroup>
+              </div>
+
+              {/* Payment Methods */}
+              <div className="space-y-3">
+                <h4 className="text-sm font-medium">Payment Method</h4>
+                <RadioGroup
+                  value={paymentMethod}
+                  onValueChange={setPaymentMethod}
+                >
+                  {paymentMethods.map((method) => (
+                    <div
+                      key={method.id}
+                      className="flex items-center space-x-2"
+                    >
+                      <RadioGroupItem value={method.id} id={method.id} />
+                      <Label htmlFor={method.id} className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <method.icon className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-sm font-medium">
+                            {method.name}
+                          </span>
+                        </div>
+                        <p className="text-xs text-muted-foreground ml-6">
+                          {method.description}
+                        </p>
+                      </Label>
+                    </div>
+                  ))}
+                </RadioGroup>
+              </div>
+
+              {/* Order Total */}
+              <div className="bg-muted/50 p-4 rounded-lg">
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span>Subtotal</span>
+                    <span>{formatPrice(subtotal)}</span>
                   </div>
-                ))}
-              </RadioGroup>
-            </div>
-
-            {/* Payment Methods */}
-            <div className="space-y-3">
-              <h4 className="text-sm font-medium">Payment Method</h4>
-              <RadioGroup
-                value={paymentMethod}
-                onValueChange={setPaymentMethod}
-              >
-                {paymentMethods.map((method) => (
-                  <div key={method.id} className="flex items-center space-x-2">
-                    <RadioGroupItem value={method.id} id={method.id} />
-                    <Label htmlFor={method.id} className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <method.icon className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm font-medium">
-                          {method.name}
-                        </span>
-                      </div>
-                      <p className="text-xs text-muted-foreground ml-6">
-                        {method.description}
-                      </p>
-                    </Label>
+                  <div className="flex justify-between text-sm">
+                    <span>Shipping</span>
+                    <span>{formatPrice(shipping)}</span>
                   </div>
-                ))}
-              </RadioGroup>
-            </div>
-
-            {/* Order Total */}
-            <div className="bg-muted/50 p-4 rounded-lg">
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span>Subtotal</span>
-                  <span>{formatPrice(subtotal)}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span>Shipping</span>
-                  <span>{formatPrice(shipping)}</span>
-                </div>
-                {promoApplied && (
-                  <div className="flex justify-between text-sm text-green-600">
-                    <span>Discount</span>
-                    <span>-{formatPrice(discount)}</span>
+                  {promoApplied && (
+                    <div className="flex justify-between text-sm text-green-600">
+                      <span>Discount</span>
+                      <span>-{formatPrice(discount)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between text-sm">
+                    <span>VAT (15%)</span>
+                    <span>{formatPrice(tax)}</span>
                   </div>
-                )}
-                <div className="flex justify-between text-sm">
-                  <span>VAT (15%)</span>
-                  <span>{formatPrice(tax)}</span>
-                </div>
-                <Separator />
-                <div className="flex justify-between text-base font-bold">
-                  <span>Total</span>
-                  <span className="text-primary">{formatPrice(total)}</span>
+                  <Separator />
+                  <div className="flex justify-between text-base font-bold">
+                    <span>Total</span>
+                    <span className="text-primary">{formatPrice(total)}</span>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
+          </ScrollArea>
 
           <DialogFooter className="gap-2">
             <Button
@@ -857,7 +844,9 @@ const CartPage: React.FC = () => {
             <Button
               onClick={() => {
                 setCheckoutDialogOpen(false);
-                // Navigate to order confirmation or process order
+                toast.success("Order placed successfully!");
+                // Navigate to order confirmation
+                navigate("/retailer/orders");
               }}
             >
               Place Order

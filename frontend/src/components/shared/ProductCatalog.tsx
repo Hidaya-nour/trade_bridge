@@ -99,9 +99,9 @@ export interface CatalogConfig {
   icon: React.ElementType; // Factory or Store
   categories: string[];
   locations: string[];
-  showVolumeDiscount: boolean; // Only for distributor
-  cartPath: string; // "/distributor/factory-cart" or "/retailer/cart"
-  ordersPath: string; // "/distributor/factory-orders" or "/retailer/orders"
+  showVolumeDiscount: boolean;
+  cartPath: string;
+  ordersPath: string;
 }
 
 // ============================================================================

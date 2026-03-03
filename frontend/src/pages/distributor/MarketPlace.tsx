@@ -65,12 +65,12 @@ const DistributorMarketplacePage: React.FC = () => {
         name: p.name,
         supplier_id: p.supplier_id,
         supplier_name:
-          p.supplier_name || p.supplier?.business_name || "Factory",
+        p.supplier_name || p.supplier?.business_name || "Factory",
         category: p.category,
         subcategory: p.subcategory,
         price: Number(p.price) || 0,
         unit: p.unit_type || "kg",
-        minOrder: Number(p.min_order_amount) || 1,
+        min_order_amount: p.min_order_amount,
         maxOrder: p.max_order_amount,
         stock: Number(p.stock_quantity) || 0,
         rating: Number(p.rating) || 0,
@@ -85,8 +85,6 @@ const DistributorMarketplacePage: React.FC = () => {
         leadTime: p.lead_time || "2-3 days",
         paymentTerms: p.payment_terms || ["Credit", "Mobile", "Bank Transfer"],
       }));
-
-      console.log("Transformed marketplace products:", transformedProducts);
       setLocalProducts(transformedProducts);
     } else {
       setLocalProducts([]);
@@ -197,7 +195,7 @@ const DistributorMarketplacePage: React.FC = () => {
 
   const config: CatalogConfig = {
     role: "distributor",
-    title: "Factory Products",
+    title: "Purchase Products",
     description:
       "Source products directly from Ethiopian manufacturers and factories",
     supplierLabel: "Factory",
@@ -206,7 +204,7 @@ const DistributorMarketplacePage: React.FC = () => {
     categories,
     locations,
     showVolumeDiscount: true,
-    cartPath: "/distributor/factory-cart",
+    cartPath: "/distributor/cart",
     ordersPath: "/distributor/factory-orders",
   };
 

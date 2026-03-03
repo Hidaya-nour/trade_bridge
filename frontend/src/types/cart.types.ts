@@ -1,65 +1,36 @@
-// ============================================================================
-// Cart Types - Matching Your Schema
-// ============================================================================
-
-export interface Cart {
-  id: string; // CHAR(36)
-  user_id: string; // CHAR(36) FK
-  created_at: string; // TIMESTAMP
-  updated_at: string; // TIMESTAMP
-}
-
+// types/cart.types.ts
 export interface CartItem {
-  id: string; // CHAR(36)
-  cart_id: string; // CHAR(36) FK
-  product_id: string; // CHAR(36) FK
-  quantity: number; // INT
-  created_at?: string;
-  updated_at?: string;
-  
-  // Relations (joined data)
+  id: string;
+  cart_id: string;
+  product_id: string;
+  quantity: number;
+  created_at: string;
+  updated_at: string;
   product?: {
     id: string;
     name: string;
     price: number;
-    images?: string[];
-    supplier_id: string;
-    supplier?: {
-      id: string;
-      business_name?: string;
-      full_name: string;
-    };
     unit_type: string;
     min_order_amount: number;
+    stock_quantity: number;
+    images: string[];
+    supplier?: {
+      id: string;
+      business_name: string;
+      full_name: string;
+      is_verified: boolean;
+      rating: number;
+    };
   };
 }
 
-// ============================================================================
-// Cart API Types
-// ============================================================================
-
-export interface CartResponse {
-  success: boolean;
-  data: {
-    cart: Cart;
-    items: CartItem[];
-    total_items: number;
-    total_price: number;
-  };
+export interface Cart {
+  id: string;
+  user_id: string;
+  created_at: string;
+  updated_at: string;
+  items?: CartItem[];
 }
-
-export interface AddToCartData {
-  product_id: string;
-  quantity: number;
-}
-
-export interface UpdateCartItemData {
-  quantity: number;
-}
-
-// ============================================================================
-// Cart Store State
-// ============================================================================
 
 export interface CartStoreState {
   cart: Cart | null;
@@ -69,7 +40,7 @@ export interface CartStoreState {
   totalPrice: number;
   isLoading: boolean;
   error: string | null;
-
+  
   // Actions
   fetchCart: () => Promise<void>;
   addToCart: (productId: string, quantity: number) => Promise<CartItem | null>;
@@ -77,4 +48,19 @@ export interface CartStoreState {
   removeFromCart: (itemId: string) => Promise<boolean>;
   clearCart: () => Promise<boolean>;
   clearError: () => void;
+}
+
+// Extended CartItem for UI with selected state
+export interface CartItemWithSelection extends CartItem {
+  selected: boolean;
+  shippingCost?: number; // This might come from supplier or product
+}
+
+export interface SupplierGroup {
+  supplierId: string;
+  supplierName: string;
+  supplierVerified: boolean;
+  items: CartItemWithSelection[];
+  subtotal: number;
+  shipping: number;
 }

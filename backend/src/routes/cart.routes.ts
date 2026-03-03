@@ -7,23 +7,6 @@ import { body, param } from 'express-validator';
 const router = express.Router();
 const cartController = new CartController();
 
-// ========================================================================
-// Validation Rules
-// ========================================================================
-
-const addToCartValidation = [
-  body('product_id').isUUID().withMessage('Valid product ID is required'),
-  body('quantity').isInt({ min: 1 }).withMessage('Quantity must be at least 1'),
-];
-
-const updateCartItemValidation = [
-  param('productId').isUUID().withMessage('Valid product ID is required'),
-  body('quantity').isInt({ min: 0 }).withMessage('Quantity must be 0 or greater'),
-];
-
-const productIdValidation = [
-  param('productId').isUUID().withMessage('Valid product ID is required'),
-];
 
 // ========================================================================
 // Routes
@@ -47,21 +30,21 @@ router.get('/validate', cartController.validateCart);
 // ========================================================================
 
 // POST /api/cart - Add item to cart
-router.post('/', validate(addToCartValidation), cartController.addToCart);
+router.post('/', cartController.addToCart);
 
 // ========================================================================
 // PUT Routes
 // ========================================================================
 
 // PUT /api/cart/:productId - Update cart item quantity
-router.put('/:productId', validate(updateCartItemValidation), cartController.updateCartItem);
+router.put('/:productId', cartController.updateCartItem);
 
 // ========================================================================
 // DELETE Routes
 // ========================================================================
 
 // DELETE /api/cart/:productId - Remove item from cart
-router.delete('/:productId', validate(productIdValidation), cartController.removeFromCart);
+router.delete('/:productId',  cartController.removeFromCart);
 
 // DELETE /api/cart - Clear entire cart
 router.delete('/', cartController.clearCart);

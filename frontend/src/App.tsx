@@ -181,7 +181,7 @@ function App() {
             }
           />
           <Route
-            path="/distributor/factory-cart"
+            path="/distributor/cart"
             element={
               <DashboardLayout>
                 <CartPage />
