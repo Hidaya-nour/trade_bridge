@@ -8,13 +8,33 @@ import { EditProductDialog } from "@/components/shared/EditProductDialog";
 
 const DistributorMyProductDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+
   const { product, fetchProductById, isLoading, updateProduct, deleteProduct } =
     useProductStore();
-  const navigate = useNavigate();
+
   const [editDialogOpen, setEditDialogOpen] = useState(false);
 
+  // 🔹 Fetch product on mount
+  useEffect(() => {
+    if (id) {
+      fetchProductById(id);
+    }
+  }, [id, fetchProductById]);
+
+  // 🔹 Edit handler
   const handleEdit = () => {
     setEditDialogOpen(true);
+  };
+
+  // 🔹 Save handler (FIXED — prevents reopening bug)
+  const handleSaveProduct = async (productId: string, updatedProduct: any) => {
+    try {
+      await updateProduct(productId, updatedProduct);
+      setEditDialogOpen(false); // close AFTER update finishes
+    } catch (error) {
+      console.error("Failed to update product", error);
+    }
   };
 
   const handleDelete = async () => {
@@ -73,17 +93,18 @@ const DistributorMyProductDetailPage: React.FC = () => {
       <MyProductDetail
         role="factory"
         product={productForDetail}
-        onEdit={() => setEditDialogOpen(true)}
+        onEdit={handleEdit}
         onDelete={handleDelete}
         onUpdateStock={handleUpdateStock}
         onUpdatePrice={handleUpdatePrice}
       />
+
       <EditProductDialog
         open={editDialogOpen}
         onOpenChange={setEditDialogOpen}
         product={product}
         mode="edit"
-        onSave={updateProduct}
+        onSave={handleSaveProduct}
       />
     </>
   );

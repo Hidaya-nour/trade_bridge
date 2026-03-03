@@ -109,7 +109,7 @@ const FactoryMyProductDetailPage: React.FC = () => {
         onOpenChange={setEditDialogOpen}
         product={product}
         mode="edit"
-        onSave={handleSaveProduct} // 🔥 Important fix
+        onSave={handleSaveProduct}
       />
     </>
   );
