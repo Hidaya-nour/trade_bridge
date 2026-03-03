@@ -57,7 +57,7 @@ export interface CatalogProduct {
   rating: number;
   reviews: number;
   location: string;
-  minOrder: number;
+  min_order_amount: number;
   unit: string;
   description: string;
   stock: number;

@@ -211,13 +211,13 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({
       (statusFilter === "inactive" && !product.is_available);
 
     const available = product.stock_quantity || 0;
-    const minOrder = product.min_order_amount || 1;
+    const min_order_amount = product.min_order_amount || 1;
 
     let matchesStock = true;
     if (stockFilter === "low") {
-      matchesStock = available < minOrder * 2;
+      matchesStock = available < min_order_amount * 2;
     } else if (stockFilter === "critical") {
-      matchesStock = available < minOrder;
+      matchesStock = available < min_order_amount;
     } else if (stockFilter === "out") {
       matchesStock = available === 0;
     }
@@ -245,8 +245,8 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({
     0,
   );
 
-  const getStockStatus = (available: number, minOrder: number) => {
-    const ratio = available / minOrder;
+  const getStockStatus = (available: number, min_order_amount: number) => {
+    const ratio = available / min_order_amount;
     if (available === 0)
       return {
         label: "Out of Stock",

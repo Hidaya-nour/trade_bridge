@@ -80,7 +80,7 @@ const suppliers = [
     products: 45,
     responseTime: "< 2 hours",
     deliveryTime: "2-3 days",
-    minOrder: "ETB 5,000",
+    min_order_amount: "ETB 5,000",
     priceLevel: "$$",
     totalOrders: 1250,
     completionRate: 99.2,

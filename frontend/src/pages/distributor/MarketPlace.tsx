@@ -65,7 +65,7 @@ const DistributorMarketplacePage: React.FC = () => {
         name: p.name,
         supplier_id: p.supplier_id,
         supplier_name:
-        p.supplier_name || p.supplier?.business_name || "Factory",
+          p.supplier_name || p.supplier?.business_name || "Factory",
         category: p.category,
         subcategory: p.subcategory,
         price: Number(p.price) || 0,
@@ -106,8 +106,10 @@ const DistributorMarketplacePage: React.FC = () => {
       if (!product) return;
 
       // Check if quantity meets minimum order
-      if (quantity < product.minOrder) {
-        toast.error(`Minimum order is ${product.minOrder} ${product.unit}`);
+      if (quantity < product.min_order_amount) {
+        toast.error(
+          `Minimum order is ${product.min_order_amount} ${product.unit}`,
+        );
         return;
       }
 
@@ -156,8 +158,10 @@ const DistributorMarketplacePage: React.FC = () => {
       if (!cartItem) return;
 
       // Check if quantity meets minimum order
-      if (quantity < product.minOrder) {
-        toast.error(`Minimum order is ${product.minOrder} ${product.unit}`);
+      if (quantity < product.min_order_amount) {
+        toast.error(
+          `Minimum order is ${product.min_order_amount} ${product.unit}`,
+        );
         return;
       }
 

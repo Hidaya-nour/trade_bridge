@@ -75,7 +75,7 @@ const initialCartItems = [
     price: 520,
     unit: "bag",
     quantity: 500,
-    minOrder: 100,
+    min_order_amount: 100,
     maxOrder: 5000,
     stock: 15000,
     verified: true,
@@ -93,7 +93,7 @@ const initialCartItems = [
     price: 7500,
     unit: "ton",
     quantity: 10,
-    minOrder: 5,
+    min_order_amount: 5,
     maxOrder: 50,
     stock: 450,
     verified: true,
@@ -111,7 +111,7 @@ const initialCartItems = [
     price: 95,
     unit: "kg",
     quantity: 1000,
-    minOrder: 200,
+    min_order_amount: 200,
     maxOrder: 10000,
     stock: 45000,
     verified: true,
@@ -187,7 +187,7 @@ const CartPage: React.FC = () => {
           ? {
               ...item,
               quantity: Math.max(
-                item.minOrder,
+                item.min_order_amount,
                 Math.min(newQuantity, item.maxOrder),
               ),
             }
@@ -393,7 +393,7 @@ const CartPage: React.FC = () => {
                                   variant="outline"
                                   className="text-[10px] bg-blue-50"
                                 >
-                                  MOQ: {item.minOrder}
+                                  MOQ: {item.min_order_amount}
                                 </Badge>
                               </div>
                               {item.volumeDiscount && (
@@ -412,10 +412,12 @@ const CartPage: React.FC = () => {
                                   onClick={() =>
                                     updateQuantity(
                                       item.id,
-                                      item.quantity - item.minOrder,
+                                      item.quantity - item.min_order_amount,
                                     )
                                   }
-                                  disabled={item.quantity <= item.minOrder}
+                                  disabled={
+                                    item.quantity <= item.min_order_amount
+                                  }
                                 >
                                   <Minus className="h-3 w-3" />
                                 </Button>
@@ -429,7 +431,7 @@ const CartPage: React.FC = () => {
                                   onClick={() =>
                                     updateQuantity(
                                       item.id,
-                                      item.quantity + item.minOrder,
+                                      item.quantity + item.min_order_amount,
                                     )
                                   }
                                   disabled={item.quantity >= item.maxOrder}

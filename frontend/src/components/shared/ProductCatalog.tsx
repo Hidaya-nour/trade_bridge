@@ -210,17 +210,20 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
   const handleManualInputChange = (
     productId: string,
     value: string,
-    minOrder: number,
+    min_order_amount: number,
   ) => {
     setManualInputValue((prev) => ({ ...prev, [productId]: value }));
   };
 
   // Handle manual quantity input blur
-  const handleManualInputBlur = (productId: string, minOrder: number) => {
+  const handleManualInputBlur = (
+    productId: string,
+    min_order_amount: number,
+  ) => {
     const value = manualInputValue[productId];
     if (value && value !== "") {
       const numValue = parseInt(value);
-      if (!isNaN(numValue) && numValue >= minOrder) {
+      if (!isNaN(numValue) && numValue >= min_order_amount) {
         onAddToCart(productId, numValue);
       } else {
         // Reset to current cart quantity if invalid
@@ -244,15 +247,13 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
   const handleManualInputKeyDown = (
     e: React.KeyboardEvent,
     productId: string,
-    minOrder: number,
+    min_order_amount: number,
   ) => {
     if (e.key === "Enter") {
-      handleManualInputBlur(productId, minOrder);
+      handleManualInputBlur(productId, min_order_amount);
     }
   };
-
   const SupplierIcon = config.icon;
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -662,7 +663,7 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
                       </span>
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">
-                      Min. order: {product.min_order_amount} {product.unit}
+                      Min. order: {product.min_order_amount}
                     </p>
                   </div>
 
