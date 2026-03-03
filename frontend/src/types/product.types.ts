@@ -7,15 +7,18 @@ export interface Product {
   supplier_id: string;
   name: string;
   category: string;
+  sku:string;
   description: string;
+  specifications?: Record<string, string> | null;
   price: number;
   stock_quantity: number;
   min_order_amount: number;
   unit_type: string;
   images: string[];
-  is_available: number; 
-    rating: number;
-  created_at: string;
+  is_available: boolean; 
+  rating: number;
+  totalReviews: number; 
+  reviews?: ReviewItem[];  created_at: string;
   updated_at: string;
   deleted_at?: string | null;
   
@@ -27,11 +30,23 @@ export interface Product {
     business_name?: string;
     email?: string;
     phone?: string;
+    rating?:number;
+    created_at?:Date;
+    is_verified?: boolean;
   };
 }
 
+export interface ReviewItem {
+  id: string;
+  product_id: string;
+  user_id: string;
+  rating: number;
+  comment?: string;
+  created_at: string;
+  updated_at: string;
+}
 export interface CatalogProduct {
-  id: string | number;
+  id: string ;
   name: string;
   supplier: string;
   supplierId: string;
@@ -74,6 +89,7 @@ export interface ProductFilters {
   maxPrice?: number;
   supplier_id?: string;
   search?: string;
+  exclude_supplier_id?: string;
   is_available?: boolean;
   page?: number;
   limit?: number;
@@ -159,7 +175,7 @@ export interface AvailabilityToggleResponse {
   success: boolean;
   data: {
     productId: string;
-    is_available: number;
+    is_available: boolean;
   };
 }
 

@@ -1,3 +1,7 @@
+import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+
 /**
  * Format price in ETB
  */
@@ -121,4 +125,106 @@ export const formatCompactNumber = (value: number): string => {
     return `${(value / 1_000).toFixed(0)}K`;
   }
   return value.toString();
+};
+
+// src/lib/export.ts
+
+interface ExportDataItem {
+  [key: string]: any;
+}
+
+/**
+ * Export data as CSV file
+ */
+export const exportToCSV = (data: ExportDataItem[], filename: string) => {
+  if (!data || data.length === 0) {
+    console.warn('No data to export');
+    return;
+  }
+
+  const headers = Object.keys(data[0]).join(',');
+  const rows = data.map(row => 
+    Object.values(row).map(value => 
+      typeof value === 'string' && value.includes(',') ? `"${value}"` : value
+    ).join(',')
+  ).join('\n');
+  
+  const csv = `${headers}\n${rows}`;
+  
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  link.click();
+  window.URL.revokeObjectURL(url);
+};
+
+/**
+ * Export data as Excel file (requires xlsx package)
+ */
+export const exportToExcel = async (data: ExportDataItem[], filename: string) => {
+  try {
+    // Dynamically import xlsx to avoid increasing bundle size
+    const XLSX = await import('xlsx');
+    
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Products');
+    XLSX.writeFile(wb, filename);
+  } catch (error) {
+    console.error('Failed to export to Excel:', error);
+    throw new Error('Excel export failed. Make sure xlsx package is installed.');
+  }
+};
+
+/**
+ * Export data as PDF file (requires jspdf and jspdf-autotable packages)
+ */
+export const exportToPDF = async (data: ExportDataItem[], filename: string, title: string = 'Product Report') => {
+  try {
+    // Dynamically import PDF libraries
+    const jsPDF = (await import('jspdf')).default;
+    await import('jspdf-autotable');
+
+    const doc = new jsPDF();
+    const headers = [Object.keys(data[0])];
+    const rows = data.map(obj => Object.values(obj));
+    
+    doc.text(title, 14, 16);
+    doc.setFontSize(10);
+    doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 22);
+    doc.text(`Total Items: ${data.length}`, 14, 28);
+    
+    (doc as any).autoTable({
+      head: headers,
+      body: rows,
+      startY: 35,
+      styles: { fontSize: 8 },
+      headStyles: { fillColor: [41, 128, 185] }
+    });
+    
+    doc.save(filename);
+  } catch (error) {
+    console.error('Failed to export to PDF:', error);
+    throw new Error('PDF export failed. Make sure jspdf and jspdf-autotable are installed.');
+  }
+};
+
+/**
+ * Format product data for export
+ */
+export const formatProductDataForExport = (products: any[]) => {
+  return products.map(product => ({
+    'Product Name': product.name,
+    'Category': product.category,
+    'Price (ETB)': product.price,
+    'Stock Quantity': product.stock_quantity,
+    'Unit Type': product.unit_type,
+    'Min Order': product.min_order_amount,
+    'Status': product.is_available ? 'Active' : 'Inactive',
+    'Total Value (ETB)': (product.stock_quantity || 0) * product.price,
+    'Rating': product.rating || 'N/A',
+    'Last Updated': product.updated_at ? new Date(product.updated_at).toLocaleDateString() : 'N/A'
+  }));
 };

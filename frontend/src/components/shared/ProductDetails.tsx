@@ -53,9 +53,9 @@ export type ProductDetailRole = "retailer" | "distributor" | "factory";
 export interface ProductDetailProps {
   role: ProductDetailRole;
   product: {
-    id: number;
+    id: string;
     name: string;
-    // sku: string;
+    sku: string;
     category: string;
     price: number;
     unit_type: string;
@@ -63,10 +63,9 @@ export interface ProductDetailProps {
     maxOrder?: number;
     stock_quantity: number;
     reserved?: number;
-    is_available?: number;
+    is_available?: boolean;
     description: string;
-    specifications?: Record<string, string>;
-    tags: string[];
+    specifications?: Record<string, string> | null;
     images?: string[];
     created_at: string;
     updated_at: string;
@@ -77,7 +76,7 @@ export interface ProductDetailProps {
     supplierRating?: number;
     supplierVerified?: boolean;
     supplierLocation?: string;
-    supplierEstablished?: string;
+    supplierEstablished?: Date;
 
     // Factory info (for factory's own products)
     productionTime?: string;
@@ -101,9 +100,9 @@ export interface ProductDetailProps {
 
     // Reviews
     rating: number;
-    reviewCount: number;
+    review_count: number;
     reviews?: {
-      id: number;
+      id: string;
       user: string;
       rating: number;
       comment: string;
@@ -184,6 +183,76 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
   const handleAddToCart = () => {
     onAddToCart(quantity);
   };
+  const parseSpecifications = (specs: any): Record<string, any> => {
+    if (!specs) return {};
+    if (typeof specs === "object") return specs;
+    if (typeof specs === "string") {
+      try {
+        return JSON.parse(specs);
+      } catch (error) {
+        console.error("Failed to parse specifications:", error);
+        return {};
+      }
+    }
+    return {};
+  };
+
+  const formatLabel = (str: string): string => {
+    return str
+      .replace(/_/g, " ")
+      .replace(/([A-Z])/g, " $1")
+      .replace(/^./, (str) => str.toUpperCase())
+      .trim();
+  };
+
+  const SpecificationRow: React.FC<{ label: string; value: any }> = ({
+    label,
+    value,
+  }) => {
+    const renderValue = () => {
+      if (value === null || value === undefined) return "N/A";
+
+      if (typeof value === "boolean") {
+        return value ? "Yes" : "No";
+      }
+
+      if (Array.isArray(value)) {
+        return (
+          <div className="flex flex-wrap gap-1">
+            {value.map((item, i) => (
+              <Badge key={i} variant="secondary" className="text-xs">
+                {String(item)}
+              </Badge>
+            ))}
+          </div>
+        );
+      }
+
+      if (typeof value === "object") {
+        return (
+          <div className="space-y-1">
+            {Object.entries(value).map(([k, v]) => (
+              <div key={k} className="text-xs">
+                <span className="font-medium">{formatLabel(k)}:</span>{" "}
+                {String(v)}
+              </div>
+            ))}
+          </div>
+        );
+      }
+
+      return <span>{String(value)}</span>;
+    };
+
+    return (
+      <div className="grid grid-cols-3 gap-4 py-2 border-b last:border-0 hover:bg-muted/50 transition-colors">
+        <span className="text-sm font-medium text-muted-foreground">
+          {formatLabel(label)}
+        </span>
+        <div className="text-sm col-span-2">{renderValue()}</div>
+      </div>
+    );
+  };
 
   return (
     <div className="space-y-6">
@@ -249,7 +318,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
               </div>
               <span className="text-sm font-medium">{product.rating}</span>
               <span className="text-sm text-muted-foreground">
-                ({product.reviewCount} reviews)
+                ({product.review_count} reviews)
               </span>
             </div>
 
@@ -274,11 +343,11 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-medium">Availability:</span>
-                    {product.is_available > product.min_order_amount * 2 ? (
+                    {product.stock_quantity > product.min_order_amount * 2 ? (
                       <Badge className="bg-green-100 text-green-800">
                         In Stock
                       </Badge>
-                    ) : product.is_available > 0 ? (
+                    ) : product.stock_quantity > 0 ? (
                       <Badge className="bg-amber-100 text-amber-800">
                         Low Stock
                       </Badge>
@@ -288,7 +357,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
                       </Badge>
                     )}
                   </div>
-                  <Progress
+                  {/* <Progress
                     value={
                       (product.is_available / product.stock_quantity) * 100
                     }
@@ -296,7 +365,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
                   />
                   <p className="text-xs text-muted-foreground">
                     {product.is_available} of {product.stock_quantity} available
-                  </p>
+                  </p> */}
                 </div>
               ) : (
                 <div className="flex items-center gap-2">
@@ -441,7 +510,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
                       <>
                         <span className="text-xs text-muted-foreground">•</span>
                         <span className="text-xs text-muted-foreground">
-                          Est. {product.supplierEstablished}
+                          {/* Est. {product.supplierEstablished} */}
                         </span>
                       </>
                     )}
@@ -473,7 +542,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
           <TabsTrigger value="description">Description</TabsTrigger>
           <TabsTrigger value="specifications">Specifications</TabsTrigger>
           <TabsTrigger value="reviews">
-            Reviews ({product.reviewCount})
+            Reviews ({product.review_count})
           </TabsTrigger>
         </TabsList>
 
@@ -481,15 +550,6 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
           <Card>
             <CardContent className="p-6">
               <p className="text-sm leading-relaxed">{product.description}</p>
-
-              {/* Tags */}
-              <div className="flex flex-wrap gap-2 mt-4">
-                {product.tags.map((tag) => (
-                  <Badge key={tag} variant="secondary">
-                    {tag}
-                  </Badge>
-                ))}
-              </div>
 
               {/* Delivery Info */}
               {product.deliveryOptions && (
@@ -538,26 +598,67 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
 
         <TabsContent value="specifications" className="mt-6">
           <Card>
+            <CardHeader>
+              <CardTitle>Product Specifications</CardTitle>
+              <CardDescription>
+                Detailed technical specifications and features
+              </CardDescription>
+            </CardHeader>
             <CardContent className="p-6">
               {product.specifications ? (
-                <div className="space-y-3">
-                  {Object.entries(product.specifications).map(
-                    ([key, value]) => (
-                      <div
-                        key={key}
-                        className="grid grid-cols-3 gap-4 py-2 border-b last:border-0"
-                      >
-                        <span className="text-sm font-medium text-muted-foreground">
-                          {key}
-                        </span>
-                        <span className="text-sm col-span-2">{value}</span>
-                      </div>
-                    ),
-                  )}
-                </div>
+                (() => {
+                  const specifications = parseSpecifications(
+                    product.specifications,
+                  );
+
+                  return Object.keys(specifications).length > 0 ? (
+                    <div className="space-y-6">
+                      {Object.entries(specifications).map(([key, value]) => {
+                        // Check if value is an object (potential category)
+                        if (
+                          typeof value === "object" &&
+                          value !== null &&
+                          !Array.isArray(value)
+                        ) {
+                          return (
+                            <div key={key}>
+                              <h4 className="text-sm font-medium text-muted-foreground mb-3 capitalize">
+                                {formatLabel(key)}
+                              </h4>
+                              <div className="space-y-3">
+                                {Object.entries(value).map(
+                                  ([subKey, subValue]) => (
+                                    <SpecificationRow
+                                      key={subKey}
+                                      label={subKey}
+                                      value={subValue}
+                                    />
+                                  ),
+                                )}
+                              </div>
+                            </div>
+                          );
+                        }
+
+                        // Otherwise treat as direct specification
+                        return (
+                          <SpecificationRow
+                            key={key}
+                            label={key}
+                            value={value}
+                          />
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">
+                      No specifications available for this product.
+                    </p>
+                  );
+                })()
               ) : (
                 <p className="text-sm text-muted-foreground">
-                  No specifications available.
+                  No specifications available for this product.
                 </p>
               )}
 
@@ -622,7 +723,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
                       className="border-b last:border-0 pb-4 last:pb-0"
                     >
                       <div className="flex items-center justify-between mb-2">
-                        <span className="font-medium">{review.user}</span>
+                        {/* <span className="font-medium">{review.user}</span> */}
                         <span className="text-xs text-muted-foreground">
                           {new Date(review.date).toLocaleDateString()}
                         </span>

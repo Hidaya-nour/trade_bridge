@@ -97,7 +97,7 @@ export interface PartnerProfile {
 
   // Performance
   rating: number;
-  reviewCount: number;
+  review_count: number;
   totalOrders: number;
   totalValue: number;
   avgOrderValue: number;
@@ -308,7 +308,7 @@ export const PartnerProfile: React.FC<PartnerProfileProps> = ({
                   <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
                   <span className="text-lg font-bold">{profile.rating}</span>
                   <span className="text-xs text-muted-foreground">
-                    ({profile.reviewCount})
+                    ({profile.review_count})
                   </span>
                 </div>
               </CardContent>
@@ -739,7 +739,7 @@ export const PartnerProfile: React.FC<PartnerProfileProps> = ({
             <CardHeader>
               <CardTitle>Customer Reviews</CardTitle>
               <CardDescription>
-                {profile.reviewCount} reviews • {profile.rating} average rating
+                {profile.review_count} reviews • {profile.rating} average rating
               </CardDescription>
             </CardHeader>
             <CardContent>

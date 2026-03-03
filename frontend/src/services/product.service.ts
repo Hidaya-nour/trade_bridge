@@ -16,6 +16,7 @@ class ProductService {
     if (filters?.limit) params.append('limit', filters.limit.toString());
     if (filters?.sortBy) params.append('sortBy', filters.sortBy);
     if (filters?.sortOrder) params.append('sortOrder', filters.sortOrder);
+    if (filters?.exclude_supplier_id) params.append("exclude_supplier_id" , filters.exclude_supplier_id);
 
     const response = await api.get(`/products?${params.toString()}`);
     return response.data;

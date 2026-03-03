@@ -3,21 +3,25 @@ import sequelize from '../config/database';
 import { IProduct } from '../types/product.types';
 import User from './user.model';
 
-interface ProductCreationAttributes extends Optional<IProduct, 'id' | 'created_at' | 'updated_at' | 'images'> {}
+interface ProductCreationAttributes
+  extends Optional<IProduct, 'id' | 'created_at' | 'updated_at' | 'images' | 'rating' | 'review_count'> {}
 
 export class Product extends Model<IProduct, ProductCreationAttributes> implements IProduct {
   public id!: string;
   public supplier_id!: string;
   public name!: string;
   public category!: string;
+  public sku!: string;
   public description!: string;
+  public specifications?: Record<string, string> | null;
   public price!: number;
   public stock_quantity!: number;
   public min_order_amount!: number;
   public unit_type!: string;
   public images!: any;
   public rating!: number;
-  public is_available!: number;
+  public review_count?: number;
+  public is_available!: boolean;
   public created_at!: Date;
   public updated_at!: Date;
   public deleted_at?: Date;
@@ -51,8 +55,20 @@ Product.init(
       type: DataTypes.STRING(30),
       allowNull: false,
     },
+    sku: {
+      type: DataTypes.STRING(50),
+      allowNull: false,
+      unique: true,
+      validate: {
+        notEmpty: true,
+      },
+    },
     description: {
       type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    specifications: {
+      type: DataTypes.JSON,
       allowNull: true,
     },
     price: {
@@ -88,15 +104,13 @@ Product.init(
       defaultValue: [],
     },
     is_available: {
-      type: DataTypes.TINYINT,
+      type: DataTypes.BOOLEAN,
       allowNull: false,
-      defaultValue: 1,
-      validate: {
-        isIn: [[0, 1]],
-      },
+      defaultValue: true,
+     
     },
     rating: {
-      type: DataTypes.DECIMAL(3, 2),
+      type: DataTypes.FLOAT,
       allowNull: false,
       defaultValue: 0.00,
       validate: {
@@ -105,6 +119,14 @@ Product.init(
       },
     },
     
+    review_count: {
+  type: DataTypes.INTEGER,
+  allowNull: false,
+  defaultValue: 0,
+  validate: {
+    min: 0,
+  },
+},
     created_at: {
       type: DataTypes.DATE,
       defaultValue: DataTypes.NOW,
@@ -126,7 +148,7 @@ Product.init(
     createdAt: 'created_at',
     updatedAt: 'updated_at',
     deletedAt: 'deleted_at',
-    paranoid: true, 
+    paranoid: true,
     indexes: [
       {
         fields: ['supplier_id'],

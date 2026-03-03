@@ -59,33 +59,26 @@ export class ProductService {
   }
 
   async updateProduct(productId: string, userId: string, updateData: any) {
-    const product = await this.productRepo.findById(productId);
-    if (!product) {
-      throw new AppError('Product not found', 404);
-    }
+  const product = await this.productRepo.findById(productId);
+  if (!product) throw new AppError('Product not found', 404);
 
-    // Check ownership
-    if (product.supplier_id !== userId) {
-      // Check if user is admin (optional)
-      const user = await this.userRepo.findById(userId);
-      if (user?.role !== 'admin') {
-        throw new AppError('You can only update your own products', 403);
-      }
-    }
-
-    // Remove fields that shouldn't be updated
-    delete updateData.id;
-    delete updateData.supplier_id;
-    delete updateData.created_at;
-
-    const [updated, updatedProducts] = await this.productRepo.updateProduct(productId, updateData);
-    if (!updated) {
-      throw new AppError('Failed to update product', 500);
-    }
-
-    logger.info(`Product updated: ${productId} by user: ${userId}`);
-    return updatedProducts[0];
+  // Check ownership
+  if (product.supplier_id !== userId) {
+    const user = await this.userRepo.findById(userId);
+    if (user?.role !== 'admin') throw new AppError('You can only update your own products', 403);
   }
+
+  delete updateData.id;
+  delete updateData.supplier_id;
+  delete updateData.created_at;
+
+  const updated = await this.productRepo.updateProduct(productId, updateData);
+  if (!updated) throw new AppError('Failed to update product', 500);
+
+  // ✅ Fetch updated product explicitly
+  const updatedProduct = await this.productRepo.findById(productId);
+  return updatedProduct;
+}
 
   async deleteProduct(productId: string, userId: string, permanent: boolean = false) {
     const product = await this.productRepo.findById(productId);
@@ -200,9 +193,9 @@ export class ProductService {
       throw new AppError('Failed to toggle availability', 500);
     }
 
-    const newStatus = product.is_available === 1 ? 'unavailable' : 'available';
+    const newStatus = product.is_available === true ? 'unavailable' : 'available';
     logger.info(`Product ${productId} is now ${newStatus}`);
-    return { productId, is_available: product.is_available === 1 ? 0 : 1 };
+    return { productId, is_available: product.is_available === true ? false : true };
   }
 
   async getLowStockProducts(threshold: number = 10) {

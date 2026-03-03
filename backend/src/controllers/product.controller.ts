@@ -15,6 +15,7 @@ export class ProductController {
   maxPrice: req.query.maxPrice ? Number(req.query.maxPrice) : undefined,
   supplier_id: req.query.supplierId as string | undefined,
   search: req.query.search as string | undefined,
+exclude_supplier_id: req.query.exclude_supplier_id as string | undefined,
   is_available:
     req.query.isAvailable !== undefined
       ? req.query.isAvailable === 'true'
@@ -24,7 +25,8 @@ export class ProductController {
   sortBy: req.query.sortBy as string | undefined,
   sortOrder: req.query.sortOrder === 'DESC' ? 'DESC'  as const: 'ASC' as const,
 };
-
+console.log("Query:", req.query);
+console.log("Filters:", filters);
       const result = await productService.getAllProducts(filters);
       res.json({ success: true, data: result });
     } catch (error) {
