@@ -127,7 +127,7 @@ interface ProductManagementProps {
 // ============================================================================
 
 // Hardcoded product categories for adding new products
-const PRODUCT_CATEGORIES = ["Beverages", "Food Products"];
+const PRODUCT_CATEGORIES = ["Beverages", "Food"];
 
 const UNIT_TYPES = [
   "kg",

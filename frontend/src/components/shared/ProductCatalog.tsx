@@ -75,7 +75,7 @@ export interface CatalogProduct {
   unit: string;
   min_order_amount: number;
   max_order_amount?: number;
-  stock_quantity: number;
+  stock_quantity?: number;
   rating: number;
   reviews: number;
   location: string;
@@ -432,7 +432,7 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
                               Min:
                             </span>
                             <span className="text-sm font-medium">
-                              {priceRange[0].toLocaleString()}
+                              {priceRange[0].toLocaleString() ?? "N/A"}
                             </span>
                           </div>
                           <div className="flex items-center gap-1">
@@ -440,7 +440,7 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
                               Max:
                             </span>
                             <span className="text-sm font-medium">
-                              {priceRange[1].toLocaleString()}
+                              {priceRange[1].toLocaleString() ?? "N/A"}
                             </span>
                           </div>
                         </div>
@@ -815,9 +815,11 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
                         <Truck className="h-4 w-4" />
                         {product.delivery_time}
                       </div>
-                      <div className="text-sm text-muted-foreground">
-                        Stock: {product.stock_quantity.toLocaleString()}
-                      </div>
+                      {product.stock_quantity !== undefined && (
+                        <div className="text-sm text-muted-foreground">
+                          Stock: {product.stock_quantity.toLocaleString()}
+                        </div>
+                      )}
                     </div>
 
                     {config.showVolumeDiscount && product.volume_discount && (

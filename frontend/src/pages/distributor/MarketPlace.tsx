@@ -9,15 +9,7 @@ import { Factory } from "lucide-react";
 import toast from "react-hot-toast";
 import { useAuthStore } from "@/stores/auth.store";
 
-const categories = [
-  "All Categories",
-  "Construction",
-  "Textiles",
-  "Beverages",
-  "Grains",
-  "Food",
-  "Raw Materials",
-];
+const categories = ["Beverages", "Foods"];
 
 const locations = [
   "All Locations",

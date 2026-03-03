@@ -53,9 +53,9 @@ export type ProductDetailRole = "retailer" | "distributor" | "factory";
 export interface ProductDetailProps {
   role: ProductDetailRole;
   product: {
-    id: number;
+    id: string;
     name: string;
-    // sku: string;
+    sku: string;
     category: string;
     price: number;
     unit_type: string;
@@ -65,7 +65,7 @@ export interface ProductDetailProps {
     reserved?: number;
     is_available?: boolean;
     description: string;
-    specifications?: Record<string, string>;
+    specifications?: Record<string, string> | null;
     images?: string[];
     created_at: string;
     updated_at: string;
@@ -182,6 +182,76 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
 
   const handleAddToCart = () => {
     onAddToCart(quantity);
+  };
+  const parseSpecifications = (specs: any): Record<string, any> => {
+    if (!specs) return {};
+    if (typeof specs === "object") return specs;
+    if (typeof specs === "string") {
+      try {
+        return JSON.parse(specs);
+      } catch (error) {
+        console.error("Failed to parse specifications:", error);
+        return {};
+      }
+    }
+    return {};
+  };
+
+  const formatLabel = (str: string): string => {
+    return str
+      .replace(/_/g, " ")
+      .replace(/([A-Z])/g, " $1")
+      .replace(/^./, (str) => str.toUpperCase())
+      .trim();
+  };
+
+  const SpecificationRow: React.FC<{ label: string; value: any }> = ({
+    label,
+    value,
+  }) => {
+    const renderValue = () => {
+      if (value === null || value === undefined) return "N/A";
+
+      if (typeof value === "boolean") {
+        return value ? "Yes" : "No";
+      }
+
+      if (Array.isArray(value)) {
+        return (
+          <div className="flex flex-wrap gap-1">
+            {value.map((item, i) => (
+              <Badge key={i} variant="secondary" className="text-xs">
+                {String(item)}
+              </Badge>
+            ))}
+          </div>
+        );
+      }
+
+      if (typeof value === "object") {
+        return (
+          <div className="space-y-1">
+            {Object.entries(value).map(([k, v]) => (
+              <div key={k} className="text-xs">
+                <span className="font-medium">{formatLabel(k)}:</span>{" "}
+                {String(v)}
+              </div>
+            ))}
+          </div>
+        );
+      }
+
+      return <span>{String(value)}</span>;
+    };
+
+    return (
+      <div className="grid grid-cols-3 gap-4 py-2 border-b last:border-0 hover:bg-muted/50 transition-colors">
+        <span className="text-sm font-medium text-muted-foreground">
+          {formatLabel(label)}
+        </span>
+        <div className="text-sm col-span-2">{renderValue()}</div>
+      </div>
+    );
   };
 
   return (
@@ -528,26 +598,67 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
 
         <TabsContent value="specifications" className="mt-6">
           <Card>
+            <CardHeader>
+              <CardTitle>Product Specifications</CardTitle>
+              <CardDescription>
+                Detailed technical specifications and features
+              </CardDescription>
+            </CardHeader>
             <CardContent className="p-6">
               {product.specifications ? (
-                <div className="space-y-3">
-                  {Object.entries(product.specifications).map(
-                    ([key, value]) => (
-                      <div
-                        key={key}
-                        className="grid grid-cols-3 gap-4 py-2 border-b last:border-0"
-                      >
-                        <span className="text-sm font-medium text-muted-foreground">
-                          {key}
-                        </span>
-                        <span className="text-sm col-span-2">{value}</span>
-                      </div>
-                    ),
-                  )}
-                </div>
+                (() => {
+                  const specifications = parseSpecifications(
+                    product.specifications,
+                  );
+
+                  return Object.keys(specifications).length > 0 ? (
+                    <div className="space-y-6">
+                      {Object.entries(specifications).map(([key, value]) => {
+                        // Check if value is an object (potential category)
+                        if (
+                          typeof value === "object" &&
+                          value !== null &&
+                          !Array.isArray(value)
+                        ) {
+                          return (
+                            <div key={key}>
+                              <h4 className="text-sm font-medium text-muted-foreground mb-3 capitalize">
+                                {formatLabel(key)}
+                              </h4>
+                              <div className="space-y-3">
+                                {Object.entries(value).map(
+                                  ([subKey, subValue]) => (
+                                    <SpecificationRow
+                                      key={subKey}
+                                      label={subKey}
+                                      value={subValue}
+                                    />
+                                  ),
+                                )}
+                              </div>
+                            </div>
+                          );
+                        }
+
+                        // Otherwise treat as direct specification
+                        return (
+                          <SpecificationRow
+                            key={key}
+                            label={key}
+                            value={value}
+                          />
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">
+                      No specifications available for this product.
+                    </p>
+                  );
+                })()
               ) : (
                 <p className="text-sm text-muted-foreground">
-                  No specifications available.
+                  No specifications available for this product.
                 </p>
               )}
 

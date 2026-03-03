@@ -59,16 +59,7 @@ const DistributorProductDetailPage: React.FC = () => {
 
   // Transform product for distributor view (buying from factories)
   const productForDetail = {
-    id: parseInt(product.id) || 0,
-    name: product.name,
-    category: product.category,
-    price: product.price,
-    unit_type: product.unit_type,
-    min_order_amount: product.min_order_amount,
-    stock_quantity: product.stock_quantity,
-    description: product.description,
-    images: product.images || [],
-    rating: product.rating || 0,
+    ...product,
     reviewCount: 0,
     maxOrder: product.stock_quantity,
     reserved: 0,
