@@ -77,6 +77,7 @@ export const useProductStore = create<ProductState>((set, get) => ({
       const response = await productService.getProductById(id);
       set({ isLoading: false, product: response.data.product });
       return response.data.product;
+      
     } catch (error: any) {
       set({
         error: error.response?.data?.message || 'Failed to fetch product',

@@ -38,30 +38,33 @@ const RetailerProductDetailPage: React.FC = () => {
 
   // Transform product to match ProductDetail expected props
   const productForDetail = {
-    id: parseInt(product.id) || 0,
-    name: product.name,
-    category: product.category,
-    price: product.price,
-    unit_type: product.unit_type,
-    min_order_amount: product.min_order_amount,
-    stock_quantity: product.stock_quantity,
-    description: product.description,
-    images: product.images || [],
-    rating: product.rating || 0,
-
-    tags: [],
-    review_count: 0,
+    ...product,
+    review_count: product.review_count || 0,
     maxOrder: product.stock_quantity,
     reserved: 0,
-    supplier:
+
+    // Supplier info (factory selling the product)
+    supplierId: product.supplier_id,
+    supplierName:
       product.supplier?.business_name ||
       product.supplier?.full_name ||
       "Unknown",
-    supplierId: product.supplier_id,
-    location: "Unknown",
-    deliveryTime: "2-3 days",
+    supplierRating: product.supplier?.rating || 4.5,
+    supplierVerified: product.supplier?.is_verified || false,
+    supplierLocation: product.supplier?.email || "Unknown",
+    supplierEstablished: product.supplier?.created_at,
     created_at: product.created_at || new Date().toISOString(),
     updated_at: product.updated_at || new Date().toISOString(),
+
+    // Fix reviews typing for ProductDetail
+    reviews:
+      product.reviews?.map((r) => ({
+        id: r.id,
+        user: r.user_id,
+        rating: r.rating,
+        comment: r.comment || "",
+        date: new Date(r.created_at).toISOString(),
+      })) || [],
   };
 
   return (

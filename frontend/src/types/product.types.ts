@@ -17,7 +17,7 @@ export interface Product {
   images: string[];
   is_available: boolean; 
   rating: number;
-  totalReviews: number; 
+  review_count:number;
   reviews?: ReviewItem[];  created_at: string;
   updated_at: string;
   deleted_at?: string | null;
