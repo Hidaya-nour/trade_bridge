@@ -115,25 +115,40 @@ export const useProductStore = create<ProductState>((set, get) => ({
   },
 
   updateProduct: async (id: string, data: any) => {
-    set({ isLoading: true, error: null });
-    try {
-      const response = await productService.updateProduct(id, data);
-      
-      // Update product in list
-      const products = get().products.map(p => 
-        p.id === id ? response.data.product : p
-      );
-      
-      set({ products, isLoading: false });
-      return response.data.product;
-    } catch (error: any) {
-      set({
-        error: error.response?.data?.message || 'Failed to update product',
-        isLoading: false,
-      });
-      return null;
-    }
-  },
+  set({ isLoading: true, error: null });
+
+  try {
+    const response = await productService.updateProduct(id, data);
+    const updatedProduct = response.data.product;
+
+    const state = get();
+
+    set({
+      // 🔥 Update list
+      products: state.products.map((p) =>
+        p.id === id ? updatedProduct : p
+      ),
+
+      // 🔥 Update single product (THIS WAS MISSING)
+      product:
+        state.product && state.product.id === id
+          ? updatedProduct
+          : state.product,
+
+      isLoading: false,
+    });
+
+    return updatedProduct;
+  } catch (error: any) {
+    set({
+      error:
+        error.response?.data?.message || "Failed to update product",
+      isLoading: false,
+    });
+
+    return null;
+  }
+},
 
   deleteProduct: async (id: string) => {
     set({ isLoading: true, error: null });

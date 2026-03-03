@@ -12,8 +12,7 @@ export class Product extends Model<IProduct, ProductCreationAttributes> implemen
   public category!: string;
    public sku!: string;
   public description!: string;
-  public specifications?: string
-  public price!: number;
+  public specifications?: Record<string, string> | null;  public price!: number;
   public stock_quantity!: number;
   public min_order_amount!: number;
   public unit_type!: string;

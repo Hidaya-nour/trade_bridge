@@ -59,10 +59,6 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
   mode,
   onAdd,
 }) => {
-  if (!product) {
-    return null;
-  }
-
   const [formData, setFormData] = useState({
     name: "",
     category: PRODUCT_CATEGORIES[0],
@@ -80,6 +76,7 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
 
   // Reset form when product changes or dialog opens
   useEffect(() => {
+    if (!product) return;
     if (product && mode === "edit") {
       setFormData({
         name: product.name || "",
@@ -93,12 +90,25 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
       });
 
       if (product.specifications) {
-        const specsArray = Object.entries(product.specifications).map(
-          ([key, value]) => ({
-            key,
-            value,
-          }),
-        );
+        let parsedSpecs = product.specifications;
+
+        // If it's a string, parse it
+        if (typeof product.specifications === "string") {
+          try {
+            parsedSpecs = JSON.parse(product.specifications);
+          } catch (error) {
+            console.error("Invalid specifications JSON");
+            parsedSpecs = {};
+          }
+        }
+
+        const specsArray = Object.entries(
+          parsedSpecs as Record<string, string>,
+        ).map(([key, value]) => ({
+          key,
+          value,
+        }));
+
         setSpecifications(specsArray);
       } else {
         setSpecifications([]);
@@ -110,7 +120,7 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
     }
   }, [product, mode, open]);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const specificationsObject: Record<string, string> = {};
 
     specifications.forEach((spec) => {
@@ -119,33 +129,30 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
       }
     });
 
-    if (mode === "edit" && product) {
-      onSave(product.id, {
-        ...formData,
-        price: parseFloat(formData.price),
-        stock_quantity: parseInt(formData.stock_quantity),
-        min_order_amount: parseInt(formData.min_order_amount),
-        specifications:
-          Object.keys(specificationsObject).length > 0
-            ? specificationsObject
-            : null,
-      });
-    }
+    const payload = {
+      ...formData,
+      price: parseFloat(formData.price),
+      stock_quantity: parseInt(formData.stock_quantity),
+      min_order_amount: parseInt(formData.min_order_amount),
+      specifications:
+        Object.keys(specificationsObject).length > 0
+          ? specificationsObject
+          : null,
+    };
 
-    if (mode === "add" && onAdd) {
-      onAdd({
-        ...formData,
-        price: parseFloat(formData.price),
-        stock_quantity: parseInt(formData.stock_quantity),
-        min_order_amount: parseInt(formData.min_order_amount),
-        specifications:
-          Object.keys(specificationsObject).length > 0
-            ? specificationsObject
-            : null,
-      });
-    }
+    try {
+      if (mode === "edit" && product) {
+        await onSave(product.id, payload);
+      }
 
-    onOpenChange(false);
+      if (mode === "add" && onAdd) {
+        await onAdd(payload);
+      }
+
+      onOpenChange(false);
+    } catch (error) {
+      console.error("Failed to save product", error);
+    }
   };
 
   const title = mode === "add" ? "Add New Product" : "Edit Product";

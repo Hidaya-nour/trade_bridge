@@ -58,10 +58,10 @@ export interface MyProductDetailProps {
     available: number;
     average_rating: number;
   };
-  onEdit: (updatedProduct: Partial<Product>) => Promise<void>; // Changed to accept product data
-  onDelete: () => Promise<void>; // Made async
-  onUpdateStock: (newStock: number) => Promise<void>; // Made async
-  onUpdatePrice: (newPrice: number) => Promise<void>; // Made async
+  onEdit: () => void;
+  onDelete: () => Promise<void>;
+  onUpdateStock: (newStock: number) => Promise<void>;
+  onUpdatePrice: (newPrice: number) => Promise<void>;
 }
 
 // ============================================================================
@@ -231,23 +231,6 @@ export const MyProductDetail: React.FC<MyProductDetailProps> = ({
     }
   };
 
-  const handleEditSave = async (
-    id: string,
-    updatedProduct: Partial<Product>,
-  ) => {
-    try {
-      setLoadingEdit(true);
-      await onEdit(updatedProduct);
-      setShowEditDialog(false);
-      toast.success("Product updated successfully");
-    } catch (err) {
-      toast.error("Failed to update product");
-      console.error(err);
-    } finally {
-      setLoadingEdit(false);
-    }
-  };
-
   const handleDelete = async () => {
     try {
       setLoadingDelete(true);
@@ -289,11 +272,7 @@ export const MyProductDetail: React.FC<MyProductDetailProps> = ({
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            onClick={() => setShowEditDialog(true)}
-            disabled={loadingEdit}
-          >
+          <Button variant="outline" onClick={onEdit}>
             <Edit className="h-4 w-4 mr-2" />
             {loadingEdit ? "Updating..." : "Edit Product"}
           </Button>
@@ -722,15 +701,6 @@ export const MyProductDetail: React.FC<MyProductDetailProps> = ({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {/* Edit Product Dialog */}
-      <EditProductDialog
-        open={showEditDialog}
-        onOpenChange={setShowEditDialog}
-        product={product}
-        onSave={handleEditSave}
-        mode="edit"
-      />
     </div>
   );
 };

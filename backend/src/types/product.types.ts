@@ -5,8 +5,7 @@ export interface IProduct {
   category: string;
     sku: string; 
   description: string;
-  specifications?: string;
-  price: number;
+  specifications?: Record<string, string> | null;  price: number;
   stock_quantity: number;
   min_order_amount: number;
   unit_type: string;
