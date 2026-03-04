@@ -11,14 +11,13 @@ class CartService {
     return response.data;
   }
 
-  async create(data: any) {
-    
-    const response = await api.post('/cart', data);
+  async updateCartItem(itemId: string, data: any) {
+    const response = await api.put(`/cart/items/${itemId}`, data);
     return response.data;
   }
 
-  async update(id: string, data: any) {
-    const response = await api.put(`/cart/${id}`, data);
+  async create(data: any) {
+    const response = await api.post('/cart', data);
     return response.data;
   }
 

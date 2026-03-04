@@ -156,11 +156,11 @@ const RetailerProductsPage: React.FC = () => {
       rating: 4.5,
       reviews: 0,
       location: "Addis Ababa",
-      minOrder: product.min_order_amount,
+      min_order_amount: product.min_order_amount,
       unit: product.unit_type,
       description: product.description || "",
       stock: product.stock_quantity,
-      isAvailable: product.is_available === 1,
+      isAvailable: product.is_available === true,
       deliveryTime: "2-3 days",
       tags: [product.category].filter(Boolean),
     })) || [];
