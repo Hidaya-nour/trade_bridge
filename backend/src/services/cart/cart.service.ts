@@ -2,7 +2,7 @@ import { CartRepository, CartItemRepository } from '../../repositories/cart.repo
 import { ProductRepository } from '../../repositories/product.repository';
 import { UserRepository } from '../../repositories/user.repository';
 import { AppError } from '../../utils/errors';
-import { AddToCartDTO, UpdateCartItemDTO, CartWithItems } from '../../types/cart.types';
+import { AddToCartDTO, CartWithItems } from '../../types/cart.types';
 import logger from '../../utils/logger';
 
 export class CartService {
@@ -11,10 +11,7 @@ export class CartService {
   private productRepo = new ProductRepository();
   private userRepo = new UserRepository();
 
-  // ============================================================
   // HELPER: Get User Info
-  // ============================================================
-
   private async getUserInfo(userId: string) {
     const user = await this.userRepo.findById(userId);
     if (!user) {
@@ -22,23 +19,17 @@ export class CartService {
     }
     return {
       role: user.role,
-      region: 'all' // Can be extended to get from user profile
+      region: 'all'
     };
   }
 
-  // ============================================================
   // GET CART
-  // ============================================================
-
   async getCart(userId: string): Promise<CartWithItems | null> {
     const { role, region } = await this.getUserInfo(userId);
     return this.cartRepo.findCartWithItems(userId, role, region);
   }
 
-  // ============================================================
   // ADD TO CART
-  // ============================================================
-
   async addToCart(userId: string, itemData: AddToCartDTO): Promise<CartWithItems> {
     const { product_id, quantity } = itemData;
 
@@ -97,91 +88,36 @@ export class CartService {
     return updatedCart;
   }
 
-  // ============================================================
-  // UPDATE CART ITEM
-  // ============================================================
+  // UPDATE CART ITEM 
+  async updateCartItemById(itemId: string, quantity: number) {
+    const cartItem = await this.cartItemRepo.findById(itemId);
 
-  async updateCartItem(userId: string, productId: string, updateData: UpdateCartItemDTO): Promise<CartWithItems> {
-    const { quantity } = updateData;
-
-    // Get cart
-    const cart = await this.cartRepo.getOrCreateCart(userId);
-
-    // Check if item exists
-    const cartItem = await this.cartItemRepo.findByCartAndProduct(cart.id, productId);
-    if (!cartItem) {
-      throw new AppError('Item not found in cart', 404);
-    }
-
-    // Validate product
-    const product = await this.productRepo.findById(productId);
-    if (!product) {
-      throw new AppError('Product not found', 404);
-    }
+    if (!cartItem) return null;
 
     if (quantity <= 0) {
-      // Remove item if quantity is 0 or negative
-      await this.cartItemRepo.removeItem(cart.id, productId);
-    } else {
-      // Validate quantity
-      if (quantity < product.min_order_amount) {
-        throw new AppError(`Minimum order quantity is ${product.min_order_amount}`, 400);
-      }
-
-      if (quantity > product.stock_quantity) {
-        throw new AppError('Insufficient stock', 400);
-      }
-
-      // Update quantity
-      await this.cartItemRepo.updateQuantity(cartItem.id, quantity);
+      await cartItem.destroy();
+      return null;
     }
 
-    // Update cart timestamp
-    await cart.update({ updated_at: new Date() });
+    await cartItem.update({ quantity });
 
-    logger.info(`User ${userId} updated cart item ${productId} quantity to ${quantity}`);
-
-    // Return updated cart
-    const { role, region } = await this.getUserInfo(userId);
-    const updatedCart = await this.cartRepo.findCartWithItems(userId, role, region);
-    if (!updatedCart) {
-      throw new AppError('Failed to retrieve updated cart', 500);
-    }
-
-    return updatedCart;
-  }
-async updateCartItemById(itemId: string, quantity: number) {
-  const cartItem = await this.cartItemRepo.findById(itemId);
-
-  if (!cartItem) return null;
-
-  if (quantity <= 0) {
-    await cartItem.destroy();
-    return null;
-  }
-
-  await cartItem.update({ quantity });
-
-  return cartItem;
+    return cartItem;
 }
-  // ============================================================
   // REMOVE FROM CART
-  // ============================================================
-
-  async removeFromCart(userId: string, productId: string): Promise<CartWithItems> {
+  async removeFromCart(userId: string, itemId: string): Promise<CartWithItems> {
     // Get cart
-    const cart = await this.cartRepo.getOrCreateCart(userId);
+    // const cart = await this.cartRepo.getOrCreateCart(userId);
 
     // Remove item
-    const deleted = await this.cartItemRepo.removeItem(cart.id, productId);
+    const deleted = await this.cartItemRepo.removeItem( itemId);
     if (deleted === 0) {
       throw new AppError('Item not found in cart', 404);
     }
 
     // Update cart timestamp
-    await cart.update({ updated_at: new Date() });
+    // await cart.update({ updated_at: new Date() });
 
-    logger.info(`User ${userId} removed product ${productId} from cart`);
+    logger.info(`User ${userId} removed product ${itemId} from cart`);
 
     // Return updated cart
     const { role, region } = await this.getUserInfo(userId);
@@ -193,32 +129,22 @@ async updateCartItemById(itemId: string, quantity: number) {
     return updatedCart;
   }
 
-  // ============================================================
   // CLEAR CART
-  // ============================================================
-
   async clearCart(userId: string): Promise<{ success: boolean; message: string }> {
     // Get cart
     const cart = await this.cartRepo.getOrCreateCart(userId);
-
     // Clear all items
     await this.cartRepo.clearCart(cart.id);
-
     // Update cart timestamp
     await cart.update({ updated_at: new Date() });
-
     logger.info(`User ${userId} cleared their cart`);
-
     return {
       success: true,
       message: 'Cart cleared successfully'
     };
   }
 
-  // ============================================================
   // VALIDATE CART FOR CHECKOUT
-  // ============================================================
-
   async validateCartForCheckout(userId: string): Promise<{
     valid: boolean;
     issues: string[];

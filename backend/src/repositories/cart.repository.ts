@@ -12,11 +12,7 @@ export class CartRepository extends BaseRepository<Cart> {
   constructor() {
     super(Cart);
   }
-
-  // ============================================================
   // Find Cart with Items
-  // ============================================================
-
   async findCartWithItems(userId: string, userRole?: UserRole, region?: string): Promise<CartWithItems | null> {
     const cart = await this.model.findOne({
       where: { user_id: userId },
@@ -74,10 +70,7 @@ export class CartRepository extends BaseRepository<Cart> {
     };
   }
 
-  // ============================================================
   // Get or Create Cart
-  // ============================================================
-
   async getOrCreateCart(userId: string): Promise<Cart> {
     let cart = await this.model.findOne({ where: { user_id: userId } });
     if (!cart) {
@@ -86,10 +79,7 @@ export class CartRepository extends BaseRepository<Cart> {
     return cart;
   }
 
-  // ============================================================
   // Clear Cart
-  // ============================================================
-
   async clearCart(cartId: string): Promise<number> {
     return CartItem.destroy({ where: { cart_id: cartId } });
   }
@@ -100,20 +90,14 @@ export class CartItemRepository extends BaseRepository<CartItem> {
     super(CartItem);
   }
 
-  // ============================================================
   // Find Cart Item
-  // ============================================================
-
   async findByCartAndProduct(cartId: string, productId: string): Promise<CartItem | null> {
     return this.model.findOne({
       where: { cart_id: cartId, product_id: productId }
     });
   }
 
-  // ============================================================
   // Update Quantity
-  // ============================================================
-
   async updateQuantity(cartItemId: string, quantity: number): Promise<[number, CartItem[]]> {
     return this.model.update(
       { quantity } as any,
@@ -121,13 +105,10 @@ export class CartItemRepository extends BaseRepository<CartItem> {
     );
   }
 
-  // ============================================================
   // Remove Item
-  // ============================================================
-
-  async removeItem(cartId: string, productId: string): Promise<number> {
+  async removeItem( itemId: string): Promise<number> {
     return this.model.destroy({
-      where: { cart_id: cartId, product_id: productId }
+      where: {id: itemId }
     });
   }
 }

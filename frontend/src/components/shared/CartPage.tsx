@@ -301,8 +301,22 @@ export const CartPage: React.FC<CartPageProps> = ({ config }) => {
       .filter(([_, selected]) => selected)
       .map(([id]) => id);
 
-    await Promise.all(selectedIds.map((id) => removeFromCart(id)));
-    toast.success("Selected items removed");
+    try {
+      // Use Promise.allSettled to handle partial failures
+      const results = await Promise.allSettled(
+        selectedIds.map((id) => removeFromCart(id)),
+      );
+
+      const failed = results.filter((r) => r.status === "rejected").length;
+
+      if (failed === 0) {
+        toast.success(`${selectedIds.length} items removed successfully`);
+      } else {
+        toast.error(`${failed} items failed to remove`);
+      }
+    } catch (error) {
+      toast.error("Failed to remove selected items");
+    }
   };
 
   // Apply promo code
@@ -401,8 +415,11 @@ export const CartPage: React.FC<CartPageProps> = ({ config }) => {
             <p className="text-muted-foreground mb-6 max-w-md mx-auto">
               {config.emptyStateMessage}
             </p>
-            <Button size="lg" asChild>
-              <Link to={config.productsPath}>Browse Products</Link>
+            <Button variant="ghost" size="sm" asChild>
+              <Link to={config.productsPath} className="gap-1">
+                <ArrowLeft className="h-4 w-4" />
+                Browse Products
+              </Link>
             </Button>
           </div>
         </Card>
@@ -592,9 +609,7 @@ export const CartPage: React.FC<CartPageProps> = ({ config }) => {
                                 variant="ghost"
                                 size="icon"
                                 className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                                onClick={() =>
-                                  handleRemoveItem(item.product_id)
-                                }
+                                onClick={() => handleRemoveItem(item.id)}
                               >
                                 <Trash2 className="h-4 w-4" />
                               </Button>

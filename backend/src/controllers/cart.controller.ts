@@ -7,10 +7,7 @@ import { AddToCartDTO, UpdateCartItemDTO } from '../types/cart.types';
 const cartService = new CartService();
 
 export class CartController {
-  // ========================================================================
   // GET CART
-  // ========================================================================
-
   async getCart(req: Request, res: Response) {
     try {
       const userId = req.user?.id;
@@ -46,10 +43,7 @@ export class CartController {
     }
   }
 
-  // ========================================================================
   // ADD TO CART
-  // ========================================================================
-
   async addToCart(req: Request, res: Response) {
     try {
       const userId = req.user?.id;
@@ -77,9 +71,7 @@ export class CartController {
     }
   }
 
-  // ========================================================================
   // UPDATE CART ITEM
-  // ========================================================================
 async updateCartItem(req: Request, res: Response) {
   const { itemId } = req.params;
   const { quantity } = req.body;
@@ -95,38 +87,8 @@ async updateCartItem(req: Request, res: Response) {
 
   return res.json(updatedItem);
 }
-  async updateCart(req: Request, res: Response) {
-    try {
-      const userId = req.user?.id;
-      if (!userId) {
-        res.status(401).json({ success: false, message: 'User not authenticated' });
-        return;
-      }
 
-      const { productId } = req.params;
-      const updateData: UpdateCartItemDTO = req.body;
-
-      const cart = await cartService.updateCartItem(userId, productId, updateData);
-
-      res.json({
-        success: true,
-        data: cart,
-        message: 'Cart item updated successfully'
-      });
-    } catch (error) {
-      if (error instanceof AppError) {
-        res.status(error.statusCode).json({ success: false, message: error.message });
-      } else {
-        logger.error('Update cart item error:', error);
-        res.status(500).json({ success: false, message: 'Internal server error' });
-      }
-    }
-  }
-
-  // ========================================================================
   // REMOVE FROM CART
-  // ========================================================================
-
   async removeFromCart(req: Request, res: Response) {
     try {
       const userId = req.user?.id;
@@ -135,9 +97,9 @@ async updateCartItem(req: Request, res: Response) {
         return;
       }
 
-      const { productId } = req.params;
+      const { itemId } = req.params;
 
-      const cart = await cartService.removeFromCart(userId, productId);
+      const cart = await cartService.removeFromCart(userId, itemId);
 
       res.json({
         success: true,
@@ -154,10 +116,7 @@ async updateCartItem(req: Request, res: Response) {
     }
   }
 
-  // ========================================================================
   // CLEAR CART
-  // ========================================================================
-
   async clearCart(req: Request, res: Response) {
     try {
       const userId = req.user?.id;
@@ -179,10 +138,7 @@ async updateCartItem(req: Request, res: Response) {
     }
   }
 
-  // ========================================================================
   // VALIDATE CART FOR CHECKOUT
-  // ========================================================================
-
   async validateCart(req: Request, res: Response) {
     try {
       const userId = req.user?.id;
