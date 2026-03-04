@@ -15,10 +15,7 @@ import {
   ChevronRight,
   AlertCircle,
   CheckCircle2,
-  Store,
-  Factory,
   Package,
-  Clock,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -142,7 +139,7 @@ const DELIVERY_OPTIONS = [
 
 export const CartPage: React.FC<CartPageProps> = ({ config }) => {
   const navigate = useNavigate();
-  const [selectAll, setSelectAll] = useState(true);
+  const [selectAll, setSelectAll] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState("cash");
   const [deliveryOption, setDeliveryOption] = useState("standard");
   const [promoCode, setPromoCode] = useState("");
@@ -610,50 +607,6 @@ export const CartPage: React.FC<CartPageProps> = ({ config }) => {
                 </CardContent>
               </Card>
             ))}
-
-            {/* Bulk Order Note */}
-            {config.bulkDiscountThreshold && (
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-start gap-3">
-                    <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
-                      <AlertCircle className="h-4 w-4 text-blue-600" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium">
-                        Bulk Order Discount Available
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Add more items to qualify for volume discounts.{" "}
-                        {remainingForDiscount > 0 ? (
-                          <>
-                            Spend {formatPrice(remainingForDiscount)} more to
-                            get {config.bulkDiscountPercentage! * 100}% off.
-                          </>
-                        ) : (
-                          <>
-                            You've qualified for{" "}
-                            {config.bulkDiscountPercentage! * 100}% discount!
-                          </>
-                        )}
-                      </p>
-                      <div className="mt-2 h-2 w-full bg-muted rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-primary rounded-full"
-                          style={{
-                            width: `${bulkDiscountProgress}%`,
-                          }}
-                        />
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {formatPrice(subtotal)} /{" "}
-                        {formatPrice(config.bulkDiscountThreshold)}
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
           </div>
 
           {/* Order Summary - Right Column */}
