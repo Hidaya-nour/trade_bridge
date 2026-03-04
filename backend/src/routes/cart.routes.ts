@@ -39,6 +39,7 @@ router.post('/', cartController.addToCart);
 // PUT /api/cart/:productId - Update cart item quantity
 router.put('/:productId', cartController.updateCartItem);
 
+router.put('/items/:itemId', cartController.updateCartItem);
 // ========================================================================
 // DELETE Routes
 // ========================================================================

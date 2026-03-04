@@ -10,17 +10,20 @@ class CartService {
     const response = await api.get(`/cart/${id}`);
     return response.data;
   }
-
+async updateCartItem(itemId: string, data: any) {
+  const response = await api.put(`/cart/items/${itemId}`, data);
+  return response.data;
+}
   async create(data: any) {
     
     const response = await api.post('/cart', data);
     return response.data;
   }
 
-  async update(id: string, data: any) {
-    const response = await api.put(`/cart/${id}`, data);
-    return response.data;
-  }
+  // async update(id: string, data: any) {
+  //   const response = await api.put(`/cart/${id}`, data);
+  //   return response.data;
+  // }
 
   async delete(id: string) {
     const response = await api.delete(`/cart/${id}`);

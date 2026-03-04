@@ -76,7 +76,7 @@ export const useCartStore = create<CartStoreState>()(
       updateQuantity: async (itemId: string, quantity: number) => {
         set({ isLoading: true, error: null });
         try {
-          const response = await cartService.update(itemId, { quantity });
+          const response = await cartService.updateCartItem(itemId, { quantity });
           const updatedItem = response.data?.data || response.data || response;
           
           // Refresh cart to get updated totals

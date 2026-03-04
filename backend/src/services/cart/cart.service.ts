@@ -150,7 +150,20 @@ export class CartService {
 
     return updatedCart;
   }
+async updateCartItemById(itemId: string, quantity: number) {
+  const cartItem = await this.cartItemRepo.findById(itemId);
 
+  if (!cartItem) return null;
+
+  if (quantity <= 0) {
+    await cartItem.destroy();
+    return null;
+  }
+
+  await cartItem.update({ quantity });
+
+  return cartItem;
+}
   // ============================================================
   // REMOVE FROM CART
   // ============================================================

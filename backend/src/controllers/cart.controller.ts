@@ -80,8 +80,22 @@ export class CartController {
   // ========================================================================
   // UPDATE CART ITEM
   // ========================================================================
+async updateCartItem(req: Request, res: Response) {
+  const { itemId } = req.params;
+  const { quantity } = req.body;
 
-  async updateCartItem(req: Request, res: Response) {
+  const updatedItem = await cartService.updateCartItemById(
+    itemId,
+    quantity
+  );
+
+  if (!updatedItem) {
+    return res.status(404).json({ message: "Item not found" });
+  }
+
+  return res.json(updatedItem);
+}
+  async updateCart(req: Request, res: Response) {
     try {
       const userId = req.user?.id;
       if (!userId) {
