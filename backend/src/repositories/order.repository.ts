@@ -176,10 +176,7 @@ export class OrderRepository extends BaseRepository<Order> {
     }
   }
 
-  // ============================================================
   // Update Status
-  // ============================================================
-
   async updateOrderStatus(orderId: string, status: OrderStatus): Promise<boolean> {
     const [updated] = await this.model.update(
       { order_status: status },
@@ -189,10 +186,7 @@ export class OrderRepository extends BaseRepository<Order> {
     return updated > 0;
   }
 
-  // ============================================================
   // Order Summary
-  // ============================================================
-
   async getOrderSummary(orderId: string) {
     const order = await this.model.findByPk(orderId, {
       include: [
@@ -230,10 +224,7 @@ export class OrderRepository extends BaseRepository<Order> {
     };
   }
 
-  // ============================================================
   // Orders by Date Range
-  // ============================================================
-
   async getOrdersByDateRange(startDate: Date, endDate: Date): Promise<Order[]> {
     return this.model.findAll({
       where: {
@@ -245,10 +236,7 @@ export class OrderRepository extends BaseRepository<Order> {
     });
   }
 
-  // ============================================================
   // Order Stats
-  // ============================================================
-
   async getOrderStats(supplierId?: string) {
     const where: any = {};
     if (supplierId) {

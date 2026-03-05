@@ -14,12 +14,13 @@ export interface CartItem {
     min_order_amount: number;
     stock_quantity: number;
     images: string[];
+    supplier_id:string;
     supplier?: {
       id: string;
       business_name: string;
       full_name: string;
       is_verified: boolean;
-      rating: number;
+      // rating: number;
     };
   };
 }

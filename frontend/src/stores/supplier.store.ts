@@ -9,16 +9,12 @@ export interface PublicSupplier {
   full_name?: string;
   role: 'factory' | 'distributor';
   business_address?: string;
-  city?: string;
   country?: string;
   profile_image?: string;
   is_verified: boolean;
-  rating: number;
   total_products: number;
   total_orders: number;
   joined_date: string;
-  description?: string;
-  website?: string;
   payment_terms?: string[];
   delivery_options?: string[];
 }
@@ -32,7 +28,7 @@ export interface SupplierProduct {
   min_order_amount: number;
   stock_quantity: number;
   images: string[];
-  rating: number;
+  // rating: number;
   review_count: number;
 }
 

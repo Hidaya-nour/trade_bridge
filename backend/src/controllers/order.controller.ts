@@ -154,10 +154,7 @@ export class OrderController {
     }
   }
 
-  // ========================================================================
   // CREATE ORDER
-  // ========================================================================
-
   async createOrder(req: Request, res: Response) {
     try {
       const buyerId = req.user?.id!;
@@ -180,10 +177,7 @@ export class OrderController {
     }
   }
 
-  // ========================================================================
   // UPDATE ORDER STATUS
-  // ========================================================================
-
   async updateOrderStatus(req: Request, res: Response) {
     try {
       const { id } = req.params;
@@ -211,10 +205,7 @@ export class OrderController {
     }
   }
 
-  // ========================================================================
   // CANCEL ORDER
-  // ========================================================================
-
   async cancelOrder(req: Request, res: Response) {
     try {
       const { id } = req.params;
@@ -238,10 +229,7 @@ export class OrderController {
     }
   }
 
-  // ========================================================================
   // ORDER STATS
-  // ========================================================================
-
   async getOrderStats(req: Request, res: Response) {
     try {
       const userId = req.user?.id;

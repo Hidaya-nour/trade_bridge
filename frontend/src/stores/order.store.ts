@@ -156,28 +156,26 @@ export const useOrderStore = create<OrderState>((set, get) => ({
     }
   },
 
-  // ========================================================================
   // Common Actions
-  // ========================================================================
-
-  createOrder: async (data: any) => {
-    set({ isLoading: true, error: null });
-    try {
-      const response = await orderService.createOrder(data);
-      
-      // Refresh orders list
-      await get().fetchMyOrders();
-      
-      set({ isLoading: false });
-      return response.data.order;
-    } catch (error: any) {
-      set({
-        error: error.response?.data?.message || 'Failed to create order',
-        isLoading: false,
-      });
-      return null;
-    }
-  },
+createOrder: async (data: any) => {
+  set({ isLoading: true, error: null });
+  try {
+    // The backend will add buyer_id from auth token
+    const response = await orderService.createOrder(data);
+    
+    // Refresh orders list
+    await get().fetchMyOrders();
+    
+    set({ isLoading: false });
+    return response.data.order;
+  } catch (error: any) {
+    set({
+      error: error.response?.data?.message || 'Failed to create order',
+      isLoading: false,
+    });
+    return null;
+  }
+},
 
   cancelOrder: async (id: string, reason?: string) => {
     set({ isLoading: true, error: null });

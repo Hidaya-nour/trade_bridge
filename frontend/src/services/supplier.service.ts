@@ -8,16 +8,12 @@ export interface PublicSupplier {
   full_name?: string;
   role: 'factory' | 'distributor';
   business_address?: string;
-  city?: string;
   country?: string;
   profile_image?: string;
   is_verified: boolean;
-  rating: number;
   total_products: number;
   total_orders: number;
   joined_date: string;
-  description?: string;
-  website?: string;
   payment_terms?: string[];
   delivery_options?: string[];
   created_at: string;
@@ -74,7 +70,6 @@ export interface SupplierReview {
 export interface SearchSuppliersParams {
   query?: string;
   category?: string;
-  city?: string;
   min_rating?: number;
   is_verified?: boolean;
   page?: number;
@@ -215,7 +210,6 @@ class SupplierService {
         params: {
           query: params.query,
           category: params.category,
-          city: params.city,
           min_rating: params.min_rating,
           is_verified: params.is_verified,
           page: params.page || 1,
@@ -254,7 +248,6 @@ class SupplierService {
     params: {
       page?: number;
       limit?: number;
-      city?: string;
       min_rating?: number;
     } = {}
   ): Promise<ApiResponse<SuppliersResponse>> {
@@ -263,7 +256,6 @@ class SupplierService {
         params: {
           page: params.page || 1,
           limit: params.limit || 20,
-          city: params.city,
           min_rating: params.min_rating,
         },
       });
@@ -277,30 +269,29 @@ class SupplierService {
   /**
    * Get suppliers by location
    */
-  async getSuppliersByLocation(
-    city: string,
-    params: {
-      page?: number;
-      limit?: number;
-      category?: string;
-      min_rating?: number;
-    } = {}
-  ): Promise<ApiResponse<SuppliersResponse>> {
-    try {
-      const response = await api.get(`${this.BASE_PATH}/location/${city}`, {
-        params: {
-          page: params.page || 1,
-          limit: params.limit || 20,
-          category: params.category,
-          min_rating: params.min_rating,
-        },
-      });
-      return response.data;
-    } catch (error) {
-      console.error(`Error fetching suppliers in ${city}:`, error);
-      throw error;
-    }
-  }
+  // async getSuppliersByLocation(
+  //   params: {
+  //     page?: number;
+  //     limit?: number;
+  //     category?: string;
+  //     min_rating?: number;
+  //   } = {}
+  // ): Promise<ApiResponse<SuppliersResponse>> {
+  //   try {
+  //     const response = await api.get(`${this.BASE_PATH}/location/${city}`, {
+  //       params: {
+  //         page: params.page || 1,
+  //         limit: params.limit || 20,
+  //         category: params.category,
+  //         min_rating: params.min_rating,
+  //       },
+  //     });
+  //     return response.data;
+  //   } catch (error) {
+  //     console.error(`Error fetching suppliers in ${city}:`, error);
+  //     throw error;
+  //   }
+  // }
 
   /**
    * Get verified suppliers
@@ -309,7 +300,6 @@ class SupplierService {
     page?: number;
     limit?: number;
     category?: string;
-    city?: string;
   } = {}): Promise<ApiResponse<SuppliersResponse>> {
     try {
       const response = await api.get(`${this.BASE_PATH}/verified`, {
@@ -317,7 +307,6 @@ class SupplierService {
           page: params.page || 1,
           limit: params.limit || 20,
           category: params.category,
-          city: params.city,
         },
       });
       return response.data;

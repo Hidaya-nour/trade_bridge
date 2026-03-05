@@ -32,22 +32,14 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
 
 import { useCartStore } from "@/stores/cart.store";
 import { useSupplierStore } from "@/stores/supplier.store";
+import { useOrderStore } from "@/stores/order.store";
 import { formatPrice } from "@/lib/formatters";
 import { getInitials } from "@/lib/utils";
+import { PlaceOrderDialog } from "./PlaceOrderDialog";
 import toast from "react-hot-toast";
 
 // ============================================================================
@@ -82,66 +74,14 @@ interface CartPageProps {
 }
 
 // ============================================================================
-// CONSTANTS
-// ============================================================================
-
-const PAYMENT_METHODS = [
-  {
-    id: "cash",
-    name: "Cash on Delivery",
-    icon: Wallet,
-    description: "Pay when you receive your order",
-  },
-  {
-    id: "credit",
-    name: "Credit",
-    icon: CreditCard,
-    description: "Pay with credit (30 days terms)",
-  },
-  {
-    id: "cheque",
-    name: "Cheque",
-    icon: Building,
-    description: "Pay by cheque",
-  },
-  {
-    id: "mobile",
-    name: "Mobile Banking",
-    icon: Wallet,
-    description: "Pay with mobile money",
-  },
-  {
-    id: "online",
-    name: "Online Payment",
-    icon: CreditCard,
-    description: "Pay with Chapa, Telebirr, etc.",
-  },
-];
-
-const DELIVERY_OPTIONS = [
-  {
-    id: "standard",
-    name: "Standard Delivery",
-    days: "3-5 business days",
-    cost: "Included",
-  },
-  {
-    id: "express",
-    name: "Express Delivery",
-    days: "1-2 business days",
-    cost: "ETB 500",
-  },
-];
-
-// ============================================================================
 // COMPONENT
 // ============================================================================
 
 export const CartPage: React.FC<CartPageProps> = ({ config }) => {
   const navigate = useNavigate();
   const [selectAll, setSelectAll] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState("cash");
   const [deliveryOption, setDeliveryOption] = useState("standard");
+  const [paymentMethod, setPaymentMethod] = useState("cash");
   const [promoCode, setPromoCode] = useState("");
   const [promoApplied, setPromoApplied] = useState(false);
   const [checkoutDialogOpen, setCheckoutDialogOpen] = useState(false);
@@ -166,6 +106,139 @@ export const CartPage: React.FC<CartPageProps> = ({ config }) => {
     isLoading: suppliersLoading,
   } = useSupplierStore();
 
+  const { createOrder, isLoading: orderLoading } = useOrderStore();
+
+  // ============================================================================
+  // PLACE ORDER HANDLER
+  // ============================================================================
+
+  // In CartPage.tsx - Updated handlePlaceOrder function
+  const handlePlaceOrder = async (
+    paymentMethod: string,
+    deliveryOption: string,
+  ) => {
+    try {
+      const supplierIds = selectedItems
+        .map((item) => item.product?.supplier_id)
+        .filter(Boolean) as string[];
+
+      if (supplierIds.length > 0) {
+        await fetchSuppliers(supplierIds);
+      }
+
+      const ordersBySupplier = selectedItems.reduce(
+        (acc, item) => {
+          const supplier_id = item.product?.supplier_id;
+
+          if (!supplier_id) {
+            console.warn("Item missing supplier_id:", item);
+            return acc;
+          }
+
+          const supplier = suppliers[supplier_id];
+
+          if (!acc[supplier_id]) {
+            acc[supplier_id] = {
+              supplier_id: supplier_id,
+              supplier_name:
+                supplier?.business_name ||
+                supplier?.full_name ||
+                `Supplier ${supplier_id.slice(0, 8)}`,
+              items: [],
+              subtotal: 0,
+            };
+          }
+
+          acc[supplier_id].items.push({
+            product_id: item.product_id,
+            quantity: item.quantity,
+            unit_price: item.product?.price || 0,
+            product_name: item.product?.name,
+          });
+
+          acc[supplier_id].subtotal +=
+            (item.product?.price || 0) * item.quantity;
+
+          return acc;
+        },
+        {} as Record<string, any>,
+      );
+
+      console.log("Orders by supplier:", ordersBySupplier);
+
+      // Check if we have any valid orders
+      if (Object.keys(ordersBySupplier).length === 0) {
+        toast.error(
+          "Cannot place order: Items are missing supplier information",
+        );
+        return;
+      }
+
+      // Create separate orders for each supplier
+      const orders = [];
+      for (const [supplierId, orderData] of Object.entries(ordersBySupplier)) {
+        // Calculate per-supplier totals
+        const supplierSubtotal = orderData.subtotal;
+        const supplierShipping = config.shippingCostPerSupplier || 250;
+        const supplierTax = supplierSubtotal * (config.vatPercentage || 0.15);
+        const supplierDiscount = promoApplied
+          ? supplierSubtotal * (config.bulkDiscountPercentage || 0.1)
+          : 0;
+
+        const orderPayload = {
+          supplier_id: supplierId,
+          items: orderData.items.map((item: any) => ({
+            product_id: item.product_id,
+            quantity: item.quantity,
+            unit_price: item.unit_price,
+          })),
+          total_price: Number(
+            (
+              supplierSubtotal +
+              supplierShipping +
+              supplierTax -
+              supplierDiscount
+            ).toFixed(2),
+          ),
+          shipping_cost: supplierShipping,
+          tax_amount: Number(supplierTax.toFixed(2)),
+          discount_amount: Number(supplierDiscount.toFixed(2)),
+          payment_method: paymentMethod,
+          delivery_option: deliveryOption,
+          notes: "",
+        };
+
+        console.log(
+          `Sending order for supplier ${orderData.supplier_name} (${supplierId}):`,
+          orderPayload,
+        );
+
+        const order = await createOrder(orderPayload);
+        console.log(`Order created for supplier ${supplierId}:`, order);
+
+        if (order) orders.push(order);
+      }
+
+      if (orders.length > 0) {
+        toast.success(`${orders.length} order(s) placed successfully!`);
+        setCheckoutDialogOpen(false);
+
+        // Remove all selected items from cart
+        await Promise.all(selectedItems.map((item) => removeFromCart(item.id)));
+
+        navigate(config.ordersPath);
+      } else {
+        toast.error("No orders were created");
+      }
+    } catch (error) {
+      console.error("Order placement error:", error);
+      toast.error("Failed to place order: " + (error as Error).message);
+    }
+  };
+  // ============================================================================
+  // FETCH DATA
+  // ============================================================================
+
   // Fetch cart on mount
   useEffect(() => {
     fetchCart();
@@ -175,7 +248,7 @@ export const CartPage: React.FC<CartPageProps> = ({ config }) => {
   useEffect(() => {
     if (cartItems.length > 0) {
       const supplierIds = cartItems
-        .map((item) => item.product?.supplier?.id)
+        .map((item) => item.product?.supplier_id)
         .filter(Boolean) as string[];
 
       if (supplierIds.length > 0) {
@@ -206,6 +279,10 @@ export const CartPage: React.FC<CartPageProps> = ({ config }) => {
     }
   }, [error]);
 
+  // ============================================================================
+  // CALCULATIONS
+  // ============================================================================
+
   // Calculate selected items
   const selectedItems = useMemo(() => {
     return cartItems.filter((item) => itemSelection[item.id]);
@@ -222,7 +299,7 @@ export const CartPage: React.FC<CartPageProps> = ({ config }) => {
   // Calculate shipping
   const shipping = useMemo(() => {
     const uniqueSuppliers = new Set(
-      selectedItems.map((item) => item.product?.supplier?.id).filter(Boolean),
+      selectedItems.map((item) => item.product?.supplier_id).filter(Boolean),
     );
     return uniqueSuppliers.size * (config.shippingCostPerSupplier || 250);
   }, [selectedItems, config.shippingCostPerSupplier]);
@@ -237,6 +314,19 @@ export const CartPage: React.FC<CartPageProps> = ({ config }) => {
 
   // Calculate total
   const total = subtotal + shipping + tax - discount;
+
+  // Check if bulk discount threshold is met
+  const bulkDiscountProgress = config.bulkDiscountThreshold
+    ? Math.min((subtotal / config.bulkDiscountThreshold) * 100, 100)
+    : 0;
+
+  const remainingForDiscount = config.bulkDiscountThreshold
+    ? Math.max(0, config.bulkDiscountThreshold - subtotal)
+    : 0;
+
+  // ============================================================================
+  // HANDLERS
+  // ============================================================================
 
   // Update quantity
   const handleUpdateQuantity = async (itemId: string, newQuantity: number) => {
@@ -302,7 +392,6 @@ export const CartPage: React.FC<CartPageProps> = ({ config }) => {
       .map(([id]) => id);
 
     try {
-      // Use Promise.allSettled to handle partial failures
       const results = await Promise.allSettled(
         selectedIds.map((id) => removeFromCart(id)),
       );
@@ -361,14 +450,9 @@ export const CartPage: React.FC<CartPageProps> = ({ config }) => {
   // Get role-specific icon
   const RoleIcon = config.supplierIcon;
 
-  // Check if bulk discount threshold is met
-  const bulkDiscountProgress = config.bulkDiscountThreshold
-    ? Math.min((subtotal / config.bulkDiscountThreshold) * 100, 100)
-    : 0;
-
-  const remainingForDiscount = config.bulkDiscountThreshold
-    ? Math.max(0, config.bulkDiscountThreshold - subtotal)
-    : 0;
+  // ============================================================================
+  // LOADING STATE
+  // ============================================================================
 
   if (isLoading || suppliersLoading) {
     return (
@@ -380,6 +464,10 @@ export const CartPage: React.FC<CartPageProps> = ({ config }) => {
       </div>
     );
   }
+
+  // ============================================================================
+  // RENDER
+  // ============================================================================
 
   return (
     <div className="space-y-6">
@@ -415,11 +503,8 @@ export const CartPage: React.FC<CartPageProps> = ({ config }) => {
             <p className="text-muted-foreground mb-6 max-w-md mx-auto">
               {config.emptyStateMessage}
             </p>
-            <Button variant="ghost" size="sm" asChild>
-              <Link to={config.productsPath} className="gap-1">
-                <ArrowLeft className="h-4 w-4" />
-                Browse Products
-              </Link>
+            <Button size="lg" asChild>
+              <Link to={config.productsPath}>Browse Products</Link>
             </Button>
           </div>
         </Card>
@@ -622,6 +707,50 @@ export const CartPage: React.FC<CartPageProps> = ({ config }) => {
                 </CardContent>
               </Card>
             ))}
+
+            {/* Bulk Order Note */}
+            {config.bulkDiscountThreshold && (
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+                      <AlertCircle className="h-4 w-4 text-blue-600" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">
+                        Bulk Order Discount Available
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Add more items to qualify for volume discounts.{" "}
+                        {remainingForDiscount > 0 ? (
+                          <>
+                            Spend {formatPrice(remainingForDiscount)} more to
+                            get {config.bulkDiscountPercentage! * 100}% off.
+                          </>
+                        ) : (
+                          <>
+                            You've qualified for{" "}
+                            {config.bulkDiscountPercentage! * 100}% discount!
+                          </>
+                        )}
+                      </p>
+                      <div className="mt-2 h-2 w-full bg-muted rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-primary rounded-full"
+                          style={{
+                            width: `${bulkDiscountProgress}%`,
+                          }}
+                        />
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {formatPrice(subtotal)} /{" "}
+                        {formatPrice(config.bulkDiscountThreshold)}
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </div>
 
           {/* Order Summary - Right Column */}
@@ -743,154 +872,30 @@ export const CartPage: React.FC<CartPageProps> = ({ config }) => {
         </div>
       )}
 
-      {/* Checkout Dialog */}
-      <Dialog open={checkoutDialogOpen} onOpenChange={setCheckoutDialogOpen}>
-        <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader>
-            <DialogTitle>Complete Your Order</DialogTitle>
-            <DialogDescription>
-              Review your order and select payment method
-            </DialogDescription>
-          </DialogHeader>
-
-          <ScrollArea className="max-h-[60vh] pr-4">
-            <div className="space-y-6 py-4">
-              {/* Order Items Summary */}
-              <div>
-                <h4 className="text-sm font-medium mb-3">Order Items</h4>
-                <div className="space-y-3">
-                  {selectedItems.map((item) => (
-                    <div key={item.id} className="flex justify-between text-sm">
-                      <div>
-                        <span className="font-medium">
-                          {item.product?.name}
-                        </span>
-                        <span className="text-muted-foreground ml-2">
-                          x{item.quantity} {item.product?.unit_type}
-                        </span>
-                      </div>
-                      <span>
-                        {formatPrice(
-                          (item.product?.price || 0) * item.quantity,
-                        )}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <Separator />
-
-              {/* Delivery Options */}
-              <div className="space-y-3">
-                <h4 className="text-sm font-medium">Delivery Option</h4>
-                <RadioGroup
-                  value={deliveryOption}
-                  onValueChange={setDeliveryOption}
-                >
-                  {DELIVERY_OPTIONS.map((option) => (
-                    <div
-                      key={option.id}
-                      className="flex items-center space-x-2"
-                    >
-                      <RadioGroupItem value={option.id} id={option.id} />
-                      <Label htmlFor={option.id} className="flex-1">
-                        <div className="flex justify-between">
-                          <span className="text-sm font-medium">
-                            {option.name}
-                          </span>
-                          <span className="text-sm text-muted-foreground">
-                            {option.cost}
-                          </span>
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                          {option.days}
-                        </p>
-                      </Label>
-                    </div>
-                  ))}
-                </RadioGroup>
-              </div>
-
-              {/* Payment Methods */}
-              <div className="space-y-3">
-                <h4 className="text-sm font-medium">Payment Method</h4>
-                <RadioGroup
-                  value={paymentMethod}
-                  onValueChange={setPaymentMethod}
-                >
-                  {PAYMENT_METHODS.map((method) => (
-                    <div
-                      key={method.id}
-                      className="flex items-center space-x-2"
-                    >
-                      <RadioGroupItem value={method.id} id={method.id} />
-                      <Label htmlFor={method.id} className="flex-1">
-                        <div className="flex items-center gap-2">
-                          <method.icon className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-sm font-medium">
-                            {method.name}
-                          </span>
-                        </div>
-                        <p className="text-xs text-muted-foreground ml-6">
-                          {method.description}
-                        </p>
-                      </Label>
-                    </div>
-                  ))}
-                </RadioGroup>
-              </div>
-
-              {/* Order Total */}
-              <div className="bg-muted/50 p-4 rounded-lg">
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span>Subtotal</span>
-                    <span>{formatPrice(subtotal)}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span>Shipping</span>
-                    <span>{formatPrice(shipping)}</span>
-                  </div>
-                  {promoApplied && (
-                    <div className="flex justify-between text-sm text-green-600">
-                      <span>Discount</span>
-                      <span>-{formatPrice(discount)}</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between text-sm">
-                    <span>VAT ({(config.vatPercentage || 0.15) * 100}%)</span>
-                    <span>{formatPrice(tax)}</span>
-                  </div>
-                  <Separator />
-                  <div className="flex justify-between text-base font-bold">
-                    <span>Total</span>
-                    <span className="text-primary">{formatPrice(total)}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </ScrollArea>
-
-          <DialogFooter className="gap-2">
-            <Button
-              variant="outline"
-              onClick={() => setCheckoutDialogOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={() => {
-                setCheckoutDialogOpen(false);
-                toast.success("Order placed successfully!");
-                navigate(config.ordersPath);
-              }}
-            >
-              Place Order
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Place Order Dialog */}
+      <PlaceOrderDialog
+        open={checkoutDialogOpen}
+        onOpenChange={setCheckoutDialogOpen}
+        items={selectedItems}
+        summary={{
+          subtotal,
+          shipping,
+          discount,
+          tax,
+          total,
+          promoApplied,
+          discountPercentage: config.bulkDiscountPercentage,
+          vatPercentage: config.vatPercentage,
+        }}
+        config={{
+          role: config.role,
+          ordersPath: config.ordersPath,
+          vatPercentage: config.vatPercentage,
+          bulkDiscountPercentage: config.bulkDiscountPercentage,
+        }}
+        onPlaceOrder={handlePlaceOrder}
+        isPlacing={orderLoading}
+      />
     </div>
   );
 };

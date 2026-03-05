@@ -41,7 +41,7 @@ import auditLogRoutes from './routes/audit-log.routes';
 import supplierPaymentMethodRoutes from './routes/supplier-payment-method.routes';
 import factoryAgentRoutes from './routes/factory-agent.routes';
 import ratingReviewRoutes from './routes/rating-review.routes';
-
+import supplierRoutes from './routes/supplier.routes'
 dotenv.config();
 
 const app = express();
@@ -80,6 +80,8 @@ app.use('/api/audit-logs', auditLogRoutes);
 app.use('/api/supplier-payment-methods', supplierPaymentMethodRoutes);
 app.use('/api/factory-agents', factoryAgentRoutes);
 app.use('/api/reviews', ratingReviewRoutes);
+app.use('/api/suppliers', supplierRoutes);
+
 
 
 // Health check
