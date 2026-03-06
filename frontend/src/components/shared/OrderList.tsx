@@ -86,7 +86,7 @@ interface OrderListProps {
   };
   orders?: Order[];
   onCancelOrder?: (orderId: string, reason: string) => void | Promise<boolean>;
-  onReorder?: (orderId: string) => void;
+  onReorder?: (order: Order) => void;
   onRateProduct?: (
     productId: string,
     rating: number,
@@ -718,7 +718,7 @@ export const OrderList: React.FC<OrderListProps> = ({
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => onReorder?.(order.id)}
+                          onClick={() => onReorder?.(order)}
                         >
                           <Repeat className="h-4 w-4 mr-2" />
                           Reorder

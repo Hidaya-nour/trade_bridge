@@ -63,10 +63,7 @@ export class OrderRepository extends BaseRepository<Order> {
     });
   }
 
-  // ============================================================
   // Find All with Filters
-  // ============================================================
-
   async findAllWithFilters(filters: OrderFilters) {
     const where: any = {};
     const limit = filters.limit || 20;
@@ -144,10 +141,7 @@ export class OrderRepository extends BaseRepository<Order> {
     };
   }
 
-  // ============================================================
   // Create Order With Items (Transactional)
-  // ============================================================
-
   async createOrderWithItems(
     orderData: Partial<Order>,
     items: { product_id: string; quantity: number; unit_price: number }[]
