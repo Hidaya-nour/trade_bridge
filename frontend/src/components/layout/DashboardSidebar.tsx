@@ -126,7 +126,7 @@ const roleNavigation = {
       },
       {
         name: "Purchase Orders",
-        href: "/distributor/factory-orders",
+        href: "/distributor/purchase-orders",
         icon: FileText,
         badge: "5",
       },

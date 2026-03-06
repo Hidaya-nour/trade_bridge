@@ -1,7 +1,8 @@
 // pages/distributor/factory-cart.tsx
 import React from "react";
-import { CartPage, type CartConfig } from "@/components/shared/CartPage";
 import { Factory } from "lucide-react";
+import type { CartConfig } from "@/types/cart.types";
+import { CartPage } from "@/components/shared/CartPage";
 
 const DistributorCartPage: React.FC = () => {
   const config: CartConfig = {
@@ -12,7 +13,7 @@ const DistributorCartPage: React.FC = () => {
     supplierPath: "/distributor/factories/:id",
     supplierLabel: "Factory",
     supplierIcon: Factory,
-    ordersPath: "/distributor/factory-orders",
+    ordersPath: "/distributor/orders",
     productsPath: "/distributor/products",
     emptyStateMessage:
       "Your factory cart is empty. Start sourcing products from Ethiopian manufacturers.",

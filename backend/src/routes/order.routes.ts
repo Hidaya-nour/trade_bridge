@@ -39,16 +39,8 @@ const orderIdValidation = [
   param('id').isUUID().withMessage('Valid order ID is required'),
 ];
 
-// ========================================================================
-// Routes
-// ========================================================================
-
 // All order routes require authentication
 router.use(authenticate);
-
-// ========================================================================
-// GET Routes
-// ========================================================================
 
 // Get all orders (with filters) - Admin only
 router.get(
@@ -96,9 +88,6 @@ router.get(
   orderController.getOrderSummary
 );
 
-// ========================================================================
-// POST Routes
-// ========================================================================
 
 // Create new order
 router.post(
@@ -107,10 +96,7 @@ router.post(
   orderController.createOrder
 );
 
-// ========================================================================
 // PATCH Routes
-// ========================================================================
-
 // Update order status
 router.patch(
   '/:id/status',

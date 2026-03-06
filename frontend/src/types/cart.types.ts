@@ -14,16 +14,35 @@ export interface CartItem {
     min_order_amount: number;
     stock_quantity: number;
     images: string[];
+    supplier_id:string;
     supplier?: {
       id: string;
       business_name: string;
       full_name: string;
       is_verified: boolean;
-      rating: number;
+      // rating: number;
     };
   };
 }
 
+export type CartRole = "retailer" | "distributor";
+
+export interface CartConfig {
+  role: CartRole;
+  title: string;
+  description: string;
+  continueShoppingPath: string;
+  supplierPath: string;
+  supplierLabel: string;
+  supplierIcon: React.ElementType;
+  ordersPath: string;
+  productsPath: string;
+  emptyStateMessage: string;
+  bulkDiscountThreshold?: number;
+  bulkDiscountPercentage?: number;
+  vatPercentage?: number;
+  shippingCostPerSupplier?: number;
+}
 export interface Cart {
   id: string;
   user_id: string;

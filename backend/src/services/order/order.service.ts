@@ -99,10 +99,7 @@ export class OrderService {
     });
   }
 
-  // ========================================================================
   // CREATE ORDER
-  // ========================================================================
-
   async createOrder(buyerId: string, orderData: CreateOrderDTO) {
     const { supplier_id, items, payment_method, delivery_address, notes } = orderData;
 
@@ -207,10 +204,7 @@ export class OrderService {
     return deliveryService.default.createDelivery(orderId, '', address);
   }
 
-  // ========================================================================
   // UPDATE ORDER STATUS
-  // ========================================================================
-
   async updateOrderStatus(
     orderId: string, 
     userId: string, 

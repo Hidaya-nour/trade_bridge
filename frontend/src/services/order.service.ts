@@ -64,19 +64,14 @@ class OrderService {
     return response.data;
   }
 
-  // ========================================================================
   // CREATE METHODS
-  // ========================================================================
-
   async createOrder(data: CreateOrderData): Promise<OrderResponse> {
+    console.log("Order payload:", JSON.stringify(data, null, 2));
     const response = await api.post('/orders', data);
     return response.data;
   }
 
-  // ========================================================================
   // UPDATE METHODS
-  // ========================================================================
-
   async updateOrderStatus(id: string, data: UpdateOrderStatusData): Promise<OrderResponse> {
     const response = await api.patch(`/orders/${id}/status`, data);
     return response.data;

@@ -2,6 +2,8 @@
 // Order Types
 // ============================================================================
 
+import type { Product } from "./product.types";
+
 export type OrderStatus = 
   | 'pending' 
   | 'approved' 
@@ -59,13 +61,8 @@ export interface OrderItem {
   product_id: string;
   quantity: number;
   unit_price: number;
-  product?: {
-    id: string;
-    name: string;
-    category: string;
-    unit_type: string;
-    images?: string[];
-  };
+  product?: Product;
+
 }
 
 export interface Payment {
