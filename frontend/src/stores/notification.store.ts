@@ -1,111 +1,84 @@
 import { create } from 'zustand';
 import { notificationService } from '../services/notification.service';
-
-interface NotificationItem {
-  id: string;
-  user_id: string;
-  type: string;
-  title: string;
-  message: string;
-  is_read: number;
-  created_at: string;
-}
+import type { Notification, NotificationFilters } from '@/types/notification.types';
 
 interface NotificationCounts {
   total: number;
   unread: number;
 }
+
 interface NotificationState {
-  notifications: NotificationItem[];
+  notifications: Notification[];
   total: number;
   page: number;
+  totalPages: number;
   isLoading: boolean;
   error: string | null;
- counts: NotificationCounts;
-  
-  // UI States
+  counts: NotificationCounts;
   isLoadingCounts: boolean;
-  
-  // Actions
+  filters: NotificationFilters;
+  fetchNotifications: (filters?: NotificationFilters) => Promise<void>;
   fetchCounts: () => Promise<void>;
-  incrementUnread: () => void;
-  decrementUnread: (amount?: number) => void;
-  clearError: () => void;
-  fetchNotifications: (page?: number, limit?: number) => Promise<void>;
   markAsRead: (id: string) => Promise<void>;
   markAllRead: () => Promise<void>;
-  pushNotification: (item: NotificationItem) => void;
+  clearAll: () => Promise<void>;
+  pushNotification: (item: Notification) => void;
   deleteNotification: (id: string) => Promise<void>;
+  incrementUnread: () => void;
+  decrementUnread: (amount?: number) => void;
+  setFilters: (filters: NotificationFilters) => void;
+  clearError: () => void;
 }
 
 export const useNotificationStore = create<NotificationState>((set, get) => ({
   notifications: [],
   total: 0,
   page: 1,
+  totalPages: 1,
   isLoading: false,
   error: null,
-
-   counts: {
+  counts: {
     total: 0,
-    unread: 0
+    unread: 0,
   },
-  
   isLoadingCounts: false,
+  filters: { page: 1, limit: 20 },
 
-  fetchNotifications: async (page = 1, limit = 20) => {
+  fetchNotifications: async (filters = {}) => {
     set({ isLoading: true, error: null });
     try {
-      const data = await notificationService.getNotifications(page, limit);
-      set({ notifications: data.data.notifications, total: data.data.total, page: data.data.page, isLoading: false });
-    } catch (err: any) {
-      set({ error: err.message || 'Failed to fetch', isLoading: false });
+      const merged = { ...get().filters, ...filters };
+      const response = await notificationService.getNotifications(merged);
+      set({
+        notifications: response.data.notifications || [],
+        total: response.data.total || 0,
+        page: response.data.page || 1,
+        totalPages: response.data.totalPages || 1,
+        counts: {
+          ...get().counts,
+          unread: response.data.unread_count ?? get().counts.unread,
+        },
+        filters: merged,
+        isLoading: false,
+      });
+    } catch (error: any) {
+      set({
+        error: error.response?.data?.message || 'Failed to fetch notifications',
+        isLoading: false,
+      });
     }
-  },
-
-  markAsRead: async (id: string) => {
-    try {
-      await notificationService.markAsRead(id);
-      set(state => ({ notifications: state.notifications.map(n => n.id === id ? { ...n, is_read: 1 } : n) }));
-    } catch (err) {
-      console.error('Mark read failed', err);
-    }
-  },
-
-  markAllRead: async () => {
-    try {
-      await notificationService.markAllRead();
-      set(state => ({ notifications: state.notifications.map(n => ({ ...n, is_read: 1 })) }));
-    } catch (err) {
-      console.error('Mark all read failed', err);
-    }
-  },
-deleteNotification: async (id: string) => {
-    try {
-      // Assuming there's an API endpoint to delete a notification    
-      await notificationService.deleteNotification(id);
-      set(state => ({
-        notifications: state.notifications.filter(n => n.id !== id),
-        total: state.total - 1
-      }));
-    } catch (err) {
-      console.error('Delete notification failed', err);
-    } },
-  pushNotification: (item: NotificationItem) => {
-    set(state => ({ notifications: [item, ...state.notifications], total: state.total + 1 }));
   },
 
   fetchCounts: async () => {
     set({ isLoadingCounts: true, error: null });
     try {
       const response = await notificationService.getCounts();
-      const data = response.data || response;
-      
-      set({ 
+      set({
         counts: {
-          total: data.total || 0,
-          unread: data.unread || 0
+          total: response.data.total || 0,
+          unread: response.data.unread || 0,
         },
-        isLoadingCounts: false 
+        isLoadingCounts: false,
       });
     } catch (error: any) {
       set({
@@ -115,14 +88,86 @@ deleteNotification: async (id: string) => {
     }
   },
 
+  markAsRead: async (id: string) => {
+    try {
+      await notificationService.markAsRead(id);
+      set((state) => ({
+        notifications: state.notifications.map((n) =>
+          n.id === id ? { ...n, is_read: 1 } : n
+        ),
+      }));
+      get().decrementUnread(1);
+    } catch (error: any) {
+      set({ error: error.response?.data?.message || 'Failed to mark notification as read' });
+    }
+  },
+
+  markAllRead: async () => {
+    try {
+      await notificationService.markAllRead();
+      set((state) => ({
+        notifications: state.notifications.map((n) => ({ ...n, is_read: 1 })),
+        counts: { ...state.counts, unread: 0 },
+      }));
+    } catch (error: any) {
+      set({ error: error.response?.data?.message || 'Failed to mark all notifications as read' });
+    }
+  },
+
+  clearAll: async () => {
+    try {
+      await notificationService.clearAll();
+      set({
+        notifications: [],
+        total: 0,
+        page: 1,
+        totalPages: 1,
+        counts: { total: 0, unread: 0 },
+      });
+    } catch (error: any) {
+      set({ error: error.response?.data?.message || 'Failed to clear notifications' });
+    }
+  },
+
+  pushNotification: (item: Notification) => {
+    set((state) => ({
+      notifications: [item, ...state.notifications],
+      total: state.total + 1,
+      counts: {
+        total: state.counts.total + 1,
+        unread: item.is_read ? state.counts.unread : state.counts.unread + 1,
+      },
+    }));
+  },
+
+  deleteNotification: async (id: string) => {
+    try {
+      const target = get().notifications.find((n) => n.id === id);
+      await notificationService.deleteNotification(id);
+      set((state) => ({
+        notifications: state.notifications.filter((n) => n.id !== id),
+        total: Math.max(0, state.total - 1),
+        counts: {
+          total: Math.max(0, state.counts.total - 1),
+          unread:
+            target && !target.is_read
+              ? Math.max(0, state.counts.unread - 1)
+              : state.counts.unread,
+        },
+      }));
+    } catch (error: any) {
+      set({ error: error.response?.data?.message || 'Failed to delete notification' });
+    }
+  },
+
   incrementUnread: () => {
     const { counts } = get();
     set({
       counts: {
         ...counts,
         unread: counts.unread + 1,
-        total: counts.total + 1
-      }
+        total: counts.total + 1,
+      },
     });
   },
 
@@ -131,11 +176,14 @@ deleteNotification: async (id: string) => {
     set({
       counts: {
         ...counts,
-        unread: Math.max(0, counts.unread - amount)
-      }
+        unread: Math.max(0, counts.unread - amount),
+      },
     });
   },
 
-  clearError: () => set({ error: null })
+  setFilters: (filters: NotificationFilters) =>
+    set((state) => ({ filters: { ...state.filters, ...filters } })),
 
+  clearError: () => set({ error: null }),
 }));
+

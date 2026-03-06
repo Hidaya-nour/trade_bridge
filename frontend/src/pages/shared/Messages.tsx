@@ -1,15 +1,37 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { MessageSquare, Search, Send } from 'lucide-react';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Textarea } from '@/components/ui/textarea';
-import { useAuthStore } from '@/stores/auth.store';
-import { useMessageStore } from '@/stores/message.store';
-import { cn } from '@/lib/utils';
+import React, { useEffect, useMemo, useState } from "react";
+import {
+  Check,
+  CheckCheck,
+  MessageSquare,
+  Plus,
+  Search,
+  Send,
+} from "lucide-react";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { useAuthStore } from "@/stores/auth.store";
+import { useMessageStore } from "@/stores/message.store";
+import { cn } from "@/lib/utils";
 
 const formatTime = (value: string) => {
   const date = new Date(value);
@@ -19,29 +41,36 @@ const formatTime = (value: string) => {
 
 const getInitials = (name: string) =>
   name
-    .split(' ')
+    .split(" ")
     .filter(Boolean)
     .map((part) => part[0])
-    .join('')
+    .join("")
     .slice(0, 2)
     .toUpperCase();
 
 const MessagesPage: React.FC = () => {
-  const [messageInput, setMessageInput] = useState('');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [messageInput, setMessageInput] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isNewChatOpen, setIsNewChatOpen] = useState(false);
+  const [contactSearch, setContactSearch] = useState("");
+  const [contactRole, setContactRole] = useState<string>("all");
 
   const currentUser = useAuthStore((state) => state.user);
   const {
     conversations,
     conversationMessages,
+    contacts,
+    contactsLoading,
     currentConversationUserId,
     isLoading,
     isSending,
     error,
     fetchUserMessages,
+    fetchChatContacts,
     fetchConversation,
     sendMessage,
     markAsRead,
+    startChatWithUser,
     setCurrentConversation,
   } = useMessageStore();
 
@@ -62,6 +91,18 @@ const MessagesPage: React.FC = () => {
   }, [currentConversationUserId, fetchConversation]);
 
   useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      if (document.visibilityState !== "visible") return;
+      void fetchUserMessages();
+      if (currentConversationUserId) {
+        void fetchConversation(currentConversationUserId);
+      }
+    }, 1000);
+
+    return () => window.clearInterval(intervalId);
+  }, [currentConversationUserId, fetchConversation, fetchUserMessages]);
+
+  useEffect(() => {
     if (!currentUser?.id || !conversationMessages.length) return;
     const unreadIds = conversationMessages
       .filter((msg) => msg.receiver_id === currentUser.id && !msg.is_read)
@@ -74,12 +115,17 @@ const MessagesPage: React.FC = () => {
   const filteredConversations = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
     if (!query) return conversations;
-    return conversations.filter((conv) => conv.participant_name.toLowerCase().includes(query));
+    return conversations.filter((conv) =>
+      conv.participant_name.toLowerCase().includes(query),
+    );
   }, [conversations, searchQuery]);
 
   const activeConversation = useMemo(
-    () => conversations.find((conv) => conv.participant_id === currentConversationUserId) || null,
-    [conversations, currentConversationUserId]
+    () =>
+      conversations.find(
+        (conv) => conv.participant_id === currentConversationUserId,
+      ) || null,
+    [conversations, currentConversationUserId],
   );
 
   const handleSendMessage = async () => {
@@ -89,21 +135,147 @@ const MessagesPage: React.FC = () => {
     if (!receiver_id || !message) return;
 
     const sent = await sendMessage({ receiver_id, message });
-    if (sent) setMessageInput('');
+    if (sent) setMessageInput("");
+  };
+
+  const handleOpenNewChat = async (open: boolean) => {
+    setIsNewChatOpen(open);
+    if (open) {
+      await fetchChatContacts();
+    }
+  };
+
+  const handleSearchContacts = async (query: string, role: string) => {
+    await fetchChatContacts(
+      query.trim() || undefined,
+      role === "all" ? undefined : role,
+    );
+  };
+
+  const handleStartChat = async (userId: string) => {
+    await startChatWithUser(userId);
+    setIsNewChatOpen(false);
+    setContactSearch("");
+    setContactRole("all");
   };
 
   return (
-    <div className="h-[calc(100vh-8rem)] space-y-4">
+    <div className="h-[calc(100vh-8rem)] min-h-0 space-y-4">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Messages</h1>
-          <p className="text-muted-foreground mt-1">Chat with your trading partners</p>
+          <p className="text-muted-foreground mt-1">
+            Chat with your trading partners
+          </p>
         </div>
+        <Dialog
+          open={isNewChatOpen}
+          onOpenChange={(open) => void handleOpenNewChat(open)}
+        >
+          <DialogTrigger asChild>
+            <Button>
+              <Plus className="h-4 w-4 mr-2" />
+              New Chat
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Start New Chat</DialogTitle>
+              <DialogDescription>
+                Search users and start chatting instantly.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-3">
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Search name, email, or business..."
+                  value={contactSearch}
+                  onChange={(e) => setContactSearch(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      void handleSearchContacts(contactSearch, contactRole);
+                    }
+                  }}
+                />
+                <Button
+                  variant="outline"
+                  onClick={() =>
+                    void handleSearchContacts(contactSearch, contactRole)
+                  }
+                >
+                  Search
+                </Button>
+              </div>
+
+              <Select
+                value={contactRole}
+                onValueChange={(role) => {
+                  setContactRole(role);
+                  void handleSearchContacts(contactSearch, role);
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Filter by role" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All roles</SelectItem>
+                  <SelectItem value="factory">Factory</SelectItem>
+                  <SelectItem value="distributor">Distributor</SelectItem>
+                  <SelectItem value="retailer">Retailer</SelectItem>
+                  <SelectItem value="driver">Driver</SelectItem>
+                  <SelectItem value="admin">Admin</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <ScrollArea className="h-72 border rounded-md">
+                <div className="p-2 space-y-1">
+                  {contactsLoading && (
+                    <p className="text-sm text-muted-foreground p-2">
+                      Loading contacts...
+                    </p>
+                  )}
+                  {!contactsLoading && contacts.length === 0 && (
+                    <p className="text-sm text-muted-foreground p-2">
+                      No users found. Try a different search.
+                    </p>
+                  )}
+                  {contacts.map((contact) => (
+                    <button
+                      key={contact.id}
+                      onClick={() => void handleStartChat(contact.id)}
+                      className="w-full text-left p-2 rounded-md hover:bg-accent transition-colors"
+                    >
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-9 w-9">
+                          <AvatarFallback>
+                            {getInitials(contact.full_name)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium truncate">
+                            {contact.full_name}
+                          </p>
+                          <p className="text-xs text-muted-foreground truncate">
+                            {contact.business_name || contact.email}
+                          </p>
+                        </div>
+                        <Badge variant="outline" className="capitalize">
+                          {contact.role}
+                        </Badge>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </ScrollArea>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
 
       <Card className="h-[calc(100vh-12rem)] overflow-hidden">
-        <div className="flex h-full">
-          <div className="w-full md:w-80 border-r flex flex-col">
+        <div className="flex h-full min-h-0">
+          <div className="w-full md:w-80 border-r flex flex-col min-h-0 overflow-hidden">
             <div className="p-4">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -116,21 +288,25 @@ const MessagesPage: React.FC = () => {
               </div>
             </div>
 
-            <ScrollArea className="flex-1">
+            <ScrollArea className="flex-1 min-h-0">
               <div className="p-2 space-y-1">
                 {filteredConversations.map((conversation) => (
                   <button
                     key={conversation.participant_id}
-                    onClick={() => setCurrentConversation(conversation.participant_id)}
+                    onClick={() =>
+                      setCurrentConversation(conversation.participant_id)
+                    }
                     className={cn(
-                      'w-full flex items-start gap-3 p-3 rounded-lg transition-colors text-left',
+                      "w-full flex items-start gap-3 p-3 rounded-lg transition-colors text-left",
                       currentConversationUserId === conversation.participant_id
-                        ? 'bg-accent'
-                        : 'hover:bg-accent/50'
+                        ? "bg-accent"
+                        : "hover:bg-accent/50",
                     )}
                   >
                     <Avatar className="h-10 w-10">
-                      <AvatarFallback>{getInitials(conversation.participant_name)}</AvatarFallback>
+                      <AvatarFallback>
+                        {getInitials(conversation.participant_name)}
+                      </AvatarFallback>
                     </Avatar>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between">
@@ -141,7 +317,9 @@ const MessagesPage: React.FC = () => {
                           {formatTime(conversation.last_message_time)}
                         </span>
                       </div>
-                      <p className="text-xs text-muted-foreground truncate">{conversation.last_message}</p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {conversation.last_message}
+                      </p>
                     </div>
                     {conversation.unread_count > 0 && (
                       <Badge className="h-5 min-w-5 px-1 flex items-center justify-center">
@@ -155,42 +333,61 @@ const MessagesPage: React.FC = () => {
           </div>
 
           {activeConversation ? (
-            <div className="flex-1 flex flex-col">
+            <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
               <div className="flex items-center justify-between p-4 border-b">
                 <div className="flex items-center gap-3">
                   <Avatar className="h-10 w-10">
-                    <AvatarFallback>{getInitials(activeConversation.participant_name)}</AvatarFallback>
+                    <AvatarFallback>
+                      {getInitials(activeConversation.participant_name)}
+                    </AvatarFallback>
                   </Avatar>
                   <div>
-                    <h3 className="font-semibold">{activeConversation.participant_name}</h3>
-                    <p className="text-xs text-muted-foreground">
-                      {isLoading ? 'Loading conversation...' : 'Connected'}
-                    </p>
+                    <h3 className="font-semibold">
+                      {activeConversation.participant_name}
+                    </h3>
                   </div>
                 </div>
               </div>
 
-              <ScrollArea className="flex-1 p-4">
+              <ScrollArea className="flex-1 min-h-0 p-4">
                 <div className="space-y-4">
                   {conversationMessages.map((msg) => {
                     const mine = msg.sender_id === currentUser?.id;
                     return (
-                      <div key={msg.id} className={cn('flex', mine ? 'justify-end' : 'justify-start')}>
+                      <div
+                        key={msg.id}
+                        className={cn(
+                          "flex",
+                          mine ? "justify-end" : "justify-start",
+                        )}
+                      >
                         <div
                           className={cn(
-                            'max-w-[75%] rounded-lg p-3',
-                            mine ? 'bg-primary text-primary-foreground' : 'bg-muted'
+                            "max-w-[75%] rounded-lg p-3",
+                            mine
+                              ? "bg-primary text-primary-foreground"
+                              : "bg-muted",
                           )}
                         >
-                          <p className="text-sm whitespace-pre-wrap">{msg.message}</p>
-                          <p
+                          <p className="text-sm whitespace-pre-wrap">
+                            {msg.message}
+                          </p>
+                          <div
                             className={cn(
-                              'text-[11px] mt-1',
-                              mine ? 'text-primary-foreground/70' : 'text-muted-foreground'
+                              "text-[11px] mt-1 flex items-center justify-end gap-1",
+                              mine
+                                ? "text-primary-foreground/70"
+                                : "text-muted-foreground",
                             )}
                           >
-                            {formatTime(msg.created_at)}
-                          </p>
+                            <span>{formatTime(msg.created_at)}</span>
+                            {mine &&
+                              (msg.is_read ? (
+                                <CheckCheck className="h-3 w-3" />
+                              ) : (
+                                <Check className="h-3 w-3" />
+                              ))}
+                          </div>
                         </div>
                       </div>
                     );
@@ -206,25 +403,34 @@ const MessagesPage: React.FC = () => {
                     value={messageInput}
                     onChange={(e) => setMessageInput(e.target.value)}
                     onKeyDown={(e) => {
-                      if (e.key === 'Enter' && !e.shiftKey) {
+                      if (e.key === "Enter" && !e.shiftKey) {
                         e.preventDefault();
                         void handleSendMessage();
                       }
                     }}
                   />
-                  <Button onClick={() => void handleSendMessage()} disabled={!messageInput.trim() || isSending}>
+                  <Button
+                    onClick={() => void handleSendMessage()}
+                    disabled={!messageInput.trim() || isSending}
+                  >
                     <Send className="h-4 w-4" />
                   </Button>
                 </div>
-                {error && <p className="text-xs text-destructive mt-2">{error}</p>}
+                {error && (
+                  <p className="text-xs text-destructive mt-2">{error}</p>
+                )}
               </div>
             </div>
           ) : (
             <div className="flex-1 flex items-center justify-center">
               <div className="text-center">
                 <MessageSquare className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                <h3 className="text-lg font-semibold mb-2">No conversation selected</h3>
-                <p className="text-muted-foreground">Pick a conversation to start messaging.</p>
+                <h3 className="text-lg font-semibold mb-2">
+                  No conversation selected
+                </h3>
+                <p className="text-muted-foreground">
+                  Pick a conversation to start messaging.
+                </p>
               </div>
             </div>
           )}
@@ -235,4 +441,3 @@ const MessagesPage: React.FC = () => {
 };
 
 export default MessagesPage;
-

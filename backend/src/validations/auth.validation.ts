@@ -57,3 +57,25 @@ export const resetPasswordSchema = Joi.object({
     'any.required': 'New password is required'
   })
 });
+
+export const updateProfileSchema = Joi.object({
+  full_name: Joi.string().min(2).max(100).optional(),
+  phone: Joi.string().allow('', null).optional(),
+  business_name: Joi.string().allow('', null).optional(),
+  business_address: Joi.string().allow('', null).optional(),
+  tin_number: Joi.string().allow('', null).optional(),
+  profile_image: Joi.string().uri().allow('', null).optional()
+}).min(1).messages({
+  'object.min': 'At least one field is required'
+});
+
+export const changePasswordSchema = Joi.object({
+  currentPassword: Joi.string().required().messages({
+    'any.required': 'Current password is required'
+  }),
+  newPassword: Joi.string().min(8).required().messages({
+    'string.min': 'New password must be at least 8 characters long',
+    'any.required': 'New password is required'
+  }),
+  confirmPassword: Joi.string().optional()
+});

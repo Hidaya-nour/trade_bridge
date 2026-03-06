@@ -3,6 +3,7 @@ import { ChatMessageService } from '../services/chat-message/chat-message.servic
 import { AppError } from '../utils/errors';
 import logger from '../utils/logger';
 import { body, param, query } from 'express-validator';
+import { UserRole } from '../types/auth.types';
 
 const chatService = new ChatMessageService();
 
@@ -125,6 +126,25 @@ export class ChatMessageController {
     }
   }
 
+  // Get contacts for starting a new chat
+  async getChatContacts(req: Request, res: Response) {
+    try {
+      const currentUserId = (req as any).user.id;
+      const search = req.query.q as string | undefined;
+      const role = req.query.role as UserRole | undefined;
+
+      const contacts = await chatService.getChatContacts(currentUserId, search, role);
+      res.json({ success: true, data: contacts });
+    } catch (error) {
+      if (error instanceof AppError) {
+        res.status(error.statusCode).json({ success: false, message: error.message });
+      } else {
+        logger.error('Get chat contacts error:', error);
+        res.status(500).json({ success: false, message: 'Internal server error' });
+      }
+    }
+  }
+
   // Validation rules
   static sendMessageValidation = [
     body('receiver_id').isUUID().withMessage('Invalid receiver ID'),
@@ -144,5 +164,13 @@ export class ChatMessageController {
 
   static messageIdValidation = [
     param('id').isUUID().withMessage('Invalid message ID')
+  ];
+
+  static chatContactsValidation = [
+    query('q').optional().isString().isLength({ max: 100 }).withMessage('Invalid search query'),
+    query('role')
+      .optional()
+      .isIn(['retailer', 'distributor', 'factory', 'driver', 'admin'])
+      .withMessage('Invalid role filter'),
   ];
 }

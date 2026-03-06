@@ -10,12 +10,28 @@ const paymentMethodController = new SupplierPaymentMethodController();
 router.use(authenticate);
 
 // Supplier payment method routes
-router.post('/', validate(SupplierPaymentMethodController.createValidation), paymentMethodController.create);
-router.get('/', paymentMethodController.getSupplierPaymentMethods);
-router.get('/active', paymentMethodController.getActivePaymentMethods);
-router.get('/primary', paymentMethodController.getPrimaryPaymentMethod);
-router.put('/:id', validate(SupplierPaymentMethodController.idValidation), paymentMethodController.update);
-router.patch('/:id/primary', validate(SupplierPaymentMethodController.idValidation), paymentMethodController.setPrimary);
-router.delete('/:id', validate(SupplierPaymentMethodController.idValidation), paymentMethodController.remove);
+router.post(
+  '/',
+  validate(SupplierPaymentMethodController.createValidation),
+  (req, res) => paymentMethodController.create(req, res)
+);
+router.get('/', (req, res) => paymentMethodController.getSupplierPaymentMethods(req, res));
+router.get('/active', (req, res) => paymentMethodController.getActivePaymentMethods(req, res));
+router.get('/primary', (req, res) => paymentMethodController.getPrimaryPaymentMethod(req, res));
+router.put(
+  '/:id',
+  validate(SupplierPaymentMethodController.idValidation),
+  (req, res) => paymentMethodController.update(req, res)
+);
+router.patch(
+  '/:id/primary',
+  validate(SupplierPaymentMethodController.idValidation),
+  (req, res) => paymentMethodController.setPrimary(req, res)
+);
+router.delete(
+  '/:id',
+  validate(SupplierPaymentMethodController.idValidation),
+  (req, res) => paymentMethodController.remove(req, res)
+);
 
 export default router;

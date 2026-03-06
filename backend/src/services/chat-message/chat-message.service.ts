@@ -1,7 +1,8 @@
 import { ChatMessageRepository } from '../../repositories/chat-message.repository';
 import { UserRepository } from '../../repositories/user.repository';
 import { AppError } from '../../utils/errors';
-import { IChatMessage } from '../../types/chat-message.types';
+import { IChatContact, IChatMessage } from '../../types/chat-message.types';
+import { UserRole } from '../../types/auth.types';
 import logger from '../../utils/logger';
 
 export class ChatMessageService {
@@ -59,5 +60,30 @@ export class ChatMessageService {
 
   async getMessageById(id: string): Promise<IChatMessage | null> {
     return this.chatRepo.findById(id);
+  }
+
+  async getChatContacts(
+    currentUserId: string,
+    search?: string,
+    role?: UserRole
+  ): Promise<IChatContact[]> {
+    const query = search?.trim() || '';
+
+    const users = query
+      ? await this.userRepo.searchUsers(query, role)
+      : await this.userRepo.findActiveUsers();
+
+    return users
+      .filter((user) => user.id !== currentUserId && user.status === 'active')
+      .filter((user) => (role ? user.role === role : true))
+      .slice(0, 30)
+      .map((user) => ({
+        id: user.id,
+        full_name: user.full_name,
+        email: user.email,
+        role: user.role,
+        business_name: user.business_name,
+        profile_image: user.profile_image,
+      }));
   }
 }

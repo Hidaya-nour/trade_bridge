@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   User,
@@ -71,6 +71,9 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useAuthStore } from "@/stores/auth.store";
+import { useSupplierPaymentMethodStore } from "@/stores/supplier-payment-method.store";
+import { useNotificationStore } from "@/stores/notification.store";
 
 // Mock user data
 const userData = {
@@ -102,7 +105,6 @@ const userData = {
     supplierUpdates: true,
   },
   security: {
-    twoFactor: false,
     loginAlerts: true,
     deviceHistory: [
       {
@@ -139,6 +141,197 @@ const SettingsPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState("profile");
   const [isEditing, setIsEditing] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [saveMessage, setSaveMessage] = useState<string | null>(null);
+  const [businessMessage, setBusinessMessage] = useState<string | null>(null);
+  const [securityMessage, setSecurityMessage] = useState<string | null>(null);
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  });
+  const [paymentMessage, setPaymentMessage] = useState<string | null>(null);
+  const [newPaymentMethod, setNewPaymentMethod] = useState({
+    method_type: "bank_transfer",
+    provider_name: "",
+    account_holder_name: "",
+    account_identifier: "",
+    account_display: "",
+    is_primary: false,
+  });
+
+  const { user, fetchUser, updateProfile, changePassword, isLoading } = useAuthStore();
+  const {
+    items: supplierPaymentMethods,
+    isLoading: isPaymentLoading,
+    error: paymentError,
+    fetchAll: fetchSupplierPaymentMethods,
+    create: createSupplierPaymentMethod,
+    update: updateSupplierPaymentMethod,
+    delete: deleteSupplierPaymentMethod,
+  } = useSupplierPaymentMethodStore();
+  const {
+    counts: notificationCounts,
+    fetchCounts: fetchNotificationCounts,
+    markAllRead: markAllNotificationsRead,
+    clearAll: clearAllNotifications,
+  } = useNotificationStore();
+  const [profileForm, setProfileForm] = useState({
+    full_name: "",
+    email: "",
+    phone: "",
+    altPhone: "",
+    business_name: "",
+    businessType: "",
+    business_address: "",
+    tin_number: "",
+    vatRegistered: true,
+    bio: "",
+    avatar: "",
+  });
+
+  const canManageSupplierPaymentMethods =
+    user?.role === "factory" || user?.role === "distributor";
+
+  useEffect(() => {
+    if (!user) {
+      void fetchUser();
+      return;
+    }
+
+    setProfileForm((prev) => ({
+      ...prev,
+      full_name: user.full_name || "",
+      email: user.email || "",
+      phone: user.phone || "",
+      business_name: user.business_name || "",
+      businessType: user.role || "",
+      business_address: user.business_address || "",
+      tin_number: user.tin_number || "",
+      avatar: user.profile_image || "",
+    }));
+  }, [user, fetchUser]);
+
+  useEffect(() => {
+    if (!canManageSupplierPaymentMethods && activeTab === "payment") {
+      setActiveTab("profile");
+    }
+  }, [activeTab, canManageSupplierPaymentMethods]);
+
+  useEffect(() => {
+    if (canManageSupplierPaymentMethods) {
+      void fetchSupplierPaymentMethods();
+    }
+  }, [canManageSupplierPaymentMethods, fetchSupplierPaymentMethods]);
+
+  useEffect(() => {
+    void fetchNotificationCounts();
+  }, [fetchNotificationCounts]);
+
+  const handleProfileSave = async () => {
+    try {
+      await updateProfile({
+        full_name: profileForm.full_name,
+        phone: profileForm.phone,
+        business_name: profileForm.business_name,
+        business_address: profileForm.business_address,
+        tin_number: profileForm.tin_number,
+        profile_image: profileForm.avatar,
+      });
+      setSaveMessage("Profile updated successfully");
+      setIsEditing(false);
+    } catch {
+      setSaveMessage("Failed to update profile");
+    }
+  };
+
+  const handleBusinessSave = async () => {
+    try {
+      await updateProfile({
+        business_name: profileForm.business_name,
+        business_address: profileForm.business_address,
+        tin_number: profileForm.tin_number,
+      });
+      setBusinessMessage("Business info updated successfully");
+    } catch {
+      setBusinessMessage("Failed to update business info");
+    }
+  };
+
+  const handleChangePassword = async () => {
+    setSecurityMessage(null);
+
+    if (!passwordForm.currentPassword || !passwordForm.newPassword) {
+      setSecurityMessage("Current password and new password are required");
+      return;
+    }
+
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      setSecurityMessage("New password and confirm password do not match");
+      return;
+    }
+
+    try {
+      await changePassword({
+        currentPassword: passwordForm.currentPassword,
+        newPassword: passwordForm.newPassword,
+      });
+      setSecurityMessage("Password changed successfully. Please login again.");
+      setPasswordForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
+    } catch (error: any) {
+      setSecurityMessage(error?.message || "Failed to change password");
+    }
+  };
+
+  const handleCreatePaymentMethod = async () => {
+    setPaymentMessage(null);
+    if (
+      !newPaymentMethod.provider_name ||
+      !newPaymentMethod.account_holder_name ||
+      !newPaymentMethod.account_identifier ||
+      !newPaymentMethod.account_display
+    ) {
+      setPaymentMessage("Please fill all payment method fields");
+      return;
+    }
+
+    const created = await createSupplierPaymentMethod(newPaymentMethod);
+    if (created) {
+      setPaymentMessage("Payment method added");
+      setNewPaymentMethod({
+        method_type: "bank_transfer",
+        provider_name: "",
+        account_holder_name: "",
+        account_identifier: "",
+        account_display: "",
+        is_primary: false,
+      });
+      await fetchSupplierPaymentMethods();
+    } else {
+      setPaymentMessage("Failed to add payment method");
+    }
+  };
+
+  const handleSetPrimaryPaymentMethod = async (id: string) => {
+    setPaymentMessage(null);
+    const updated = await updateSupplierPaymentMethod(id, { is_primary: true });
+    if (updated) {
+      setPaymentMessage("Primary payment method updated");
+      await fetchSupplierPaymentMethods();
+    } else {
+      setPaymentMessage("Failed to update primary payment method");
+    }
+  };
+
+  const handleDeletePaymentMethod = async (id: string) => {
+    setPaymentMessage(null);
+    const deleted = await deleteSupplierPaymentMethod(id);
+    if (deleted) {
+      setPaymentMessage("Payment method removed");
+      await fetchSupplierPaymentMethods();
+    } else {
+      setPaymentMessage("Failed to remove payment method");
+    }
+  };
 
   const getInitials = (name: string) => {
     return name
@@ -200,14 +393,16 @@ const SettingsPage: React.FC = () => {
                   <Shield className="h-4 w-4 mr-2" />
                   Security
                 </Button>
-                <Button
-                  variant={activeTab === "payment" ? "secondary" : "ghost"}
-                  className="w-full justify-start"
-                  onClick={() => setActiveTab("payment")}
-                >
-                  <CreditCard className="h-4 w-4 mr-2" />
-                  Payment Settings
-                </Button>
+                {canManageSupplierPaymentMethods && (
+                  <Button
+                    variant={activeTab === "payment" ? "secondary" : "ghost"}
+                    className="w-full justify-start"
+                    onClick={() => setActiveTab("payment")}
+                  >
+                    <CreditCard className="h-4 w-4 mr-2" />
+                    Payment Settings
+                  </Button>
+                )}
                 <Button
                   variant={activeTab === "preferences" ? "secondary" : "ghost"}
                   className="w-full justify-start"
@@ -267,7 +462,7 @@ const SettingsPage: React.FC = () => {
                   <div className="flex items-center gap-6">
                     <Avatar className="h-24 w-24">
                       <AvatarFallback className="bg-primary/10 text-primary text-2xl">
-                        {getInitials(userData.profile.name)}
+                        {getInitials(profileForm.full_name || "User")}
                       </AvatarFallback>
                     </Avatar>
                     {isEditing && (
@@ -291,7 +486,13 @@ const SettingsPage: React.FC = () => {
                       <Label htmlFor="fullName">Full Name</Label>
                       <Input
                         id="fullName"
-                        defaultValue={userData.profile.name}
+                        value={profileForm.full_name}
+                        onChange={(e) =>
+                          setProfileForm((prev) => ({
+                            ...prev,
+                            full_name: e.target.value,
+                          }))
+                        }
                         disabled={!isEditing}
                       />
                     </div>
@@ -300,15 +501,21 @@ const SettingsPage: React.FC = () => {
                       <Input
                         id="email"
                         type="email"
-                        defaultValue={userData.profile.email}
-                        disabled={!isEditing}
+                        value={profileForm.email}
+                        disabled
                       />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="phone">Primary Phone</Label>
                       <Input
                         id="phone"
-                        defaultValue={userData.profile.phone}
+                        value={profileForm.phone}
+                        onChange={(e) =>
+                          setProfileForm((prev) => ({
+                            ...prev,
+                            phone: e.target.value,
+                          }))
+                        }
                         disabled={!isEditing}
                       />
                     </div>
@@ -316,7 +523,13 @@ const SettingsPage: React.FC = () => {
                       <Label htmlFor="altPhone">Alternate Phone</Label>
                       <Input
                         id="altPhone"
-                        defaultValue={userData.profile.altPhone}
+                        value={profileForm.altPhone}
+                        onChange={(e) =>
+                          setProfileForm((prev) => ({
+                            ...prev,
+                            altPhone: e.target.value,
+                          }))
+                        }
                         disabled={!isEditing}
                       />
                     </div>
@@ -327,11 +540,22 @@ const SettingsPage: React.FC = () => {
                     <Label htmlFor="bio">Bio</Label>
                     <Textarea
                       id="bio"
-                      defaultValue={userData.profile.bio}
+                      value={profileForm.bio}
+                      onChange={(e) =>
+                        setProfileForm((prev) => ({
+                          ...prev,
+                          bio: e.target.value,
+                        }))
+                      }
                       disabled={!isEditing}
                       rows={4}
                     />
                   </div>
+                  {saveMessage && (
+                    <p className="text-sm text-muted-foreground">
+                      {saveMessage}
+                    </p>
+                  )}
                 </CardContent>
                 {isEditing && (
                   <CardFooter className="flex justify-end gap-2 border-t pt-6">
@@ -341,9 +565,12 @@ const SettingsPage: React.FC = () => {
                     >
                       Cancel
                     </Button>
-                    <Button onClick={() => setIsEditing(false)}>
+                    <Button
+                      onClick={() => void handleProfileSave()}
+                      disabled={isLoading}
+                    >
                       <Save className="h-4 w-4 mr-2" />
-                      Save Changes
+                      {isLoading ? "Saving..." : "Save Changes"}
                     </Button>
                   </CardFooter>
                 )}
@@ -365,13 +592,20 @@ const SettingsPage: React.FC = () => {
                       <Label htmlFor="businessName">Business Name</Label>
                       <Input
                         id="businessName"
-                        defaultValue={userData.profile.businessName}
+                        value={profileForm.business_name}
+                        onChange={(e) =>
+                          setProfileForm((prev) => ({
+                            ...prev,
+                            business_name: e.target.value,
+                          }))
+                        }
                       />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="businessType">Business Type</Label>
                       <Select
-                        defaultValue={userData.profile.businessType.toLowerCase()}
+                        value={profileForm.businessType || "retailer"}
+                        disabled
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="Select business type" />
@@ -392,14 +626,26 @@ const SettingsPage: React.FC = () => {
                       <Label htmlFor="businessAddress">Business Address</Label>
                       <Input
                         id="businessAddress"
-                        defaultValue={userData.profile.businessAddress}
+                        value={profileForm.business_address}
+                        onChange={(e) =>
+                          setProfileForm((prev) => ({
+                            ...prev,
+                            business_address: e.target.value,
+                          }))
+                        }
                       />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="tinNumber">TIN Number</Label>
                       <Input
                         id="tinNumber"
-                        defaultValue={userData.profile.tinNumber}
+                        value={profileForm.tin_number}
+                        onChange={(e) =>
+                          setProfileForm((prev) => ({
+                            ...prev,
+                            tin_number: e.target.value,
+                          }))
+                        }
                       />
                     </div>
                     <div className="space-y-2">
@@ -435,9 +681,19 @@ const SettingsPage: React.FC = () => {
                   </div>
                 </CardContent>
                 <CardFooter className="flex justify-end gap-2 border-t pt-6">
-                  <Button variant="outline">Cancel</Button>
-                  <Button>Save Changes</Button>
+                  <Button variant="outline" onClick={() => setBusinessMessage(null)}>
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={() => void handleBusinessSave()}
+                    disabled={isLoading}
+                  >
+                    {isLoading ? "Saving..." : "Save Changes"}
+                  </Button>
                 </CardFooter>
+                {businessMessage && (
+                  <p className="px-6 pb-6 text-sm text-muted-foreground">{businessMessage}</p>
+                )}
               </Card>
             </TabsContent>
 
@@ -451,6 +707,34 @@ const SettingsPage: React.FC = () => {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
+                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 p-4 border rounded-lg bg-muted/30">
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium">Live Notification Status</p>
+                      <p className="text-xs text-muted-foreground">
+                        Total: {notificationCounts.total} | Unread: {notificationCounts.unread}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => void markAllNotificationsRead()}
+                        disabled={notificationCounts.unread === 0}
+                      >
+                        Mark All Read
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-destructive"
+                        onClick={() => void clearAllNotifications()}
+                        disabled={notificationCounts.total === 0}
+                      >
+                        Clear All
+                      </Button>
+                    </div>
+                  </div>
+
                   <div>
                     <h3 className="text-sm font-medium mb-4">
                       Email Notifications
@@ -612,53 +896,61 @@ const SettingsPage: React.FC = () => {
                         <Label htmlFor="currentPassword">
                           Current Password
                         </Label>
-                        <Input id="currentPassword" type="password" />
+                        <Input
+                          id="currentPassword"
+                          type="password"
+                          value={passwordForm.currentPassword}
+                          onChange={(e) =>
+                            setPasswordForm((prev) => ({
+                              ...prev,
+                              currentPassword: e.target.value,
+                            }))
+                          }
+                        />
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="newPassword">New Password</Label>
-                        <Input id="newPassword" type="password" />
+                        <Input
+                          id="newPassword"
+                          type="password"
+                          value={passwordForm.newPassword}
+                          onChange={(e) =>
+                            setPasswordForm((prev) => ({
+                              ...prev,
+                              newPassword: e.target.value,
+                            }))
+                          }
+                        />
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="confirmPassword">
                           Confirm New Password
                         </Label>
-                        <Input id="confirmPassword" type="password" />
+                        <Input
+                          id="confirmPassword"
+                          type="password"
+                          value={passwordForm.confirmPassword}
+                          onChange={(e) =>
+                            setPasswordForm((prev) => ({
+                              ...prev,
+                              confirmPassword: e.target.value,
+                            }))
+                          }
+                        />
                       </div>
                     </div>
-                    <Button variant="outline" size="sm">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => void handleChangePassword()}
+                      disabled={isLoading}
+                    >
                       Update Password
                     </Button>
+                    {securityMessage && (
+                      <p className="text-sm text-muted-foreground">{securityMessage}</p>
+                    )}
                   </div>
-
-                  <Separator />
-
-                  {/* Two-Factor Authentication */}
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h3 className="text-sm font-medium">
-                          Two-Factor Authentication
-                        </h3>
-                        <p className="text-xs text-muted-foreground">
-                          Add an extra layer of security to your account
-                        </p>
-                      </div>
-                      <Switch defaultChecked={userData.security.twoFactor} />
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h3 className="text-sm font-medium">Login Alerts</h3>
-                        <p className="text-xs text-muted-foreground">
-                          Receive notifications when new devices log in to your
-                          account
-                        </p>
-                      </div>
-                      <Switch defaultChecked={userData.security.loginAlerts} />
-                    </div>
-                  </div>
-
-                  <Separator />
 
                   {/* Active Sessions */}
                   <div className="space-y-4">
@@ -718,127 +1010,160 @@ const SettingsPage: React.FC = () => {
                 <CardHeader>
                   <CardTitle>Payment Settings</CardTitle>
                   <CardDescription>
-                    Manage your payment methods and credit terms
+                    Manage supplier payment methods (factory/distributor only)
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  {/* Credit Summary */}
-                  <div className="bg-gradient-to-br from-primary/5 to-primary/10 rounded-lg p-6">
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-sm font-semibold">Credit Summary</h3>
-                      <Badge className="bg-primary/90">Active</Badge>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div>
-                        <p className="text-xs text-muted-foreground">
-                          Credit Limit
-                        </p>
-                        <p className="text-lg font-bold text-primary">
-                          {userData.payment.creditLimit}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-muted-foreground">Used</p>
-                        <p className="text-lg font-bold">
-                          {userData.payment.creditUsed}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-muted-foreground">
-                          Available
-                        </p>
-                        <p className="text-lg font-bold text-green-600">
-                          {userData.payment.creditAvailable}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="mt-4">
-                      <p className="text-xs text-muted-foreground">
-                        Payment Terms:{" "}
-                        <span className="font-medium">
-                          {userData.payment.paymentTerms}
-                        </span>
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Default Payment Method */}
-                  <div className="space-y-4">
-                    <h3 className="text-sm font-medium">
-                      Default Payment Method
-                    </h3>
-                    <div className="space-y-2">
-                      <div className="flex items-center space-x-2">
-                        <input
-                          type="radio"
-                          id="credit"
-                          name="paymentMethod"
-                          defaultChecked={
-                            userData.payment.defaultMethod === "credit"
-                          }
-                          className="h-4 w-4"
-                        />
-                        <Label htmlFor="credit" className="text-sm">
-                          Credit (30 days terms)
-                        </Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <input
-                          type="radio"
-                          id="mobile"
-                          name="paymentMethod"
-                          className="h-4 w-4"
-                        />
-                        <Label htmlFor="mobile" className="text-sm">
-                          Mobile Banking
-                        </Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <input
-                          type="radio"
-                          id="cash"
-                          name="paymentMethod"
-                          className="h-4 w-4"
-                        />
-                        <Label htmlFor="cash" className="text-sm">
-                          Cash on Delivery
-                        </Label>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Saved Cards/Payment Methods */}
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-sm font-medium">
-                        Saved Payment Methods
-                      </h3>
-                      <Button variant="outline" size="sm">
-                        <CreditCard className="h-4 w-4 mr-2" />
-                        Add New
-                      </Button>
-                    </div>
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between p-3 border rounded-lg">
-                        <div className="flex items-center gap-3">
-                          <div className="h-8 w-8 bg-primary/10 rounded-full flex items-center justify-center">
-                            <Smartphone className="h-4 w-4 text-primary" />
+                  {!canManageSupplierPaymentMethods ? (
+                    <p className="text-sm text-muted-foreground">
+                      Payment methods are available only for factory and distributor accounts.
+                    </p>
+                  ) : (
+                    <>
+                      <div className="space-y-4 border rounded-lg p-4">
+                        <h3 className="text-sm font-medium">Add Payment Method</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          <div className="space-y-2">
+                            <Label>Method Type</Label>
+                            <Select
+                              value={newPaymentMethod.method_type}
+                              onValueChange={(value) =>
+                                setNewPaymentMethod((prev) => ({ ...prev, method_type: value }))
+                              }
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select method type" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
+                                <SelectItem value="mobile_money">Mobile Money</SelectItem>
+                                <SelectItem value="cash_on_delivery">Cash on Delivery</SelectItem>
+                                <SelectItem value="credit_card">Credit Card</SelectItem>
+                                <SelectItem value="debit_card">Debit Card</SelectItem>
+                                <SelectItem value="paypal">PayPal</SelectItem>
+                                <SelectItem value="other">Other</SelectItem>
+                              </SelectContent>
+                            </Select>
                           </div>
-                          <div>
-                            <p className="text-sm font-medium">
-                              Mobile Banking
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              +251 91 234 5678
-                            </p>
+                          <div className="space-y-2">
+                            <Label>Provider Name</Label>
+                            <Input
+                              value={newPaymentMethod.provider_name}
+                              onChange={(e) =>
+                                setNewPaymentMethod((prev) => ({ ...prev, provider_name: e.target.value }))
+                              }
+                              placeholder="e.g. CBE, Telebirr"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Account Holder</Label>
+                            <Input
+                              value={newPaymentMethod.account_holder_name}
+                              onChange={(e) =>
+                                setNewPaymentMethod((prev) => ({
+                                  ...prev,
+                                  account_holder_name: e.target.value,
+                                }))
+                              }
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Account Identifier</Label>
+                            <Input
+                              value={newPaymentMethod.account_identifier}
+                              onChange={(e) =>
+                                setNewPaymentMethod((prev) => ({
+                                  ...prev,
+                                  account_identifier: e.target.value,
+                                }))
+                              }
+                              placeholder="Account number / phone"
+                            />
+                          </div>
+                          <div className="space-y-2 md:col-span-2">
+                            <Label>Display Text</Label>
+                            <Input
+                              value={newPaymentMethod.account_display}
+                              onChange={(e) =>
+                                setNewPaymentMethod((prev) => ({
+                                  ...prev,
+                                  account_display: e.target.value,
+                                }))
+                              }
+                              placeholder="What buyers should see"
+                            />
                           </div>
                         </div>
-                        <Badge variant="outline" className="bg-primary/5">
-                          Default
-                        </Badge>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Switch
+                              checked={newPaymentMethod.is_primary}
+                              onCheckedChange={(checked) =>
+                                setNewPaymentMethod((prev) => ({ ...prev, is_primary: checked }))
+                              }
+                            />
+                            <span className="text-sm">Set as primary</span>
+                          </div>
+                          <Button
+                            onClick={() => void handleCreatePaymentMethod()}
+                            disabled={isPaymentLoading}
+                          >
+                            Add Method
+                          </Button>
+                        </div>
                       </div>
-                    </div>
-                  </div>
+
+                      <div className="space-y-3">
+                        <h3 className="text-sm font-medium">Saved Payment Methods</h3>
+                        {supplierPaymentMethods.length === 0 ? (
+                          <p className="text-sm text-muted-foreground">No payment methods added yet.</p>
+                        ) : (
+                          supplierPaymentMethods.map((method: any) => (
+                            <div
+                              key={method.id}
+                              className="flex items-center justify-between p-3 border rounded-lg"
+                            >
+                              <div>
+                                <p className="text-sm font-medium">
+                                  {method.provider_name} ({method.method_type})
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  {method.account_display}
+                                </p>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                {method.is_primary ? (
+                                  <Badge>Primary</Badge>
+                                ) : (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => void handleSetPrimaryPaymentMethod(method.id)}
+                                  >
+                                    Set Primary
+                                  </Button>
+                                )}
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-destructive"
+                                  onClick={() => void handleDeletePaymentMethod(method.id)}
+                                >
+                                  Delete
+                                </Button>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </>
+                  )}
+
+                  {(paymentMessage || paymentError) && (
+                    <p className="text-sm text-muted-foreground">
+                      {paymentMessage || paymentError}
+                    </p>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>

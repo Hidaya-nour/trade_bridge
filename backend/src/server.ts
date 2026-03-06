@@ -42,6 +42,7 @@ import supplierPaymentMethodRoutes from './routes/supplier-payment-method.routes
 import factoryAgentRoutes from './routes/factory-agent.routes';
 import ratingReviewRoutes from './routes/rating-review.routes';
 import supplierRoutes from './routes/supplier.routes'
+import { AppError, ValidationError } from './utils/errors';
 dotenv.config();
 
 const app = express();
@@ -94,6 +95,23 @@ app.get('/api/health', (req, res) => {
 
 // Error handler
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  if (err instanceof ValidationError) {
+    res.status(err.statusCode).json({
+      success: false,
+      message: err.message,
+      errors: err.errors,
+    });
+    return;
+  }
+
+  if (err instanceof AppError) {
+    res.status(err.statusCode).json({
+      success: false,
+      message: err.message,
+    });
+    return;
+  }
+
   logger.error(err.stack);
   res.status(500).json({
     success: false,

@@ -5,7 +5,9 @@ export interface INotification {
   title: string;
   message: string;
   is_read: number;
-  
+  created_at?: Date;
+  updated_at?: Date;
+  deleted_at?: Date;
 }
 
 export interface CreateNotificationDTO {
@@ -13,4 +15,11 @@ export interface CreateNotificationDTO {
   type: string;
   title: string;
   message: string;
+}
+
+export interface NotificationFiltersDTO {
+  page?: number;
+  limit?: number;
+  type?: string;
+  is_read?: number;
 }

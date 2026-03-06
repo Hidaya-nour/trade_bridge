@@ -1,4 +1,5 @@
 import type {
+  ChatContactsResponse,
   MarkAsReadResponse,
   MarkMessagesAsReadData,
   MessageResponse,
@@ -38,6 +39,16 @@ class MessageService {
 
   async getUnreadCount(): Promise<UnreadCountResponse> {
     const response = await api.get('/messages/unread-count');
+    return response.data;
+  }
+
+  async getChatContacts(search?: string, role?: string): Promise<ChatContactsResponse> {
+    const response = await api.get('/messages/contacts', {
+      params: {
+        q: search || undefined,
+        role: role || undefined,
+      },
+    });
     return response.data;
   }
 }

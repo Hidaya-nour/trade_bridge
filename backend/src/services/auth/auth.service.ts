@@ -24,6 +24,20 @@ export interface LoginDTO {
   ipAddress?: string;
 }
 
+export interface UpdateProfileDTO {
+  full_name?: string;
+  phone?: string;
+  business_name?: string;
+  business_address?: string;
+  tin_number?: string;
+  profile_image?: string;
+}
+
+export interface ChangePasswordDTO {
+  currentPassword: string;
+  newPassword: string;
+}
+
 // Type for safe user response (without sensitive data)
 type SafeUser = Omit<IUser, 'password_hash'>;
 
@@ -162,6 +176,74 @@ async register(data: RegisterDTO): Promise<{ user: SafeUser }> {
    */
   async refreshToken(refreshToken: string): Promise<{ accessToken: string }> {
     return this.tokenService.refreshAccessToken(refreshToken);
+  }
+
+  async getCurrentUser(userId: string): Promise<SafeUser> {
+    const user = await this.userRepo.findById(userId);
+    if (!user || user.deleted_at) {
+      throw new AppError('User not found', 404);
+    }
+
+    const userResponse = user.toJSON() as any;
+    const { password_hash: _, ...safeUser } = userResponse;
+    return safeUser as SafeUser;
+  }
+
+  async updateProfile(userId: string, data: UpdateProfileDTO): Promise<SafeUser> {
+    const user = await this.userRepo.findById(userId);
+    if (!user || user.deleted_at) {
+      throw new AppError('User not found', 404);
+    }
+
+    const updates: UpdateProfileDTO = {};
+    if (typeof data.full_name === 'string') updates.full_name = data.full_name.trim();
+    if (typeof data.phone === 'string') updates.phone = data.phone.trim();
+    if (typeof data.business_name === 'string') updates.business_name = data.business_name.trim();
+    if (typeof data.business_address === 'string') updates.business_address = data.business_address.trim();
+    if (typeof data.tin_number === 'string') updates.tin_number = data.tin_number.trim();
+    if (typeof data.profile_image === 'string') updates.profile_image = data.profile_image.trim();
+
+    await this.userRepo.update(userId, updates as any);
+
+    const updated = await this.userRepo.findById(userId);
+    if (!updated) {
+      throw new AppError('Failed to update profile', 500);
+    }
+
+    const updatedResponse = updated.toJSON() as any;
+    const { password_hash: _, ...safeUser } = updatedResponse;
+    return safeUser as SafeUser;
+  }
+
+  async changePassword(userId: string, data: ChangePasswordDTO): Promise<void> {
+    const user = await this.userRepo.findById(userId);
+    if (!user || user.deleted_at) {
+      throw new AppError('User not found', 404);
+    }
+
+    const isValidCurrent = await this.passwordService.verifyPassword(
+      data.currentPassword,
+      user.password_hash
+    );
+    if (!isValidCurrent) {
+      throw new AppError('Current password is incorrect', 400);
+    }
+
+    this.passwordService.validatePasswordStrength(data.newPassword);
+
+    const isSameAsOld = await this.passwordService.verifyPassword(
+      data.newPassword,
+      user.password_hash
+    );
+    if (isSameAsOld) {
+      throw new AppError('New password must be different from current password', 400);
+    }
+
+    const password_hash = await this.passwordService.hashPassword(data.newPassword);
+    await this.userRepo.update(userId, { password_hash } as any);
+
+    await this.tokenService.revokeAllUserTokens(userId);
+    logger.info(`Password changed for user: ${userId}`);
   }
 
   /**

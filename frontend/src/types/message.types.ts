@@ -31,6 +31,15 @@ export interface Conversation {
   order_id?: string | null;
 }
 
+export interface ChatContact {
+  id: string;
+  full_name: string;
+  email: string;
+  role: 'retailer' | 'distributor' | 'factory' | 'driver' | 'admin';
+  business_name?: string;
+  profile_image?: string;
+}
+
 export interface SendMessageData {
   receiver_id: string;
   message: string;
@@ -65,4 +74,9 @@ export interface MarkAsReadResponse {
   data: {
     updatedCount: number;
   };
+}
+
+export interface ChatContactsResponse {
+  success: boolean;
+  data: ChatContact[];
 }

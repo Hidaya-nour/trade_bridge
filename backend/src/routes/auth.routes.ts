@@ -8,7 +8,9 @@ import {
   loginSchema,
   refreshTokenSchema,
   emailSchema,
-  resetPasswordSchema
+  resetPasswordSchema,
+  updateProfileSchema,
+  changePasswordSchema
 } from '../validations/auth.validation';
 
 const router = express.Router();
@@ -64,6 +66,8 @@ router.post('/logout', authController.logout);
 
 // Protected routes
 router.get('/me', authenticate, authController.getMe);
+router.patch('/me', authenticate, validate(updateProfileSchema), authController.updateMe);
+router.patch('/change-password', authenticate, validate(changePasswordSchema), authController.changePassword);
 router.post('/logout-all', authenticate, authController.logoutAll);
 
 export default router;

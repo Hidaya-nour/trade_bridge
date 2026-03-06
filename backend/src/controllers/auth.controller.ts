@@ -118,7 +118,14 @@ export class AuthController {
 
   getMe = async (req: Request, res: Response): Promise<void> => {
     try {
-      const user = req.user;
+      const userId = req.user?.id;
+      if (!userId) {
+        res.status(401).json({ success: false, message: 'Authentication required' });
+        return;
+      }
+
+      const user = await this.authService.getCurrentUser(userId);
+
       res.json({
         success: true,
         data: { user }
@@ -128,6 +135,55 @@ export class AuthController {
         res.status(error.statusCode).json({ success: false, message: error.message });
       } else {
         logger.error('Get me error:', error);
+        res.status(500).json({ success: false, message: 'Internal server error' });
+      }
+    }
+  };
+
+  updateMe = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        res.status(401).json({ success: false, message: 'Authentication required' });
+        return;
+      }
+
+      const user = await this.authService.updateProfile(userId, req.body);
+      res.json({
+        success: true,
+        message: 'Profile updated successfully',
+        data: { user }
+      });
+    } catch (error) {
+      if (error instanceof AppError) {
+        res.status(error.statusCode).json({ success: false, message: error.message });
+      } else {
+        logger.error('Update profile error:', error);
+        res.status(500).json({ success: false, message: 'Internal server error' });
+      }
+    }
+  };
+
+  changePassword = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        res.status(401).json({ success: false, message: 'Authentication required' });
+        return;
+      }
+
+      const { currentPassword, newPassword } = req.body;
+      await this.authService.changePassword(userId, { currentPassword, newPassword });
+
+      res.json({
+        success: true,
+        message: 'Password updated successfully. Please login again.'
+      });
+    } catch (error) {
+      if (error instanceof AppError) {
+        res.status(error.statusCode).json({ success: false, message: error.message });
+      } else {
+        logger.error('Change password error:', error);
         res.status(500).json({ success: false, message: 'Internal server error' });
       }
     }

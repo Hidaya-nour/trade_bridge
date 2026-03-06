@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import messageService from '@/services/message.service';
 import { useAuthStore } from '@/stores/auth.store';
-import type { Conversation, Message, SendMessageData } from '@/types/message.types';
+import type { ChatContact, Conversation, Message, SendMessageData } from '@/types/message.types';
 
 interface MessageState {
   messages: Message[];
@@ -9,6 +9,8 @@ interface MessageState {
   conversations: Conversation[];
   currentConversationUserId: string | null;
   currentMessage: Message | null;
+  contacts: ChatContact[];
+  contactsLoading: boolean;
   unreadCount: number;
   isLoading: boolean;
   isSending: boolean;
@@ -19,6 +21,8 @@ interface MessageState {
   fetchUnreadCount: () => Promise<void>;
   sendMessage: (data: SendMessageData) => Promise<Message | null>;
   markAsRead: (messageIds: string[]) => Promise<boolean>;
+  fetchChatContacts: (search?: string, role?: string) => Promise<void>;
+  startChatWithUser: (userId: string) => Promise<void>;
   setCurrentConversation: (userId: string | null) => void;
   clearError: () => void;
 }
@@ -75,6 +79,8 @@ export const useMessageStore = create<MessageState>((set, get) => ({
   conversations: [],
   currentConversationUserId: null,
   currentMessage: null,
+  contacts: [],
+  contactsLoading: false,
   unreadCount: 0,
   isLoading: false,
   isSending: false,
@@ -200,8 +206,47 @@ export const useMessageStore = create<MessageState>((set, get) => ({
     }
   },
 
+  fetchChatContacts: async (search?: string, role?: string) => {
+    set({ contactsLoading: true, error: null });
+    try {
+      const response = await messageService.getChatContacts(search, role);
+      set({ contacts: response.data || [], contactsLoading: false });
+    } catch (error: any) {
+      set({
+        error: error.response?.data?.message || 'Failed to fetch chat contacts',
+        contactsLoading: false,
+      });
+    }
+  },
+
+  startChatWithUser: async (userId: string) => {
+    const { conversations, contacts } = get();
+    const alreadyExists = conversations.some((c) => c.participant_id === userId);
+
+    if (!alreadyExists) {
+      const contact = contacts.find((c) => c.id === userId);
+      const placeholder: Conversation = {
+        participant_id: userId,
+        participant_name: contact?.full_name || 'New chat',
+        last_message: '',
+        last_message_time: new Date().toISOString(),
+        unread_count: 0,
+        order_id: null,
+      };
+
+      set({
+        conversations: [placeholder, ...conversations],
+        currentConversationUserId: userId,
+        conversationMessages: [],
+      });
+    } else {
+      set({ currentConversationUserId: userId });
+    }
+
+    await get().fetchConversation(userId);
+  },
+
   setCurrentConversation: (userId: string | null) => set({ currentConversationUserId: userId }),
 
   clearError: () => set({ error: null }),
 }));
-

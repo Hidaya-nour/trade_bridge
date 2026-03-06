@@ -19,6 +19,12 @@ router.get('/', chatMessageController.getUserMessages);
 router.get('/unread-count', chatMessageController.getUnreadCount);
 
 router.get(
+  '/contacts',
+  validate(ChatMessageController.chatContactsValidation),
+  chatMessageController.getChatContacts
+);
+
+router.get(
   '/conversation/:userId',
   validate(ChatMessageController.conversationValidation),
   chatMessageController.getConversation
