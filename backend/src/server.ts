@@ -32,7 +32,7 @@ import paymentRoutes from './routes/payment.routes';
 import deliveryRoutes from './routes/delivery.routes';
 import promotionRoutes from './routes/promotion.routes';
 import inventoryMovementRoutes from './routes/inventory-movement.routes';
-import messageRoutes from './routes/message.routes';
+import chatMessageRoutes from './routes/chat-message.route';
 import loginAttemptRoutes from './routes/login-attempt.routes';
 import documentRoutes from './routes/document.routes';
 import addressRoutes from './routes/address.routes';
@@ -71,7 +71,7 @@ app.use('/api/payments', paymentRoutes);
 app.use('/api/deliveries', deliveryRoutes);
 app.use('/api/promotions', promotionRoutes);
 app.use('/api/inventory-movements', inventoryMovementRoutes);
-app.use('/api/messages', messageRoutes);
+app.use('/api/messages', chatMessageRoutes);
 app.use('/api/login-attempts', loginAttemptRoutes);
 app.use('/api/documents', documentRoutes);
 app.use('/api/addresses', addressRoutes);
@@ -81,7 +81,6 @@ app.use('/api/supplier-payment-methods', supplierPaymentMethodRoutes);
 app.use('/api/factory-agents', factoryAgentRoutes);
 app.use('/api/reviews', ratingReviewRoutes);
 app.use('/api/suppliers', supplierRoutes);
-
 
 
 // Health check

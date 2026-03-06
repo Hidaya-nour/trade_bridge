@@ -1,107 +1,207 @@
 import { create } from 'zustand';
 import messageService from '@/services/message.service';
+import { useAuthStore } from '@/stores/auth.store';
+import type { Conversation, Message, SendMessageData } from '@/types/message.types';
 
 interface MessageState {
-  items: any[];
-  currentItem: any | null;
+  messages: Message[];
+  conversationMessages: Message[];
+  conversations: Conversation[];
+  currentConversationUserId: string | null;
+  currentMessage: Message | null;
+  unreadCount: number;
   isLoading: boolean;
+  isSending: boolean;
   error: string | null;
-  
-  fetchAll: (params?: any) => Promise<void>;
-  fetchById: (id: string) => Promise<any | null>;
-  create: (data: any) => Promise<any | null>;
-  update: (id: string, data: any) => Promise<any | null>;
-  delete: (id: string) => Promise<boolean>;
+  fetchUserMessages: () => Promise<void>;
+  fetchConversation: (userId: string, orderId?: string) => Promise<void>;
+  fetchMessageById: (id: string) => Promise<Message | null>;
+  fetchUnreadCount: () => Promise<void>;
+  sendMessage: (data: SendMessageData) => Promise<Message | null>;
+  markAsRead: (messageIds: string[]) => Promise<boolean>;
+  setCurrentConversation: (userId: string | null) => void;
   clearError: () => void;
 }
 
+const getParticipantId = (message: Message, currentUserId: string): string =>
+  message.sender_id === currentUserId ? message.receiver_id : message.sender_id;
+
+const getParticipantName = (message: Message, participantId: string): string => {
+  if (message.sender_id === participantId) {
+    return message.sender?.full_name || message.sender?.email || 'Unknown user';
+  }
+  return message.receiver?.full_name || message.receiver?.email || 'Unknown user';
+};
+
+const toConversations = (messages: Message[], currentUserId: string): Conversation[] => {
+  const map = new Map<string, Conversation>();
+
+  for (const message of messages) {
+    const participantId = getParticipantId(message, currentUserId);
+    const existing = map.get(participantId);
+    const unreadForThisConversation =
+      message.receiver_id === currentUserId && !message.is_read ? 1 : 0;
+
+    if (!existing) {
+      map.set(participantId, {
+        participant_id: participantId,
+        participant_name: getParticipantName(message, participantId),
+        last_message: message.message,
+        last_message_time: message.created_at,
+        unread_count: unreadForThisConversation,
+        order_id: message.order_id || null,
+      });
+      continue;
+    }
+
+    if (new Date(message.created_at).getTime() > new Date(existing.last_message_time).getTime()) {
+      existing.last_message = message.message;
+      existing.last_message_time = message.created_at;
+      existing.order_id = message.order_id || existing.order_id || null;
+      existing.participant_name = getParticipantName(message, participantId);
+    }
+
+    existing.unread_count += unreadForThisConversation;
+  }
+
+  return Array.from(map.values()).sort(
+    (a, b) => new Date(b.last_message_time).getTime() - new Date(a.last_message_time).getTime()
+  );
+};
+
 export const useMessageStore = create<MessageState>((set, get) => ({
-  items: [],
-  currentItem: null,
+  messages: [],
+  conversationMessages: [],
+  conversations: [],
+  currentConversationUserId: null,
+  currentMessage: null,
+  unreadCount: 0,
   isLoading: false,
+  isSending: false,
   error: null,
 
-  fetchAll: async (params?: any) => {
+  fetchUserMessages: async () => {
     set({ isLoading: true, error: null });
     try {
-      const response = await messageService.getAll(params);
-      set({ items: response.data || response, isLoading: false });
+      const response = await messageService.getUserMessages();
+      const currentUserId = useAuthStore.getState().user?.id;
+      const messages = response.data || [];
+
+      set({
+        messages,
+        conversations: currentUserId ? toConversations(messages, currentUserId) : [],
+        isLoading: false,
+      });
     } catch (error: any) {
       set({
-        error: error.response?.data?.message || 'Failed to fetch items',
+        error: error.response?.data?.message || 'Failed to fetch messages',
         isLoading: false,
       });
     }
   },
 
-  fetchById: async (id: string) => {
+  fetchConversation: async (userId: string, orderId?: string) => {
+    set({ isLoading: true, error: null });
+    try {
+      const response = await messageService.getConversation(userId, orderId);
+      set({
+        conversationMessages: response.data || [],
+        currentConversationUserId: userId,
+        isLoading: false,
+      });
+    } catch (error: any) {
+      set({
+        error: error.response?.data?.message || 'Failed to fetch conversation',
+        isLoading: false,
+      });
+    }
+  },
+
+  fetchMessageById: async (id: string) => {
     set({ isLoading: true, error: null });
     try {
       const response = await messageService.getById(id);
-      set({ currentItem: response.data || response, isLoading: false });
-      return response.data || response;
+      const message = response.data.message;
+      set({ currentMessage: message, isLoading: false });
+      return message;
     } catch (error: any) {
       set({
-        error: error.response?.data?.message || 'Failed to fetch item',
+        error: error.response?.data?.message || 'Failed to fetch message',
         isLoading: false,
       });
       return null;
     }
   },
 
-  create: async (data: any) => {
-    set({ isLoading: true, error: null });
+  fetchUnreadCount: async () => {
     try {
-      const response = await messageService.create(data);
-      // Optional: Refresh list
-      // await get().fetchAll();
-      set({ isLoading: false });
-      return response.data || response;
+      const response = await messageService.getUnreadCount();
+      set({ unreadCount: response.data.unreadCount || 0 });
+    } catch {
+      set({ unreadCount: 0 });
+    }
+  },
+
+  sendMessage: async (data: SendMessageData) => {
+    set({ isSending: true, error: null });
+    try {
+      const response = await messageService.send(data);
+      const sentMessage = response.data.message;
+      const { messages, conversationMessages, currentConversationUserId } = get();
+      const currentUserId = useAuthStore.getState().user?.id;
+      const nextMessages = [sentMessage, ...messages];
+
+      set({
+        messages: nextMessages,
+        conversations: currentUserId ? toConversations(nextMessages, currentUserId) : [],
+        conversationMessages:
+          currentConversationUserId === data.receiver_id
+            ? [...conversationMessages, sentMessage]
+            : conversationMessages,
+        isSending: false,
+      });
+
+      return sentMessage;
     } catch (error: any) {
       set({
-        error: error.response?.data?.message || 'Failed to create item',
-        isLoading: false,
+        error: error.response?.data?.message || 'Failed to send message',
+        isSending: false,
       });
       return null;
     }
   },
 
-  update: async (id: string, data: any) => {
-    set({ isLoading: true, error: null });
+  markAsRead: async (messageIds: string[]) => {
+    if (!messageIds.length) return true;
+
     try {
-      const response = await messageService.update(id, data);
-      
-      const items = get().items.map(p => 
-        p.id === id ? (response.data || response) : p
+      await messageService.markAsRead({ messageIds });
+      const { messages, conversationMessages } = get();
+      const messageIdSet = new Set(messageIds);
+
+      const updatedMessages = messages.map((m) =>
+        messageIdSet.has(m.id) ? { ...m, is_read: true } : m
       );
-      
-      set({ items, currentItem: response.data || response, isLoading: false });
-      return response.data || response;
-    } catch (error: any) {
-      set({
-        error: error.response?.data?.message || 'Failed to update item',
-        isLoading: false,
-      });
-      return null;
-    }
-  },
+      const updatedConversation = conversationMessages.map((m) =>
+        messageIdSet.has(m.id) ? { ...m, is_read: true } : m
+      );
+      const currentUserId = useAuthStore.getState().user?.id;
 
-  delete: async (id: string) => {
-    set({ isLoading: true, error: null });
-    try {
-      await messageService.delete(id);
-      
-      const items = get().items.filter(p => p.id !== id);
-      set({ items, isLoading: false });
+      set({
+        messages: updatedMessages,
+        conversationMessages: updatedConversation,
+        conversations: currentUserId ? toConversations(updatedMessages, currentUserId) : [],
+      });
+      await get().fetchUnreadCount();
       return true;
     } catch (error: any) {
-      set({
-        error: error.response?.data?.message || 'Failed to delete item',
-        isLoading: false,
-      });
+      set({ error: error.response?.data?.message || 'Failed to mark messages as read' });
       return false;
     }
   },
 
+  setCurrentConversation: (userId: string | null) => set({ currentConversationUserId: userId }),
+
   clearError: () => set({ error: null }),
 }));
+
