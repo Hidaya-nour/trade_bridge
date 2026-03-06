@@ -41,33 +41,7 @@ import { formatPrice } from "@/lib/formatters";
 import { getInitials } from "@/lib/utils";
 import { PlaceOrderDialog } from "./PlaceOrderDialog";
 import toast from "react-hot-toast";
-
-// ============================================================================
-// TYPES
-// ============================================================================
-
-export type CartRole = "retailer" | "distributor";
-
-export interface CartConfig {
-  role: CartRole;
-  title: string;
-  description: string;
-  continueShoppingPath: string;
-  supplierPath: string;
-  supplierLabel: string;
-  supplierIcon: React.ElementType;
-  ordersPath: string;
-  productsPath: string;
-  emptyStateMessage: string;
-  bulkDiscountThreshold?: number;
-  bulkDiscountPercentage?: number;
-  vatPercentage?: number;
-  shippingCostPerSupplier?: number;
-}
-
-// ============================================================================
-// PROPS
-// ============================================================================
+import type { CartConfig } from "@/types/cart.types";
 
 interface CartPageProps {
   config: CartConfig;
@@ -81,7 +55,6 @@ export const CartPage: React.FC<CartPageProps> = ({ config }) => {
   const navigate = useNavigate();
   const [selectAll, setSelectAll] = useState(false);
   const [deliveryOption, setDeliveryOption] = useState("standard");
-  const [paymentMethod, setPaymentMethod] = useState("cash");
   const [promoCode, setPromoCode] = useState("");
   const [promoApplied, setPromoApplied] = useState(false);
   const [checkoutDialogOpen, setCheckoutDialogOpen] = useState(false);

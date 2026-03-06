@@ -25,6 +25,24 @@ export interface CartItem {
   };
 }
 
+export type CartRole = "retailer" | "distributor";
+
+export interface CartConfig {
+  role: CartRole;
+  title: string;
+  description: string;
+  continueShoppingPath: string;
+  supplierPath: string;
+  supplierLabel: string;
+  supplierIcon: React.ElementType;
+  ordersPath: string;
+  productsPath: string;
+  emptyStateMessage: string;
+  bulkDiscountThreshold?: number;
+  bulkDiscountPercentage?: number;
+  vatPercentage?: number;
+  shippingCostPerSupplier?: number;
+}
 export interface Cart {
   id: string;
   user_id: string;

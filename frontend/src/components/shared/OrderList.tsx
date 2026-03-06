@@ -1,41 +1,24 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   Package,
-  Search,
-  Filter,
   Eye,
   CheckCircle2,
   XCircle,
   Clock,
   Truck,
-  AlertCircle,
-  ChevronRight,
   Download,
   Calendar,
-  DollarSign,
   MapPin,
   Phone,
   Printer,
   MoreVertical,
-  FileText,
   Repeat,
   Star,
-  Factory,
-  Store,
 } from "lucide-react";
-
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardFooter,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -48,8 +31,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -70,183 +51,129 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
-
 import {
   StatusBadge,
   EmptyState,
   PaginationBar,
-  SearchFilter,
   StatsCard,
 } from "@/components/shared";
 import { formatPrice, formatDate, formatDateTime } from "@/lib/formatters";
-import { getInitials, cn } from "@/lib/utils";
-import { Label } from "../ui/label";
-
-// ============================================================================
-// TYPES
-// ============================================================================
-
-export type OrderRole = "retailer" | "distributor";
-export type OrderType = "sales" | "purchases";
-
-export interface OrderItem {
-  name: string;
-  sku: string;
-  quantity: number;
-  unit: string;
-  price: number;
-  total: number;
-}
-
-export interface Order {
-  id: string;
-  orderNumber: string;
-  partyId: number;
-  partyName: string;
-  partyContact: string;
-  partyPhone: string;
-  partyLocation: string;
-  orderDate: string;
-  requestedDelivery: string;
-  estimatedDelivery: string;
-  actualDelivery?: string | null;
-  items: OrderItem[];
-  subtotal: number;
-  shipping: number;
-  tax: number;
-  total: number;
-  status:
-    | "pending"
-    | "confirmed"
-    | "processing"
-    | "shipped"
-    | "delivered"
-    | "cancelled";
-  paymentStatus: "pending" | "paid" | "approved" | "refunded";
-  paymentMethod: string;
-  paymentTerms: string;
-  priority: "high" | "medium" | "low";
-  notes?: string;
-  trackingNumber?: string;
-  carrier?: string;
-  cancellationReason?: string;
-  cancelledDate?: string;
-  receivedBy?: string;
-  receivedDate?: string;
-  invoiceUrl?: string;
-  rating?: number | null;
-  review?: string;
-}
-
-export interface OrderListConfig {
-  role: OrderRole;
-  type: OrderType;
-  title: string;
-  description: string;
-  partyLabel: string; // "Supplier", "Distributor", "Factory"
-  partyPath: string; // "/suppliers", "/distributors", "/factories"
-  icon: React.ElementType;
-  showRating: boolean; // Retailers rate suppliers
-  showReorder: boolean; // Can reorder from this party
-  showCancel: boolean; // Can cancel orders
-  stats: {
-    totalSpent: number;
-    pending: number;
-    processing: number;
-    shipped: number;
-    delivered: number;
-  };
-}
-
-// ============================================================================
-// PROPS
-// ============================================================================
+import { cn } from "@/lib/utils";
+import { Label } from "@/components/ui/label";
+import type { Order } from "@/types/order.types";
 
 interface OrderListProps {
-  config: OrderListConfig;
-  orders: Order[];
-  onCancelOrder?: (orderId: string, reason: string) => void;
+  config: {
+    role: "retailer" | "distributor";
+    type: "sales" | "purchases";
+    title: string;
+    description: string;
+    partyLabel: string;
+    partyPath: string;
+    icon: React.ElementType;
+    showRating: boolean;
+    showReorder: boolean;
+    showCancel: boolean;
+    stats: {
+      totalSpent: number;
+      pending: number;
+      processing: number;
+      shipped: number;
+      delivered: number;
+    };
+  };
+  orders?: Order[];
+  onCancelOrder?: (orderId: string, reason: string) => void | Promise<boolean>;
   onReorder?: (orderId: string) => void;
-  onRate?: (orderId: string, rating: number, review: string) => void;
+  onRateProduct?: (
+    productId: string,
+    rating: number,
+    review: string,
+    orderId: string,
+  ) => void;
+  isLoading?: boolean;
+  error?: string | null;
 }
-
-// ============================================================================
-// CONSTANTS
-// ============================================================================
-
-const statusColors = {
-  pending: "bg-yellow-100 text-yellow-800 border-yellow-200",
-  confirmed: "bg-blue-100 text-blue-800 border-blue-200",
-  processing: "bg-indigo-100 text-indigo-800 border-indigo-200",
-  shipped: "bg-purple-100 text-purple-800 border-purple-200",
-  delivered: "bg-green-100 text-green-800 border-green-200",
-  cancelled: "bg-red-100 text-red-800 border-red-200",
-};
-
-const priorityColors = {
-  high: "bg-red-100 text-red-800 border-red-200",
-  medium: "bg-amber-100 text-amber-800 border-amber-200",
-  low: "bg-green-100 text-green-800 border-green-200",
-};
 
 const paymentStatusColors = {
   pending: "bg-yellow-100 text-yellow-800",
-  approved: "bg-blue-100 text-blue-800",
-  paid: "bg-green-100 text-green-800",
+  processing: "bg-blue-100 text-blue-800",
+  completed: "bg-green-100 text-green-800",
+  failed: "bg-red-100 text-red-800",
   refunded: "bg-gray-100 text-gray-800",
 };
 
-// ============================================================================
-// COMPONENT
-// ============================================================================
-
 export const OrderList: React.FC<OrderListProps> = ({
   config,
-  orders: initialOrders,
+  orders: propOrders = [],
   onCancelOrder,
   onReorder,
-  onRate,
+  onRateProduct,
+  isLoading = false,
+  error = null,
 }) => {
-  const [orders, setOrders] = useState<Order[]>(initialOrders);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [partyFilter, setPartyFilter] = useState<string>("all");
+  const [supplierFilter, setSupplierFilter] = useState<string>("all");
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
-  const [showOrderDialog, setShowOrderDialog] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<{
+    id: string;
+    name: string;
+    orderId: string;
+  } | null>(null);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [showRateDialog, setShowRateDialog] = useState(false);
   const [cancellationReason, setCancellationReason] = useState("");
   const [rating, setRating] = useState(5);
   const [review, setReview] = useState("");
+  const [ratedProducts, setRatedProducts] = useState<
+    Record<string, { rating: number; review: string }>
+  >({});
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
 
-  // Get unique parties for filter
-  const parties = Array.from(new Set(orders.map((o) => o.partyName))).sort();
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, statusFilter, supplierFilter]);
+
+  // Get unique suppliers for filter
+  const suppliers = Array.from(
+    new Set(
+      propOrders
+        .map(
+          (order) =>
+            order.supplier?.business_name ||
+            order.supplier?.full_name ||
+            "Unknown",
+        )
+        .filter(Boolean),
+    ),
+  ).sort();
 
   // Filter orders
-  const filteredOrders = orders.filter((order) => {
+  const filteredOrders = propOrders.filter((order) => {
+    const supplierName =
+      order.supplier?.business_name || order.supplier?.full_name || "Unknown";
+
     const matchesSearch =
       searchQuery === "" ||
       order.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      order.orderNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      order.partyName.toLowerCase().includes(searchQuery.toLowerCase());
+      supplierName.toLowerCase().includes(searchQuery.toLowerCase());
 
     const matchesStatus =
-      statusFilter === "all" || order.status === statusFilter;
-    const matchesParty =
-      partyFilter === "all" || order.partyName === partyFilter;
+      statusFilter === "all" || order.order_status === statusFilter;
+    const matchesSupplier =
+      supplierFilter === "all" || supplierName === supplierFilter;
 
-    return matchesSearch && matchesStatus && matchesParty;
+    return matchesSearch && matchesStatus && matchesSupplier;
   });
 
   // Sort orders by date (newest first)
   const sortedOrders = [...filteredOrders].sort(
-    (a, b) => new Date(b.orderDate).getTime() - new Date(a.orderDate).getTime(),
+    (a, b) =>
+      new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
   );
 
   // Pagination
@@ -255,45 +182,30 @@ export const OrderList: React.FC<OrderListProps> = ({
   const currentOrders = sortedOrders.slice(indexOfFirstItem, indexOfLastItem);
   const totalPages = Math.ceil(sortedOrders.length / itemsPerPage);
 
-  const handleCancelOrder = () => {
-    if (selectedOrder && onCancelOrder) {
-      onCancelOrder(selectedOrder.id, cancellationReason);
-      setOrders((prev) =>
-        prev.map((o) =>
-          o.id === selectedOrder.id
-            ? {
-                ...o,
-                status: "cancelled",
-                paymentStatus: "refunded",
-                cancellationReason,
-                cancelledDate: new Date().toISOString().split("T")[0],
-              }
-            : o,
-        ),
-      );
+  const handleCancelOrder = async () => {
+    if (selectedOrder) {
+      await onCancelOrder?.(selectedOrder.id, cancellationReason);
     }
     setShowCancelDialog(false);
     setSelectedOrder(null);
     setCancellationReason("");
   };
 
-  const handleRate = () => {
-    if (selectedOrder && onRate) {
-      onRate(selectedOrder.id, rating, review);
-      setOrders((prev) =>
-        prev.map((o) =>
-          o.id === selectedOrder.id
-            ? {
-                ...o,
-                rating,
-                review,
-              }
-            : o,
-        ),
+  const handleRateProduct = () => {
+    if (selectedProduct) {
+      onRateProduct?.(
+        selectedProduct.id,
+        rating,
+        review,
+        selectedProduct.orderId,
       );
+      setRatedProducts((prev) => ({
+        ...prev,
+        [selectedProduct.id]: { rating, review },
+      }));
     }
     setShowRateDialog(false);
-    setSelectedOrder(null);
+    setSelectedProduct(null);
     setRating(5);
     setReview("");
   };
@@ -302,7 +214,7 @@ export const OrderList: React.FC<OrderListProps> = ({
     switch (status) {
       case "pending":
         return 20;
-      case "confirmed":
+      case "approved":
         return 40;
       case "processing":
         return 60;
@@ -317,8 +229,41 @@ export const OrderList: React.FC<OrderListProps> = ({
     }
   };
 
-  const PartyIcon = config.icon;
+  // Check if a product has been rated
+  const isProductRated = (productId: string) => {
+    return !!ratedProducts[productId];
+  };
 
+  const getStatsCards = (config: OrderListProps["config"], orders: Order[]) => [
+    {
+      title: "Pending",
+      value: config.stats.pending,
+      icon: Clock,
+      iconBg: "bg-yellow-100",
+      iconColor: "text-yellow-600",
+    },
+    {
+      title: "Approved",
+      value: orders.filter((o) => o.order_status === "approved").length,
+      icon: CheckCircle2,
+      iconBg: "bg-blue-100",
+      iconColor: "text-blue-600",
+    },
+    {
+      title: "Shipped",
+      value: config.stats.shipped,
+      icon: Truck,
+      iconBg: "bg-purple-100",
+      iconColor: "text-purple-600",
+    },
+    {
+      title: "Delivered",
+      value: config.stats.delivered,
+      icon: CheckCircle2,
+      iconBg: "bg-green-100",
+      iconColor: "text-green-600",
+    },
+  ];
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -333,7 +278,7 @@ export const OrderList: React.FC<OrderListProps> = ({
               className="bg-blue-50 text-blue-700 border-blue-200"
             >
               <Package className="h-3 w-3 mr-1" />
-              {orders.length} Total Orders
+              {propOrders.length} Total Orders
             </Badge>
           </div>
           <p className="text-muted-foreground mt-1">{config.description}</p>
@@ -347,92 +292,87 @@ export const OrderList: React.FC<OrderListProps> = ({
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-        <StatsCard
-          title="Total Spent"
-          value={formatPrice(config.stats.totalSpent)}
-          icon={DollarSign}
-          iconBg="bg-green-100"
-          iconColor="text-green-600"
-        />
-        <StatsCard
-          title="Pending"
-          value={config.stats.pending}
-          icon={Clock}
-          iconBg="bg-yellow-100"
-          iconColor="text-yellow-600"
-        />
-        <StatsCard
-          title="Processing"
-          value={config.stats.processing}
-          icon={Package}
-          iconBg="bg-blue-100"
-          iconColor="text-blue-600"
-        />
-        <StatsCard
-          title="Shipped"
-          value={config.stats.shipped}
-          icon={Truck}
-          iconBg="bg-purple-100"
-          iconColor="text-purple-600"
-        />
-        <StatsCard
-          title="Delivered"
-          value={config.stats.delivered}
-          icon={CheckCircle2}
-          iconBg="bg-green-100"
-          iconColor="text-green-600"
-        />
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {getStatsCards(config, propOrders).map((card, index) => (
+          <StatsCard
+            key={index}
+            title={card.title}
+            value={card.value}
+            icon={card.icon}
+            iconBg={card.iconBg}
+            iconColor={card.iconColor}
+          />
+        ))}
       </div>
+
+      {/* Error State */}
+      {error && (
+        <Card className="border-red-200 bg-red-50">
+          <CardContent className="p-4 text-sm text-red-700">
+            {error}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Loading State */}
+      {isLoading && (
+        <Card>
+          <CardContent className="p-4 text-sm text-muted-foreground">
+            Loading orders...
+          </CardContent>
+        </Card>
+      )}
 
       {/* Filters */}
       <Card>
         <CardContent className="p-4">
-          <SearchFilter
-            placeholder={`Search by order number, ${config.partyLabel.toLowerCase()}...`}
-            onSearch={setSearchQuery}
-            filterComponent={
-              <div className="flex items-center gap-2">
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-[150px]">
-                    <SelectValue placeholder="Order Status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Status</SelectItem>
-                    <SelectItem value="pending">Pending</SelectItem>
-                    <SelectItem value="confirmed">Confirmed</SelectItem>
-                    <SelectItem value="processing">Processing</SelectItem>
-                    <SelectItem value="shipped">Shipped</SelectItem>
-                    <SelectItem value="delivered">Delivered</SelectItem>
-                    <SelectItem value="cancelled">Cancelled</SelectItem>
-                  </SelectContent>
-                </Select>
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="flex-1">
+              <Input
+                placeholder={`Search by order number or ${config.partyLabel.toLowerCase()}...`}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-[150px]">
+                  <SelectValue placeholder="Order Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="approved">Approved</SelectItem>
+                  <SelectItem value="processing">Processing</SelectItem>
+                  <SelectItem value="shipped">Shipped</SelectItem>
+                  <SelectItem value="delivered">Delivered</SelectItem>
+                  <SelectItem value="cancelled">Cancelled</SelectItem>
+                </SelectContent>
+              </Select>
 
-                <Select value={partyFilter} onValueChange={setPartyFilter}>
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder={`All ${config.partyLabel}s`} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">
-                      All {config.partyLabel}s
+              <Select value={supplierFilter} onValueChange={setSupplierFilter}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder={`All ${config.partyLabel}s`} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All {config.partyLabel}s</SelectItem>
+                  {suppliers.map((supplier) => (
+                    <SelectItem key={supplier} value={supplier}>
+                      {supplier}
                     </SelectItem>
-                    {parties.map((party) => (
-                      <SelectItem key={party} value={party}>
-                        {party}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            }
-          />
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
         </CardContent>
       </Card>
 
       {/* Results Count */}
       <div className="flex items-center justify-between">
         <div className="text-sm text-muted-foreground">
-          Showing {indexOfFirstItem + 1}-
+          Showing {sortedOrders.length === 0 ? 0 : indexOfFirstItem + 1}-
           {Math.min(indexOfLastItem, sortedOrders.length)} of{" "}
           {sortedOrders.length} orders
         </div>
@@ -465,35 +405,35 @@ export const OrderList: React.FC<OrderListProps> = ({
                     <div
                       className={cn(
                         "p-2 rounded-full",
-                        order.status === "pending"
+                        order.order_status === "pending"
                           ? "bg-yellow-100"
-                          : order.status === "confirmed"
+                          : order.order_status === "approved"
                             ? "bg-blue-100"
-                            : order.status === "processing"
+                            : order.order_status === "processing"
                               ? "bg-indigo-100"
-                              : order.status === "shipped"
+                              : order.order_status === "shipped"
                                 ? "bg-purple-100"
-                                : order.status === "delivered"
+                                : order.order_status === "delivered"
                                   ? "bg-green-100"
                                   : "bg-red-100",
                       )}
                     >
-                      {order.status === "pending" && (
+                      {order.order_status === "pending" && (
                         <Clock className="h-5 w-5 text-yellow-600" />
                       )}
-                      {order.status === "confirmed" && (
+                      {order.order_status === "approved" && (
                         <CheckCircle2 className="h-5 w-5 text-blue-600" />
                       )}
-                      {order.status === "processing" && (
+                      {order.order_status === "processing" && (
                         <Package className="h-5 w-5 text-indigo-600" />
                       )}
-                      {order.status === "shipped" && (
+                      {order.order_status === "shipped" && (
                         <Truck className="h-5 w-5 text-purple-600" />
                       )}
-                      {order.status === "delivered" && (
+                      {order.order_status === "delivered" && (
                         <CheckCircle2 className="h-5 w-5 text-green-600" />
                       )}
-                      {order.status === "cancelled" && (
+                      {order.order_status === "cancelled" && (
                         <XCircle className="h-5 w-5 text-red-600" />
                       )}
                     </div>
@@ -503,63 +443,75 @@ export const OrderList: React.FC<OrderListProps> = ({
                           to={`/${config.role}/${config.type === "purchases" ? "purchase-orders" : "orders"}/${order.id}`}
                           className="text-lg font-semibold hover:text-primary"
                         >
-                          {order.orderNumber}
+                          {order.id}
                         </Link>
-                        <StatusBadge status={order.status} />
-                        <StatusBadge status={order.priority} />
+                        <StatusBadge status={order.order_status} />
                       </div>
                       <div className="flex items-center gap-3 mt-1 flex-wrap">
                         <div className="flex items-center gap-2">
                           <div className="h-6 w-6 bg-blue-100 rounded-full flex items-center justify-center">
-                            <PartyIcon className="h-3 w-3 text-blue-600" />
+                            <config.icon className="h-3 w-3 text-blue-600" />
                           </div>
                           <Link
-                            to={`/${config.role}${config.partyPath}/${order.partyId}`}
+                            to={`/${config.role}${config.partyPath}/${order.supplier_id}`}
                             className="text-sm font-medium hover:text-primary"
                           >
-                            {order.partyName}
+                            {order.supplier?.business_name ||
+                              order.supplier?.full_name ||
+                              "Unknown"}
                           </Link>
                         </div>
                         <span className="text-xs text-muted-foreground">•</span>
                         <span className="text-xs text-muted-foreground flex items-center">
                           <Calendar className="h-3 w-3 mr-1" />
-                          Ordered: {formatDate(order.orderDate)}
+                          Ordered: {formatDate(order.created_at)}
                         </span>
-                        <span className="text-xs text-muted-foreground">•</span>
-                        <span className="text-xs text-muted-foreground flex items-center">
-                          <MapPin className="h-3 w-3 mr-1" />
-                          {order.partyLocation}
-                        </span>
+                        {order.delivery && (
+                          <>
+                            <span className="text-xs text-muted-foreground">
+                              •
+                            </span>
+                            <span className="text-xs text-muted-foreground flex items-center">
+                              <MapPin className="h-3 w-3 mr-1" />
+                              {order.delivery.dropoff_location}
+                            </span>
+                          </>
+                        )}
                       </div>
                     </div>
                   </div>
                   <div className="flex items-center gap-2 lg:flex-col lg:items-end">
                     <p className="text-2xl font-bold text-primary">
-                      {formatPrice(order.total)}
+                      {formatPrice(order.total_price)}
                     </p>
-                    <Badge
-                      variant="outline"
-                      className={paymentStatusColors[order.paymentStatus]}
-                    >
-                      {order.paymentMethod} • {order.paymentStatus}
-                    </Badge>
+                    {order.payment && (
+                      <Badge
+                        variant="outline"
+                        className={
+                          paymentStatusColors[order.payment.payment_status]
+                        }
+                      >
+                        {order.payment.payment_method} •{" "}
+                        {order.payment.payment_status}
+                      </Badge>
+                    )}
                   </div>
                 </div>
 
                 {/* Order Progress */}
-                {order.status !== "cancelled" &&
-                  order.status !== "delivered" && (
+                {order.order_status !== "cancelled" &&
+                  order.order_status !== "delivered" && (
                     <div className="mb-4">
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-xs font-medium">
                           Order Progress
                         </span>
                         <span className="text-xs text-muted-foreground">
-                          {getStatusProgress(order.status)}%
+                          {getStatusProgress(order.order_status)}%
                         </span>
                       </div>
                       <Progress
-                        value={getStatusProgress(order.status)}
+                        value={getStatusProgress(order.order_status)}
                         className="h-2"
                       />
                       <div className="flex justify-between mt-1">
@@ -567,7 +519,7 @@ export const OrderList: React.FC<OrderListProps> = ({
                           Pending
                         </span>
                         <span className="text-[10px] text-muted-foreground">
-                          Confirmed
+                          Approved
                         </span>
                         <span className="text-[10px] text-muted-foreground">
                           Processing
@@ -582,37 +534,94 @@ export const OrderList: React.FC<OrderListProps> = ({
                     </div>
                   )}
 
-                {/* Order Items Preview */}
-                <div className="bg-muted/50 rounded-lg p-3 mb-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-medium">
-                      Order Items ({order.items.length})
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                      Est. Delivery: {formatDate(order.estimatedDelivery)}
-                    </span>
-                  </div>
-                  <div className="space-y-2">
-                    {order.items.slice(0, 2).map((item, idx) => (
-                      <div key={idx} className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">
-                          {item.name} x{item.quantity} {item.unit}
+                {/* Order Items with Product Ratings */}
+                {order.items && order.items.length > 0 && (
+                  <div className="bg-muted/50 rounded-lg p-3 mb-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-medium">
+                        Order Items ({order.items.length})
+                      </span>
+                      {order.delivery?.completed_at && (
+                        <span className="text-xs text-muted-foreground">
+                          Delivered: {formatDate(order.delivery.completed_at)}
                         </span>
-                        <span className="font-medium">
-                          {formatPrice(item.total)}
-                        </span>
-                      </div>
-                    ))}
-                    {order.items.length > 2 && (
-                      <p className="text-xs text-muted-foreground">
-                        +{order.items.length - 2} more items
-                      </p>
-                    )}
+                      )}
+                    </div>
+                    <div className="space-y-3">
+                      {order.items.map((item, idx) => {
+                        const productId = item.product_id;
+                        const isRated = isProductRated(productId);
+                        const productRating = ratedProducts[productId];
+
+                        return (
+                          <div key={idx} className="flex flex-col gap-2">
+                            <div className="flex justify-between items-center">
+                              <div className="flex-1">
+                                <div className="flex justify-between text-sm">
+                                  <span className="text-muted-foreground">
+                                    {item.product?.name ||
+                                      `Product ${item.product_id}`}{" "}
+                                    x{item.quantity}{" "}
+                                    {item.product?.unit_type || "unit"}
+                                  </span>
+                                  <span className="font-medium">
+                                    {formatPrice(
+                                      item.quantity * item.unit_price,
+                                    )}
+                                  </span>
+                                </div>
+                              </div>
+
+                              {/* Rating button for delivered orders */}
+                              {config.showRating &&
+                                order.order_status === "delivered" &&
+                                !isRated && (
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="ml-2 h-7 text-xs"
+                                    onClick={() => {
+                                      setSelectedProduct({
+                                        id: productId,
+                                        name:
+                                          item.product?.name ||
+                                          `Product ${item.product_id}`,
+                                        orderId: order.id,
+                                      });
+                                      setShowRateDialog(true);
+                                    }}
+                                  >
+                                    <Star className="h-3 w-3 mr-1" />
+                                    Rate
+                                  </Button>
+                                )}
+
+                              {/* Show rating if already rated */}
+                              {isRated && (
+                                <div className="flex items-center gap-1 ml-2 bg-yellow-50 px-2 py-1 rounded">
+                                  <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                                  <span className="text-xs font-medium">
+                                    {productRating?.rating}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Show review if exists */}
+                            {isRated && productRating?.review && (
+                              <p className="text-xs text-muted-foreground pl-2 border-l-2 border-gray-200">
+                                "{productRating.review}"
+                              </p>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {/* Tracking Info */}
-                {order.trackingNumber && (
+                {order.delivery && order.delivery.id && (
                   <div className="bg-purple-50 border border-purple-100 rounded-lg p-3 mb-4">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
@@ -622,11 +631,11 @@ export const OrderList: React.FC<OrderListProps> = ({
                             Tracking Number
                           </p>
                           <p className="text-xs text-purple-600 font-mono">
-                            {order.trackingNumber}
+                            {order.delivery.id}
                           </p>
-                          {order.carrier && (
+                          {order.delivery.driver && (
                             <p className="text-xs text-purple-600">
-                              Carrier: {order.carrier}
+                              Driver: {order.delivery.driver.full_name}
                             </p>
                           )}
                         </div>
@@ -643,47 +652,29 @@ export const OrderList: React.FC<OrderListProps> = ({
                 )}
 
                 {/* Delivery Confirmation */}
-                {order.status === "delivered" && (
+                {order.order_status === "delivered" && (
                   <div className="bg-green-50 border border-green-100 rounded-lg p-3 mb-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <CheckCircle2 className="h-4 w-4 text-green-600" />
-                        <div>
-                          <p className="text-xs font-medium text-green-800">
-                            Delivered
-                          </p>
-                          <p className="text-xs text-green-700">
-                            Received by: {order.receivedBy} on{" "}
-                            {formatDate(order.receivedDate || "")}
-                          </p>
-                        </div>
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="h-4 w-4 text-green-600" />
+                      <div>
+                        <p className="text-xs font-medium text-green-800">
+                          Delivered
+                        </p>
+                        <p className="text-xs text-green-700">
+                          {order.delivery?.completed_at && (
+                            <>
+                              Delivered on:{" "}
+                              {formatDate(order.delivery.completed_at)}
+                            </>
+                          )}
+                        </p>
                       </div>
-                      {config.showRating && order.rating ? (
-                        <div className="flex items-center gap-1 bg-white px-2 py-1 rounded">
-                          <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                          <span className="text-xs font-medium">
-                            {order.rating}
-                          </span>
-                        </div>
-                      ) : config.showRating && !order.rating ? (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="h-7 text-xs bg-white"
-                          onClick={() => {
-                            setSelectedOrder(order);
-                            setShowRateDialog(true);
-                          }}
-                        >
-                          Rate Order
-                        </Button>
-                      ) : null}
                     </div>
                   </div>
                 )}
 
                 {/* Cancellation Info */}
-                {order.status === "cancelled" && (
+                {order.order_status === "cancelled" && (
                   <div className="bg-red-50 border border-red-100 rounded-lg p-3 mb-4">
                     <div className="flex items-start gap-2">
                       <XCircle className="h-4 w-4 text-red-600 mt-0.5" />
@@ -691,42 +682,23 @@ export const OrderList: React.FC<OrderListProps> = ({
                         <p className="text-xs font-medium text-red-800">
                           Order Cancelled
                         </p>
-                        <p className="text-xs text-red-700">
-                          Reason: {order.cancellationReason}
-                        </p>
-                        {order.cancelledDate && (
-                          <p className="text-xs text-red-600 mt-1">
-                            Cancelled on: {formatDate(order.cancelledDate)}
-                          </p>
-                        )}
                       </div>
                     </div>
-                  </div>
-                )}
-
-                {/* Notes */}
-                {order.notes && (
-                  <div className="bg-amber-50 border border-amber-100 rounded-lg p-3 mb-4">
-                    <p className="text-xs font-medium text-amber-800">Note</p>
-                    <p className="text-xs text-amber-700">{order.notes}</p>
                   </div>
                 )}
 
                 {/* Actions */}
                 <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t">
                   <div className="flex items-center gap-2">
-                    <Badge variant="outline" className="bg-blue-50">
-                      Payment: {order.paymentTerms}
-                    </Badge>
-                    {order.notes && (
-                      <Badge variant="outline" className="bg-amber-50">
-                        Has Notes
+                    {order.items && order.items.length > 0 && (
+                      <Badge variant="outline" className="bg-blue-50">
+                        {order.items.length} items
                       </Badge>
                     )}
                   </div>
 
                   <div className="flex items-center gap-2 flex-wrap">
-                    {config.showCancel && order.status === "pending" && (
+                    {config.showCancel && order.order_status === "pending" && (
                       <Button
                         size="sm"
                         variant="outline"
@@ -741,34 +713,29 @@ export const OrderList: React.FC<OrderListProps> = ({
                       </Button>
                     )}
 
-                    {config.showReorder && order.status === "delivered" && (
-                      <Button size="sm" variant="outline" asChild>
-                        <Link
-                          to={`/${config.role}${config.partyPath}?reorder=${order.id}`}
+                    {config.showReorder &&
+                      order.order_status === "delivered" && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => onReorder?.(order.id)}
                         >
                           <Repeat className="h-4 w-4 mr-2" />
                           Reorder
-                        </Link>
-                      </Button>
-                    )}
+                        </Button>
+                      )}
 
                     <Button
                       size="sm"
                       variant="outline"
                       onClick={() => {
                         setSelectedOrder(order);
-                        setShowOrderDialog(true);
+                        window.location.href = `/${config.role}/${config.type === "purchases" ? "purchase-orders" : "orders"}/${selectedOrder?.id}`;
                       }}
                     >
                       <Eye className="h-4 w-4 mr-2" />
                       View Details
                     </Button>
-
-                    {order.invoiceUrl && (
-                      <Button size="sm" variant="ghost" className="h-8 w-8 p-0">
-                        <FileText className="h-4 w-4" />
-                      </Button>
-                    )}
 
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -807,207 +774,16 @@ export const OrderList: React.FC<OrderListProps> = ({
           )}
         </div>
       )}
-
-      {/* Order Details Dialog */}
-      <Dialog open={showOrderDialog} onOpenChange={setShowOrderDialog}>
-        <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader>
-            <DialogTitle>
-              Order Details - {selectedOrder?.orderNumber}
-            </DialogTitle>
-            <DialogDescription>
-              Complete order information and {config.partyLabel.toLowerCase()}{" "}
-              details
-            </DialogDescription>
-          </DialogHeader>
-
-          {selectedOrder && (
-            <ScrollArea className="h-[500px] pr-4">
-              <div className="space-y-6 py-2">
-                {/* Party Information */}
-                <div className="space-y-3">
-                  <h4 className="text-sm font-medium flex items-center gap-2">
-                    <PartyIcon className="h-4 w-4" />
-                    {config.partyLabel} Information
-                  </h4>
-                  <div className="bg-muted/50 rounded-lg p-3 space-y-2">
-                    <div className="flex justify-between">
-                      <span className="text-xs text-muted-foreground">
-                        {config.partyLabel} Name
-                      </span>
-                      <span className="text-xs font-medium">
-                        {selectedOrder.partyName}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-xs text-muted-foreground">
-                        Contact Person
-                      </span>
-                      <span className="text-xs font-medium">
-                        {selectedOrder.partyContact}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-xs text-muted-foreground">
-                        Phone
-                      </span>
-                      <span className="text-xs font-medium">
-                        {selectedOrder.partyPhone}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-xs text-muted-foreground">
-                        Location
-                      </span>
-                      <span className="text-xs font-medium">
-                        {selectedOrder.partyLocation}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Order Information */}
-                <div className="space-y-3">
-                  <h4 className="text-sm font-medium flex items-center gap-2">
-                    <Package className="h-4 w-4" />
-                    Order Information
-                  </h4>
-                  <div className="bg-muted/50 rounded-lg p-3 space-y-2">
-                    <div className="flex justify-between">
-                      <span className="text-xs text-muted-foreground">
-                        Order Number
-                      </span>
-                      <span className="text-xs font-medium">
-                        {selectedOrder.orderNumber}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-xs text-muted-foreground">
-                        Order Date
-                      </span>
-                      <span className="text-xs font-medium">
-                        {formatDateTime(selectedOrder.orderDate)}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-xs text-muted-foreground">
-                        Requested Delivery
-                      </span>
-                      <span className="text-xs font-medium">
-                        {formatDate(selectedOrder.requestedDelivery)}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-xs text-muted-foreground">
-                        Estimated Delivery
-                      </span>
-                      <span className="text-xs font-medium">
-                        {formatDate(selectedOrder.estimatedDelivery)}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-xs text-muted-foreground">
-                        Payment Terms
-                      </span>
-                      <span className="text-xs font-medium">
-                        {selectedOrder.paymentTerms}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Order Items */}
-                <div className="space-y-3">
-                  <h4 className="text-sm font-medium flex items-center gap-2">
-                    <Package className="h-4 w-4" />
-                    Order Items
-                  </h4>
-                  <div className="space-y-2">
-                    {selectedOrder.items.map((item, idx) => (
-                      <div key={idx} className="bg-muted/50 rounded-lg p-3">
-                        <div className="flex justify-between mb-1">
-                          <span className="text-sm font-medium">
-                            {item.name}
-                          </span>
-                          <span className="text-sm font-bold">
-                            {formatPrice(item.total)}
-                          </span>
-                        </div>
-                        <div className="flex justify-between text-xs text-muted-foreground">
-                          <span>SKU: {item.sku}</span>
-                          <span>
-                            {item.quantity} {item.unit} ×{" "}
-                            {formatPrice(item.price)}
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Order Summary */}
-                <div className="space-y-3">
-                  <h4 className="text-sm font-medium">Order Summary</h4>
-                  <div className="bg-primary/5 rounded-lg p-3 space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Subtotal</span>
-                      <span>{formatPrice(selectedOrder.subtotal)}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Shipping</span>
-                      <span>{formatPrice(selectedOrder.shipping)}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">VAT (15%)</span>
-                      <span>{formatPrice(selectedOrder.tax)}</span>
-                    </div>
-                    <Separator className="my-2" />
-                    <div className="flex justify-between text-base font-bold">
-                      <span>Total</span>
-                      <span className="text-primary">
-                        {formatPrice(selectedOrder.total)}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {selectedOrder.notes && (
-                  <div className="space-y-3">
-                    <h4 className="text-sm font-medium">Notes</h4>
-                    <div className="bg-blue-50 rounded-lg p-3">
-                      <p className="text-sm text-blue-800">
-                        {selectedOrder.notes}
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </ScrollArea>
-          )}
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowOrderDialog(false)}>
-              Close
-            </Button>
-            <Button asChild>
-              <Link
-                to={`/${config.role}/${config.type === "purchases" ? "purchase-orders" : "orders"}/${selectedOrder?.id}`}
-              >
-                View Full Order
-              </Link>
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
       {/* Cancel Order Dialog */}
       <AlertDialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Cancel Order</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to cancel order {selectedOrder?.orderNumber}{" "}
-              from {selectedOrder?.partyName}?
+              Are you sure you want to cancel order {selectedOrder?.id} from{" "}
+              {selectedOrder?.supplier?.business_name ||
+                selectedOrder?.supplier?.full_name}
+              ?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="py-4">
@@ -1031,7 +807,6 @@ export const OrderList: React.FC<OrderListProps> = ({
                 <SelectItem value="Ordered by mistake">
                   Ordered by mistake
                 </SelectItem>
-                <SelectItem value="Supplier issue">Supplier issue</SelectItem>
                 <SelectItem value="Other">Other</SelectItem>
               </SelectContent>
             </Select>
@@ -1057,13 +832,13 @@ export const OrderList: React.FC<OrderListProps> = ({
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Rate Order Dialog */}
+      {/* Rate Product Dialog */}
       <AlertDialog open={showRateDialog} onOpenChange={setShowRateDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Rate & Review</AlertDialogTitle>
+            <AlertDialogTitle>Rate Product</AlertDialogTitle>
             <AlertDialogDescription>
-              Share your feedback about order {selectedOrder?.orderNumber}
+              Share your feedback about {selectedProduct?.name}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="py-4 space-y-4">
@@ -1104,7 +879,7 @@ export const OrderList: React.FC<OrderListProps> = ({
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              onClick={handleRate}
+              onClick={handleRateProduct}
               className="bg-blue-600 hover:bg-blue-700"
             >
               Submit Review
