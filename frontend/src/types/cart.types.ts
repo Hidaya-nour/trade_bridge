@@ -1,3 +1,5 @@
+import type { Product } from "./product.types";
+
 // types/cart.types.ts
 export interface CartItem {
   id: string;
@@ -6,22 +8,14 @@ export interface CartItem {
   quantity: number;
   created_at: string;
   updated_at: string;
-  product?: {
-    id: string;
-    name: string;
-    price: number;
-    unit_type: string;
-    min_order_amount: number;
-    stock_quantity: number;
-    images: string[];
-    supplier_id:string;
+  product?: Product;
     supplier?: {
       id: string;
       business_name: string;
       full_name: string;
       is_verified: boolean;
       // rating: number;
-    };
+  
   };
 }
 

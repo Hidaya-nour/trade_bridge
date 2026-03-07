@@ -26,21 +26,8 @@ import { Badge } from "@/components/ui/badge";
 
 import { formatPrice } from "@/lib/formatters";
 import toast from "react-hot-toast";
-
-// ============================================================================
-// TYPES
-// ============================================================================
-
-export interface OrderItem {
-  id: string;
-  product?: {
-    name: string;
-    unit_type: string;
-    price: number;
-  };
-  product_id: string;
-  quantity: number;
-}
+import type { Product } from "@/types/product.types";
+import type { OrderItem } from "@/types/order.types";
 
 export interface OrderSummary {
   subtotal: number;
@@ -137,12 +124,10 @@ export const PlaceOrderDialog: React.FC<PlaceOrderDialogProps> = ({
     externalIsPlacing !== undefined ? externalIsPlacing : internalIsPlacing;
 
   const handlePlaceOrder = async () => {
-    // If external onPlaceOrder is provided, use it with the selected values
     if (onPlaceOrder) {
       setInternalIsPlacing(true);
       try {
         await onPlaceOrder(paymentMethod, deliveryOption);
-        // Don't close or navigate here - let the parent handle it
       } catch (error) {
         toast.error("Failed to place order");
       } finally {
