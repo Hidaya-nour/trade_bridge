@@ -1,0 +1,10 @@
+{
+  "expo": {
+    "name": "Trade Bridge Mobile",
+    "slug": "trade-bridge-mobile",
+    "scheme": "tradebridge",
+    "plugins": [
+      "expo-router"
+    ]
+  }
+}

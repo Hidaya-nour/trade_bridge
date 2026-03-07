@@ -32,7 +32,7 @@ import paymentRoutes from './routes/payment.routes';
 import deliveryRoutes from './routes/delivery.routes';
 import promotionRoutes from './routes/promotion.routes';
 import inventoryMovementRoutes from './routes/inventory-movement.routes';
-import messageRoutes from './routes/message.routes';
+import chatMessageRoutes from './routes/chat-message.route';
 import loginAttemptRoutes from './routes/login-attempt.routes';
 import documentRoutes from './routes/document.routes';
 import addressRoutes from './routes/address.routes';
@@ -42,6 +42,7 @@ import supplierPaymentMethodRoutes from './routes/supplier-payment-method.routes
 import factoryAgentRoutes from './routes/factory-agent.routes';
 import ratingReviewRoutes from './routes/rating-review.routes';
 import supplierRoutes from './routes/supplier.routes'
+import { AppError, ValidationError } from './utils/errors';
 dotenv.config();
 
 const app = express();
@@ -71,7 +72,7 @@ app.use('/api/payments', paymentRoutes);
 app.use('/api/deliveries', deliveryRoutes);
 app.use('/api/promotions', promotionRoutes);
 app.use('/api/inventory-movements', inventoryMovementRoutes);
-app.use('/api/messages', messageRoutes);
+app.use('/api/messages', chatMessageRoutes);
 app.use('/api/login-attempts', loginAttemptRoutes);
 app.use('/api/documents', documentRoutes);
 app.use('/api/addresses', addressRoutes);
@@ -81,7 +82,6 @@ app.use('/api/supplier-payment-methods', supplierPaymentMethodRoutes);
 app.use('/api/factory-agents', factoryAgentRoutes);
 app.use('/api/reviews', ratingReviewRoutes);
 app.use('/api/suppliers', supplierRoutes);
-
 
 
 // Health check
@@ -95,6 +95,23 @@ app.get('/api/health', (req, res) => {
 
 // Error handler
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  if (err instanceof ValidationError) {
+    res.status(err.statusCode).json({
+      success: false,
+      message: err.message,
+      errors: err.errors,
+    });
+    return;
+  }
+
+  if (err instanceof AppError) {
+    res.status(err.statusCode).json({
+      success: false,
+      message: err.message,
+    });
+    return;
+  }
+
   logger.error(err.stack);
   res.status(500).json({
     success: false,

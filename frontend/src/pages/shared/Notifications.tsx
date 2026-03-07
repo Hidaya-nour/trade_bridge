@@ -60,8 +60,9 @@ const NotificationsPage: React.FC = () => {
     fetchNotifications,
     markAsRead,
     markAllRead,
-    isLoading,
+    clearAll,
     deleteNotification,
+    setFilters,
   } = useNotificationStore();
 
   // Fetch notifications on mount
@@ -188,8 +189,7 @@ const NotificationsPage: React.FC = () => {
   const [filterType, setFilterType] = useState("all");
   const [showRead, setShowRead] = useState(true);
 
-  const unreadCount = notifications.filter((n) => !n.is_read).length;
-  console.log(unreadCount);
+  const unreadCount = counts.unread;
 
   const filteredNotifications = notifications.filter((n) => {
     if (filterType !== "all" && n.type !== filterType) return false;
@@ -266,7 +266,14 @@ const NotificationsPage: React.FC = () => {
         <CardContent className="p-4">
           <div className="flex flex-col md:flex-row gap-4">
             <div className="flex-1 flex items-center gap-4">
-              <Select value={filterType} onValueChange={setFilterType}>
+              <Select
+                value={filterType}
+                onValueChange={(value) => {
+                  setFilterType(value);
+                  setFilters({ type: value === "all" ? undefined : value });
+                  void fetchNotifications({ type: value === "all" ? undefined : value });
+                }}
+              >
                 <SelectTrigger className="w-[180px]">
                   <SelectValue placeholder="Filter by type" />
                 </SelectTrigger>
@@ -292,7 +299,7 @@ const NotificationsPage: React.FC = () => {
             </div>
             <div className="flex items-center gap-2">
               <Badge variant="outline" className="px-3 py-1">
-                {filteredNotifications.length - counts.unread} notifications
+                {filteredNotifications.length} notifications
               </Badge>
             </div>
           </div>
@@ -309,6 +316,16 @@ const NotificationsPage: React.FC = () => {
                 <TabsTrigger value="unread">Unread</TabsTrigger>
                 <TabsTrigger value="mentions">Mentions</TabsTrigger>
               </TabsList>
+              <div className="mt-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => void clearAll()}
+                  disabled={notifications.length === 0}
+                >
+                  Clear all
+                </Button>
+              </div>
             </div>
 
             <TabsContent value="all" className="mt-0">

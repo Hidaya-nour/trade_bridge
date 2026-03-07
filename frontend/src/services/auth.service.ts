@@ -14,6 +14,20 @@ export interface RegisterData {
   business_name?: string;
 }
 
+export interface UpdateProfileData {
+  full_name?: string;
+  phone?: string;
+  business_name?: string;
+  business_address?: string;
+  tin_number?: string;
+  profile_image?: string;
+}
+
+export interface ChangePasswordData {
+  currentPassword: string;
+  newPassword: string;
+}
+
 export const authService = {
   async login(credentials: LoginCredentials) {
     const response = await api.post('/auth/login', credentials);
@@ -37,6 +51,16 @@ export const authService = {
 
   async getCurrentUser() {
     const response = await api.get('/auth/me');
+    return response.data;
+  },
+
+  async updateProfile(data: UpdateProfileData) {
+    const response = await api.patch('/auth/me', data);
+    return response.data;
+  },
+
+  async changePassword(data: ChangePasswordData) {
+    const response = await api.patch('/auth/change-password', data);
     return response.data;
   }
 };

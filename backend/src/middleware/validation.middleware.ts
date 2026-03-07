@@ -13,7 +13,7 @@ export const validate = (schema: SchemaOrChains) => {
       const result = validationResult(req);
       if (!result.isEmpty()) {
         const errors = result.array().map(err => ({ field: (err as any).param || (err as any).path || '', message: err.msg }));
-        next(new ValidationError(errors));
+        next(new ValidationError(errors, errors[0]?.message || 'Validation failed'));
         return;
       }
       next();
@@ -21,7 +21,7 @@ export const validate = (schema: SchemaOrChains) => {
   }
 
   // Otherwise treat as Joi schema
-  return (req: Request, res: Response, next: NextFunction): void => {
+  return (req: Request, _res: Response, next: NextFunction): void => {
     const { error } = (schema as Joi.ObjectSchema).validate(req.body, { abortEarly: false });
 
     if (error) {
@@ -29,7 +29,7 @@ export const validate = (schema: SchemaOrChains) => {
         field: detail.path.join('.'),
         message: detail.message
       }));
-      next(new ValidationError(errors));
+      next(new ValidationError(errors, errors[0]?.message || 'Validation failed'));
       return;
     }
 

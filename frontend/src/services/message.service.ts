@@ -1,51 +1,54 @@
-// services/message.service.ts
+import type {
+  ChatContactsResponse,
+  MarkAsReadResponse,
+  MarkMessagesAsReadData,
+  MessageResponse,
+  MessagesListResponse,
+  SendMessageData,
+  UnreadCountResponse,
+} from '@/types/message.types';
 import api from './api';
 
 class MessageService {
-  // Existing methods
-  async getAll(params?: any) {
-    const response = await api.get('/messages', { params });
+  async getUserMessages(): Promise<MessagesListResponse> {
+    const response = await api.get('/messages');
     return response.data;
   }
 
-  async getById(id: string) {
+  async getConversation(userId: string, orderId?: string): Promise<MessagesListResponse> {
+    const response = await api.get(`/messages/conversation/${userId}`, {
+      params: orderId ? { orderId } : undefined,
+    });
+    return response.data;
+  }
+
+  async getById(id: string): Promise<MessageResponse> {
     const response = await api.get(`/messages/${id}`);
     return response.data;
   }
 
-  async create(data: any) {
+  async send(data: SendMessageData): Promise<MessageResponse> {
     const response = await api.post('/messages', data);
     return response.data;
   }
 
-  async update(id: string, data: any) {
-    const response = await api.put(`/messages/${id}`, data);
+  async markAsRead(data: MarkMessagesAsReadData): Promise<MarkAsReadResponse> {
+    const response = await api.patch('/messages/mark-as-read', data);
     return response.data;
   }
 
-  async delete(id: string) {
-    const response = await api.delete(`/messages/${id}`);
-    return response.data;
-  }
-
-  // New methods needed
-  async getConversations() {
-    const response = await api.get('/messages/conversations');
-    return response.data;
-  }
-
-  async getConversation(userId: string, params?: any) {
-    const response = await api.get(`/messages/conversation/${userId}`, { params });
-    return response.data;
-  }
-
-  async markAsRead(data: { sender_id: string }) {
-    const response = await api.patch('/messages/mark-read', data);
-    return response.data;
-  }
-
-  async getUnreadCount() {
+  async getUnreadCount(): Promise<UnreadCountResponse> {
     const response = await api.get('/messages/unread-count');
+    return response.data;
+  }
+
+  async getChatContacts(search?: string, role?: string): Promise<ChatContactsResponse> {
+    const response = await api.get('/messages/contacts', {
+      params: {
+        q: search || undefined,
+        role: role || undefined,
+      },
+    });
     return response.data;
   }
 }

@@ -1,6 +1,10 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { authService } from "../services/auth.service";
+import {
+  authService,
+  type ChangePasswordData,
+  type UpdateProfileData,
+} from "../services/auth.service";
 
 /* =========================
    User Role Type
@@ -62,6 +66,8 @@ interface AuthState {
   logout: () => Promise<void>;
   refreshAccessToken: () => Promise<void>;
   fetchUser: () => Promise<void>;
+  updateProfile: (data: UpdateProfileData) => Promise<void>;
+  changePassword: (data: ChangePasswordData) => Promise<void>;
   clearError: () => void;
 }
 
@@ -162,6 +168,37 @@ export const useAuthStore = create<AuthState>()(
         } catch (error) {
           console.error("Fetch user failed:", error);
           await get().logout();
+        }
+      },
+
+      updateProfile: async (data) => {
+        set({ isLoading: true, error: null });
+        try {
+          const response = await authService.updateProfile(data);
+          const { user } = response.data as { user: User };
+          set({ user, isLoading: false });
+        } catch (error: any) {
+          const message =
+            error.response?.data?.message ||
+            error.message ||
+            "Profile update failed";
+          set({ error: message, isLoading: false });
+          throw new Error(message);
+        }
+      },
+
+      changePassword: async (data) => {
+        set({ isLoading: true, error: null });
+        try {
+          await authService.changePassword(data);
+          set({ isLoading: false });
+        } catch (error: any) {
+          const message =
+            error.response?.data?.message ||
+            error.message ||
+            "Password change failed";
+          set({ error: message, isLoading: false });
+          throw new Error(message);
         }
       },
 
