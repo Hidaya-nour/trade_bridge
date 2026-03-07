@@ -33,6 +33,7 @@ import { cn, getInitials } from "@/lib/utils";
 import { PerformanceCard } from "@/components/shared/PerformanceCard";
 import { useAuthStore } from "@/stores/auth.store";
 import { useNotificationStore } from "@/stores/notification.store";
+import { useMessageStore } from "@/stores/message.store";
 
 const roleNavigation = {
   retailer: [
@@ -237,17 +238,19 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
   const [isProfileOpen, setIsProfileOpen] = useState(false);
 
   const { fetchCounts, counts } = useNotificationStore();
+  const { fetchUserMessages, unreadCount } = useMessageStore();
 
   // Fetch notifications on mount
   useEffect(() => {
     fetchCounts();
+    fetchUserMessages();
 
     const interval = setInterval(() => {
       fetchCounts();
     }, 300000);
 
     return () => clearInterval(interval);
-  }, [fetchCounts]);
+  }, [fetchCounts, fetchUserMessages]);
 
   if (!user) {
     return (
@@ -265,7 +268,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
       name: "Messages",
       href: "/messages",
       icon: MessageSquare,
-      badge: counts.unread > 0 ? counts.unread.toString() : "0",
+      badge: counts.unread > 0 ? unreadCount.toString() : "0",
     },
     {
       name: "Notifications",

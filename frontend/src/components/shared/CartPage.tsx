@@ -81,11 +81,6 @@ export const CartPage: React.FC<CartPageProps> = ({ config }) => {
 
   const { createOrder, isLoading: orderLoading } = useOrderStore();
 
-  // ============================================================================
-  // PLACE ORDER HANDLER
-  // ============================================================================
-
-  // In CartPage.tsx - Updated handlePlaceOrder function
   const handlePlaceOrder = async (
     paymentMethod: string,
     deliveryOption: string,
@@ -208,16 +203,10 @@ export const CartPage: React.FC<CartPageProps> = ({ config }) => {
       toast.error("Failed to place order: " + (error as Error).message);
     }
   };
-  // ============================================================================
-  // FETCH DATA
-  // ============================================================================
-
-  // Fetch cart on mount
   useEffect(() => {
     fetchCart();
   }, [fetchCart]);
 
-  // Fetch suppliers for cart items
   useEffect(() => {
     if (cartItems.length > 0) {
       const supplierIds = cartItems

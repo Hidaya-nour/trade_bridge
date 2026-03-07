@@ -7,8 +7,16 @@ import { body, param } from 'express-validator';
 const paymentMethodService = new SupplierPaymentMethodService();
 
 export class SupplierPaymentMethodController {
+  private ensureSupplierRole(req: Request): void {
+    const role = (req as any).user?.role;
+    if (role !== 'factory' && role !== 'distributor') {
+      throw new AppError('Only factory and distributor accounts can manage supplier payment methods', 403);
+    }
+  }
+
   async create(req: Request, res: Response) {
     try {
+      this.ensureSupplierRole(req);
       const data = req.body;
       data.supplier_id = (req as any).user.id;
 
@@ -26,6 +34,7 @@ export class SupplierPaymentMethodController {
 
   async getSupplierPaymentMethods(req: Request, res: Response) {
     try {
+      this.ensureSupplierRole(req);
       const supplierId = (req as any).user.id;
       const paymentMethods = await paymentMethodService.getSupplierPaymentMethods(supplierId);
       res.json({ success: true, data: paymentMethods });
@@ -41,6 +50,7 @@ export class SupplierPaymentMethodController {
 
   async getActivePaymentMethods(req: Request, res: Response) {
     try {
+      this.ensureSupplierRole(req);
       const supplierId = (req as any).user.id;
       const paymentMethods = await paymentMethodService.getActiveSupplierPaymentMethods(supplierId);
       res.json({ success: true, data: paymentMethods });
@@ -56,6 +66,7 @@ export class SupplierPaymentMethodController {
 
   async getPrimaryPaymentMethod(req: Request, res: Response) {
     try {
+      this.ensureSupplierRole(req);
       const supplierId = (req as any).user.id;
       const paymentMethod = await paymentMethodService.getPrimaryPaymentMethod(supplierId);
       res.json({ success: true, data: paymentMethod });
@@ -71,6 +82,7 @@ export class SupplierPaymentMethodController {
 
   async update(req: Request, res: Response) {
     try {
+      this.ensureSupplierRole(req);
       const { id } = req.params;
       const data = req.body;
       await paymentMethodService.updatePaymentMethod(id, data);
@@ -87,6 +99,7 @@ export class SupplierPaymentMethodController {
 
   async setPrimary(req: Request, res: Response) {
     try {
+      this.ensureSupplierRole(req);
       const { id } = req.params;
       const supplierId = (req as any).user.id;
       await paymentMethodService.setPrimaryPaymentMethod(supplierId, id);
@@ -103,6 +116,7 @@ export class SupplierPaymentMethodController {
 
   async remove(req: Request, res: Response) {
     try {
+      this.ensureSupplierRole(req);
       const { id } = req.params;
       await paymentMethodService.deletePaymentMethod(id);
       res.json({ success: true, message: 'Payment method deleted' });

@@ -1,26 +1,52 @@
 import { Router } from 'express';
+import { query, param, body } from 'express-validator';
 import { authenticate } from '../middleware/auth.middleware';
+import { validate } from '../middleware/validation.middleware';
 import notificationController from '../controllers/notification.controller';
 
 const router = Router();
 
 router.use(authenticate);
 
-// Get current user's notifications
-router.get('/', notificationController.getNotifications);
+router.get(
+  '/',
+  validate([
+    query('page').optional().isInt({ min: 1 }),
+    query('limit').optional().isInt({ min: 1, max: 100 }),
+    query('type').optional().isString(),
+    query('is_read').optional().isIn(['0', '1']),
+  ]),
+  notificationController.getNotifications
+);
 
-router.get('/counts', authenticate, notificationController.getNotificationCounts);
+router.get('/counts', notificationController.getNotificationCounts);
 
-// Create a notification (could be used by internal systems)
-router.post('/', authenticate, notificationController.createNotification);
+router.post(
+  '/',
+  validate([
+    body('user_id').isUUID().withMessage('Valid user_id is required'),
+    body('type').isString().notEmpty(),
+    body('title').isString().notEmpty(),
+    body('message').isString().notEmpty(),
+  ]),
+  notificationController.createNotification
+);
 
-// Mark single notification as read
-router.patch('/:id/read', authenticate, notificationController.markAsRead);
+router.patch(
+  '/:id/read',
+  validate([param('id').isUUID().withMessage('Invalid notification id')]),
+  notificationController.markAsRead
+);
 
-// Mark all as read
-router.patch('/mark-all-read', authenticate, notificationController.markAllRead);
+router.patch('/mark-all-read', notificationController.markAllRead);
 
-// Delete a notification
-router.delete('/:id', authenticate, notificationController.deleteNotification);
+router.delete(
+  '/:id',
+  validate([param('id').isUUID().withMessage('Invalid notification id')]),
+  notificationController.deleteNotification
+);
+
+// router.delete('/clear-all', notificationController.clearAll);
 
 export default router;
+

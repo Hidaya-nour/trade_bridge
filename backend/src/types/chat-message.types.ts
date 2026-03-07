@@ -8,3 +8,12 @@ export interface IChatMessage {
   created_at: Date;
   updated_at: Date;
 }
+
+export interface IChatContact {
+  id: string;
+  full_name: string;
+  email: string;
+  role: 'retailer' | 'distributor' | 'factory' | 'driver' | 'admin';
+  business_name?: string;
+  profile_image?: string;
+}
