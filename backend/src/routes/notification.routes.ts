@@ -46,7 +46,7 @@ router.delete(
   notificationController.deleteNotification
 );
 
-router.delete('/clear-all', notificationController.clearAll);
+// router.delete('/clear-all', notificationController.clearAll);
 
 export default router;
 
