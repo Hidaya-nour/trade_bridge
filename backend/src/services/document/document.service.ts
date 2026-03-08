@@ -2,16 +2,44 @@ import { DocumentRepository } from '../../repositories/document.repository';
 import { AppError } from '../../utils/errors';
 import { IDocument } from '../../types/document.types';
 import logger from '../../utils/logger';
+import { isCloudinaryConfigured, uploadBufferToCloudinary } from '../../config/cloudinary';
 
 export class DocumentService {
   private docRepo = new DocumentRepository();
 
-  async uploadDocument(data: Partial<IDocument>): Promise<IDocument> {
+  async uploadDocument(data: Partial<IDocument>, file: Express.Multer.File): Promise<IDocument> {
     if (!data.user_id || !data.document_type) {
       throw new AppError('Missing required fields', 400);
     }
 
-    const doc = await this.docRepo.create(data as any);
+    if (!file) {
+      throw new AppError('Document file is required', 400);
+    }
+
+    if (!isCloudinaryConfigured()) {
+      throw new AppError(
+        'Cloudinary is not configured. Please set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET.',
+        500
+      );
+    }
+
+    const folder = `trade_bridge/documents/${data.user_id}/${data.document_type}`;
+    const uploaded = await uploadBufferToCloudinary(file, folder);
+
+    const payload: Partial<IDocument> = {
+      ...data,
+      cloudinary_public_id: uploaded.public_id,
+      cloudinary_resource_type: uploaded.resource_type as any,
+      cloudinary_format: uploaded.format,
+      cloudinary_version: String(uploaded.version),
+      file_secure_url: uploaded.secure_url,
+      original_file_name: file.originalname,
+      file_size: file.size,
+      issued_date: data.issued_date ? new Date(data.issued_date) : null,
+      expiry_date: data.expiry_date ? new Date(data.expiry_date) : null,
+    };
+
+    const doc = await this.docRepo.create(payload as any);
     logger.info(`Document uploaded for user ${data.user_id}`);
     return doc as IDocument;
   }

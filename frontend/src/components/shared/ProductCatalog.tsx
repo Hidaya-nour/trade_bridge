@@ -19,6 +19,7 @@ import {
   Factory,
   Store,
   ChevronRight,
+  CreditCard,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -56,6 +57,9 @@ import {
   SearchFilter,
 } from "@/components/shared";
 import { formatPrice } from "@/lib/formatters";
+import { useOrderStore } from "@/stores/order.store";
+import toast from "react-hot-toast";
+import { PlaceOrderDialog } from "./PlaceOrderDialog";
 
 // ============================================================================
 // TYPES
@@ -68,6 +72,12 @@ export interface CatalogProduct {
   name: string;
   supplier_id: string;
   supplier_name: string;
+  supplier?: {
+    id: string;
+    business_name?: string;
+    full_name?: string;
+    is_verified?: boolean;
+  };
   supplier_type?: "factory" | "distributor";
   category: string;
   subcategory?: string;
@@ -102,6 +112,12 @@ export interface CatalogConfig {
   showVolumeDiscount: boolean;
   cartPath: string;
   ordersPath: string;
+  productsPath: string;
+  continueShoppingPath: string;
+  vatPercentage?: number;
+  bulkDiscountPercentage?: number;
+  shippingCostPerSupplier?: number;
+  bulkDiscountThreshold?: number;
 }
 
 // ============================================================================
@@ -142,6 +158,16 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
   const [manualInputValue, setManualInputValue] = useState<{
     [key: string]: string;
   }>({});
+
+  // Direct order state
+  const [orderDialogOpen, setOrderDialogOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<CatalogProduct | null>(
+    null,
+  );
+  const [orderQuantity, setOrderQuantity] = useState<number>(0);
+
+  const { createOrder, isLoading: orderLoading } = useOrderStore();
+
   const itemsPerPage = 9;
 
   // Get unique suppliers for filter
@@ -253,7 +279,64 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
       handleManualInputBlur(productId, min_order_amount);
     }
   };
+
+  // Handle direct order
+  const handleDirectOrder = (product: CatalogProduct) => {
+    setSelectedProduct(product);
+    setOrderQuantity(product.min_order_amount);
+    setOrderDialogOpen(true);
+  };
+
+  // Handle place order
+  const handlePlaceOrder = async (
+    paymentMethod: string,
+    deliveryOption: string,
+  ) => {
+    if (!selectedProduct) return;
+
+    try {
+      const itemTotal = selectedProduct.price * orderQuantity;
+      const shipping = config.shippingCostPerSupplier || 250;
+      const tax = itemTotal * (config.vatPercentage || 0.15);
+      const discount = 0; // No discount for single product orders
+
+      const orderPayload = {
+        supplier_id: selectedProduct.supplier_id,
+        items: [
+          {
+            product_id: selectedProduct.id,
+            quantity: orderQuantity,
+            unit_price: selectedProduct.price,
+          },
+        ],
+        total_price: Number((itemTotal + shipping + tax - discount).toFixed(2)),
+        shipping_cost: shipping,
+        tax_amount: Number(tax.toFixed(2)),
+        discount_amount: discount,
+        payment_method: paymentMethod,
+        delivery_option: deliveryOption,
+        notes: "",
+      };
+
+      const order = await createOrder(orderPayload);
+
+      if (order) {
+        toast.success("Order placed successfully!");
+        setOrderDialogOpen(false);
+
+        // Optional: Navigate to orders page
+        // navigate(config.ordersPath);
+      } else {
+        toast.error("Failed to place order");
+      }
+    } catch (error) {
+      console.error("Order placement error:", error);
+      toast.error("Failed to place order: " + (error as Error).message);
+    }
+  };
+
   const SupplierIcon = config.icon;
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -667,7 +750,7 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
                     </p>
                   </div>
 
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-2">
                     {getCartQuantity(product.id) > 0 ? (
                       <div className="flex items-center border rounded-md">
                         <Button
@@ -729,16 +812,30 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
                         </Button>
                       </div>
                     ) : (
-                      <Button
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onAddToCart(product.id, product.min_order_amount);
-                        }}
-                      >
-                        <ShoppingCart className="h-4 w-4 mr-2" />
-                        Add (Min: {product.min_order_amount})
-                      </Button>
+                      <>
+                        <Button
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onAddToCart(product.id, product.min_order_amount);
+                          }}
+                        >
+                          <ShoppingCart className="h-4 w-4 mr-2" />
+                          Add
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDirectOrder(product);
+                          }}
+                          className="gap-1"
+                        >
+                          <CreditCard className="h-4 w-4" />
+                          Order
+                        </Button>
+                      </>
                     )}
                   </div>
                 </div>
@@ -893,27 +990,41 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
                           </Button>
                         </div>
                       ) : (
-                        <Button
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onAddToCart(product.id, product.min_order_amount);
-                          }}
-                        >
-                          <ShoppingCart className="h-4 w-4 mr-2" />
-                          Add to Cart (Min: {product.min_order_amount})
-                        </Button>
+                        <>
+                          <Button
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onAddToCart(product.id, product.min_order_amount);
+                            }}
+                          >
+                            <ShoppingCart className="h-4 w-4 mr-2" />
+                            Add to Cart
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDirectOrder(product);
+                            }}
+                            className="gap-1"
+                          >
+                            <CreditCard className="h-4 w-4" />
+                            Order Now
+                          </Button>
+                        </>
                       )}
 
                       <Button
                         size="sm"
-                        variant="outline"
+                        variant="ghost"
                         asChild
                         onClick={(e) => e.stopPropagation()}
                       >
                         <Link to={`/${config.role}/products/${product.id}`}>
                           <Eye className="h-4 w-4 mr-2" />
-                          View Details
+                          Details
                         </Link>
                       </Button>
                     </div>
@@ -931,6 +1042,55 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
           currentPage={currentPage}
           totalPages={totalPages}
           onPageChange={setCurrentPage}
+        />
+      )}
+
+      {/* Direct Order Dialog */}
+      {selectedProduct && (
+        <PlaceOrderDialog
+          open={orderDialogOpen}
+          onOpenChange={setOrderDialogOpen}
+          items={[
+            {
+              id: `temp-${selectedProduct.id}`,
+              product_id: selectedProduct.id,
+              quantity: orderQuantity,
+              product: {
+                ...selectedProduct,
+                unit_type: selectedProduct.unit,
+                supplier: {
+                  id: selectedProduct.supplier_id,
+                  business_name: selectedProduct.supplier_name,
+                },
+              },
+            },
+          ]}
+          summary={{
+            subtotal: selectedProduct.price * orderQuantity,
+            shipping: config.shippingCostPerSupplier || 250,
+            discount: 0,
+            tax:
+              selectedProduct.price *
+              orderQuantity *
+              (config.vatPercentage || 0.15),
+            total:
+              selectedProduct.price * orderQuantity +
+              (config.shippingCostPerSupplier || 250) +
+              selectedProduct.price *
+                orderQuantity *
+                (config.vatPercentage || 0.15),
+            promoApplied: false,
+            discountPercentage: config.bulkDiscountPercentage,
+            vatPercentage: config.vatPercentage,
+          }}
+          config={{
+            role: config.role,
+            ordersPath: config.ordersPath,
+            vatPercentage: config.vatPercentage,
+            bulkDiscountPercentage: config.bulkDiscountPercentage,
+          }}
+          onPlaceOrder={handlePlaceOrder}
+          isPlacing={orderLoading}
         />
       )}
     </div>

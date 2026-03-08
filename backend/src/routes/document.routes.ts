@@ -2,6 +2,7 @@ import express from 'express';
 import { DocumentController } from '../controllers/document.controller';
 import { authenticate, authorize } from '../middleware/auth.middleware';
 import { validate } from '../middleware/validation.middleware';
+import { uploadDocumentMiddleware } from '../middleware/upload.middleware';
 
 const router = express.Router();
 const docController = new DocumentController();
@@ -9,7 +10,7 @@ const docController = new DocumentController();
 router.use(authenticate);
 
 // Upload document (user)
-router.post('/', validate(DocumentController.uploadValidation), docController.upload);
+router.post('/', uploadDocumentMiddleware, validate(DocumentController.uploadValidation), docController.upload);
 
 // Get current user's documents
 router.get('/', docController.getUserDocs);
