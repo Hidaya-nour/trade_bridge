@@ -47,6 +47,15 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+const corsOrigins = (
+  process.env.CORS_ORIGINS ||
+  process.env.FRONTEND_URL ||
+  'http://localhost:3000'
+)
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+const localhostOriginPattern = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
 
 // 3️⃣ THIRD: Call setup function
 setupAssociations();
@@ -54,7 +63,21 @@ setupAssociations();
 // Middleware
 app.use(helmet());
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  origin: (origin, callback) => {
+    // Allow native apps/tools with no browser origin header.
+    if (!origin) {
+      callback(null, true);
+      return;
+    }
+
+    if (corsOrigins.includes(origin) || localhostOriginPattern.test(origin)) {
+      callback(null, true);
+      return;
+    }
+
+    // Deny cleanly without throwing a server error.
+    callback(null, false);
+  },
   credentials: true
 }));
 app.use(express.json());
