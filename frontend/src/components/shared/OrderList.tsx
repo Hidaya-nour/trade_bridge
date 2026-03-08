@@ -197,6 +197,14 @@ export const OrderList: React.FC<OrderListProps> = ({
 
   // Check if order needs payment (no payment record OR payment status is pending/failed)
   const needsPayment = (order: Order): boolean => {
+    // Cash on delivery does not require an online "Pay Now" action.
+    if (
+      order.payment?.payment_method === "cash" &&
+      order.payment.payment_status === "pending"
+    ) {
+      return false;
+    }
+
     // If there's no payment record at all, it needs payment
     if (!order.payment) {
       return true;

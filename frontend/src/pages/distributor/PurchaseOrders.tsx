@@ -5,6 +5,8 @@ import { useOrderStore } from "@/stores/order.store";
 import { Factory } from "lucide-react";
 import type { Order, OrderItem } from "@/types/order.types";
 import toast from "react-hot-toast";
+import paymentService from "@/services/payment.service";
+import documentService from "@/services/document.service";
 
 const PurchaseOrdersPage: React.FC = () => {
   const {
@@ -131,6 +133,43 @@ const PurchaseOrdersPage: React.FC = () => {
     }
   };
 
+  const handleProcessPayment = async (
+    orderId: string,
+    paymentMethod: string,
+    paymentDetails?: any,
+    documents?: File[],
+  ): Promise<boolean> => {
+    try {
+      const order = orders.find((o) => o.id === orderId);
+      if (!order) return false;
+
+      let proofDocumentId: string | undefined;
+      if (documents && documents.length > 0) {
+        const uploaded = await documentService.uploadPaymentProof(documents[0]);
+        proofDocumentId = uploaded?.data?.id || uploaded?.data?.data?.id;
+      }
+
+      const amountPaid =
+        paymentMethod === "cash" || paymentMethod === "credit"
+          ? undefined
+          : order.total_price;
+
+      await paymentService.submitByOrder(orderId, {
+        payment_method: paymentMethod as any,
+        amount_paid: amountPaid,
+        proof_document_id: proofDocumentId,
+        notes: paymentDetails?.notes,
+        payment_details: paymentDetails,
+      });
+
+      await fetchOrdersAsBuyer();
+      return true;
+    } catch (error) {
+      console.error("Payment submit failed:", error);
+      return false;
+    }
+  };
+
   return (
     <>
       <OrderList
@@ -152,6 +191,7 @@ const PurchaseOrdersPage: React.FC = () => {
         onCancelOrder={cancelOrder}
         onReorder={handleReorder}
         onRateProduct={handleRateProduct}
+        onProcessPayment={handleProcessPayment}
         isLoading={isLoading}
         error={error}
       />
