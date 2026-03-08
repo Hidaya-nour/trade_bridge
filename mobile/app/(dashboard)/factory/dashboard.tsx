@@ -1,35 +1,17 @@
-import { SafeAreaView, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
+import ScreenWrapper from "../../../src/components/layout/ScreenWrapper";
 
 export default function FactoryDashboardScreen() {
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <ScreenWrapper title="Factory Dashboard" subtitle="Production and fulfillment">
       <View style={styles.container}>
         <Text style={styles.title}>Factory Dashboard</Text>
-        <Text style={styles.subtitle}>Login is currently bypassed.</Text>
       </View>
-    </SafeAreaView>
+    </ScreenWrapper>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: "#f4f6f8",
-  },
-  container: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 24,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: "700",
-    color: "#111827",
-  },
-  subtitle: {
-    marginTop: 8,
-    fontSize: 14,
-    color: "#4b5563",
-  },
+  container: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
+  title: { fontSize: 22, fontWeight: "700", color: "#0f172a" },
 });
