@@ -10,9 +10,8 @@ const FactoryManageProductsPage: React.FC = () => {
         title: "Manage Products",
         description: "Add, edit, and manage your product catalog",
         addButtonLabel: "Add Product",
-        showSupplier: false, // Factory doesn't have suppliers
       }}
-      products={factoryProducts}
+      products={factoryProducts as any}
       categories={["All Categories", ...categories]}
       onAddProduct={(product) => console.log("Add", product)}
       onEditProduct={(id, product) => console.log("Edit", id, product)}

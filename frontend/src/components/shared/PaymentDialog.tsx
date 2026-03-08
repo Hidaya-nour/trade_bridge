@@ -713,7 +713,7 @@ export const PaymentDialog: React.FC<PaymentDialogProps> = ({
                   <div className="space-y-2">
                     <Label>Bank Account Details</Label>
                     <div className="bg-muted/50 rounded-lg p-3 space-y-2">
-                      {config.bankAccounts.map((account, index) => (
+                      {config.bankAccounts.map((account, index, accounts) => (
                         <div key={index} className="text-sm">
                           <p className="font-medium">{account.bankName}</p>
                           <p className="text-muted-foreground">
@@ -727,7 +727,7 @@ export const PaymentDialog: React.FC<PaymentDialogProps> = ({
                               Branch: {account.branch}
                             </p>
                           )}
-                          {index < config.bankAccounts.length - 1 && (
+                          {index < accounts.length - 1 && (
                             <Separator className="my-2" />
                           )}
                         </div>

@@ -41,11 +41,14 @@ import { formatPrice } from "@/lib/formatters";
 import { getInitials } from "@/lib/utils";
 import { PlaceOrderDialog } from "./PlaceOrderDialog";
 import toast from "react-hot-toast";
-import type { CartConfig } from "@/types/cart.types";
+import type { CartConfig, CartItem } from "@/types/cart.types";
+import type { OrderItem } from "@/types/order.types";
 
 interface CartPageProps {
   config: CartConfig;
 }
+
+export type { CartConfig };
 
 // ============================================================================
 // COMPONENT
@@ -838,7 +841,7 @@ export const CartPage: React.FC<CartPageProps> = ({ config }) => {
       <PlaceOrderDialog
         open={checkoutDialogOpen}
         onOpenChange={setCheckoutDialogOpen}
-        items={selectedItems}
+        items={selectedItems.map(toOrderItem)}
         summary={{
           subtotal,
           shipping,
@@ -861,3 +864,11 @@ export const CartPage: React.FC<CartPageProps> = ({ config }) => {
     </div>
   );
 };
+  const toOrderItem = (item: CartItem): OrderItem => ({
+    id: item.id,
+    order_id: "",
+    product_id: item.product_id,
+    quantity: item.quantity,
+    unit_price: item.product?.price || 0,
+    product: item.product,
+  });

@@ -134,6 +134,8 @@ const RetailerProductsPage: React.FC = () => {
     showVolumeDiscount: false,
     cartPath: "/retailer/cart",
     ordersPath: "/retailer/orders",
+    productsPath: "/retailer/products",
+    continueShoppingPath: "/retailer/products",
   };
 
   // Transform products to match CatalogProduct type
@@ -141,15 +143,12 @@ const RetailerProductsPage: React.FC = () => {
     products?.map((product) => ({
       id: product.id,
       name: product.name,
-      supplier:
+      supplier_id: product.supplier_id,
+      supplier_name:
         product.supplier?.business_name ||
         product.supplier?.full_name ||
         "Unknown Supplier",
-      supplierName:
-        product.supplier?.business_name ||
-        product.supplier?.full_name ||
-        "Unknown Supplier",
-      supplierId: product.supplier_id as any,
+      supplier: product.supplier,
       price: Number(product.price),
       category: product.category || "Uncategorized",
       image: product.images?.[0] || "/placeholder-product.png",
@@ -159,9 +158,8 @@ const RetailerProductsPage: React.FC = () => {
       min_order_amount: product.min_order_amount,
       unit: product.unit_type,
       description: product.description || "",
-      stock: product.stock_quantity,
-      isAvailable: product.is_available === true,
-      deliveryTime: "2-3 days",
+      stock_quantity: product.stock_quantity,
+      delivery_time: "2-3 days",
       tags: [product.category].filter(Boolean),
     })) || [];
   // Show loading state

@@ -1,7 +1,6 @@
 import React from "react";
 import { AlertCircle, RefreshCw, Home, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
@@ -37,7 +36,7 @@ export const ErrorDisplay: React.FC<ErrorDisplayProps> = ({
   const errorMessage =
     error?.response?.data?.message || error?.message || message;
 
-  const errorDetails = process.env.NODE_ENV === "development" ? error : null;
+  const errorDetails = import.meta.env.DEV ? error : null;
 
   const handleRetry = () => {
     window.location.reload();

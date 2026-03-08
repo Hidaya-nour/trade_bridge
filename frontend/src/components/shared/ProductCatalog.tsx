@@ -1053,16 +1053,19 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
           items={[
             {
               id: `temp-${selectedProduct.id}`,
+              order_id: "",
               product_id: selectedProduct.id,
               quantity: orderQuantity,
+              unit_price: selectedProduct.price,
               product: {
                 ...selectedProduct,
                 unit_type: selectedProduct.unit,
                 supplier: {
                   id: selectedProduct.supplier_id,
+                  full_name: selectedProduct.supplier_name,
                   business_name: selectedProduct.supplier_name,
                 },
-              },
+              } as any,
             },
           ]}
           summary={{

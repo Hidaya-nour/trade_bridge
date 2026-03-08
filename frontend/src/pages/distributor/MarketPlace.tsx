@@ -210,6 +210,8 @@ const DistributorMarketplacePage: React.FC = () => {
     showVolumeDiscount: true,
     cartPath: "/distributor/cart",
     ordersPath: "/distributor/factory-orders",
+    productsPath: "/distributor/marketplace",
+    continueShoppingPath: "/distributor/marketplace",
   };
 
   return (
