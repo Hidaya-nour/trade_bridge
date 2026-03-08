@@ -26,6 +26,7 @@ import {
   Wallet,
   Building,
   Smartphone,
+  FileText,
   Upload,
   CheckCircle2,
   AlertCircle,
@@ -96,18 +97,29 @@ export interface PaymentDetails {
   // Common fields
   notes?: string;
 
+  // Credit fields
+  creditCustomerName?: string;
+  creditDueDate?: string;
+  creditTerms?: string;
+
   // Cheque fields
   chequeNumber?: string;
   bankName?: string;
+  branch?: string;
   chequeDate?: string;
+  drawerName?: string;
 
   // Mobile banking fields
   transactionId?: string;
+  mobileProvider?: string;
+  phoneNumber?: string;
   transferDate?: string;
 
   // Chapa fields
+  chapaEmail?: string;
+  chapaFirstName?: string;
+  chapaLastName?: string;
   chapaTxRef?: string;
-  chapaPaymentUrl?: string;
 }
 
 // ============================================================================
@@ -153,6 +165,14 @@ const PAYMENT_METHODS: PaymentMethodConfig[] = [
     description: "Pay securely with Chapa payment gateway",
     enabled: true,
   },
+];
+
+const MOBILE_PROVIDERS = [
+  { id: "m-pesa", name: "M-Pesa" },
+  { id: "airtel-money", name: "Airtel Money" },
+  { id: "tele-birr", name: "Tele Birr" },
+  { id: "hello-cash", name: "Hello Cash" },
+  { id: "amole", name: "Amole" },
 ];
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
@@ -220,6 +240,10 @@ export const PaymentDialog: React.FC<PaymentDialogProps> = ({
   const handleSubmit = async () => {
     // Validate based on payment method
     if (selectedMethod === "credit" && config.creditTerms?.enabled) {
+      if (!paymentDetails.creditCustomerName) {
+        toast.error("Please enter customer name for credit");
+        return;
+      }
       if (amount > (config.creditTerms.maxCreditAmount || Infinity)) {
         toast.error(
           `Credit amount exceeds maximum allowed (${formatPrice(config.creditTerms.maxCreditAmount || 0)})`,
@@ -248,6 +272,10 @@ export const PaymentDialog: React.FC<PaymentDialogProps> = ({
         toast.error("Please enter transaction ID");
         return;
       }
+      if (!paymentDetails.mobileProvider) {
+        toast.error("Please select mobile provider");
+        return;
+      }
       if (uploadedFiles.length === 0) {
         toast.error("Please upload payment receipt/screenshot");
         return;
@@ -255,8 +283,12 @@ export const PaymentDialog: React.FC<PaymentDialogProps> = ({
     }
 
     if (selectedMethod === "chapa") {
-      if (!paymentDetails.chapaTxRef) {
-        toast.error("Please enter Chapa transaction reference");
+      if (!paymentDetails.chapaEmail) {
+        toast.error("Please enter email address for Chapa payment");
+        return;
+      }
+      if (!paymentDetails.chapaFirstName || !paymentDetails.chapaLastName) {
+        toast.error("Please enter your full name");
         return;
       }
     }
@@ -277,7 +309,7 @@ export const PaymentDialog: React.FC<PaymentDialogProps> = ({
   };
 
   // Render payment method icon
-  const renderMethodIcon = (method: PaymentMethodConfig) => {
+  const renderMethodIcaon = (method: PaymentMethodConfig) => {
     const Icon = method.icon;
     return (
       <div className="flex flex-col items-center p-3 border rounded-lg cursor-pointer hover:bg-accent">
@@ -453,16 +485,47 @@ export const PaymentDialog: React.FC<PaymentDialogProps> = ({
                   </div>
                 </div>
 
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="credit-name">Customer Name *</Label>
+                    <Input
+                      id="credit-name"
+                      placeholder="Full name"
+                      value={paymentDetails.creditCustomerName || ""}
+                      onChange={(e) =>
+                        setPaymentDetails({
+                          ...paymentDetails,
+                          creditCustomerName: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="credit-due">Preferred Due Date</Label>
+                    <Input
+                      id="credit-due"
+                      type="date"
+                      value={paymentDetails.creditDueDate || ""}
+                      onChange={(e) =>
+                        setPaymentDetails({
+                          ...paymentDetails,
+                          creditDueDate: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
+                </div>
+
                 <div className="space-y-2">
-                  <Label htmlFor="credit-notes">Credit Request Notes</Label>
+                  <Label htmlFor="credit-terms">Credit Terms / Agreement</Label>
                   <Textarea
-                    id="credit-notes"
-                    placeholder="Optional note for the supplier"
-                    value={paymentDetails.notes || ""}
+                    id="credit-terms"
+                    placeholder="Any special credit terms or agreements"
+                    value={paymentDetails.creditTerms || ""}
                     onChange={(e) =>
                       setPaymentDetails({
                         ...paymentDetails,
-                        notes: e.target.value,
+                        creditTerms: e.target.value,
                       })
                     }
                   />
@@ -534,6 +597,20 @@ export const PaymentDialog: React.FC<PaymentDialogProps> = ({
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
+                    <Label htmlFor="cheque-branch">Branch</Label>
+                    <Input
+                      id="cheque-branch"
+                      placeholder="Branch name"
+                      value={paymentDetails.branch || ""}
+                      onChange={(e) =>
+                        setPaymentDetails({
+                          ...paymentDetails,
+                          branch: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2">
                     <Label htmlFor="cheque-date">Cheque Date</Label>
                     <Input
                       id="cheque-date"
@@ -547,6 +624,23 @@ export const PaymentDialog: React.FC<PaymentDialogProps> = ({
                       }
                     />
                   </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="drawer-name">
+                    Drawer Name (Account Holder)
+                  </Label>
+                  <Input
+                    id="drawer-name"
+                    placeholder="Name on cheque"
+                    value={paymentDetails.drawerName || ""}
+                    onChange={(e) =>
+                      setPaymentDetails({
+                        ...paymentDetails,
+                        drawerName: e.target.value,
+                      })
+                    }
+                  />
                 </div>
 
                 {/* File Upload */}
@@ -642,22 +736,61 @@ export const PaymentDialog: React.FC<PaymentDialogProps> = ({
                   </div>
                 )}
 
-                <div className="space-y-2">
-                  <Label htmlFor="transaction-id">Transaction ID *</Label>
-                  <Input
-                    id="transaction-id"
-                    placeholder="Enter transaction ID"
-                    value={paymentDetails.transactionId || ""}
-                    onChange={(e) =>
-                      setPaymentDetails({
-                        ...paymentDetails,
-                        transactionId: e.target.value,
-                      })
-                    }
-                  />
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="transaction-id">Transaction ID *</Label>
+                    <Input
+                      id="transaction-id"
+                      placeholder="Enter transaction ID"
+                      value={paymentDetails.transactionId || ""}
+                      onChange={(e) =>
+                        setPaymentDetails({
+                          ...paymentDetails,
+                          transactionId: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="mobile-provider">Mobile Provider *</Label>
+                    <Select
+                      value={paymentDetails.mobileProvider || ""}
+                      onValueChange={(value) =>
+                        setPaymentDetails({
+                          ...paymentDetails,
+                          mobileProvider: value,
+                        })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select provider" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {MOBILE_PROVIDERS.map((provider) => (
+                          <SelectItem key={provider.id} value={provider.id}>
+                            {provider.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="phone-number">Phone Number</Label>
+                    <Input
+                      id="phone-number"
+                      placeholder="+251 91 234 5678"
+                      value={paymentDetails.phoneNumber || ""}
+                      onChange={(e) =>
+                        setPaymentDetails({
+                          ...paymentDetails,
+                          phoneNumber: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
                   <div className="space-y-2">
                     <Label htmlFor="transfer-date">Transfer Date</Label>
                     <Input
@@ -738,49 +871,67 @@ export const PaymentDialog: React.FC<PaymentDialogProps> = ({
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="chapa-ref">Chapa Transaction Ref *</Label>
-                  <Input
-                    id="chapa-ref"
-                    placeholder="Enter tx_ref"
-                    value={paymentDetails.chapaTxRef || ""}
-                    onChange={(e) =>
-                      setPaymentDetails({
-                        ...paymentDetails,
-                        chapaTxRef: e.target.value,
-                      })
-                    }
-                  />
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="chapa-email">Email Address *</Label>
+                    <Input
+                      id="chapa-email"
+                      type="email"
+                      placeholder="your@email.com"
+                      value={paymentDetails.chapaEmail || ""}
+                      onChange={(e) =>
+                        setPaymentDetails({
+                          ...paymentDetails,
+                          chapaEmail: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="chapa-phone">Phone Number</Label>
+                    <Input
+                      id="chapa-phone"
+                      placeholder="+251 91 234 5678"
+                      value={paymentDetails.phoneNumber || ""}
+                      onChange={(e) =>
+                        setPaymentDetails({
+                          ...paymentDetails,
+                          phoneNumber: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="chapa-url">Chapa Payment URL (Optional)</Label>
-                  <Input
-                    id="chapa-url"
-                    placeholder="https://checkout.chapa.co/..."
-                    value={paymentDetails.chapaPaymentUrl || ""}
-                    onChange={(e) =>
-                      setPaymentDetails({
-                        ...paymentDetails,
-                        chapaPaymentUrl: e.target.value,
-                      })
-                    }
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="chapa-notes">Notes (Optional)</Label>
-                  <Textarea
-                    id="chapa-notes"
-                    placeholder="Optional note"
-                    value={paymentDetails.notes || ""}
-                    onChange={(e) =>
-                      setPaymentDetails({
-                        ...paymentDetails,
-                        notes: e.target.value,
-                      })
-                    }
-                  />
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="chapa-firstname">First Name *</Label>
+                    <Input
+                      id="chapa-firstname"
+                      placeholder="First name"
+                      value={paymentDetails.chapaFirstName || ""}
+                      onChange={(e) =>
+                        setPaymentDetails({
+                          ...paymentDetails,
+                          chapaFirstName: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="chapa-lastname">Last Name *</Label>
+                    <Input
+                      id="chapa-lastname"
+                      placeholder="Last name"
+                      value={paymentDetails.chapaLastName || ""}
+                      onChange={(e) =>
+                        setPaymentDetails({
+                          ...paymentDetails,
+                          chapaLastName: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
                 </div>
 
                 <div className="bg-muted/50 rounded-lg p-3">
