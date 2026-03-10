@@ -1,13 +1,7 @@
 // components/shared/PlaceOrderDialog.tsx
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  CreditCard,
-  Wallet,
-  Building,
-  Truck,
-  CheckCircle2,
-} from "lucide-react";
+import { CreditCard, Wallet, Truck, Building } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -18,6 +12,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
@@ -26,8 +30,9 @@ import { Badge } from "@/components/ui/badge";
 
 import { formatPrice } from "@/lib/formatters";
 import toast from "react-hot-toast";
-import type { Product } from "@/types/product.types";
 import type { OrderItem } from "@/types/order.types";
+import { PaymentDialog } from "./PaymentDialog";
+import type { PaymentDetails, PaymentMethod } from "./PaymentDialog";
 
 export interface OrderSummary {
   subtotal: number;
@@ -54,7 +59,17 @@ export interface PlaceOrderDialogProps {
   onPlaceOrder?: (
     paymentMethod: string,
     deliveryOption: string,
-  ) => Promise<void>;
+  ) => Promise<{
+    primaryOrderId: string;
+    orderIds?: string[];
+    total?: number;
+  } | void>;
+  onProcessPayment?: (
+    orderId: string,
+    paymentMethod: PaymentMethod,
+    paymentDetails?: PaymentDetails,
+    documents?: File[],
+  ) => Promise<boolean>;
   isPlacing?: boolean;
 }
 
@@ -78,13 +93,13 @@ export const PAYMENT_METHODS = [
     description: "Pay by cheque",
   },
   {
-    id: "mobile",
+    id: "mobile_banking",
     name: "Mobile Banking",
     icon: Wallet,
     description: "Pay with mobile money",
   },
   {
-    id: "online",
+    id: "chapa",
     name: "Online Payment",
     icon: CreditCard,
     description: "Pay with Chapa, Telebirr, etc.",
@@ -113,21 +128,69 @@ export const PlaceOrderDialog: React.FC<PlaceOrderDialogProps> = ({
   summary,
   config,
   onPlaceOrder,
+  onProcessPayment,
   isPlacing: externalIsPlacing,
 }) => {
   const navigate = useNavigate();
-  const [paymentMethod, setPaymentMethod] = React.useState("cash");
   const [deliveryOption, setDeliveryOption] = React.useState("standard");
   const [internalIsPlacing, setInternalIsPlacing] = React.useState(false);
+  const [openPaymentDialog, setOpenPaymentDialog] = React.useState(false);
+  const [openPostOrderChoice, setOpenPostOrderChoice] = React.useState(false);
+  const [createdOrderId, setCreatedOrderId] = React.useState<string | null>(
+    null,
+  );
+  const [createdOrderTotal, setCreatedOrderTotal] = React.useState<number>(
+    summary.total,
+  );
+  const [paymentProcessing, setPaymentProcessing] = React.useState(false);
 
   const isPlacing =
     externalIsPlacing !== undefined ? externalIsPlacing : internalIsPlacing;
+  const defaultOrderPaymentMethod = "cash";
+
+  const handlePaymentSubmit = async (
+    method: PaymentMethod,
+    details: PaymentDetails,
+    documents?: File[],
+  ) => {
+    if (!onProcessPayment || !createdOrderId) return false;
+
+    setPaymentProcessing(true);
+    try {
+      const success = await onProcessPayment(
+        createdOrderId,
+        method,
+        details,
+        documents,
+      );
+      if (success) {
+        setOpenPaymentDialog(false);
+        onOpenChange(false);
+        navigate(config.ordersPath);
+      }
+      return success;
+    } finally {
+      setPaymentProcessing(false);
+    }
+  };
 
   const handlePlaceOrder = async () => {
     if (onPlaceOrder) {
       setInternalIsPlacing(true);
       try {
-        await onPlaceOrder(paymentMethod, deliveryOption);
+        const result = await onPlaceOrder(
+          defaultOrderPaymentMethod,
+          deliveryOption,
+        );
+        if (result?.primaryOrderId && onProcessPayment) {
+          setCreatedOrderId(result.primaryOrderId);
+          setCreatedOrderTotal(result.total || summary.total);
+          setOpenPostOrderChoice(true);
+          return;
+        }
+
+        onOpenChange(false);
+        navigate(config.ordersPath);
       } catch (error) {
         toast.error("Failed to place order");
       } finally {
@@ -157,7 +220,7 @@ export const PlaceOrderDialog: React.FC<PlaceOrderDialogProps> = ({
         <DialogHeader>
           <DialogTitle>Confirm and Place Order</DialogTitle>
           <DialogDescription>
-            Review your order details and select payment method
+            Review your order details and place your order
           </DialogDescription>
         </DialogHeader>
 
@@ -209,32 +272,6 @@ export const PlaceOrderDialog: React.FC<PlaceOrderDialogProps> = ({
                       </div>
                       <p className="text-xs text-muted-foreground">
                         {option.days}
-                      </p>
-                    </Label>
-                  </div>
-                ))}
-              </RadioGroup>
-            </div>
-
-            {/* Payment Methods */}
-            <div className="space-y-3">
-              <h4 className="text-sm font-medium">Payment Method</h4>
-              <RadioGroup
-                value={paymentMethod}
-                onValueChange={setPaymentMethod}
-              >
-                {PAYMENT_METHODS.map((method) => (
-                  <div key={method.id} className="flex items-center space-x-2">
-                    <RadioGroupItem value={method.id} id={method.id} />
-                    <Label htmlFor={method.id} className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <method.icon className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm font-medium">
-                          {method.name}
-                        </span>
-                      </div>
-                      <p className="text-xs text-muted-foreground ml-6">
-                        {method.description}
                       </p>
                     </Label>
                   </div>
@@ -297,6 +334,59 @@ export const PlaceOrderDialog: React.FC<PlaceOrderDialogProps> = ({
           </Button>
         </DialogFooter>
       </DialogContent>
+      <AlertDialog
+        open={openPostOrderChoice}
+        onOpenChange={setOpenPostOrderChoice}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Order Placed Successfully</AlertDialogTitle>
+            <AlertDialogDescription>
+              Your order has been created. Do you want to finish now or proceed
+              with payment?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              onClick={() => {
+                setOpenPostOrderChoice(false);
+                onOpenChange(false);
+                navigate(config.ordersPath);
+              }}
+            >
+              Finish
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setOpenPostOrderChoice(false);
+                setOpenPaymentDialog(true);
+              }}
+            >
+              Pay Now
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      {createdOrderId && (
+        <PaymentDialog
+          open={openPaymentDialog}
+          onOpenChange={setOpenPaymentDialog}
+          orderId={createdOrderId}
+          orderNumber={createdOrderId.slice(-8)}
+          amount={createdOrderTotal}
+          onPaymentSubmit={handlePaymentSubmit}
+          isProcessing={paymentProcessing}
+          config={{
+            allowedMethods: [
+              "cash",
+              "credit",
+              "cheque",
+              "mobile_banking",
+              "chapa",
+            ] as PaymentMethod[],
+          }}
+        />
+      )}
     </Dialog>
   );
 };

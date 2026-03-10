@@ -1,7 +1,6 @@
 import type { AudienceSegment, BroadcastItem } from "@/components/shared";
 import type { IncomingOrder } from "@/components/shared/IncomingOrders";
 import type { Partner } from "@/components/shared/Partnerships";
-import type { Product } from "@/components/shared/ProductManagement";
 
 // ============================================================================
 // BROADCAST / PROMOTIONS DATA
@@ -211,7 +210,7 @@ export const suppliers = [
   { id: "108", name: "Mugher Cement" },
 ];
 
-export const initialProducts: Product[] = [
+export const initialProducts = [
   {
     id: "1",
     name: "White Teff Flour",

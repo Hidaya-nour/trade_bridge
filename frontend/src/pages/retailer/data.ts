@@ -1,11 +1,8 @@
-
 // ============================================================================
 // PRODUCT CATALOG DATA
 // ============================================================================
 
-import type { CatalogProduct } from "@/components/shared/ProductCatalog";
-
-export const retailerProducts: CatalogProduct[] = [
+export const retailerProducts = [
   {
     id: 1,
     name: "Yirgacheffe Coffee",

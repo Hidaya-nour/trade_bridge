@@ -4,7 +4,6 @@
 
 import type { AudienceSegment, BroadcastItem } from "@/components/shared/Broadcast";
 import type { IncomingOrder } from "@/components/shared/IncomingOrders";
-import type { Product } from "@/components/shared/ProductManagement";
 
 export const distributorSegments: AudienceSegment[] = [
   {
@@ -43,7 +42,7 @@ export const categories = [
   "Raw Materials",
 ];
 
-export const factoryProducts: Product[] = [
+export const factoryProducts = [
   {
     id: 1001,
     name: "Portland Cement",

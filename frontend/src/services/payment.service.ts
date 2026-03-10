@@ -1,6 +1,78 @@
 import api from './api';
 
+export interface SubmitOrderPaymentData {
+  payment_method: 'cash' | 'credit' | 'cheque' | 'mobile_banking' | 'chapa' | 'bank_transfer';
+  amount_paid?: number;
+  notes?: string;
+  proof_document_id?: string;
+  payment_details?: {
+    chequeNumber?: string;
+    bankName?: string;
+    chequeDate?: string;
+    transactionId?: string;
+    transferDate?: string;
+    chapaTxRef?: string;
+    chapaPaymentUrl?: string;
+  };
+}
+
 class PaymentService {
+  private formatErrorMessage(input: unknown): string {
+    if (typeof input === 'string') {
+      try {
+        const parsed = JSON.parse(input);
+        if (parsed && typeof parsed === 'object') {
+          return Object.entries(parsed as Record<string, unknown>)
+            .map(([field, value]) => {
+              if (Array.isArray(value)) {
+                return `${field}: ${value.join(', ')}`;
+              }
+              return `${field}: ${String(value)}`;
+            })
+            .join(' | ');
+        }
+      } catch {
+        return input;
+      }
+      return input;
+    }
+    if (input && typeof input === 'object') {
+      return Object.entries(input as Record<string, unknown>)
+        .map(([field, value]) =>
+          `${field}: ${Array.isArray(value) ? value.join(', ') : String(value)}`,
+        )
+        .join(' | ');
+    }
+    return 'Payment submission failed';
+  }
+
+  async getByOrderId(orderId: string) {
+    const response = await api.get(`/payments/order/${orderId}`);
+    return response.data;
+  }
+
+  async submitByOrder(orderId: string, data: SubmitOrderPaymentData) {
+    try {
+      const response = await api.post(`/payments/order/${orderId}/submit`, data);
+      return response.data;
+    } catch (error: any) {
+      const backendMessage = error?.response?.data?.message;
+      const message =
+        backendMessage !== undefined
+          ? this.formatErrorMessage(backendMessage)
+          : this.formatErrorMessage(error?.message);
+      throw new Error(message);
+    }
+  }
+
+  async updateStatus(id: string, status: string, amount_paid?: number) {
+    const response = await api.patch(`/payments/${id}/status`, {
+      status,
+      amount_paid,
+    });
+    return response.data;
+  }
+
   async getAll(params?: any) {
     const response = await api.get('/payments', { params });
     return response.data;
@@ -17,8 +89,7 @@ class PaymentService {
   }
 
   async update(id: string, data: any) {
-    const response = await api.put(`/payments/${id}`, data);
-    return response.data;
+    return this.updateStatus(id, data.status, data.amount_paid);
   }
 
   async delete(id: string) {

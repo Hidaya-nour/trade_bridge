@@ -3,6 +3,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
+import multer from 'multer';
 import sequelize, { testConnection } from './config/database';
 import authRoutes from './routes/auth.routes';
 import logger from './utils/logger';
@@ -118,6 +119,14 @@ app.get('/api/health', (req, res) => {
 
 // Error handler
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  if (err instanceof multer.MulterError) {
+    res.status(400).json({
+      success: false,
+      message: err.code === 'LIMIT_FILE_SIZE' ? 'File too large. Max size is 10MB.' : err.message,
+    });
+    return;
+  }
+
   if (err instanceof ValidationError) {
     res.status(err.statusCode).json({
       success: false,

@@ -10,11 +10,10 @@ import {
   Download,
   Calendar,
   MapPin,
-  Phone,
-  Printer,
-  MoreVertical,
   Repeat,
   Star,
+  CreditCard,
+  AlertCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -28,20 +27,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -51,18 +36,21 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Progress } from "@/components/ui/progress";
 import {
   StatusBadge,
   EmptyState,
   PaginationBar,
   StatsCard,
+  PaymentDialog,
+  type PaymentMethod,
+  type PaymentDetails,
 } from "@/components/shared";
-import { formatPrice, formatDate, formatDateTime } from "@/lib/formatters";
+import { formatPrice, formatDate } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 import { Label } from "@/components/ui/label";
 import type { Order } from "@/types/order.types";
+import toast from "react-hot-toast";
 
 interface OrderListProps {
   config: {
@@ -83,6 +71,22 @@ interface OrderListProps {
       shipped: number;
       delivered: number;
     };
+    paymentConfig?: {
+      vatPercentage?: number;
+      bankAccounts?: {
+        bankName: string;
+        accountNumber: string;
+        accountName: string;
+        branch?: string;
+      }[];
+      creditTerms?: {
+        enabled: boolean;
+        maxCreditAmount?: number;
+        dueDays?: number;
+        interestRate?: number;
+      };
+      chapaEnabled?: boolean;
+    };
   };
   orders?: Order[];
   onCancelOrder?: (orderId: string, reason: string) => void | Promise<boolean>;
@@ -93,6 +97,12 @@ interface OrderListProps {
     review: string,
     orderId: string,
   ) => void;
+  onProcessPayment?: (
+    orderId: string,
+    paymentMethod: string,
+    paymentDetails?: any,
+    documents?: File[],
+  ) => Promise<boolean>;
   isLoading?: boolean;
   error?: string | null;
 }
@@ -111,6 +121,7 @@ export const OrderList: React.FC<OrderListProps> = ({
   onCancelOrder,
   onReorder,
   onRateProduct,
+  onProcessPayment,
   isLoading = false,
   error = null,
 }) => {
@@ -125,6 +136,7 @@ export const OrderList: React.FC<OrderListProps> = ({
   } | null>(null);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [showRateDialog, setShowRateDialog] = useState(false);
+  const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const [cancellationReason, setCancellationReason] = useState("");
   const [rating, setRating] = useState(5);
   const [review, setReview] = useState("");
@@ -132,6 +144,7 @@ export const OrderList: React.FC<OrderListProps> = ({
     Record<string, { rating: number; review: string }>
   >({});
   const [currentPage, setCurrentPage] = useState(1);
+  const [paymentProcessing, setPaymentProcessing] = useState(false);
   const itemsPerPage = 5;
 
   useEffect(() => {
@@ -182,6 +195,65 @@ export const OrderList: React.FC<OrderListProps> = ({
   const currentOrders = sortedOrders.slice(indexOfFirstItem, indexOfLastItem);
   const totalPages = Math.ceil(sortedOrders.length / itemsPerPage);
 
+  // Check if order needs payment (no payment record OR payment status is pending/failed)
+  const needsPayment = (order: Order): boolean => {
+    if (order.order_status === "cancelled") {
+      return false;
+    }
+
+    // Cash on delivery does not require an online "Pay Now" action.
+    if (
+      order.payment?.payment_method === "cash" &&
+      order.payment.payment_status === "pending"
+    ) {
+      return false;
+    }
+
+    // If there's no payment record at all, it needs payment
+    if (!order.payment) {
+      return true;
+    }
+    // If there is a payment record, check if it's pending or failed
+    return ["pending", "failed"].includes(order.payment.payment_status);
+  };
+
+  // Handle payment submission
+  const handlePaymentSubmit = async (
+    method: PaymentMethod,
+    details: PaymentDetails,
+    documents?: File[],
+  ): Promise<boolean> => {
+    if (!selectedOrder || !onProcessPayment) return false;
+
+    setPaymentProcessing(true);
+    try {
+      const success = await onProcessPayment(
+        selectedOrder.id,
+        method,
+        details,
+        documents,
+      );
+
+      if (success) {
+        toast.success(
+          method === "credit"
+            ? "Credit request submitted successfully! Awaiting approval."
+            : "Payment processed successfully!",
+        );
+        return true;
+      } else {
+        toast.error("Payment failed. Please try again.");
+        return false;
+      }
+    } catch (error) {
+      console.error("Payment error:", error);
+      toast.error((error as Error)?.message || "Failed to process payment");
+      return false;
+    } finally {
+      setPaymentProcessing(false);
+    }
+  };
+
   const handleCancelOrder = async () => {
     if (selectedOrder) {
       await onCancelOrder?.(selectedOrder.id, cancellationReason);
@@ -203,6 +275,7 @@ export const OrderList: React.FC<OrderListProps> = ({
         ...prev,
         [selectedProduct.id]: { rating, review },
       }));
+      toast.success("Thank you for your review!");
     }
     setShowRateDialog(false);
     setSelectedProduct(null);
@@ -264,6 +337,7 @@ export const OrderList: React.FC<OrderListProps> = ({
       iconColor: "text-green-600",
     },
   ];
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -443,9 +517,20 @@ export const OrderList: React.FC<OrderListProps> = ({
                           to={`/${config.role}/${config.type === "purchases" ? "purchase-orders" : "orders"}/${order.id}`}
                           className="text-lg font-semibold hover:text-primary"
                         >
-                          {order.id}
+                          Order #{order.id.slice(-8)}
                         </Link>
                         <StatusBadge status={order.order_status} />
+                        {/* Payment Status Badge - only show if payment exists */}
+                        {order.payment && (
+                          <Badge
+                            variant="outline"
+                            className={
+                              paymentStatusColors[order.payment.payment_status]
+                            }
+                          >
+                            Payment: {order.payment.payment_status}
+                          </Badge>
+                        )}
                       </div>
                       <div className="flex items-center gap-3 mt-1 flex-wrap">
                         <div className="flex items-center gap-2">
@@ -484,6 +569,7 @@ export const OrderList: React.FC<OrderListProps> = ({
                     <p className="text-2xl font-bold text-primary">
                       {formatPrice(order.total_price)}
                     </p>
+                    {/* Payment method badge - only show if payment exists */}
                     {order.payment && (
                       <Badge
                         variant="outline"
@@ -497,6 +583,41 @@ export const OrderList: React.FC<OrderListProps> = ({
                     )}
                   </div>
                 </div>
+
+                {/* Payment Reminder for Unpaid Orders */}
+                {needsPayment(order) && (
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+                    <div className="flex items-start gap-3">
+                      <AlertCircle className="h-5 w-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+                      <div className="flex-1">
+                        <h4 className="text-sm font-medium text-yellow-800 mb-1">
+                          Payment Required
+                        </h4>
+                        <p className="text-sm text-yellow-700 mb-3">
+                          {!order.payment
+                            ? "This order requires payment to proceed. Complete your payment to process the order."
+                            : "Your payment is pending. Complete the payment to process your order."}
+                        </p>
+                        <div className="flex items-center gap-3">
+                          <Button
+                            size="sm"
+                            onClick={() => {
+                              setSelectedOrder(order);
+                              setShowPaymentDialog(true);
+                            }}
+                            className="bg-yellow-600 hover:bg-yellow-700"
+                          >
+                            <CreditCard className="h-4 w-4 mr-2" />
+                            Pay Now
+                          </Button>
+                          <p className="text-xs text-yellow-600">
+                            Amount due: {formatPrice(order.total_price)}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {/* Order Progress */}
                 {order.order_status !== "cancelled" &&
@@ -698,6 +819,22 @@ export const OrderList: React.FC<OrderListProps> = ({
                   </div>
 
                   <div className="flex items-center gap-2 flex-wrap">
+                    {/* Payment Button for Unpaid Orders */}
+                    {needsPayment(order) && (
+                      <Button
+                        size="sm"
+                        variant="default"
+                        className="bg-green-600 hover:bg-green-700"
+                        onClick={() => {
+                          setSelectedOrder(order);
+                          setShowPaymentDialog(true);
+                        }}
+                      >
+                        <CreditCard className="h-4 w-4 mr-2" />
+                        Pay Now
+                      </Button>
+                    )}
+
                     {config.showCancel && order.order_status === "pending" && (
                       <Button
                         size="sm"
@@ -729,35 +866,12 @@ export const OrderList: React.FC<OrderListProps> = ({
                       size="sm"
                       variant="outline"
                       onClick={() => {
-                        setSelectedOrder(order);
-                        window.location.href = `/${config.role}/${config.type === "purchases" ? "purchase-orders" : "orders"}/${selectedOrder?.id}`;
+                        window.location.href = `/${config.role}/${config.type === "purchases" ? "purchase-orders" : "orders"}/${order.id}`;
                       }}
                     >
                       <Eye className="h-4 w-4 mr-2" />
                       View Details
                     </Button>
-
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem>
-                          <Printer className="h-4 w-4 mr-2" />
-                          Print Order
-                        </DropdownMenuItem>
-                        <DropdownMenuItem>
-                          <Download className="h-4 w-4 mr-2" />
-                          Download Invoice
-                        </DropdownMenuItem>
-                        <DropdownMenuItem>
-                          <Phone className="h-4 w-4 mr-2" />
-                          Contact {config.partyLabel}
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
                   </div>
                 </div>
               </CardContent>
@@ -774,13 +888,54 @@ export const OrderList: React.FC<OrderListProps> = ({
           )}
         </div>
       )}
+
+      {/* Payment Dialog */}
+      {selectedOrder && (
+        <PaymentDialog
+          open={showPaymentDialog}
+          onOpenChange={setShowPaymentDialog}
+          orderId={selectedOrder.id}
+          orderNumber={selectedOrder.id.slice(-8)}
+          amount={selectedOrder.total_price}
+          onPaymentSubmit={handlePaymentSubmit}
+          isProcessing={paymentProcessing}
+          config={{
+            allowedMethods: [
+              "cash",
+              "credit",
+              "cheque",
+              "mobile_banking",
+              "chapa",
+            ],
+            creditTerms: config.paymentConfig?.creditTerms || {
+              enabled: true,
+              maxCreditAmount: 50000,
+              dueDays: 30,
+              interestRate: 2.5,
+            },
+            bankAccounts: config.paymentConfig?.bankAccounts || [
+              {
+                bankName: "Commercial Bank of Ethiopia",
+                accountNumber: "1000134567890",
+                accountName: "TradeBridge Trading PLC",
+                branch: "Head Office",
+              },
+            ],
+            chapaEnabled: config.paymentConfig?.chapaEnabled || true,
+            requireApprovalFor: ["credit"],
+            maxDocumentSize: 5,
+          }}
+        />
+      )}
+
       {/* Cancel Order Dialog */}
       <AlertDialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Cancel Order</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to cancel order {selectedOrder?.id} from{" "}
+              Are you sure you want to cancel order #
+              {selectedOrder?.id.slice(-8)} from{" "}
               {selectedOrder?.supplier?.business_name ||
                 selectedOrder?.supplier?.full_name}
               ?

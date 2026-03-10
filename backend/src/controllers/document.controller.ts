@@ -10,9 +10,10 @@ export class DocumentController {
   async upload(req: Request, res: Response) {
     try {
       const data = req.body;
+      const file = req.file;
       data.user_id = (req as any).user.id;
 
-      const doc = await documentService.uploadDocument(data);
+      const doc = await documentService.uploadDocument(data, file as Express.Multer.File);
       res.status(201).json({ success: true, data: doc });
     } catch (error) {
       if (error instanceof AppError) {
@@ -75,7 +76,9 @@ export class DocumentController {
   }
 
   static uploadValidation = [
-    body('document_type').isIn(['id_card','business_license','tax_certificate','other']).withMessage('Invalid document type')
+    body('document_type').isIn(['id_card','business_license','tax_certificate','other']).withMessage('Invalid document type'),
+    body('issued_date').optional().isISO8601().withMessage('issued_date must be a valid date'),
+    body('expiry_date').optional().isISO8601().withMessage('expiry_date must be a valid date')
   ];
 
   static idValidation = [param('id').isUUID().withMessage('Invalid document ID')];
