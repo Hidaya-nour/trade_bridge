@@ -117,7 +117,7 @@ const PurchaseOrdersPage: React.FC = () => {
       const supplierId = reorderItems[0].product?.supplier_id;
 
       // Send all required fields to backend
-      await createOrder({
+      const order = await createOrder({
         supplier_id: supplierId,
         items: itemsWithPrice,
         total_price: totalPrice,
@@ -125,11 +125,19 @@ const PurchaseOrdersPage: React.FC = () => {
         delivery_option: deliveryOption,
       });
 
+      if (!order) {
+        toast.error("Failed to place order");
+        return;
+      }
       toast.success("Order placed successfully!");
-      setDialogOpen(false);
+      return {
+        primaryOrderId: order.id,
+        total: totalPrice,
+      };
     } catch (err) {
       console.error("Reorder failed:", err);
       toast.error("Failed to place order");
+      return;
     }
   };
 
@@ -150,17 +158,28 @@ const PurchaseOrdersPage: React.FC = () => {
       }
 
       const amountPaid =
-        paymentMethod === "cash" || paymentMethod === "credit"
+        paymentMethod === "cash" ||
+        paymentMethod === "credit" ||
+        paymentMethod === "chapa"
           ? undefined
           : order.total_price;
 
-      await paymentService.submitByOrder(orderId, {
+      const result = await paymentService.submitByOrder(orderId, {
         payment_method: paymentMethod as any,
         amount_paid: amountPaid,
         proof_document_id: proofDocumentId,
         notes: paymentDetails?.notes,
         payment_details: paymentDetails,
       });
+
+      if (paymentMethod === "chapa") {
+        const checkoutUrl =
+          result?.data?.chapa?.checkout_url ||
+          result?.data?.payment?.chapa_payment_url;
+        if (!checkoutUrl) return false;
+        window.location.href = checkoutUrl;
+        return true;
+      }
 
       await fetchOrdersAsBuyer();
       return true;
@@ -206,6 +225,7 @@ const PurchaseOrdersPage: React.FC = () => {
           ordersPath: "/retailer/orders",
         }}
         onPlaceOrder={handlePlaceOrder}
+        onProcessPayment={handleProcessPayment as any}
       />
     </>
   );

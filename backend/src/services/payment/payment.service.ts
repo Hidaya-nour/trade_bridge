@@ -1,5 +1,7 @@
 import Payment from '../../models/payment.model';
 import { Order } from '../../models/order.model';
+import User from '../../models/user.model';
+import { initializeChapaTransaction, verifyChapaTransaction } from '../../config/chapa';
 import { AppError } from '../../utils/errors';
 
 type PaymentMethod =
@@ -27,7 +29,34 @@ interface SubmitPaymentPayload {
 }
 
 class PaymentService {
+  private isValidEmail(email: string) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  }
+
+  private async getOrRestorePaymentByOrderId(orderId: string) {
+    const existing = await Payment.findOne({
+      where: { order_id: orderId },
+      paranoid: false,
+    });
+
+    if (existing && existing.deleted_at) {
+      await existing.restore();
+    }
+
+    return existing || null;
+  }
+
   async createPayment(orderId: string, total: number, method: string) {
+    const existing = await this.getOrRestorePaymentByOrderId(orderId);
+    if (existing) {
+      existing.payment_method = method as any;
+      existing.total_amount = total as any;
+      existing.amount_paid = 0 as any;
+      existing.payment_status = 'pending';
+      await existing.save();
+      return existing;
+    }
+
     const payment = await Payment.create({
       order_id: orderId,
       payment_method: method,
@@ -40,7 +69,7 @@ class PaymentService {
   }
 
   async getPaymentByOrderId(orderId: string) {
-    return Payment.findOne({ where: { order_id: orderId } });
+    return this.getOrRestorePaymentByOrderId(orderId);
   }
 
   async submitPaymentByOrderId(orderId: string, payload: SubmitPaymentPayload) {
@@ -49,61 +78,163 @@ class PaymentService {
       throw new AppError('Order not found', 404);
     }
 
-    let payment = await Payment.findOne({ where: { order_id: orderId } });
+    let payment = await this.getOrRestorePaymentByOrderId(orderId);
     const selectedMethod = (payload.payment_method ||
       payment?.payment_method ||
       'cash') as PaymentMethod;
 
+    let paymentCreatedInThisRequest = false;
     if (!payment) {
       payment = await this.createPayment(
         orderId,
         Number(order.total_price),
         selectedMethod,
       );
+      paymentCreatedInThisRequest = true;
     }
 
-    payment.payment_method = selectedMethod as any;
-    payment.notes = payload.notes;
-    payment.proof_document_id = payload.proof_document_id;
+    try {
+      payment.payment_method = selectedMethod as any;
+      payment.notes = payload.notes;
+      payment.proof_document_id = payload.proof_document_id;
 
-    if (typeof payload.amount_paid === 'number') {
-      payment.amount_paid = payload.amount_paid as any;
+      if (typeof payload.amount_paid === 'number') {
+        payment.amount_paid = payload.amount_paid as any;
+      }
+
+      // Method-specific fields
+      if (selectedMethod === 'cheque') {
+        payment.cheque_number = payload.payment_details?.chequeNumber;
+        payment.cheque_bank = payload.payment_details?.bankName;
+        payment.cheque_date = payload.payment_details?.chequeDate
+          ? new Date(payload.payment_details.chequeDate)
+          : undefined;
+        payment.cheque_status = 'submitted';
+      }
+
+      if (selectedMethod === 'mobile_banking') {
+        const transactionId = payload.payment_details?.transactionId;
+        const transferDate = payload.payment_details?.transferDate;
+        payment.notes = [payment.notes, transactionId && `tx:${transactionId}`, transferDate && `date:${transferDate}`]
+          .filter(Boolean)
+          .join(' | ');
+      }
+
+      let chapaCheckoutUrl: string | null = null;
+
+      if (selectedMethod === 'chapa') {
+        const buyer = await User.findByPk(order.buyer_id);
+        if (!buyer?.email || !buyer?.full_name) {
+          throw new AppError('Buyer profile must include name and email for Chapa payment', 400);
+        }
+        if (!this.isValidEmail(buyer.email)) {
+          throw new AppError(
+            'Your account email is invalid for Chapa. Please update your profile email and try again.',
+            400,
+          );
+        }
+
+        const txRef =
+          payload.payment_details?.chapaTxRef ||
+          `tb-${order.id.slice(0, 8)}-${Date.now()}`;
+        const [firstName, ...restNames] = buyer.full_name.split(' ');
+        const lastName = restNames.join(' ') || firstName;
+        const backendBaseUrl =
+          process.env.BACKEND_URL ||
+          `http://localhost:${process.env.PORT || 5000}`;
+        const frontendBaseUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+        const callbackUrl =
+          process.env.CHAPA_CALLBACK_URL ||
+          `${backendBaseUrl}/api/payments/chapa/callback`;
+        const returnUrl =
+          process.env.CHAPA_RETURN_URL || `${frontendBaseUrl}/retailer/orders`;
+
+        const initialized = await initializeChapaTransaction({
+          amount: String(Number(order.total_price).toFixed(2)),
+          currency: process.env.CHAPA_CURRENCY || 'ETB',
+          email: buyer.email,
+          first_name: firstName,
+          last_name: lastName,
+          tx_ref: txRef,
+          callback_url: callbackUrl,
+          return_url: returnUrl,
+          phone_number: buyer.phone || undefined,
+          customization: {
+            title: 'TradeBridge',
+            description: `Order ${order.id.slice(0, 8)} payment`,
+          },
+        });
+
+        chapaCheckoutUrl =
+          payload.payment_details?.chapaPaymentUrl ||
+          initialized?.data?.checkout_url ||
+          null;
+
+        if (!chapaCheckoutUrl) {
+          throw new AppError('Chapa checkout URL was not returned', 400);
+        }
+
+        payment.chapa_transaction_id = txRef;
+        payment.chapa_payment_url = chapaCheckoutUrl;
+      }
+
+      // Default flow per method.
+      if (selectedMethod === 'cash') {
+        payment.payment_status = 'pending';
+      } else if (selectedMethod === 'credit') {
+        payment.payment_status = 'processing';
+      } else {
+        payment.payment_status = 'processing';
+      }
+
+      await payment.save();
+      return {
+        payment,
+        chapa: chapaCheckoutUrl
+          ? {
+              tx_ref: payment.chapa_transaction_id,
+              checkout_url: chapaCheckoutUrl,
+            }
+          : undefined,
+      };
+    } catch (error) {
+      // If we created the payment row in this request and failed to initialize Chapa,
+      // cleanup to avoid stale pending records without checkout URL.
+      if (paymentCreatedInThisRequest && selectedMethod === 'chapa') {
+        await payment.destroy();
+      }
+      throw error;
+    }
+  }
+
+  async verifyChapaByTxRef(txRef: string) {
+    const verification = await verifyChapaTransaction(txRef);
+    const payment = await Payment.findOne({
+      where: { chapa_transaction_id: txRef },
+    });
+
+    if (!payment) {
+      throw new AppError('Payment not found for tx_ref', 404);
     }
 
-    // Method-specific fields
-    if (selectedMethod === 'cheque') {
-      payment.cheque_number = payload.payment_details?.chequeNumber;
-      payment.cheque_bank = payload.payment_details?.bankName;
-      payment.cheque_date = payload.payment_details?.chequeDate
-        ? new Date(payload.payment_details.chequeDate)
-        : undefined;
-      payment.cheque_status = 'submitted';
-    }
+    const verificationStatus =
+      String(verification?.data?.status || verification?.status || '').toLowerCase();
+    const isSuccess =
+      verificationStatus === 'success' ||
+      verificationStatus === 'completed' ||
+      verificationStatus === 'paid';
 
-    if (selectedMethod === 'mobile_banking') {
-      const transactionId = payload.payment_details?.transactionId;
-      const transferDate = payload.payment_details?.transferDate;
-      payment.notes = [payment.notes, transactionId && `tx:${transactionId}`, transferDate && `date:${transferDate}`]
-        .filter(Boolean)
-        .join(' | ');
+    payment.payment_status = isSuccess ? 'completed' : 'failed';
+    if (isSuccess) {
+      payment.amount_paid = payment.total_amount as any;
+      payment.payment_date = new Date();
     }
-
-    if (selectedMethod === 'chapa') {
-      payment.chapa_transaction_id = payload.payment_details?.chapaTxRef;
-      payment.chapa_payment_url = payload.payment_details?.chapaPaymentUrl;
-    }
-
-    // Default flow per method.
-    if (selectedMethod === 'cash') {
-      payment.payment_status = 'pending';
-    } else if (selectedMethod === 'credit') {
-      payment.payment_status = 'processing';
-    } else {
-      payment.payment_status = 'processing';
-    }
-
     await payment.save();
-    return payment;
+
+    return {
+      payment,
+      verification,
+    };
   }
 
   async updatePaymentStatusById(paymentId: string, status: string, amountPaid?: number) {

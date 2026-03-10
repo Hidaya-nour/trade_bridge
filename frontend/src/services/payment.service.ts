@@ -17,14 +17,52 @@ export interface SubmitOrderPaymentData {
 }
 
 class PaymentService {
+  private formatErrorMessage(input: unknown): string {
+    if (typeof input === 'string') {
+      try {
+        const parsed = JSON.parse(input);
+        if (parsed && typeof parsed === 'object') {
+          return Object.entries(parsed as Record<string, unknown>)
+            .map(([field, value]) => {
+              if (Array.isArray(value)) {
+                return `${field}: ${value.join(', ')}`;
+              }
+              return `${field}: ${String(value)}`;
+            })
+            .join(' | ');
+        }
+      } catch {
+        return input;
+      }
+      return input;
+    }
+    if (input && typeof input === 'object') {
+      return Object.entries(input as Record<string, unknown>)
+        .map(([field, value]) =>
+          `${field}: ${Array.isArray(value) ? value.join(', ') : String(value)}`,
+        )
+        .join(' | ');
+    }
+    return 'Payment submission failed';
+  }
+
   async getByOrderId(orderId: string) {
     const response = await api.get(`/payments/order/${orderId}`);
     return response.data;
   }
 
   async submitByOrder(orderId: string, data: SubmitOrderPaymentData) {
-    const response = await api.post(`/payments/order/${orderId}/submit`, data);
-    return response.data;
+    try {
+      const response = await api.post(`/payments/order/${orderId}/submit`, data);
+      return response.data;
+    } catch (error: any) {
+      const backendMessage = error?.response?.data?.message;
+      const message =
+        backendMessage !== undefined
+          ? this.formatErrorMessage(backendMessage)
+          : this.formatErrorMessage(error?.message);
+      throw new Error(message);
+    }
   }
 
   async updateStatus(id: string, status: string, amount_paid?: number) {

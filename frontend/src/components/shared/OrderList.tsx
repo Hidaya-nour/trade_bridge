@@ -197,6 +197,10 @@ export const OrderList: React.FC<OrderListProps> = ({
 
   // Check if order needs payment (no payment record OR payment status is pending/failed)
   const needsPayment = (order: Order): boolean => {
+    if (order.order_status === "cancelled") {
+      return false;
+    }
+
     // Cash on delivery does not require an online "Pay Now" action.
     if (
       order.payment?.payment_method === "cash" &&
@@ -243,7 +247,7 @@ export const OrderList: React.FC<OrderListProps> = ({
       }
     } catch (error) {
       console.error("Payment error:", error);
-      toast.error("Failed to process payment");
+      toast.error((error as Error)?.message || "Failed to process payment");
       return false;
     } finally {
       setPaymentProcessing(false);

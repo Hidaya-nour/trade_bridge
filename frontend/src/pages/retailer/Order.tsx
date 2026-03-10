@@ -62,17 +62,28 @@ const OrdersPage: React.FC = () => {
       }
 
       const amountPaid =
-        paymentMethod === "cash" || paymentMethod === "credit"
+        paymentMethod === "cash" ||
+        paymentMethod === "credit" ||
+        paymentMethod === "chapa"
           ? undefined
           : order.total_price;
 
-      await paymentService.submitByOrder(orderId, {
+      const result = await paymentService.submitByOrder(orderId, {
         payment_method: paymentMethod as any,
         amount_paid: amountPaid,
         proof_document_id: proofDocumentId,
         notes: paymentDetails?.notes,
         payment_details: paymentDetails,
       });
+
+      if (paymentMethod === "chapa") {
+        const checkoutUrl =
+          result?.data?.chapa?.checkout_url ||
+          result?.data?.payment?.chapa_payment_url;
+        if (!checkoutUrl) return false;
+        window.location.href = checkoutUrl;
+        return true;
+      }
 
       await fetchOrdersAsBuyer();
       return true;

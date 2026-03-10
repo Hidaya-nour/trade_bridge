@@ -10,10 +10,17 @@ class PaymentController {
         .status(err.statusCode)
         .json({ success: false, message: err.message });
     }
-    logger.error(context, err);
+    const message = err instanceof Error ? err.message : 'Internal server error';
+    logger.error(`${context}: ${message}`, err);
     return res
       .status(500)
-      .json({ success: false, message: 'Internal server error' });
+      .json({
+        success: false,
+        message:
+          process.env.NODE_ENV === 'development'
+            ? message
+            : 'Internal server error',
+      });
   }
 
   async create(req: Request, res: Response): Promise<any> {
@@ -42,10 +49,34 @@ class PaymentController {
   async submitByOrder(req: Request, res: Response): Promise<any> {
     try {
       const { orderId } = req.params;
-      const payment = await paymentService.submitPaymentByOrderId(orderId, req.body);
-      return res.json({ success: true, data: { payment } });
+      const result = await paymentService.submitPaymentByOrderId(orderId, req.body);
+      return res.json({ success: true, data: result });
     } catch (err) {
       return this.handleError(res, err, 'Submit payment by order error');
+    }
+  }
+
+  async chapaCallback(req: Request, res: Response): Promise<any> {
+    try {
+      const txRef = String(req.query.tx_ref || req.body?.tx_ref || '');
+      if (!txRef) {
+        return res.status(400).json({ success: false, message: 'tx_ref is required' });
+      }
+
+      const result = await paymentService.verifyChapaByTxRef(txRef);
+      const returnUrl =
+        process.env.CHAPA_RETURN_URL ||
+        `${process.env.FRONTEND_URL || 'http://localhost:5173'}/retailer/orders`;
+
+      if (req.method === 'GET') {
+        return res.redirect(
+          `${returnUrl}?payment=success&tx_ref=${encodeURIComponent(txRef)}`,
+        );
+      }
+
+      return res.json({ success: true, data: result });
+    } catch (err) {
+      return this.handleError(res, err, 'Chapa callback error');
     }
   }
 

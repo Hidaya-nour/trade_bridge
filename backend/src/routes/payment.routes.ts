@@ -6,6 +6,10 @@ import paymentController from '../controllers/payment.controller';
 
 const router = Router();
 
+// Public callback endpoint for Chapa redirects/webhooks.
+router.get('/chapa/callback', (req, res) => paymentController.chapaCallback(req, res));
+router.post('/chapa/callback', (req, res) => paymentController.chapaCallback(req, res));
+
 router.use(authenticate);
 
 const paymentMethodValues = [
@@ -62,21 +66,21 @@ const updatePaymentStatusValidation = [
     .withMessage('amount_paid must be a positive number'),
 ];
 
-router.post('/', validate(createPaymentValidation), paymentController.create);
+router.post('/', validate(createPaymentValidation), (req, res) => paymentController.create(req, res));
 router.get(
   '/order/:orderId',
   validate([param('orderId').isUUID().withMessage('Valid orderId is required')]),
-  paymentController.getByOrderId,
+  (req, res) => paymentController.getByOrderId(req, res),
 );
 router.post(
   '/order/:orderId/submit',
   validate(submitPaymentByOrderValidation),
-  paymentController.submitByOrder,
+  (req, res) => paymentController.submitByOrder(req, res),
 );
 router.patch(
   '/:id/status',
   validate(updatePaymentStatusValidation),
-  paymentController.updateStatus,
+  (req, res) => paymentController.updateStatus(req, res),
 );
 
 export default router;
