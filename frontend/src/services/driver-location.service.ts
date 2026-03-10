@@ -1,8 +1,8 @@
-import api from './api';
+import api from "./api";
 
 class DriverLocationService {
   async getAll(params?: any) {
-    const response = await api.get('/driver-locations', { params });
+    const response = await api.get("/driver-locations", { params });
     return response.data;
   }
 
@@ -11,8 +11,13 @@ class DriverLocationService {
     return response.data;
   }
 
+  async getByOrderId(orderId: string) {
+    const response = await api.get(`/driver-locations/order/${orderId}`);
+    return response.data;
+  }
+
   async create(data: any) {
-    const response = await api.post('/driver-locations', data);
+    const response = await api.post("/driver-locations", data);
     return response.data;
   }
 

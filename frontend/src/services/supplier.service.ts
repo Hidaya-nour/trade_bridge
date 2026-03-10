@@ -343,7 +343,7 @@ class SupplierService {
   }
 
   /**
-   * Get supplier delivery options
+   * Get delivery options
    */
   async getSupplierDeliveryOptions(supplierId: string): Promise<ApiResponse<{ delivery_options: string[] }>> {
     try {

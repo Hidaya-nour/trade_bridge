@@ -6,6 +6,7 @@ import { Payment } from './payment.model';
 import { Product } from './product.model';
 import RefreshToken from './RefreshToken.model';
 import { User } from './user.model';
+import Driver from './driver.model';
 import Notification from './notification.model';
 import Cart from './cart.model';
 import CartItem from './cart-item.model';
@@ -270,5 +271,12 @@ User.hasMany(Review, {
   foreignKey: 'user_id',
   as: 'reviews'
 });
+
+  // Driver - links supplier (factory/distributor) to driver (user)
+  Driver.belongsTo(User, { foreignKey: 'supplier_id', as: 'supplier' });
+  Driver.belongsTo(User, { foreignKey: 'driver_id', as: 'driver' });
+  User.hasMany(Driver, { foreignKey: 'supplier_id', as: 'drivers' });
+  User.hasMany(Driver, { foreignKey: 'driver_id', as: 'drivers' });
+
   console.log('✅ Associations defined successfully');
 };

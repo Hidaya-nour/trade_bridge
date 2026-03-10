@@ -47,7 +47,6 @@ const roleNavigation = {
       name: "Browse Products",
       href: "/retailer/products",
       icon: Store,
-      badge: "24",
     },
     {
       name: "Browse Suppliers",

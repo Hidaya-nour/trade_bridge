@@ -320,7 +320,7 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ onMenuClick }) => {
         <div className="flex items-center gap-1.5">
           {/* Quick Actions */}
           <div className="hidden md:flex items-center gap-1">
-            {user.role === "retailer" && (
+            {user.role !== "retailer" && (
               <TooltipProvider>
                 <Tooltip delayDuration={300}>
                   <TooltipTrigger asChild>
@@ -330,7 +330,7 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ onMenuClick }) => {
                       className="relative h-9 w-9 text-muted-foreground hover:text-foreground hover:bg-accent/50"
                       asChild
                     >
-                      <Link to="/retailer/cart">
+                      <Link to={`/${user.role}/cart`}>
                         <ShoppingCart className="h-5 w-5" />
                         <Badge className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center bg-primary text-[10px] font-medium text-primary-foreground ring-2 ring-background">
                           3

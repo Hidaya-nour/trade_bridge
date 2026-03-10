@@ -2,6 +2,7 @@
 // Order Types
 // ============================================================================
 
+import type { User } from "@/stores/auth.store";
 import type { Product } from "./product.types";
 
 export type OrderStatus = 
@@ -19,6 +20,17 @@ export type PaymentStatus =
   | 'failed' 
   | 'refunded';
 
+  export type OrderParty = {
+    id: number | string;
+    name: string;
+    contact?: string;
+    phone?: string;
+    email?: string;
+    location?: string;
+    rating?: number;
+    verified?: boolean;
+    previousOrders?: number;
+  };
 export type DeliveryStatus = 
   | 'pending' 
   | 'assigned' 
@@ -44,8 +56,10 @@ export interface Order {
     id: string;
     full_name: string;
     business_name?: string;
+    phone?: string;
   };
   supplier?: {
+    user: User;
     id: string;
     full_name: string;
     business_name?: string;
@@ -53,6 +67,7 @@ export interface Order {
   items?: OrderItem[];
   payment?: Payment;
   delivery?: Delivery;
+  driver?: OrderDriver;
 }
 
 export interface OrderItem {
@@ -65,6 +80,36 @@ export interface OrderItem {
 
 }
 
+export type OrderTimelineItem = {
+  status: string;
+  date?: string | null;
+  completed: boolean;
+};
+export type OrderDriver = {
+  id: number | string;
+  name: string;
+  vehicle?: string;
+  available?: boolean;
+};
+export type OrderDelivery = {
+  address: string;
+  recipient: string;
+  phone: string;
+  requestedDate?: string;
+  estimatedDate?: string;
+  actualDate?: string;
+  trackingNumber?: string | null;
+  carrier?: string | null;
+  driverId?: number | string | null;
+  driverName?: string | null;
+  driverPhone?: string | null;
+};
+export type OrderDetailsData = {
+  order: Order;
+  driver?: OrderDriver;
+  canAssignDriver?: boolean;
+  canCancel?: boolean;
+};
 export interface Payment {
   id: string;
   order_id: string;

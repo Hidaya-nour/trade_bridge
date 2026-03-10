@@ -58,6 +58,7 @@ import {
 import { Label } from "@/components/ui/label";
 
 import { StatusBadge } from "@/components/shared";
+import OrderTrackingDialog from "@/components/shared/OrderTrackingDialog";
 import { formatPrice, formatDate, formatDateTime } from "@/lib/formatters";
 import { getInitials, cn } from "@/lib/utils";
 
@@ -179,6 +180,7 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
   const [cancellationReason, setCancellationReason] = useState("");
   const [rating, setRating] = useState(5);
   const [review, setReview] = useState("");
+  const [showTrackingDialog, setShowTrackingDialog] = useState(false);
 
   useEffect(() => {
     setOrder(initialOrder);
@@ -471,6 +473,7 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                       size="sm"
                       variant="outline"
                       className="h-7 text-xs bg-white"
+                      onClick={() => setShowTrackingDialog(true)}
                     >
                       Track Package
                     </Button>
@@ -933,6 +936,14 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Live Tracking Dialog */}
+      <OrderTrackingDialog
+        open={showTrackingDialog}
+        onOpenChange={setShowTrackingDialog}
+        orderId={order.id}
+        deliveryId={order.delivery.trackingNumber || undefined}
+      />
     </div>
   );
 };

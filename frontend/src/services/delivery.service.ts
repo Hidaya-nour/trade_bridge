@@ -1,28 +1,35 @@
 import api from './api';
 
 class DeliveryService {
+  private readonly BASE = '/deliveries';
+
   async getAll(params?: any) {
-    const response = await api.get('/deliverys', { params });
+    const response = await api.get(this.BASE, { params });
     return response.data;
   }
 
   async getById(id: string) {
-    const response = await api.get(`/deliverys/${id}`);
+    const response = await api.get(`${this.BASE}/${id}`);
     return response.data;
   }
 
   async create(data: any) {
-    const response = await api.post('/deliverys', data);
+    const response = await api.post(this.BASE, data);
     return response.data;
   }
 
   async update(id: string, data: any) {
-    const response = await api.put(`/deliverys/${id}`, data);
+    const response = await api.put(`${this.BASE}/${id}`, data);
     return response.data;
   }
 
   async delete(id: string) {
-    const response = await api.delete(`/deliverys/${id}`);
+    const response = await api.delete(`${this.BASE}/${id}`);
+    return response.data;
+  }
+
+  async assignDriver(deliveryId: string, driverId: string) {
+    const response = await api.patch(`${this.BASE}/${deliveryId}/assign-driver`, { driver_id: driverId });
     return response.data;
   }
 }

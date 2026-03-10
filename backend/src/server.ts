@@ -22,6 +22,7 @@ import './models/audit-log.model';
 import './models/supplier-payment-method.model';
 import './models/factory-agent.model';
 import './models/rating-reviews.model';
+import './models/driver.model';
 
 import { setupAssociations } from './models/associations';
 import productRoutes from './routes/product.routes';
@@ -43,6 +44,7 @@ import supplierPaymentMethodRoutes from './routes/supplier-payment-method.routes
 import factoryAgentRoutes from './routes/factory-agent.routes';
 import ratingReviewRoutes from './routes/rating-review.routes';
 import supplierRoutes from './routes/supplier.routes'
+import driverRoutes from './routes/driver.routes';
 import { AppError, ValidationError } from './utils/errors';
 dotenv.config();
 
@@ -106,6 +108,7 @@ app.use('/api/supplier-payment-methods', supplierPaymentMethodRoutes);
 app.use('/api/factory-agents', factoryAgentRoutes);
 app.use('/api/reviews', ratingReviewRoutes);
 app.use('/api/suppliers', supplierRoutes);
+app.use('/api/drivers', driverRoutes);
 
 
 // Health check

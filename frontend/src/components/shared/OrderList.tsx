@@ -50,6 +50,7 @@ import { formatPrice, formatDate } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 import { Label } from "@/components/ui/label";
 import type { Order } from "@/types/order.types";
+import OrderTrackingDialog from "@/components/shared/OrderTrackingDialog";
 import toast from "react-hot-toast";
 
 interface OrderListProps {
@@ -145,6 +146,7 @@ export const OrderList: React.FC<OrderListProps> = ({
   >({});
   const [currentPage, setCurrentPage] = useState(1);
   const [paymentProcessing, setPaymentProcessing] = useState(false);
+  const [trackingOrder, setTrackingOrder] = useState<Order | null>(null);
   const itemsPerPage = 5;
 
   useEffect(() => {
@@ -754,6 +756,7 @@ export const OrderList: React.FC<OrderListProps> = ({
                         size="sm"
                         variant="outline"
                         className="h-7 text-xs bg-white"
+                        onClick={() => setTrackingOrder(order)}
                       >
                         Track Shipment
                       </Button>
@@ -1031,6 +1034,20 @@ export const OrderList: React.FC<OrderListProps> = ({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Live Tracking Dialog */}
+      {trackingOrder && trackingOrder.delivery && (
+        <OrderTrackingDialog
+          open={!!trackingOrder}
+          onOpenChange={(open) => {
+            if (!open) {
+              setTrackingOrder(null);
+            }
+          }}
+          orderId={trackingOrder.id}
+          deliveryId={trackingOrder.delivery.id}
+        />
+      )}
     </div>
   );
 };
