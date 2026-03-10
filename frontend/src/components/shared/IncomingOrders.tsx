@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   Package,
@@ -122,7 +122,10 @@ export interface IncomingOrder {
     | "cancelled";
   paymentStatus: string;
   paymentMethod: string;
-  priority: "high" | "medium" | "low";
+  paymentAmount?: number;
+  paymentPaid?: number;
+  paymentProofUrl?: string;
+  paymentProofName?: string;
   notes?: string;
   trackingNumber?: string;
   driver?: string;
@@ -175,12 +178,6 @@ const statusColors = {
   cancelled: "bg-red-100 text-red-800 border-red-200",
 };
 
-const priorityColors = {
-  high: "bg-red-100 text-red-800 border-red-200",
-  medium: "bg-amber-100 text-amber-800 border-amber-200",
-  low: "bg-green-100 text-green-800 border-green-200",
-};
-
 // ============================================================================
 // COMPONENT
 // ============================================================================
@@ -196,7 +193,6 @@ export const IncomingOrders: React.FC<IncomingOrdersProps> = ({
   const [orders, setOrders] = useState<IncomingOrder[]>(initialOrders);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [priorityFilter, setPriorityFilter] = useState<string>("all");
   const [selectedOrder, setSelectedOrder] = useState<IncomingOrder | null>(
     null,
   );
@@ -206,6 +202,10 @@ export const IncomingOrders: React.FC<IncomingOrdersProps> = ({
   const [rejectionReason, setRejectionReason] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
+
+  useEffect(() => {
+    setOrders(initialOrders);
+  }, [initialOrders]);
 
   // Filter orders
   const filteredOrders = orders.filter((order) => {
@@ -217,10 +217,8 @@ export const IncomingOrders: React.FC<IncomingOrdersProps> = ({
 
     const matchesStatus =
       statusFilter === "all" || order.status === statusFilter;
-    const matchesPriority =
-      priorityFilter === "all" || order.priority === priorityFilter;
 
-    return matchesSearch && matchesStatus && matchesPriority;
+    return matchesSearch && matchesStatus;
   });
 
   // Sort orders by date (newest first)
@@ -361,21 +359,6 @@ export const IncomingOrders: React.FC<IncomingOrdersProps> = ({
                     <SelectItem value="cancelled">Cancelled</SelectItem>
                   </SelectContent>
                 </Select>
-
-                <Select
-                  value={priorityFilter}
-                  onValueChange={setPriorityFilter}
-                >
-                  <SelectTrigger className="w-[140px]">
-                    <SelectValue placeholder="Priority" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Priorities</SelectItem>
-                    <SelectItem value="high">High</SelectItem>
-                    <SelectItem value="medium">Medium</SelectItem>
-                    <SelectItem value="low">Low</SelectItem>
-                  </SelectContent>
-                </Select>
               </div>
             }
           />
@@ -405,7 +388,6 @@ export const IncomingOrders: React.FC<IncomingOrdersProps> = ({
           onAction={() => {
             setSearchQuery("");
             setStatusFilter("all");
-            setPriorityFilter("all");
           }}
         />
       ) : (
@@ -463,7 +445,6 @@ export const IncomingOrders: React.FC<IncomingOrdersProps> = ({
                           {order.id}
                         </Link>
                         <StatusBadge status={order.status} />
-                        <StatusBadge status={order.priority} />
                       </div>
                       <div className="flex items-center gap-3 mt-1 flex-wrap">
                         <div className="flex items-center gap-2">
@@ -936,6 +917,40 @@ export const IncomingOrders: React.FC<IncomingOrdersProps> = ({
                   Order Total:{" "}
                   {selectedOrder && formatPrice(selectedOrder.total)}
                 </p>
+                <div className="mt-3 rounded-lg bg-white/60 p-3">
+                  <p className="text-xs text-green-800">
+                    Payment Method: {selectedOrder?.paymentMethod || "N/A"}
+                  </p>
+                  <p className="text-xs text-green-800">
+                    Payment Status: {selectedOrder?.paymentStatus || "N/A"}
+                  </p>
+                  {typeof selectedOrder?.paymentAmount === "number" && (
+                    <p className="text-xs text-green-800">
+                      Amount Due: {formatPrice(selectedOrder.paymentAmount)}
+                    </p>
+                  )}
+                  {typeof selectedOrder?.paymentPaid === "number" && (
+                    <p className="text-xs text-green-800">
+                      Amount Paid: {formatPrice(selectedOrder.paymentPaid)}
+                    </p>
+                  )}
+                  {selectedOrder?.paymentProofUrl && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="mt-2 h-7 text-xs"
+                      asChild
+                    >
+                      <a
+                        href={selectedOrder.paymentProofUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        View Proof Document
+                      </a>
+                    </Button>
+                  )}
+                </div>
                 <p className="text-xs text-green-700 mt-1">
                   Approving this order will:
                 </p>

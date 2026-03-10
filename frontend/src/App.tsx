@@ -205,6 +205,14 @@ function App() {
             }
           />
           <Route
+            path="/distributor/purchase-orders/:id"
+            element={
+              <DashboardLayout>
+                <DistributorOrderDetailsPage />
+              </DashboardLayout>
+            }
+          />
+          <Route
             path="/distributor/delivery"
             element={
               <DashboardLayout>

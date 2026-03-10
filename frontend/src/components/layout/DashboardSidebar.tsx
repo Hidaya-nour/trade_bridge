@@ -96,7 +96,7 @@ const roleNavigation = {
     ],
     retailOperations: [
       {
-        name: "Retailer Orders",
+        name: "Incoming Orders",
         href: "/distributor/orders",
         icon: ShoppingCart,
         badge: "8",

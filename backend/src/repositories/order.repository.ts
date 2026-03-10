@@ -7,6 +7,7 @@ import { Product } from '../models/product.model';
 import { Payment } from '../models/payment.model';
 import { Delivery } from '../models/delivery.model';
 import { User } from '../models/user.model';
+import Document from '../models/document.model';
 
 import { OrderFilters, OrderStatus } from '../types/order.types';
 import OrderItems from '../models/order-item.model';
@@ -46,7 +47,14 @@ export class OrderRepository extends BaseRepository<Order> {
         },
         {
           model: Payment,
-          as: 'payment'
+          as: 'payment',
+          include: [
+            {
+              model: Document,
+              as: 'proofDocument',
+              attributes: ['id', 'file_secure_url', 'original_file_name']
+            }
+          ]
         },
         {
           model: Delivery,
@@ -118,12 +126,26 @@ export class OrderRepository extends BaseRepository<Order> {
         {
           model: OrderItems,
           as: 'items',
-          attributes: ['id', 'product_id', 'quantity', 'unit_price']
+          attributes: ['id', 'product_id', 'quantity', 'unit_price'],
+          include: [
+            {
+              model: Product,
+              as: 'product',
+              attributes: ['id', 'name', 'sku', 'unit_type', 'images']
+            }
+          ]
         },
         {
           model: Payment,
           as: 'payment',
-          attributes: ['payment_status', 'payment_method']
+          attributes: ['payment_status', 'payment_method', 'total_amount', 'amount_paid', 'proof_document_id'],
+          include: [
+            {
+              model: Document,
+              as: 'proofDocument',
+              attributes: ['id', 'file_secure_url', 'original_file_name']
+            }
+          ]
         },
         {
           model: Delivery,

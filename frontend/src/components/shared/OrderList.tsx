@@ -520,17 +520,6 @@ export const OrderList: React.FC<OrderListProps> = ({
                           Order #{order.id.slice(-8)}
                         </Link>
                         <StatusBadge status={order.order_status} />
-                        {/* Payment Status Badge - only show if payment exists */}
-                        {order.payment && (
-                          <Badge
-                            variant="outline"
-                            className={
-                              paymentStatusColors[order.payment.payment_status]
-                            }
-                          >
-                            Payment: {order.payment.payment_status}
-                          </Badge>
-                        )}
                       </div>
                       <div className="flex items-center gap-3 mt-1 flex-wrap">
                         <div className="flex items-center gap-2">

@@ -94,6 +94,16 @@ export const setupAssociations = () => {
     as: 'order'
   });
 
+  // Payment - Proof Document (optional)
+  Payment.belongsTo(Document, {
+    foreignKey: 'proof_document_id',
+    as: 'proofDocument'
+  });
+  Document.hasMany(Payment, {
+    foreignKey: 'proof_document_id',
+    as: 'paymentsWithProof'
+  });
+
   // Order - Delivery (one-to-one)
   Order.hasOne(Delivery, {
     foreignKey: 'order_id',

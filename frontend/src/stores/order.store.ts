@@ -1,7 +1,26 @@
 import { create } from 'zustand';
 
 import orderService from '../services/order.service';
+import paymentService from '../services/payment.service';
 import type { Order, OrderFilters } from '@/types/order.types';
+
+const enrichOrdersWithPayments = async (orders: Order[]) => {
+  const enriched = await Promise.all(
+    orders.map(async (order) => {
+      if (order.payment) return order;
+      try {
+        const response = await paymentService.getByOrderId(order.id);
+        const payment =
+          response?.data?.payment || response?.payment || response?.data;
+        if (!payment) return order;
+        return { ...order, payment };
+      } catch {
+        return order;
+      }
+    }),
+  );
+  return enriched;
+};
 
 interface OrderState {
   // Data
@@ -55,9 +74,12 @@ export const useOrderStore = create<OrderState>((set, get) => ({
     try {
       const mergedFilters = { ...get().filters, ...filters };
       const response = await orderService.getMyOrders(mergedFilters);
+      const ordersWithPayments = await enrichOrdersWithPayments(
+        response.data.orders || [],
+      );
       
       set({
-        orders: response.data.orders,
+        orders: ordersWithPayments,
         totalOrders: response.data.total,
         currentPage: response.data.page,
         totalPages: response.data.totalPages,
@@ -77,9 +99,12 @@ export const useOrderStore = create<OrderState>((set, get) => ({
     try {
       const mergedFilters = { ...get().filters, ...filters };
       const response = await orderService.getOrdersAsBuyer(mergedFilters);
+      const ordersWithPayments = await enrichOrdersWithPayments(
+        response.data.orders || [],
+      );
       
       set({
-        orders: response.data.orders,
+        orders: ordersWithPayments,
         totalOrders: response.data.total,
         currentPage: response.data.page,
         totalPages: response.data.totalPages,
