@@ -148,7 +148,7 @@ export interface CreateOrderItem {
 export interface CreateOrderData {
   supplier_id: string;
   items: CreateOrderItem[];
-  payment_method: string;
+  payment_method?: string;
   delivery_address?: string;
   notes?: string;
 }

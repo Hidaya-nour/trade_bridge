@@ -156,7 +156,7 @@ export interface CreateOrderItemDTO {
 export interface CreateOrderDTO {
   supplier_id: string;
   items: CreateOrderItemDTO[];
-  payment_method: string;
+  payment_method?: string;
   delivery_address?: string;
   notes?: string;
 }

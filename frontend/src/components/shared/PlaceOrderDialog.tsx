@@ -57,7 +57,7 @@ export interface PlaceOrderDialogProps {
     bulkDiscountPercentage?: number;
   };
   onPlaceOrder?: (
-    paymentMethod: string,
+    paymentMethod?: string,
     deliveryOption: string,
   ) => Promise<{
     primaryOrderId: string;
@@ -146,8 +146,6 @@ export const PlaceOrderDialog: React.FC<PlaceOrderDialogProps> = ({
 
   const isPlacing =
     externalIsPlacing !== undefined ? externalIsPlacing : internalIsPlacing;
-  const defaultOrderPaymentMethod = "cash";
-
   const handlePaymentSubmit = async (
     method: PaymentMethod,
     details: PaymentDetails,
@@ -178,10 +176,7 @@ export const PlaceOrderDialog: React.FC<PlaceOrderDialogProps> = ({
     if (onPlaceOrder) {
       setInternalIsPlacing(true);
       try {
-        const result = await onPlaceOrder(
-          defaultOrderPaymentMethod,
-          deliveryOption,
-        );
+        const result = await onPlaceOrder(undefined, deliveryOption);
         if (result?.primaryOrderId && onProcessPayment) {
           setCreatedOrderId(result.primaryOrderId);
           setCreatedOrderTotal(result.total || summary.total);

@@ -160,8 +160,10 @@ export class OrderService {
       orderItems
     );
 
-    // Create payment record
-    await this.createPaymentRecord(order.id, total_price, payment_method);
+    // Create payment record only when method is explicitly provided
+    if (typeof payment_method === 'string' && payment_method.trim().length > 0) {
+      await this.createPaymentRecord(order.id, total_price, payment_method);
+    }
 
     // Create delivery record if address provided
     if (delivery_address) {

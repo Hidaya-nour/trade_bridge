@@ -87,7 +87,7 @@ export const CartPage: React.FC<CartPageProps> = ({ config }) => {
   const { createOrder, isLoading: orderLoading } = useOrderStore();
 
   const handlePlaceOrder = async (
-    paymentMethod: string,
+    paymentMethod: string | undefined,
     deliveryOption: string,
   ) => {
     try {
@@ -176,9 +176,9 @@ export const CartPage: React.FC<CartPageProps> = ({ config }) => {
           shipping_cost: supplierShipping,
           tax_amount: Number(supplierTax.toFixed(2)),
           discount_amount: Number(supplierDiscount.toFixed(2)),
-          payment_method: paymentMethod,
           delivery_option: deliveryOption,
           notes: "",
+          ...(paymentMethod ? { payment_method: paymentMethod } : {}),
         };
 
         console.log(

@@ -16,7 +16,7 @@ const createOrderValidation = [
   body('items').isArray({ min: 1 }).withMessage('At least one item is required'),
   body('items.*.product_id').isUUID().withMessage('Valid product ID is required'),
   body('items.*.quantity').isInt({ min: 1 }).withMessage('Quantity must be at least 1'),
-  body('payment_method').isString().notEmpty().withMessage('Payment method is required'),
+  body('payment_method').optional().isString().notEmpty().withMessage('Payment method must be a non-empty string'),
   body('delivery_address').optional().isString(),
   body('notes').optional().isString(),
 ];

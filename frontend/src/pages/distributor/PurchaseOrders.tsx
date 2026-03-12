@@ -95,7 +95,7 @@ const PurchaseOrdersPage: React.FC = () => {
   };
 
   const handlePlaceOrder = async (
-    paymentMethod: string,
+    paymentMethod: string | undefined,
     deliveryOption: string,
   ) => {
     try {
@@ -117,13 +117,15 @@ const PurchaseOrdersPage: React.FC = () => {
       const supplierId = reorderItems[0].product?.supplier_id;
 
       // Send all required fields to backend
-      const order = await createOrder({
+      const orderPayload = {
         supplier_id: supplierId,
         items: itemsWithPrice,
         total_price: totalPrice,
-        payment_method: paymentMethod,
         delivery_option: deliveryOption,
-      });
+        ...(paymentMethod ? { payment_method: paymentMethod } : {}),
+      };
+
+      const order = await createOrder(orderPayload);
 
       if (!order) {
         toast.error("Failed to place order");

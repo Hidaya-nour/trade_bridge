@@ -291,7 +291,7 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
 
   // Handle place order
   const handlePlaceOrder = async (
-    paymentMethod: string,
+    paymentMethod: string | undefined,
     deliveryOption: string,
   ) => {
     if (!selectedProduct) return;
@@ -315,9 +315,9 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
         shipping_cost: shipping,
         tax_amount: Number(tax.toFixed(2)),
         discount_amount: discount,
-        payment_method: paymentMethod,
         delivery_option: deliveryOption,
         notes: "",
+        ...(paymentMethod ? { payment_method: paymentMethod } : {}),
       };
 
       const order = await createOrder(orderPayload);
