@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import {
   User,
   Building,
@@ -74,6 +74,9 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAuthStore } from "@/stores/auth.store";
 import { useSupplierPaymentMethodStore } from "@/stores/supplier-payment-method.store";
 import { useNotificationStore } from "@/stores/notification.store";
+import { useDocumentStore } from "@/stores/document.store";
+import { useAddressStore } from "@/stores/address.store";
+import documentService from "@/services/document.service";
 
 // Mock user data
 const userData = {
@@ -159,7 +162,9 @@ const SettingsPage: React.FC = () => {
     is_primary: false,
   });
 
-  const { user, fetchUser, updateProfile, changePassword, isLoading } = useAuthStore();
+  const { user, fetchUser, updateProfile, changePassword, isLoading } =
+    useAuthStore();
+  const isSupplier = user?.role === "factory" || user?.role === "distributor";
   const {
     items: supplierPaymentMethods,
     isLoading: isPaymentLoading,
@@ -175,6 +180,20 @@ const SettingsPage: React.FC = () => {
     markAllRead: markAllNotificationsRead,
     clearAll: clearAllNotifications,
   } = useNotificationStore();
+  const {
+    items: documents,
+    fetchAll: fetchDocuments,
+    isLoading: docsLoading,
+    error: docsError,
+  } = useDocumentStore();
+  const {
+    items: addresses,
+    fetchAll: fetchAddresses,
+    create: createAddress,
+    update: updateAddress,
+    isLoading: addressesLoading,
+    error: addressesError,
+  } = useAddressStore();
   const [profileForm, setProfileForm] = useState({
     full_name: "",
     email: "",
@@ -182,15 +201,28 @@ const SettingsPage: React.FC = () => {
     altPhone: "",
     business_name: "",
     businessType: "",
-    business_address: "",
     tin_number: "",
     vatRegistered: true,
     bio: "",
     avatar: "",
   });
 
+  const [licenseFile, setLicenseFile] = useState<File | null>(null);
+  const [licenseIssuedDate, setLicenseIssuedDate] = useState("");
+  const [licenseExpiryDate, setLicenseExpiryDate] = useState("");
+  const [licenseMessage, setLicenseMessage] = useState<string | null>(null);
+  const [licenseUploading, setLicenseUploading] = useState(false);
+  const [addressForm, setAddressForm] = useState({
+    region: "",
+    city: "",
+    subcity: "",
+    latitude: "",
+    longitude: "",
+  });
+
   const canManageSupplierPaymentMethods =
     user?.role === "factory" || user?.role === "distributor";
+  const location = useLocation();
 
   useEffect(() => {
     if (!user) {
@@ -205,7 +237,6 @@ const SettingsPage: React.FC = () => {
       phone: user.phone || "",
       business_name: user.business_name || "",
       businessType: user.role || "",
-      business_address: user.business_address || "",
       tin_number: user.tin_number || "",
       avatar: user.profile_image || "",
     }));
@@ -218,10 +249,25 @@ const SettingsPage: React.FC = () => {
   }, [activeTab, canManageSupplierPaymentMethods]);
 
   useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const tab = params.get("tab");
+    if (tab) {
+      setActiveTab(tab);
+    }
+  }, [location.search]);
+
+  useEffect(() => {
     if (canManageSupplierPaymentMethods) {
       void fetchSupplierPaymentMethods();
     }
   }, [canManageSupplierPaymentMethods, fetchSupplierPaymentMethods]);
+
+  useEffect(() => {
+    if (isSupplier) {
+      void fetchDocuments();
+      void fetchAddresses();
+    }
+  }, [isSupplier, fetchDocuments, fetchAddresses]);
 
   useEffect(() => {
     void fetchNotificationCounts();
@@ -233,7 +279,6 @@ const SettingsPage: React.FC = () => {
         full_name: profileForm.full_name,
         phone: profileForm.phone,
         business_name: profileForm.business_name,
-        business_address: profileForm.business_address,
         tin_number: profileForm.tin_number,
         profile_image: profileForm.avatar,
       });
@@ -248,12 +293,109 @@ const SettingsPage: React.FC = () => {
     try {
       await updateProfile({
         business_name: profileForm.business_name,
-        business_address: profileForm.business_address,
         tin_number: profileForm.tin_number,
       });
       setBusinessMessage("Business info updated successfully");
     } catch {
       setBusinessMessage("Failed to update business info");
+    }
+  };
+
+  const businessLicenseDoc = React.useMemo(() => {
+    const licenseDocs = (documents || []).filter(
+      (d) => d.document_type === "business_license",
+    );
+    if (licenseDocs.length === 0) return null;
+    const sorted = [...licenseDocs].sort((a: any, b: any) => {
+      const aDate = new Date(
+        a.uploaded_at || a.created_at || a.updated_at || 0,
+      ).getTime();
+      const bDate = new Date(
+        b.uploaded_at || b.created_at || b.updated_at || 0,
+      ).getTime();
+      return bDate - aDate;
+    });
+    return sorted[0];
+  }, [documents]);
+
+  const latestAddress = React.useMemo(() => {
+    if (!addresses || addresses.length === 0) return null;
+    const sorted = [...addresses].sort((a: any, b: any) => {
+      const aDate = new Date(a.created_at || a.updated_at || 0).getTime();
+      const bDate = new Date(b.created_at || b.updated_at || 0).getTime();
+      return bDate - aDate;
+    });
+    return sorted[0];
+  }, [addresses]);
+
+  useEffect(() => {
+    if (!latestAddress) return;
+    setAddressForm((prev) => ({
+      region: prev.region || latestAddress.region || "",
+      city: prev.city || latestAddress.city || "",
+      subcity: prev.subcity || latestAddress.subcity || "",
+      latitude:
+        prev.latitude ||
+        (latestAddress.latitude !== null && latestAddress.latitude !== undefined
+          ? String(latestAddress.latitude)
+          : ""),
+      longitude:
+        prev.longitude ||
+        (latestAddress.longitude !== null &&
+        latestAddress.longitude !== undefined
+          ? String(latestAddress.longitude)
+          : ""),
+    }));
+  }, [latestAddress]);
+
+  const handleUploadLicense = async () => {
+    if (!licenseFile) {
+      setLicenseMessage("Please select a license document first.");
+      return;
+    }
+    if (!addressForm.region.trim() || !addressForm.city.trim()) {
+      setLicenseMessage("Please provide your region and city address details.");
+      return;
+    }
+    setLicenseUploading(true);
+    setLicenseMessage(null);
+    try {
+      const addressPayload: any = {
+        region: addressForm.region.trim(),
+        city: addressForm.city.trim(),
+        subcity: addressForm.subcity?.trim() || undefined,
+      };
+      if (addressForm.latitude) addressPayload.latitude = addressForm.latitude;
+      if (addressForm.longitude)
+        addressPayload.longitude = addressForm.longitude;
+
+      if (latestAddress?.id) {
+        await updateAddress(latestAddress.id, addressPayload);
+      } else {
+        await createAddress(addressPayload);
+      }
+
+      await documentService.uploadDocument(
+        licenseFile,
+        "business_license",
+        licenseIssuedDate || undefined,
+        licenseExpiryDate || undefined,
+      );
+      setLicenseMessage("Business license uploaded. Awaiting admin review.");
+      setLicenseFile(null);
+      setLicenseIssuedDate("");
+      setLicenseExpiryDate("");
+      await fetchDocuments();
+      await fetchAddresses();
+      await fetchUser();
+    } catch (error: any) {
+      setLicenseMessage(
+        error?.response?.data?.message ||
+          error?.message ||
+          "Failed to upload license document",
+      );
+    } finally {
+      setLicenseUploading(false);
     }
   };
 
@@ -276,7 +418,11 @@ const SettingsPage: React.FC = () => {
         newPassword: passwordForm.newPassword,
       });
       setSecurityMessage("Password changed successfully. Please login again.");
-      setPasswordForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
+      setPasswordForm({
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: "",
+      });
     } catch (error: any) {
       setSecurityMessage(error?.message || "Failed to change password");
     }
@@ -622,19 +768,6 @@ const SettingsPage: React.FC = () => {
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="space-y-2 md:col-span-2">
-                      <Label htmlFor="businessAddress">Business Address</Label>
-                      <Input
-                        id="businessAddress"
-                        value={profileForm.business_address}
-                        onChange={(e) =>
-                          setProfileForm((prev) => ({
-                            ...prev,
-                            business_address: e.target.value,
-                          }))
-                        }
-                      />
-                    </div>
                     <div className="space-y-2">
                       <Label htmlFor="tinNumber">TIN Number</Label>
                       <Input
@@ -662,26 +795,231 @@ const SettingsPage: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                    <div className="flex items-start gap-3">
-                      <Shield className="h-5 w-5 text-blue-600 mt-0.5" />
-                      <div>
-                        <h4 className="text-sm font-medium text-blue-800">
-                          Verification Status
-                        </h4>
-                        <p className="text-xs text-blue-700 mt-1">
-                          Your business information is verified. You have access
-                          to verified supplier badges.
+                  {isSupplier && (
+                    <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 space-y-4">
+                      <div className="flex items-start gap-3">
+                        <Shield className="h-5 w-5 text-amber-700 mt-0.5" />
+                        <div className="flex-1">
+                          <h4 className="text-sm font-medium text-amber-900">
+                            Business Verification
+                          </h4>
+                          <p className="text-xs text-amber-800 mt-1">
+                            Upload your business license so an admin can review
+                            and approve your account.
+                          </p>
+                        </div>
+                        {user?.verified ? (
+                          <Badge className="ml-auto bg-green-100 text-green-700 border-green-200">
+                            Verified
+                          </Badge>
+                        ) : (
+                          <Badge className="ml-auto bg-amber-100 text-amber-800 border-amber-200">
+                            Pending
+                          </Badge>
+                        )}
+                      </div>
+
+                      {businessLicenseDoc && (
+                        <div className="rounded-md border border-amber-200 bg-white/70 p-3 text-xs">
+                          <div className="flex items-center justify-between">
+                            <span className="text-amber-900 font-medium">
+                              Latest license document
+                            </span>
+                            <Badge
+                              variant="outline"
+                              className={
+                                businessLicenseDoc.verification_status ===
+                                "verified"
+                                  ? "bg-green-100 text-green-700 border-green-200"
+                                  : businessLicenseDoc.verification_status ===
+                                      "rejected"
+                                    ? "bg-red-100 text-red-700 border-red-200"
+                                    : "bg-amber-100 text-amber-800 border-amber-200"
+                              }
+                            >
+                              {businessLicenseDoc.verification_status}
+                            </Badge>
+                          </div>
+                          {businessLicenseDoc.rejection_reason && (
+                            <p className="mt-2 text-red-700">
+                              Rejection reason:{" "}
+                              {businessLicenseDoc.rejection_reason}
+                            </p>
+                          )}
+                        </div>
+                      )}
+                      {businessLicenseDoc && (
+                        <div className="rounded-md border border-green-200 bg-green-50 p-4 text-sm text-green-800">
+                          <div className="flex items-center gap-2">
+                            <Check className="h-4 w-4" />
+                            Your business license has been submitted
+                            successfully.
+                          </div>
+
+                          {businessLicenseDoc.verification_status ===
+                            "pending" && (
+                            <p className="text-xs mt-1">
+                              It is currently under admin review.
+                            </p>
+                          )}
+
+                          {businessLicenseDoc.verification_status ===
+                            "verified" && (
+                            <p className="text-xs mt-1">
+                              Your business has been verified.
+                            </p>
+                          )}
+                        </div>
+                      )}
+                      {!businessLicenseDoc && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="businessRegion">Region</Label>
+                            <Input
+                              id="businessRegion"
+                              value={addressForm.region}
+                              onChange={(e) =>
+                                setAddressForm((prev) => ({
+                                  ...prev,
+                                  region: e.target.value,
+                                }))
+                              }
+                              placeholder="e.g. Oromia"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="businessCity">City</Label>
+                            <Input
+                              id="businessCity"
+                              value={addressForm.city}
+                              onChange={(e) =>
+                                setAddressForm((prev) => ({
+                                  ...prev,
+                                  city: e.target.value,
+                                }))
+                              }
+                              placeholder="e.g. Adama"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="businessSubcity">
+                              Subcity (optional)
+                            </Label>
+                            <Input
+                              id="businessSubcity"
+                              value={addressForm.subcity}
+                              onChange={(e) =>
+                                setAddressForm((prev) => ({
+                                  ...prev,
+                                  subcity: e.target.value,
+                                }))
+                              }
+                              placeholder="e.g. Bole"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="businessLatitude">
+                              Latitude (optional)
+                            </Label>
+                            <Input
+                              id="businessLatitude"
+                              value={addressForm.latitude}
+                              onChange={(e) =>
+                                setAddressForm((prev) => ({
+                                  ...prev,
+                                  latitude: e.target.value,
+                                }))
+                              }
+                              placeholder="e.g. 8.9806"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="businessLongitude">
+                              Longitude (optional)
+                            </Label>
+                            <Input
+                              id="businessLongitude"
+                              value={addressForm.longitude}
+                              onChange={(e) =>
+                                setAddressForm((prev) => ({
+                                  ...prev,
+                                  longitude: e.target.value,
+                                }))
+                              }
+                              placeholder="e.g. 38.7578"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="licenseFile">
+                              Business License
+                            </Label>
+                            <Input
+                              id="licenseFile"
+                              type="file"
+                              accept=".pdf,image/*"
+                              onChange={(e) =>
+                                setLicenseFile(e.target.files?.[0] || null)
+                              }
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="licenseIssued">Issued Date</Label>
+                            <Input
+                              id="licenseIssued"
+                              type="date"
+                              value={licenseIssuedDate}
+                              onChange={(e) =>
+                                setLicenseIssuedDate(e.target.value)
+                              }
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="licenseExpiry">Expiry Date</Label>
+                            <Input
+                              id="licenseExpiry"
+                              type="date"
+                              value={licenseExpiryDate}
+                              onChange={(e) =>
+                                setLicenseExpiryDate(e.target.value)
+                              }
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      {(docsError || addressesError) && (
+                        <p className="text-xs text-red-600">
+                          {docsError || addressesError}
+                        </p>
+                      )}
+                      {licenseMessage && (
+                        <p className="text-xs text-amber-900">
+                          {licenseMessage}
+                        </p>
+                      )}
+
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          onClick={() => void handleUploadLicense()}
+                          disabled={
+                            licenseUploading || docsLoading || addressesLoading
+                          }
+                        >
+                          {licenseUploading ? "Uploading..." : "Upload License"}
+                        </Button>
+                        <p className="text-xs text-amber-800">
+                          Accepted formats: PDF, JPG, PNG, WEBP. Max 10MB.
                         </p>
                       </div>
-                      <Badge className="ml-auto bg-green-100 text-green-700 border-green-200">
-                        Verified
-                      </Badge>
                     </div>
-                  </div>
+                  )}
                 </CardContent>
                 <CardFooter className="flex justify-end gap-2 border-t pt-6">
-                  <Button variant="outline" onClick={() => setBusinessMessage(null)}>
+                  <Button
+                    variant="outline"
+                    onClick={() => setBusinessMessage(null)}
+                  >
                     Cancel
                   </Button>
                   <Button
@@ -692,7 +1030,9 @@ const SettingsPage: React.FC = () => {
                   </Button>
                 </CardFooter>
                 {businessMessage && (
-                  <p className="px-6 pb-6 text-sm text-muted-foreground">{businessMessage}</p>
+                  <p className="px-6 pb-6 text-sm text-muted-foreground">
+                    {businessMessage}
+                  </p>
                 )}
               </Card>
             </TabsContent>
@@ -709,9 +1049,12 @@ const SettingsPage: React.FC = () => {
                 <CardContent className="space-y-6">
                   <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 p-4 border rounded-lg bg-muted/30">
                     <div className="space-y-1">
-                      <p className="text-sm font-medium">Live Notification Status</p>
+                      <p className="text-sm font-medium">
+                        Live Notification Status
+                      </p>
                       <p className="text-xs text-muted-foreground">
-                        Total: {notificationCounts.total} | Unread: {notificationCounts.unread}
+                        Total: {notificationCounts.total} | Unread:{" "}
+                        {notificationCounts.unread}
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
@@ -948,7 +1291,9 @@ const SettingsPage: React.FC = () => {
                       Update Password
                     </Button>
                     {securityMessage && (
-                      <p className="text-sm text-muted-foreground">{securityMessage}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {securityMessage}
+                      </p>
                     )}
                   </div>
 
@@ -1016,30 +1361,46 @@ const SettingsPage: React.FC = () => {
                 <CardContent className="space-y-6">
                   {!canManageSupplierPaymentMethods ? (
                     <p className="text-sm text-muted-foreground">
-                      Payment methods are available only for factory and distributor accounts.
+                      Payment methods are available only for factory and
+                      distributor accounts.
                     </p>
                   ) : (
                     <>
                       <div className="space-y-4 border rounded-lg p-4">
-                        <h3 className="text-sm font-medium">Add Payment Method</h3>
+                        <h3 className="text-sm font-medium">
+                          Add Payment Method
+                        </h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                           <div className="space-y-2">
                             <Label>Method Type</Label>
                             <Select
                               value={newPaymentMethod.method_type}
                               onValueChange={(value) =>
-                                setNewPaymentMethod((prev) => ({ ...prev, method_type: value }))
+                                setNewPaymentMethod((prev) => ({
+                                  ...prev,
+                                  method_type: value,
+                                }))
                               }
                             >
                               <SelectTrigger>
                                 <SelectValue placeholder="Select method type" />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
-                                <SelectItem value="mobile_money">Mobile Money</SelectItem>
-                                <SelectItem value="cash_on_delivery">Cash on Delivery</SelectItem>
-                                <SelectItem value="credit_card">Credit Card</SelectItem>
-                                <SelectItem value="debit_card">Debit Card</SelectItem>
+                                <SelectItem value="bank_transfer">
+                                  Bank Transfer
+                                </SelectItem>
+                                <SelectItem value="mobile_money">
+                                  Mobile Money
+                                </SelectItem>
+                                <SelectItem value="cash_on_delivery">
+                                  Cash on Delivery
+                                </SelectItem>
+                                <SelectItem value="credit_card">
+                                  Credit Card
+                                </SelectItem>
+                                <SelectItem value="debit_card">
+                                  Debit Card
+                                </SelectItem>
                                 <SelectItem value="paypal">PayPal</SelectItem>
                                 <SelectItem value="other">Other</SelectItem>
                               </SelectContent>
@@ -1050,7 +1411,10 @@ const SettingsPage: React.FC = () => {
                             <Input
                               value={newPaymentMethod.provider_name}
                               onChange={(e) =>
-                                setNewPaymentMethod((prev) => ({ ...prev, provider_name: e.target.value }))
+                                setNewPaymentMethod((prev) => ({
+                                  ...prev,
+                                  provider_name: e.target.value,
+                                }))
                               }
                               placeholder="e.g. CBE, Telebirr"
                             />
@@ -1099,7 +1463,10 @@ const SettingsPage: React.FC = () => {
                             <Switch
                               checked={newPaymentMethod.is_primary}
                               onCheckedChange={(checked) =>
-                                setNewPaymentMethod((prev) => ({ ...prev, is_primary: checked }))
+                                setNewPaymentMethod((prev) => ({
+                                  ...prev,
+                                  is_primary: checked,
+                                }))
                               }
                             />
                             <span className="text-sm">Set as primary</span>
@@ -1114,9 +1481,13 @@ const SettingsPage: React.FC = () => {
                       </div>
 
                       <div className="space-y-3">
-                        <h3 className="text-sm font-medium">Saved Payment Methods</h3>
+                        <h3 className="text-sm font-medium">
+                          Saved Payment Methods
+                        </h3>
                         {supplierPaymentMethods.length === 0 ? (
-                          <p className="text-sm text-muted-foreground">No payment methods added yet.</p>
+                          <p className="text-sm text-muted-foreground">
+                            No payment methods added yet.
+                          </p>
                         ) : (
                           supplierPaymentMethods.map((method: any) => (
                             <div
@@ -1138,7 +1509,11 @@ const SettingsPage: React.FC = () => {
                                   <Button
                                     variant="outline"
                                     size="sm"
-                                    onClick={() => void handleSetPrimaryPaymentMethod(method.id)}
+                                    onClick={() =>
+                                      void handleSetPrimaryPaymentMethod(
+                                        method.id,
+                                      )
+                                    }
                                   >
                                     Set Primary
                                   </Button>
@@ -1147,7 +1522,9 @@ const SettingsPage: React.FC = () => {
                                   variant="ghost"
                                   size="sm"
                                   className="text-destructive"
-                                  onClick={() => void handleDeletePaymentMethod(method.id)}
+                                  onClick={() =>
+                                    void handleDeletePaymentMethod(method.id)
+                                  }
                                 >
                                   Delete
                                 </Button>

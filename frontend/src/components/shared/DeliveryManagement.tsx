@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   Truck,
@@ -77,6 +77,10 @@ import {
 } from "@/components/shared";
 import { formatDate, formatDateTime, formatPrice } from "@/lib/formatters";
 import { getInitials, cn } from "@/lib/utils";
+import { useDriverStore } from "@/stores/driver.store";
+import deliveryService from "@/services/delivery.service";
+import DriverService, { type DriverUser } from "@/services/driver.service";
+import toast from "react-hot-toast";
 
 // ============================================================================
 // TYPES
@@ -113,7 +117,7 @@ export interface Delivery {
   scheduledTime: string;
   estimatedDelivery: string;
   actualDelivery?: string;
-  driverId?: number;
+  driverId?: number | string;
   driverName?: string;
   driverPhone?: string;
   vehicleType?: string;
@@ -134,7 +138,7 @@ export interface Delivery {
 }
 
 export interface Driver {
-  id: number;
+  id: string; // driver_id (user id)
   name: string;
   phone: string;
   email: string;
@@ -351,60 +355,7 @@ const deliveries: Delivery[] = [
   },
 ];
 
-const drivers: Driver[] = [
-  {
-    id: 301,
-    name: "Abebe Kebede",
-    phone: "+251 91 234 5678",
-    email: "abebe.k@tradebridge.com",
-    vehicleType: "Truck",
-    licensePlate: "AA-1234-AB",
-    status: "on-delivery",
-    currentLocation: "Bole, Addis Ababa",
-    deliveriesToday: 3,
-    deliveriesCompleted: 1,
-    rating: 4.8,
-  },
-  {
-    id: 302,
-    name: "Tigist Haile",
-    phone: "+251 92 345 6789",
-    email: "tigist.h@tradebridge.com",
-    vehicleType: "Flatbed Truck",
-    licensePlate: "AA-5678-CD",
-    status: "on-delivery",
-    currentLocation: "Adama",
-    deliveriesToday: 2,
-    deliveriesCompleted: 0,
-    rating: 4.9,
-  },
-  {
-    id: 303,
-    name: "Almaz Worku",
-    phone: "+251 93 456 7890",
-    email: "almaz.w@tradebridge.com",
-    vehicleType: "Truck",
-    licensePlate: "AA-9012-EF",
-    status: "available",
-    currentLocation: "Adama Depot",
-    deliveriesToday: 1,
-    deliveriesCompleted: 0,
-    rating: 4.7,
-  },
-  {
-    id: 304,
-    name: "Mulugeta Assefa",
-    phone: "+251 94 567 8901",
-    email: "mulugeta.a@tradebridge.com",
-    vehicleType: "Heavy Truck",
-    licensePlate: "DD-9012-EF",
-    status: "on-delivery",
-    currentLocation: "Adama - Bishoftu",
-    deliveriesToday: 2,
-    deliveriesCompleted: 0,
-    rating: 4.6,
-  },
-];
+// NOTE: Driver list will be loaded from backend via DriverStore.
 
 // ============================================================================
 // CONSTANTS
@@ -450,11 +401,20 @@ interface DeliveryManagementProps {
 export const DeliveryManagement: React.FC<DeliveryManagementProps> = ({
   config,
   initialDeliveries = deliveries,
-  initialDrivers = drivers,
+  initialDrivers = [],
 }) => {
+  const {
+    drivers: Drivers,
+    fetchMyDrivers,
+    addDriver: addDriverToStore,
+    removeDriver: removeDriverFromStore,
+    isLoading: driversLoading,
+    error: driversError,
+    clearError: clearDriversError,
+  } = useDriverStore();
   const [deliveryList, setDeliveryList] =
     useState<Delivery[]>(initialDeliveries);
-  const [driverList] = useState<Driver[]>(initialDrivers);
+  const [driverList, setDriverList] = useState<Driver[]>(initialDrivers);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [selectedDelivery, setSelectedDelivery] = useState<Delivery | null>(
@@ -471,6 +431,43 @@ export const DeliveryManagement: React.FC<DeliveryManagementProps> = ({
   const [currentPage, setCurrentPage] = useState(1);
   const [activeTab, setActiveTab] = useState("deliveries");
   const itemsPerPage = 5;
+
+  // Add Driver dialog (link a driver user to this supplier)
+  const [showAddDriverDialog, setShowAddDriverDialog] = useState(false);
+  const [availableDriversList, setAvailableDriversList] = useState<
+    DriverUser[]
+  >([]);
+  const [addDriverSearch, setAddDriverSearch] = useState("");
+  const [selectedDriverIdToAdd, setSelectedDriverIdToAdd] =
+    useState<string>("");
+  const [addDriverVehicleType, setAddDriverVehicleType] = useState("");
+  const [addDriverLicensePlate, setAddDriverLicensePlate] = useState("");
+  const [addDriverLoading, setAddDriverLoading] = useState(false);
+
+  // Load real drivers for the logged-in supplier/factory
+  useEffect(() => {
+    if (!config.hasDrivers) return;
+    fetchMyDrivers();
+  }, [config.hasDrivers, fetchMyDrivers]);
+
+  // Map API drivers into Driver shape for list and assign dropdown
+  useEffect(() => {
+    if (!config.hasDrivers) return;
+    const mapped: Driver[] = Drivers.filter((d) => d.active).map((d) => ({
+      id: d.driver_id,
+      name: d.driver?.full_name ?? "Driver",
+      phone: d.driver?.phone ?? "",
+      email: d.driver?.email ?? "",
+      vehicleType: d.vehicle_type || "Vehicle",
+      licensePlate: d.license_plate || "",
+      status: "available",
+      currentLocation: "",
+      deliveriesToday: 0,
+      deliveriesCompleted: 0,
+      rating: 0,
+    }));
+    setDriverList(mapped);
+  }, [Drivers, config.hasDrivers]);
 
   // Filter deliveries
   const filteredDeliveries = deliveryList.filter((delivery) => {
@@ -515,21 +512,76 @@ export const DeliveryManagement: React.FC<DeliveryManagementProps> = ({
       d.status === "delivered" &&
       d.actualDelivery?.startsWith(new Date().toISOString().split("T")[0]),
   ).length;
-  const availableDrivers = driverList.filter(
-    (d) => d.status === "available",
-  ).length;
+  const availableDrivers = useMemo(
+    () => driverList.filter((d) => d.status === "available").length,
+    [driverList],
+  );
 
-  const assignDriver = (deliveryId: string) => {
-    const driver = driverList.find((d) => d.id.toString() === selectedDriver);
+  const openAddDriverDialog = async () => {
+    setShowAddDriverDialog(true);
+    setSelectedDriverIdToAdd("");
+    setAddDriverVehicleType("");
+    setAddDriverLicensePlate("");
+    setAddDriverSearch("");
+    setAvailableDriversList([]);
+    clearDriversError();
+    try {
+      const list = await DriverService.getAvailableDrivers();
+      setAvailableDriversList(list);
+    } catch {
+      setAvailableDriversList([]);
+    }
+  };
+
+  const searchAvailableDrivers = async () => {
+    setAddDriverLoading(true);
+    try {
+      const list = await DriverService.getAvailableDrivers(addDriverSearch);
+      setAvailableDriversList(list);
+    } finally {
+      setAddDriverLoading(false);
+    }
+  };
+
+  const submitAddDriver = async () => {
+    if (!selectedDriverIdToAdd) {
+      toast.error("Please select a driver.");
+      return;
+    }
+    const added = await addDriverToStore({
+      driver_id: selectedDriverIdToAdd,
+      vehicle_type: addDriverVehicleType.trim() || undefined,
+      license_plate: addDriverLicensePlate.trim() || undefined,
+    });
+    if (added) {
+      toast.success(
+        "Driver linked to your account. You can now assign them to deliveries.",
+      );
+      setShowAddDriverDialog(false);
+    } else if (driversError) {
+      toast.error(driversError);
+    }
+  };
+
+  const handleRemoveDriver = async (DriverId: string) => {
+    const ok = await removeDriverFromStore(DriverId);
+    if (ok) toast.success("Driver removed from your list.");
+    else if (driversError) toast.error(driversError);
+  };
+
+  const assignDriver = async (deliveryId: string) => {
+    const driver = driverList.find((d) => d.id === selectedDriver);
     if (!driver) return;
+    const driverId = selectedDriver; // user id of the driver
 
+    // Update UI immediately so the button "works" even if the delivery is mock
     setDeliveryList((prev) =>
       prev.map((d) =>
         d.id === deliveryId
           ? {
               ...d,
               status: "assigned",
-              driverId: driver.id,
+              driverId: driverId,
               driverName: driver.name,
               driverPhone: driver.phone,
               vehicleType: driver.vehicleType,
@@ -541,6 +593,16 @@ export const DeliveryManagement: React.FC<DeliveryManagementProps> = ({
     setShowAssignDialog(false);
     setSelectedDriver("");
     setSelectedDelivery(null);
+
+    try {
+      await deliveryService.assignDriver(deliveryId, driverId);
+      toast.success(`Driver ${driver.name} assigned to delivery.`);
+    } catch (err: any) {
+      toast.error(
+        err?.response?.data?.message ??
+          "Driver shown as assigned here, but the server could not be updated. If this is a real delivery, check that it exists.",
+      );
+    }
   };
 
   const updateDeliveryStatus = (
@@ -1073,6 +1135,8 @@ export const DeliveryManagement: React.FC<DeliveryManagementProps> = ({
                             className="bg-blue-600 hover:bg-blue-700"
                             onClick={() => {
                               setSelectedDelivery(delivery);
+                              setSelectedDriver("");
+                              fetchMyDrivers(); // refresh so dropdown has latest linked drivers
                               setShowAssignDialog(true);
                             }}
                           >
@@ -1228,6 +1292,88 @@ export const DeliveryManagement: React.FC<DeliveryManagementProps> = ({
         {/* ===== DRIVERS TAB - Only shown if user has drivers ===== */}
         {config.hasDrivers && (
           <TabsContent value="drivers" className="space-y-4">
+            {/* My Drivers: link drivers to this supplier so they appear in Assign Driver */}
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <div>
+                  <CardTitle>My drivers</CardTitle>
+                  <CardDescription>
+                    Drivers linked here can be assigned to deliveries. Add
+                    drivers by selecting from active driver accounts.
+                  </CardDescription>
+                </div>
+                <Button onClick={openAddDriverDialog}>
+                  <User className="h-4 w-4 mr-2" />
+                  Add driver
+                </Button>
+              </CardHeader>
+              <CardContent>
+                {driversError && (
+                  <div className="mb-3 text-sm text-destructive">
+                    {driversError}
+                  </div>
+                )}
+
+                {driversLoading && Drivers.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    Loading your drivers...
+                  </p>
+                ) : Drivers.filter((d) => d.active).length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    No drivers linked yet. Click &quot;Add driver&quot; to link
+                    a driver account so you can assign them to deliveries.
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {Drivers.filter((d) => d.active).map((sd) => (
+                      <div
+                        key={sd.id}
+                        className="flex items-center justify-between rounded-lg border p-3"
+                      >
+                        <div className="flex items-center gap-3">
+                          <Avatar className="h-9 w-9">
+                            <AvatarFallback className="bg-primary/10 text-primary text-sm">
+                              {getInitials(sd.driver?.full_name ?? "D")}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <p className="font-medium">
+                              {sd.driver?.full_name ?? "Driver"}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {sd.driver?.phone ??
+                                sd.driver?.email ??
+                                sd.driver_id}
+                            </p>
+                            <div className="flex gap-2 mt-1">
+                              {sd.vehicle_type && (
+                                <Badge variant="outline" className="text-xs">
+                                  {sd.vehicle_type}
+                                </Badge>
+                              )}
+                              {sd.license_plate && (
+                                <Badge variant="outline" className="text-xs">
+                                  {sd.license_plate}
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-destructive hover:text-destructive"
+                          onClick={() => handleRemoveDriver(sd.id)}
+                        >
+                          Remove
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {driverList.map((driver) => (
                 <Card
@@ -1338,25 +1484,42 @@ export const DeliveryManagement: React.FC<DeliveryManagementProps> = ({
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label>Available Drivers</Label>
-              <Select value={selectedDriver} onValueChange={setSelectedDriver}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Choose a driver" />
-                </SelectTrigger>
-                <SelectContent>
-                  {driverList
-                    .filter((d) => d.status === "available")
-                    .map((driver) => (
-                      <SelectItem key={driver.id} value={driver.id.toString()}>
-                        <div className="flex items-center justify-between w-full">
-                          <span>{driver.name}</span>
-                          <span className="text-xs text-muted-foreground ml-2">
-                            {driver.vehicleType} • {driver.licensePlate}
-                          </span>
-                        </div>
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
+              {driversLoading && driverList.length === 0 ? (
+                <div className="rounded-md border border-muted p-3 text-sm text-muted-foreground">
+                  Loading your drivers…
+                </div>
+              ) : driverList.filter((d) => d.status === "available").length ===
+                0 ? (
+                <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                  No drivers linked yet. Go to the <strong>Drivers</strong> tab
+                  and click &quot;Add driver&quot; to link driver accounts to
+                  your business, then they will appear here.
+                </div>
+              ) : (
+                <Select
+                  key={`driver-select-${driverList.length}`}
+                  value={selectedDriver}
+                  onValueChange={setSelectedDriver}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Choose a driver" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {driverList
+                      .filter((d) => d.status === "available")
+                      .map((driver) => (
+                        <SelectItem key={driver.id} value={driver.id}>
+                          <div className="flex items-center justify-between w-full">
+                            <span>{driver.name}</span>
+                            <span className="text-xs text-muted-foreground ml-2">
+                              {driver.vehicleType} • {driver.licensePlate}
+                            </span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
 
             {selectedDriver && (
@@ -1386,10 +1549,105 @@ export const DeliveryManagement: React.FC<DeliveryManagementProps> = ({
               onClick={() =>
                 selectedDelivery && assignDriver(selectedDelivery.id)
               }
-              disabled={!selectedDriver}
+              disabled={
+                !selectedDriver ||
+                driverList.filter((d) => d.status === "available").length === 0
+              }
               className="bg-blue-600 hover:bg-blue-700"
             >
               Assign Driver
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Driver dialog - link a driver user to this supplier */}
+      <Dialog open={showAddDriverDialog} onOpenChange={setShowAddDriverDialog}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Add driver</DialogTitle>
+            <DialogDescription>
+              Select a driver account to link to your business. They will appear
+              in the Assign Driver list for deliveries.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label>Search by name or email</Label>
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Search drivers..."
+                  value={addDriverSearch}
+                  onChange={(e) => setAddDriverSearch(e.target.value)}
+                  onKeyDown={(e) =>
+                    e.key === "Enter" && searchAvailableDrivers()
+                  }
+                />
+                <Button
+                  variant="outline"
+                  onClick={searchAvailableDrivers}
+                  disabled={addDriverLoading}
+                >
+                  Search
+                </Button>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Select driver</Label>
+              <Select
+                value={selectedDriverIdToAdd}
+                onValueChange={setSelectedDriverIdToAdd}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Choose a driver to link" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableDriversList.map((u) => (
+                    <SelectItem key={u.id} value={u.id}>
+                      {u.full_name}
+                      {u.email ? ` (${u.email})` : ""}
+                      {u.phone ? ` · ${u.phone}` : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {availableDriversList.length === 0 && !addDriverLoading && (
+                <p className="text-xs text-muted-foreground">
+                  No driver accounts found. Ensure driver users exist and are
+                  active.
+                </p>
+              )}
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="vehicle_type">Vehicle type (optional)</Label>
+                <Input
+                  id="vehicle_type"
+                  placeholder="e.g. Truck"
+                  value={addDriverVehicleType}
+                  onChange={(e) => setAddDriverVehicleType(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="license_plate">License plate (optional)</Label>
+                <Input
+                  id="license_plate"
+                  placeholder="e.g. AA-1234"
+                  value={addDriverLicensePlate}
+                  onChange={(e) => setAddDriverLicensePlate(e.target.value)}
+                />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowAddDriverDialog(false)}
+            >
+              Cancel
+            </Button>
+            <Button onClick={submitAddDriver} disabled={!selectedDriverIdToAdd}>
+              Add driver
             </Button>
           </DialogFooter>
         </DialogContent>

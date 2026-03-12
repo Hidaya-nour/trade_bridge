@@ -47,7 +47,6 @@ const roleNavigation = {
       name: "Browse Products",
       href: "/retailer/products",
       icon: Store,
-      badge: "24",
     },
     {
       name: "Browse Suppliers",
@@ -96,7 +95,7 @@ const roleNavigation = {
     ],
     retailOperations: [
       {
-        name: "Retailer Orders",
+        name: "Incoming Orders",
         href: "/distributor/orders",
         icon: ShoppingCart,
         badge: "8",
@@ -138,11 +137,6 @@ const roleNavigation = {
         href: "/distributor/analytics",
         icon: BarChart3,
       },
-      {
-        name: "Supplier Partnerships",
-        href: "/distributor/partners",
-        icon: Users,
-      },
     ],
   },
 
@@ -160,8 +154,8 @@ const roleNavigation = {
       badge: "7",
     },
     {
-      name: "Distributor Partners",
-      href: "/factory/partners",
+      name: "Agents",
+      href: "/factory/agents",
       icon: Warehouse,
     },
     { name: "Demand Forecast", href: "/factory/forecast", icon: TrendingUp },

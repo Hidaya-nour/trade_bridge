@@ -28,7 +28,6 @@ export interface UpdateProfileDTO {
   full_name?: string;
   phone?: string;
   business_name?: string;
-  business_address?: string;
   tin_number?: string;
   profile_image?: string;
 }
@@ -97,6 +96,9 @@ async register(data: RegisterDTO): Promise<{ user: SafeUser }> {
   // Hash password
   const password_hash = await this.passwordService.hashPassword(data.password);
 
+  const requiresApproval = ['factory', 'distributor'].includes(data.role);
+  const status = data.role === 'admin' ? 'active' : requiresApproval ? 'pending' : 'active';
+
   // Create user
   const user = await this.userRepo.create({
     email: data.email,
@@ -106,7 +108,7 @@ async register(data: RegisterDTO): Promise<{ user: SafeUser }> {
     password_hash,
     business_name: data.business_name,
     tin_number: data.tin_number,
-    status: data.role === 'admin' ? 'active' : 'pending'
+    status
   });
 
   // ✅ COMMENT OUT EMAIL FOR NOW
@@ -130,11 +132,6 @@ async register(data: RegisterDTO): Promise<{ user: SafeUser }> {
     // Check if user is deleted
     if (user.deleted_at) {
       throw new AuthError('Account not found');
-    }
-
-    // Check account status
-    if (user.status !== 'active') {
-      throw new AppError(`Account is ${user.status}. Please contact support.`, 403);
     }
 
     // Verify password
@@ -199,7 +196,6 @@ async register(data: RegisterDTO): Promise<{ user: SafeUser }> {
     if (typeof data.full_name === 'string') updates.full_name = data.full_name.trim();
     if (typeof data.phone === 'string') updates.phone = data.phone.trim();
     if (typeof data.business_name === 'string') updates.business_name = data.business_name.trim();
-    if (typeof data.business_address === 'string') updates.business_address = data.business_address.trim();
     if (typeof data.tin_number === 'string') updates.tin_number = data.tin_number.trim();
     if (typeof data.profile_image === 'string') updates.profile_image = data.profile_image.trim();
 

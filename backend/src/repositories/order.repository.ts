@@ -6,7 +6,9 @@ import { Order } from '../models/order.model';
 import { Product } from '../models/product.model';
 import { Payment } from '../models/payment.model';
 import { Delivery } from '../models/delivery.model';
+import Driver from '../models/driver.model';
 import { User } from '../models/user.model';
+import Document from '../models/document.model';
 
 import { OrderFilters, OrderStatus } from '../types/order.types';
 import OrderItems from '../models/order-item.model';
@@ -46,16 +48,31 @@ export class OrderRepository extends BaseRepository<Order> {
         },
         {
           model: Payment,
-          as: 'payment'
+          as: 'payment',
+          include: [
+            {
+              model: Document,
+              as: 'proofDocument',
+              attributes: ['id', 'file_secure_url', 'original_file_name']
+            }
+          ]
         },
         {
           model: Delivery,
           as: 'delivery',
           include: [
             {
-              model: User,
+              model: Driver,
               as: 'driver',
-              attributes: ['id', 'full_name', 'phone']
+              attributes: ['id', 'driver_id', 'vehicle_type', 'license_plate', 'driver_type'],
+              include: [
+                {
+                  model: User,
+                  as: 'driverUser',
+                  attributes: ['id', 'full_name', 'phone', 'email'],
+                  required: false,
+                },
+              ],
             }
           ]
         }
@@ -118,12 +135,26 @@ export class OrderRepository extends BaseRepository<Order> {
         {
           model: OrderItems,
           as: 'items',
-          attributes: ['id', 'product_id', 'quantity', 'unit_price']
+          attributes: ['id', 'product_id', 'quantity', 'unit_price'],
+          include: [
+            {
+              model: Product,
+              as: 'product',
+              attributes: ['id', 'name', 'sku', 'unit_type', 'images']
+            }
+          ]
         },
         {
           model: Payment,
           as: 'payment',
-          attributes: ['payment_status', 'payment_method']
+          attributes: ['payment_status', 'payment_method', 'total_amount', 'amount_paid', 'proof_document_id'],
+          include: [
+            {
+              model: Document,
+              as: 'proofDocument',
+              attributes: ['id', 'file_secure_url', 'original_file_name']
+            }
+          ]
         },
         {
           model: Delivery,

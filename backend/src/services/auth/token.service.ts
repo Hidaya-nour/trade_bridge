@@ -43,7 +43,7 @@ export class TokenService {
 
     // ✅ FIX 2: Check user properties safely
     const userData = user.toJSON() as any;
-    if (userData.deleted_at || userData.status !== 'active') {
+    if (userData.deleted_at || !['active', 'pending'].includes(userData.status)) {
       throw new AppError('User account is not active', 403);
     }
 

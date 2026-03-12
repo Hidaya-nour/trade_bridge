@@ -17,7 +17,7 @@ export const RegisterPage: React.FC = () => {
     email: "",
     password: "",
     full_name: "",
-    role: "retailer" as const,
+    role: " ",
     phone: "",
     business_name: "",
   });
@@ -30,9 +30,13 @@ export const RegisterPage: React.FC = () => {
 
     try {
       await register(formData);
+      const needsApproval =
+        formData.role === "factory" || formData.role === "distributor";
       navigate("/login", {
         state: {
-          message: "Registration successful. Please wait for admin approval.",
+          message: needsApproval
+            ? "Registration successful. Please upload your business license for admin approval."
+            : "Registration successful.",
         },
       });
     } catch (err) {

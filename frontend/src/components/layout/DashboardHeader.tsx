@@ -320,7 +320,7 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ onMenuClick }) => {
         <div className="flex items-center gap-1.5">
           {/* Quick Actions */}
           <div className="hidden md:flex items-center gap-1">
-            {user.role === "retailer" && (
+            {user.role !== "retailer" && (
               <TooltipProvider>
                 <Tooltip delayDuration={300}>
                   <TooltipTrigger asChild>
@@ -330,7 +330,7 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ onMenuClick }) => {
                       className="relative h-9 w-9 text-muted-foreground hover:text-foreground hover:bg-accent/50"
                       asChild
                     >
-                      <Link to="/retailer/cart">
+                      <Link to={`/${user.role}/cart`}>
                         <ShoppingCart className="h-5 w-5" />
                         <Badge className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center bg-primary text-[10px] font-medium text-primary-foreground ring-2 ring-background">
                           3
@@ -660,6 +660,22 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ onMenuClick }) => {
           </DropdownMenu>
         </div>
       </div>
+
+      {user &&
+        (user.role === "factory" || user.role === "distributor") &&
+        !user.verified && (
+          <div className="border-t border-amber-200 bg-amber-50 px-4 py-2 text-xs text-amber-900">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+              <span>
+                Your account is not verified yet. Please upload your business
+                license for admin approval.
+              </span>
+              <Button asChild size="sm" variant="outline">
+                <Link to="/settings?tab=business">Verify account</Link>
+              </Button>
+            </div>
+          </div>
+        )}
 
       {/* Mobile Search */}
       <div className="lg:hidden px-4 pb-3 animate-in slide-in-from-top-2 duration-200">

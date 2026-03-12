@@ -9,3 +9,4 @@ export * from "./Broadcast";
 export * from "./WelcomeHeader";      
 export * from "./OrderSummaryCard";   
 export * from "./PaymentDialog";   
+export * from "./OrderDetailsView";

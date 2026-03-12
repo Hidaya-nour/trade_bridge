@@ -3,18 +3,20 @@ import sequelize from '../config/database';
 import { IDelivery, DeliveryStatus } from '../types/order.types';
 import Order from './order.model';
 import Notification from './notification.model';
-// import Order from './Order.model';
-// import User from './User.model';
 
-interface DeliveryCreationAttributes extends Optional<IDelivery, 'id' | 'created_at' | 'updated_at'> {}
+interface DeliveryCreationAttributes
+  extends Optional<IDelivery, 'id' | 'driver_id' | 'started_at' | 'completed_at' | 'notes' | 'created_at' | 'updated_at' | 'deleted_at'> {}
 
-export class Delivery extends Model<IDelivery, DeliveryCreationAttributes> implements IDelivery {
+export class Delivery
+  extends Model<IDelivery, DeliveryCreationAttributes>
+  implements IDelivery
+{
   public id!: string;
   public order_id!: string;
   public driver_id?: string;
   public pickup_location!: string;
   public dropoff_location!: string;
-  public status!: DeliveryStatus; // ✅ Using the specific type
+  public status!: DeliveryStatus;
   public started_at?: Date;
   public completed_at?: Date;
   public notes?: string;
@@ -30,55 +32,75 @@ Delivery.init(
       defaultValue: DataTypes.UUIDV4,
       primaryKey: true,
     },
+
     order_id: {
       type: DataTypes.UUID,
       allowNull: false,
       unique: true,
       references: {
         model: 'orders',
-        key: 'id'
+        key: 'id',
       },
     },
+
+    // IMPORTANT FIX: reference drivers table instead of users
     driver_id: {
       type: DataTypes.UUID,
       allowNull: true,
       references: {
-        model: 'users',
-        key: 'id'
+        model: 'drivers',
+        key: 'id',
       },
     },
+
     pickup_location: {
       type: DataTypes.STRING(255),
       allowNull: false,
     },
+
     dropoff_location: {
       type: DataTypes.STRING(255),
       allowNull: false,
     },
+
     status: {
-      type: DataTypes.ENUM('pending', 'assigned', 'picked_up', 'in_transit', 'delivered', 'failed', 'cancelled'),
+      type: DataTypes.ENUM(
+        'pending',
+        'assigned',
+        'picked_up',
+        'in_transit',
+        'delivered',
+        'failed',
+        'cancelled'
+      ),
       defaultValue: 'pending',
     },
+
     started_at: {
       type: DataTypes.DATE,
       allowNull: true,
     },
+
     completed_at: {
       type: DataTypes.DATE,
       allowNull: true,
     },
+
     notes: {
       type: DataTypes.TEXT,
       allowNull: true,
     },
+
     created_at: {
       type: DataTypes.DATE,
       defaultValue: DataTypes.NOW,
     },
+
     updated_at: {
       type: DataTypes.DATE,
       defaultValue: DataTypes.NOW,
     },
+
     deleted_at: {
       type: DataTypes.DATE,
       allowNull: true,
@@ -93,31 +115,61 @@ Delivery.init(
     updatedAt: 'updated_at',
     deletedAt: 'deleted_at',
     paranoid: true,
+
     hooks: {
       afterUpdate: async (delivery: any) => {
         try {
           if (delivery.changed('status')) {
             const status = delivery.status;
+
             const order = await Order.findByPk(delivery.order_id);
             if (!order) return;
 
-            if (status === 'picked_up' || status === 'in_transit' || status === 'assigned') {
-              // Delivery started - notify buyer and supplier
-              await Notification.create({ user_id: order.buyer_id, type: 'delivery', title: 'Delivery Started', message: `Delivery for order ${order.id} has started.`, is_read: 0 } as any);
-              await Notification.create({ user_id: order.supplier_id, type: 'delivery', title: 'Delivery Started', message: `Delivery for order ${order.id} has started.`, is_read: 0 } as any);
+            if (
+              status === 'assigned' ||
+              status === 'picked_up' ||
+              status === 'in_transit'
+            ) {
+              await Notification.create({
+                user_id: order.buyer_id,
+                type: 'delivery',
+                title: 'Delivery Started',
+                message: `Delivery for order ${order.id} has started.`,
+                is_read: 0,
+              } as any);
+
+              await Notification.create({
+                user_id: order.supplier_id,
+                type: 'delivery',
+                title: 'Delivery Started',
+                message: `Delivery for order ${order.id} has started.`,
+                is_read: 0,
+              } as any);
             }
 
             if (status === 'delivered') {
-              // Order completed
-              await Notification.create({ user_id: order.buyer_id, type: 'order', title: 'Order Delivered', message: `Your order ${order.id} has been delivered.`, is_read: 0 } as any);
-              await Notification.create({ user_id: order.supplier_id, type: 'order', title: 'Order Completed', message: `Order ${order.id} has been marked delivered.`, is_read: 0 } as any);
+              await Notification.create({
+                user_id: order.buyer_id,
+                type: 'order',
+                title: 'Order Delivered',
+                message: `Your order ${order.id} has been delivered.`,
+                is_read: 0,
+              } as any);
+
+              await Notification.create({
+                user_id: order.supplier_id,
+                type: 'order',
+                title: 'Order Completed',
+                message: `Order ${order.id} has been marked delivered.`,
+                is_read: 0,
+              } as any);
             }
           }
         } catch (err) {
           console.error('Delivery hook notification error', err);
         }
-      }
-    }
+      },
+    },
   }
 );
 

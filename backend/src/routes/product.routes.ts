@@ -1,6 +1,6 @@
 import express from 'express';
 import { ProductController } from '../controllers/product.controller';
-import { authenticate, authorize } from '../middleware/auth.middleware';
+import { authenticate, authorize, requireVerifiedSupplier } from '../middleware/auth.middleware';
 import { validate } from '../middleware/validation.middleware';
 import { body, query, param } from 'express-validator';
 
@@ -31,6 +31,7 @@ router.get('/supplier/:supplierId', productController.getProductsBySupplier);
 router.post(
   '/',
   authenticate,
+  requireVerifiedSupplier,
   authorize('distributor', 'factory', 'admin'),
   productValidation,
   productController.createProduct
@@ -39,6 +40,7 @@ router.post(
 router.put(
   '/:id',
   authenticate,
+  requireVerifiedSupplier,
   authorize('distributor', 'factory', 'admin'),
   productValidation,
   productController.updateProduct
@@ -47,6 +49,7 @@ router.put(
 router.patch(
   '/:id/stock',
   authenticate,
+  requireVerifiedSupplier,
   authorize('distributor', 'factory', 'admin'),
   body('quantity').isInt({ min: 0 }).withMessage('Quantity must be a non-negative integer'),
   productController.updateStock
@@ -55,6 +58,7 @@ router.patch(
 router.patch(
   '/:id/toggle-availability',
   authenticate,
+  requireVerifiedSupplier,
   authorize('distributor', 'factory', 'admin'),
   productController.toggleAvailability
 );
@@ -62,6 +66,7 @@ router.patch(
 router.delete(
   '/:id',
   authenticate,
+  requireVerifiedSupplier,
   authorize('distributor', 'factory', 'admin'),
   productController.deleteProduct
 );

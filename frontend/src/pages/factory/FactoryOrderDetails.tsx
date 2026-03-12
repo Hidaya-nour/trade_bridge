@@ -5,6 +5,9 @@ import OrderDetailsView, {
   type OrderDetailsData,
 } from "@/components/shared/OrderDetailsView";
 import { useOrderStore } from "@/stores/order.store";
+import { useDriverStore } from "@/stores/driver.store";
+import deliveryService from "@/services/delivery.service";
+import toast from "react-hot-toast";
 import type { Order, OrderStatus } from "@/types/order.types";
 
 const statusIndex: Record<OrderStatus, number> = {
@@ -50,7 +53,10 @@ const mapPaymentStatus = (paymentStatus?: string) => {
   }
 };
 
-const mapOrderToDetails = (order: Order): OrderDetailsData => {
+const mapOrderToDetails = (
+  order: Order,
+  drivers: { id: string; name: string; vehicle?: string; available?: boolean }[],
+) => {
   const items =
     order.items?.map((item) => ({
       id: item.id,
@@ -67,11 +73,21 @@ const mapOrderToDetails = (order: Order): OrderDetailsData => {
   const total = order.total_price || subtotal;
   const tax = Math.max(0, total - subtotal);
 
-  const supplierName =
-    order.supplier?.business_name || order.supplier?.full_name || "Supplier";
+  const buyerName =
+    order.buyer?.business_name || order.buyer?.full_name || "Customer";
 
-  const recipientName =
-    order.buyer?.business_name || order.buyer?.full_name || "Recipient";
+  const party = {
+    id: order.buyer_id,
+    name: buyerName,
+    contact: order.buyer?.full_name,
+  };
+
+  const recipientName = buyerName;
+
+  const address =
+    order.delivery?.dropoff_location ||
+    order.delivery?.pickup_location ||
+    "Not provided";
 
   return {
     id: order.id,
@@ -89,7 +105,8 @@ const mapOrderToDetails = (order: Order): OrderDetailsData => {
     items,
     timeline: buildTimeline(order),
     delivery: {
-      address: order.delivery?.dropoff_location || "Not provided",
+      deliveryId: order.delivery?.id,
+      address,
       recipient: recipientName,
       phone: "N/A",
       requestedDate: undefined,
@@ -97,23 +114,24 @@ const mapOrderToDetails = (order: Order): OrderDetailsData => {
       actualDate: order.delivery?.completed_at,
       trackingNumber: undefined,
       carrier: undefined,
-      driverName: order.delivery?.driver?.full_name,
-      driverPhone: order.delivery?.driver?.phone,
+      driverName:
+        (order.delivery as any)?.driver?.full_name ||
+        (order.delivery as any)?.driver?.driverUser?.full_name,
+      driverPhone:
+        (order.delivery as any)?.driver?.phone ||
+        (order.delivery as any)?.driver?.driverUser?.phone,
     },
-    party: {
-      id: order.supplier_id,
-      name: supplierName,
-      contact: order.supplier?.full_name,
-    },
-    canReview: true,
-    canReorder: true,
+    party,
+    drivers,
+    canAssignDriver: true,
     canCancel: true,
-  };
+  } as OrderDetailsData;
 };
 
-const OrderDetailsPage: React.FC = () => {
+const FactoryOrderDetailsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { currentOrder, fetchOrderById, isLoading, error } = useOrderStore();
+  const { drivers, fetchMyDrivers } = useDriverStore();
 
   useEffect(() => {
     if (id) {
@@ -121,10 +139,28 @@ const OrderDetailsPage: React.FC = () => {
     }
   }, [id, fetchOrderById]);
 
+  useEffect(() => {
+    fetchMyDrivers();
+  }, [fetchMyDrivers]);
+
+  const driverOptions = useMemo(
+    () =>
+      drivers
+        .filter((d) => d.active)
+        .map((d) => ({
+          id: d.driver_id,
+          name: d.driver?.full_name ?? "Driver",
+          vehicle: d.vehicle_type || undefined,
+          phone: d.driver?.phone,
+          available: true,
+        })),
+    [drivers],
+  );
+
   const orderDetails = useMemo(() => {
     if (!currentOrder) return null;
-    return mapOrderToDetails(currentOrder);
-  }, [currentOrder]);
+    return mapOrderToDetails(currentOrder, driverOptions);
+  }, [currentOrder, driverOptions]);
 
   if (isLoading && !orderDetails) {
     return (
@@ -142,18 +178,27 @@ const OrderDetailsPage: React.FC = () => {
 
   return (
     <OrderDetailsView
-      key={orderDetails.id}
       initialOrder={orderDetails}
-      mode="outgoing"
-      partyLabel="Supplier"
-      links={{
-        party: (supplierId) => `/retailer/supplier/${supplierId}`,
-        product: (productId) => `/retailer/products/${productId}`,
-        reorder: (orderId) => `/retailer/reorder?order=${orderId}`,
-        message: (supplierId) => `/messages?supplier=${supplierId}`,
+      mode="incoming"
+      partyLabel="Customer"
+      onAssignDriver={async (deliveryId, driverId) => {
+        try {
+          await deliveryService.assignDriver(deliveryId, driverId);
+          await fetchOrderById(orderDetails.id);
+        } catch (err: any) {
+          toast.error(
+            err?.response?.data?.message ||
+              "Failed to assign driver. Please try again.",
+          );
+          throw err;
+        }
       }}
+      links={{
+        party: (buyerId) => `/factory/distributors/${buyerId}`,
+      }}
+      cancelReasonOptions={["Out of stock", "Customer request", "Payment issue", "Other"]}
     />
   );
 };
 
-export default OrderDetailsPage;
+export default FactoryOrderDetailsPage;

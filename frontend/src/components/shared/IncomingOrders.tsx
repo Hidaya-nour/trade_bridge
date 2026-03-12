@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   Package,
@@ -73,6 +73,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
+import { Label } from "@/components/ui/label";
 
 import {
   StatusBadge,
@@ -83,6 +84,9 @@ import {
 } from "@/components/shared";
 import { formatPrice, formatDate, formatDateTime } from "@/lib/formatters";
 import { getInitials, cn } from "@/lib/utils";
+import { useDriverStore } from "@/stores/driver.store";
+import deliveryService from "@/services/delivery.service";
+import toast from "react-hot-toast";
 
 // ============================================================================
 // TYPES
@@ -101,6 +105,7 @@ export interface OrderItem {
 
 export interface IncomingOrder {
   id: string;
+  deliveryId?: string;
   customerId: number;
   customerName: string;
   customerContact: string;
@@ -120,13 +125,18 @@ export interface IncomingOrder {
     | "shipped"
     | "delivered"
     | "cancelled";
+  paymentId?: string;
   paymentStatus: string;
   paymentMethod: string;
-  priority: "high" | "medium" | "low";
+  paymentAmount?: number;
+  paymentPaid?: number;
+  paymentProofUrl?: string;
+  paymentProofName?: string;
   notes?: string;
   trackingNumber?: string;
   driver?: string;
-  driverId?: number;
+  driverPhone?: string;
+  driverId?: number | string;
   deliveredDate?: string;
   cancelledDate?: string;
   cancellationReason?: string;
@@ -159,7 +169,16 @@ interface IncomingOrdersProps {
   onApproveOrder: (orderId: string) => void;
   onRejectOrder: (orderId: string, reason: string) => void;
   onProcessOrder: (orderId: string) => void;
-  onAssignDriver?: (orderId: string) => void; // Only for distributor
+  onAssignDriver?: (
+    orderId: string,
+    deliveryId: string,
+    driverId: string,
+  ) => void | Promise<void>;
+  onConfirmPayment?: (
+    orderId: string,
+    paymentId: string,
+    amountPaid?: number,
+  ) => void;
 }
 
 // ============================================================================
@@ -175,12 +194,6 @@ const statusColors = {
   cancelled: "bg-red-100 text-red-800 border-red-200",
 };
 
-const priorityColors = {
-  high: "bg-red-100 text-red-800 border-red-200",
-  medium: "bg-amber-100 text-amber-800 border-amber-200",
-  low: "bg-green-100 text-green-800 border-green-200",
-};
-
 // ============================================================================
 // COMPONENT
 // ============================================================================
@@ -192,11 +205,11 @@ export const IncomingOrders: React.FC<IncomingOrdersProps> = ({
   onRejectOrder,
   onProcessOrder,
   onAssignDriver,
+  onConfirmPayment,
 }) => {
   const [orders, setOrders] = useState<IncomingOrder[]>(initialOrders);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [priorityFilter, setPriorityFilter] = useState<string>("all");
   const [selectedOrder, setSelectedOrder] = useState<IncomingOrder | null>(
     null,
   );
@@ -206,6 +219,45 @@ export const IncomingOrders: React.FC<IncomingOrdersProps> = ({
   const [rejectionReason, setRejectionReason] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
+  const [showConfirmPaymentDialog, setShowConfirmPaymentDialog] =
+    useState(false);
+  const [showAssignDialog, setShowAssignDialog] = useState(false);
+  const [assigningOrder, setAssigningOrder] = useState<IncomingOrder | null>(
+    null,
+  );
+  const [selectedDriver, setSelectedDriver] = useState("");
+  const [assignLoading, setAssignLoading] = useState(false);
+
+  const {
+    drivers,
+    fetchMyDrivers,
+    isLoading: driversLoading,
+    error: driversError,
+  } = useDriverStore();
+
+  const driverOptions = React.useMemo(
+    () =>
+      drivers
+        .filter((d) => d.active)
+        .map((d) => ({
+          id: d.driver_id,
+          name: d.driver?.full_name ?? "Driver",
+          phone: d.driver?.phone ?? "",
+          vehicleType: d.vehicle_type || "Vehicle",
+          licensePlate: d.license_plate || "",
+        })),
+    [drivers],
+  );
+
+  useEffect(() => {
+    setOrders(initialOrders);
+  }, [initialOrders]);
+
+  useEffect(() => {
+    if (config.role === "distributor" || config.role === "factory") {
+      fetchMyDrivers();
+    }
+  }, [config.role, fetchMyDrivers]);
 
   // Filter orders
   const filteredOrders = orders.filter((order) => {
@@ -217,10 +269,8 @@ export const IncomingOrders: React.FC<IncomingOrdersProps> = ({
 
     const matchesStatus =
       statusFilter === "all" || order.status === statusFilter;
-    const matchesPriority =
-      priorityFilter === "all" || order.priority === priorityFilter;
 
-    return matchesSearch && matchesStatus && matchesPriority;
+    return matchesSearch && matchesStatus;
   });
 
   // Sort orders by date (newest first)
@@ -272,6 +322,71 @@ export const IncomingOrders: React.FC<IncomingOrdersProps> = ({
     setOrders((prev) =>
       prev.map((o) => (o.id === orderId ? { ...o, status: "processing" } : o)),
     );
+  };
+
+  const handleConfirmPayment = () => {
+    if (!selectedOrder?.paymentId || !onConfirmPayment) return;
+    const amountPaid =
+      typeof selectedOrder.paymentAmount === "number"
+        ? selectedOrder.paymentAmount
+        : selectedOrder.paymentPaid;
+    onConfirmPayment(selectedOrder.id, selectedOrder.paymentId, amountPaid);
+    setOrders((prev) =>
+      prev.map((o) =>
+        o.id === selectedOrder.id
+          ? {
+              ...o,
+              paymentStatus: "paid",
+              paymentPaid:
+                typeof amountPaid === "number" ? amountPaid : o.paymentPaid,
+            }
+          : o,
+      ),
+    );
+    setShowConfirmPaymentDialog(false);
+    setSelectedOrder(null);
+  };
+
+  const openAssignDialog = (order: IncomingOrder) => {
+    setAssigningOrder(order);
+    setSelectedDriver("");
+    setShowAssignDialog(true);
+  };
+
+  const handleAssignDriver = async () => {
+    if (!assigningOrder?.deliveryId || !selectedDriver) return;
+    const driver = driverOptions.find((d) => d.id === selectedDriver);
+    if (!driver) return;
+
+    setAssignLoading(true);
+    try {
+      await deliveryService.assignDriver(assigningOrder.deliveryId, selectedDriver);
+      setOrders((prev) =>
+        prev.map((o) =>
+          o.id === assigningOrder.id
+            ? {
+                ...o,
+                driver: driver.name,
+                driverPhone: driver.phone,
+                driverId: selectedDriver,
+              }
+            : o,
+        ),
+      );
+      if (onAssignDriver) {
+        await onAssignDriver(assigningOrder.id, assigningOrder.deliveryId, selectedDriver);
+      }
+      toast.success(`Driver ${driver.name} assigned.`);
+      setShowAssignDialog(false);
+      setAssigningOrder(null);
+    } catch (err: any) {
+      toast.error(
+        err?.response?.data?.message ||
+          "Failed to assign driver. Please try again.",
+      );
+    } finally {
+      setAssignLoading(false);
+    }
   };
 
   const statsData = [
@@ -361,21 +476,6 @@ export const IncomingOrders: React.FC<IncomingOrdersProps> = ({
                     <SelectItem value="cancelled">Cancelled</SelectItem>
                   </SelectContent>
                 </Select>
-
-                <Select
-                  value={priorityFilter}
-                  onValueChange={setPriorityFilter}
-                >
-                  <SelectTrigger className="w-[140px]">
-                    <SelectValue placeholder="Priority" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Priorities</SelectItem>
-                    <SelectItem value="high">High</SelectItem>
-                    <SelectItem value="medium">Medium</SelectItem>
-                    <SelectItem value="low">Low</SelectItem>
-                  </SelectContent>
-                </Select>
               </div>
             }
           />
@@ -405,7 +505,6 @@ export const IncomingOrders: React.FC<IncomingOrdersProps> = ({
           onAction={() => {
             setSearchQuery("");
             setStatusFilter("all");
-            setPriorityFilter("all");
           }}
         />
       ) : (
@@ -463,7 +562,6 @@ export const IncomingOrders: React.FC<IncomingOrdersProps> = ({
                           {order.id}
                         </Link>
                         <StatusBadge status={order.status} />
-                        <StatusBadge status={order.priority} />
                       </div>
                       <div className="flex items-center gap-3 mt-1 flex-wrap">
                         <div className="flex items-center gap-2">
@@ -582,6 +680,12 @@ export const IncomingOrders: React.FC<IncomingOrdersProps> = ({
                         New {config.customerLabel}
                       </Badge>
                     )}
+                    {order.driver && (
+                      <Badge variant="outline" className="bg-purple-50">
+                        <Truck className="h-3 w-3 mr-1" />
+                        Driver: {order.driver}
+                      </Badge>
+                    )}
                   </div>
 
                   <div className="flex items-center gap-2 flex-wrap">
@@ -625,19 +729,16 @@ export const IncomingOrders: React.FC<IncomingOrdersProps> = ({
                     )}
 
                     {order.status === "processing" &&
-                      config.role === "distributor" &&
-                      onAssignDriver && (
+                      (config.role === "distributor" ||
+                        config.role === "factory") &&
+                      order.deliveryId && (
                         <Button
                           size="sm"
                           className="bg-purple-600 hover:bg-purple-700"
-                          asChild
+                          onClick={() => openAssignDialog(order)}
                         >
-                          <Link
-                            to={`/${config.role}/delivery/assign/${order.id}`}
-                          >
-                            <Truck className="h-4 w-4 mr-2" />
-                            Assign Driver
-                          </Link>
+                          <Truck className="h-4 w-4 mr-2" />
+                          {order.driver ? "Change Driver" : "Assign Driver"}
                         </Button>
                       )}
 
@@ -875,6 +976,78 @@ export const IncomingOrders: React.FC<IncomingOrdersProps> = ({
                   </div>
                 )}
 
+                {(selectedOrder.paymentId || selectedOrder.paymentProofUrl) && (
+                  <div className="space-y-3">
+                    <h4 className="text-sm font-medium">Payment Details</h4>
+                    <div className="bg-muted/50 rounded-lg p-3 space-y-2">
+                      <div className="flex justify-between">
+                        <span className="text-xs text-muted-foreground">
+                          Method
+                        </span>
+                        <span className="text-xs font-medium">
+                          {selectedOrder.paymentMethod}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-xs text-muted-foreground">
+                          Status
+                        </span>
+                        <span className="text-xs font-medium">
+                          {selectedOrder.paymentStatus}
+                        </span>
+                      </div>
+                      {typeof selectedOrder.paymentAmount === "number" && (
+                        <div className="flex justify-between">
+                          <span className="text-xs text-muted-foreground">
+                            Amount Due
+                          </span>
+                          <span className="text-xs font-medium">
+                            {formatPrice(selectedOrder.paymentAmount)}
+                          </span>
+                        </div>
+                      )}
+                      {typeof selectedOrder.paymentPaid === "number" && (
+                        <div className="flex justify-between">
+                          <span className="text-xs text-muted-foreground">
+                            Amount Paid
+                          </span>
+                          <span className="text-xs font-medium">
+                            {formatPrice(selectedOrder.paymentPaid)}
+                          </span>
+                        </div>
+                      )}
+                      {selectedOrder.paymentProofUrl && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 text-xs"
+                          asChild
+                        >
+                          <a
+                            href={selectedOrder.paymentProofUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            View Proof Document
+                          </a>
+                        </Button>
+                      )}
+                      {onConfirmPayment &&
+                        selectedOrder.paymentId &&
+                        selectedOrder.paymentStatus !== "paid" &&
+                        selectedOrder.paymentStatus !== "refunded" && (
+                          <Button
+                            size="sm"
+                            className="bg-emerald-600 hover:bg-emerald-700"
+                            onClick={() => setShowConfirmPaymentDialog(true)}
+                          >
+                            Confirm Payment
+                          </Button>
+                        )}
+                    </div>
+                  </div>
+                )}
+
                 {selectedOrder.cancellationReason && (
                   <div className="space-y-3">
                     <h4 className="text-sm font-medium text-red-600">
@@ -936,6 +1109,40 @@ export const IncomingOrders: React.FC<IncomingOrdersProps> = ({
                   Order Total:{" "}
                   {selectedOrder && formatPrice(selectedOrder.total)}
                 </p>
+                <div className="mt-3 rounded-lg bg-white/60 p-3">
+                  <p className="text-xs text-green-800">
+                    Payment Method: {selectedOrder?.paymentMethod || "N/A"}
+                  </p>
+                  <p className="text-xs text-green-800">
+                    Payment Status: {selectedOrder?.paymentStatus || "N/A"}
+                  </p>
+                  {typeof selectedOrder?.paymentAmount === "number" && (
+                    <p className="text-xs text-green-800">
+                      Amount Due: {formatPrice(selectedOrder.paymentAmount)}
+                    </p>
+                  )}
+                  {typeof selectedOrder?.paymentPaid === "number" && (
+                    <p className="text-xs text-green-800">
+                      Amount Paid: {formatPrice(selectedOrder.paymentPaid)}
+                    </p>
+                  )}
+                  {selectedOrder?.paymentProofUrl && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="mt-2 h-7 text-xs"
+                      asChild
+                    >
+                      <a
+                        href={selectedOrder.paymentProofUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        View Proof Document
+                      </a>
+                    </Button>
+                  )}
+                </div>
                 <p className="text-xs text-green-700 mt-1">
                   Approving this order will:
                 </p>
@@ -1014,6 +1221,103 @@ export const IncomingOrders: React.FC<IncomingOrdersProps> = ({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Confirm Payment Dialog */}
+      <AlertDialog
+        open={showConfirmPaymentDialog}
+        onOpenChange={setShowConfirmPaymentDialog}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Payment</AlertDialogTitle>
+            <AlertDialogDescription>
+              Confirm that payment has been received for order{" "}
+              {selectedOrder?.id}.
+              {typeof selectedOrder?.paymentAmount === "number" && (
+                <div className="mt-3 text-sm">
+                  Amount Due: {formatPrice(selectedOrder.paymentAmount)}
+                </div>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmPayment}
+              className="bg-emerald-600 hover:bg-emerald-700"
+            >
+              Mark as Paid
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Assign Driver Dialog */}
+      <Dialog open={showAssignDialog} onOpenChange={setShowAssignDialog}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Assign Driver</DialogTitle>
+            <DialogDescription>
+              {assigningOrder?.id
+                ? `Select a driver for order ${assigningOrder.id}`
+                : "Select a driver for this order"}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Available Drivers</Label>
+              {driversLoading && driverOptions.length === 0 ? (
+                <div className="rounded-md border border-muted p-3 text-sm text-muted-foreground">
+                  Loading your drivers...
+                </div>
+              ) : driverOptions.length === 0 ? (
+                <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                  No drivers linked yet. Add drivers in the Delivery page to
+                  assign them here.
+                </div>
+              ) : (
+                <Select value={selectedDriver} onValueChange={setSelectedDriver}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Choose a driver" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {driverOptions.map((driver) => (
+                      <SelectItem key={driver.id} value={driver.id}>
+                        <div className="flex items-center justify-between w-full">
+                          <span>{driver.name}</span>
+                          <span className="text-xs text-muted-foreground ml-2">
+                            {driver.vehicleType} • {driver.licensePlate}
+                          </span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+              {driversError && (
+                <p className="text-xs text-red-600">{driversError}</p>
+              )}
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowAssignDialog(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleAssignDriver}
+              disabled={!selectedDriver || assignLoading || driverOptions.length === 0}
+              className="bg-purple-600 hover:bg-purple-700"
+            >
+              Assign Driver
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

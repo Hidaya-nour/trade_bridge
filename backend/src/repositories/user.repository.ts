@@ -65,4 +65,25 @@ export class UserRepository extends BaseRepository<User> {
 
     return this.findAll({ where: whereClause, limit: 20 });
   }
+
+  /** List users with role=driver (for suppliers to link as their drivers). */
+  async findDrivers(search?: string): Promise<User[]> {
+    const where: any = {
+      role: 'driver',
+      status: 'active',
+      deleted_at: null,
+    };
+    if (search && search.trim()) {
+      where[Op.or] = [
+        { email: { [Op.like]: `%${search.trim()}%` } },
+        { full_name: { [Op.like]: `%${search.trim()}%` } },
+      ];
+    }
+    return this.findAll({
+      where,
+      attributes: ['id', 'full_name', 'email', 'phone'],
+      limit: 50,
+      order: [['full_name', 'ASC']],
+    });
+  }
 }

@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import deliveryService from '../services/delivery/delivery.service';
 import logger from '../utils/logger';
+import { AppError } from '../utils/errors';
 
 class DeliveryController {
   async create(req: Request, res: Response): Promise<any> {
@@ -27,12 +28,20 @@ class DeliveryController {
   }
   async assignDriver(req: Request, res: Response): Promise<any> {
     try {
+      const role = (req as any).user?.role as string | undefined;
+      if (role && !['distributor', 'factory'].includes(role)) {
+        return res.status(403).json({ success: false, message: 'Only suppliers can assign drivers' });
+      }
+
       const { id } = req.params;
       const { driver_id } = req.body;
-      const delivery = await deliveryService.assignDriver(id, driver_id);
-      if (!delivery) return res.status(404).json({ success: false, message: 'Delivery not found' });
+      const supplierId = (req as any).user.id as string;
+      const delivery = await deliveryService.assignDriver(id, supplierId, driver_id);
       return res.json({ success: true, data: { delivery } });
     } catch (err) {
+      if (err instanceof AppError) {
+        return res.status(err.statusCode).json({ success: false, message: err.message });
+      }
       logger.error('Assign driver error', err);
       return res.status(500).json({ success: false, message: 'Internal server error' });
     }

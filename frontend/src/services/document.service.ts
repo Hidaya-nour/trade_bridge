@@ -6,11 +6,24 @@ class DocumentService {
     formData.append('file', file);
     formData.append('document_type', 'other');
 
-    const response = await api.post('/documents', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
+    const response = await api.post('/documents', formData);
+
+    return response.data;
+  }
+
+  async uploadDocument(
+    file: File,
+    documentType: "id_card" | "business_license" | "tax_certificate" | "other",
+    issuedDate?: string,
+    expiryDate?: string,
+  ) {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("document_type", documentType);
+    if (issuedDate) formData.append("issued_date", issuedDate);
+    if (expiryDate) formData.append("expiry_date", expiryDate);
+
+    const response = await api.post("/documents", formData);
 
     return response.data;
   }

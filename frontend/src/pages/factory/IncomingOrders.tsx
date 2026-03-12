@@ -1,20 +1,123 @@
-import React from "react";
+import React, { useEffect, useMemo } from "react";
 import {
   IncomingOrders,
   type IncomingOrdersConfig,
+  type IncomingOrder,
 } from "@/components/shared/IncomingOrders";
-import { factoryOrders } from "./data"; // Your factory-specific mock data
 import { Factory } from "lucide-react";
 
-const FactoryIncomingOrdersPage: React.FC = () => {
-  const stats = {
-    pending: factoryOrders.filter((o) => o.status === "pending").length,
-    processing: factoryOrders.filter((o) => o.status === "processing").length,
-    approved: factoryOrders.filter((o) => o.status === "approved").length,
-    totalRevenue: factoryOrders
-      .filter((o) => o.status !== "cancelled")
-      .reduce((sum, o) => sum + o.total, 0),
+import { useOrderStore } from "@/stores/order.store";
+import type { Order } from "@/types/order.types";
+
+const mapPaymentStatus = (status?: string) => {
+  switch (status) {
+    case "completed":
+      return "paid";
+    case "processing":
+      return "approved";
+    case "refunded":
+      return "refunded";
+    case "failed":
+      return "failed";
+    case "pending":
+    default:
+      return "pending";
+  }
+};
+
+const mapOrderToIncoming = (order: Order): IncomingOrder => {
+  const items =
+    order.items?.map((item) => ({
+      name: item.product?.name || "Item",
+      sku: item.product?.sku || item.product_id,
+      quantity: item.quantity,
+      unit: item.product?.unit_type || "unit",
+      price: item.unit_price,
+      total: item.unit_price * item.quantity,
+    })) || [];
+
+  const subtotal = items.reduce((sum, item) => sum + item.total, 0);
+  const total = order.total_price || subtotal;
+  const tax = Math.max(0, total - subtotal);
+
+  const customerName =
+    order.buyer?.business_name || order.buyer?.full_name || "Customer";
+
+  return {
+    id: order.id,
+    deliveryId: order.delivery?.id,
+    customerId: Number(order.buyer_id) || 0,
+    customerName,
+    customerContact: order.buyer?.full_name || customerName,
+    customerPhone: "N/A",
+    customerLocation:
+      order.delivery?.dropoff_location ||
+      order.delivery?.pickup_location ||
+      "Not provided",
+    orderDate: order.created_at,
+    requestedDelivery: order.delivery?.completed_at || order.created_at,
+    items,
+    subtotal,
+    shipping: 0,
+    tax,
+    total,
+    status: order.order_status,
+    paymentStatus: mapPaymentStatus(order.payment?.payment_status),
+    paymentMethod: order.payment?.payment_method || "N/A",
+    paymentAmount: Number((order.payment as any)?.total_amount) || undefined,
+    paymentPaid: Number((order.payment as any)?.amount_paid) || undefined,
+    paymentProofUrl: (order.payment as any)?.proofDocument?.file_secure_url,
+    paymentProofName:
+      (order.payment as any)?.proofDocument?.original_file_name ||
+      "Payment Proof",
+    notes: undefined,
+    trackingNumber: undefined,
+    driver:
+      (order.delivery as any)?.driver?.full_name ||
+      (order.delivery as any)?.driver?.driverUser?.full_name,
+    driverPhone:
+      (order.delivery as any)?.driver?.phone ||
+      (order.delivery as any)?.driver?.driverUser?.phone,
+    driverId:
+      (order.delivery as any)?.driver?.id ||
+      (order.delivery as any)?.driver?.driver_id,
+    deliveredDate: order.delivery?.completed_at,
+    cancelledDate: undefined,
+    cancellationReason: undefined,
+    customerRating: null,
+    previousOrders: 0,
   };
+};
+
+const FactoryIncomingOrdersPage: React.FC = () => {
+  const {
+    orders: storeOrders,
+    fetchOrdersAsSupplier,
+    updateOrderStatus,
+    cancelOrder,
+    isLoading,
+    error,
+  } = useOrderStore();
+
+  useEffect(() => {
+    fetchOrdersAsSupplier();
+  }, [fetchOrdersAsSupplier]);
+
+  const orders = useMemo(
+    () => (storeOrders as Order[]).map(mapOrderToIncoming),
+    [storeOrders],
+  );
+
+  const stats = useMemo(() => {
+    return {
+      pending: orders.filter((o) => o.status === "pending").length,
+      processing: orders.filter((o) => o.status === "processing").length,
+      approved: orders.filter((o) => o.status === "approved").length,
+      totalRevenue: orders
+        .filter((o) => o.status !== "cancelled")
+        .reduce((sum, o) => sum + o.total, 0),
+    };
+  }, [orders]);
 
   const config: IncomingOrdersConfig = {
     role: "factory",
@@ -26,14 +129,28 @@ const FactoryIncomingOrdersPage: React.FC = () => {
     stats,
   };
 
+  if (isLoading && orders.length === 0) {
+    return (
+      <div className="p-6 text-sm text-muted-foreground">
+        Loading incoming orders...
+      </div>
+    );
+  }
+
+  if (error && orders.length === 0) {
+    return <div className="p-6 text-sm text-muted-foreground">{error}</div>;
+  }
+
   return (
     <IncomingOrders
       config={config}
-      orders={factoryOrders}
-      onApproveOrder={(id) => console.log("Approve", id)}
-      onRejectOrder={(id, reason) => console.log("Reject", id, reason)}
-      onProcessOrder={(id) => console.log("Process", id)}
-      // No onAssignDriver for factory
+      orders={orders}
+      onApproveOrder={(id) => updateOrderStatus(id, { status: "approved" })}
+      onRejectOrder={(id, reason) => cancelOrder(id, reason)}
+      onProcessOrder={(id) => updateOrderStatus(id, { status: "processing" })}
+      onAssignDriver={async (_orderId, _deliveryId, _driverId) => {
+        await fetchOrdersAsSupplier();
+      }}
     />
   );
 };

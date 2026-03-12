@@ -1,7 +1,7 @@
 import express from 'express';
 import rateLimit from 'express-rate-limit';
 import { AuthController } from '../controllers/auth.controller';
-import { authenticate } from '../middleware/auth.middleware';
+import { authenticate, authenticateAllowPending } from '../middleware/auth.middleware';
 import { validate } from '../middleware/validation.middleware';
 import {
   registerSchema,
@@ -65,9 +65,9 @@ router.post('/logout', authController.logout);
 // );
 
 // Protected routes
-router.get('/me', authenticate, authController.getMe);
-router.patch('/me', authenticate, validate(updateProfileSchema), authController.updateMe);
-router.patch('/change-password', authenticate, validate(changePasswordSchema), authController.changePassword);
+router.get('/me', authenticateAllowPending, authController.getMe);
+router.patch('/me', authenticateAllowPending, validate(updateProfileSchema), authController.updateMe);
+router.patch('/change-password', authenticateAllowPending, validate(changePasswordSchema), authController.changePassword);
 router.post('/logout-all', authenticate, authController.logoutAll);
 
 export default router;

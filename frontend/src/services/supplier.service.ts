@@ -7,7 +7,6 @@ export interface PublicSupplier {
   business_name: string;
   full_name?: string;
   role: 'factory' | 'distributor';
-  business_address?: string;
   country?: string;
   profile_image?: string;
   is_verified: boolean;
@@ -343,7 +342,7 @@ class SupplierService {
   }
 
   /**
-   * Get supplier delivery options
+   * Get delivery options
    */
   async getSupplierDeliveryOptions(supplierId: string): Promise<ApiResponse<{ delivery_options: string[] }>> {
     try {
