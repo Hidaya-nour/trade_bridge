@@ -2,7 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { useAuthStore } from "../stores/auth.store";
-import { roleDefaultRoute, roleSidebarNavigation } from "./roleNavigation";
+import { roleDefaultRoute, roleSidebarNavigation, type SidebarNavItem } from "./roleNavigation";
 
 interface DrawerContentProps {
   currentPath: string;
@@ -19,6 +19,16 @@ export default function DrawerContent({ currentPath, onClose }: DrawerContentPro
 
   const navItems = roleSidebarNavigation[user.role] || [];
 
+  // Group items by section
+  const groupedNavItems = navItems.reduce((acc, item) => {
+    const section = item.section || "DEFAULT";
+    if (!acc[section]) {
+      acc[section] = [];
+    }
+    acc[section].push(item);
+    return acc;
+  }, {} as Record<string, SidebarNavItem[]>);
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -32,27 +42,34 @@ export default function DrawerContent({ currentPath, onClose }: DrawerContentPro
       </View>
 
       <ScrollView contentContainerStyle={styles.list}>
-        {navItems.map((item) => {
-          const isActive = currentPath.startsWith(item.href);
+        {Object.entries(groupedNavItems).map(([section, items]) => (
+          <View key={section} style={styles.sectionGroup}>
+            {section !== "DEFAULT" && (
+              <Text style={styles.sectionHeader}>{section}</Text>
+            )}
+            {items.map((item) => {
+              const isActive = currentPath.startsWith(item.href);
 
-          return (
-            <Pressable
-              key={item.href}
-              style={[styles.navItem, isActive && styles.navItemActive]}
-              onPress={() => {
-                router.push(item.href as never);
-                onClose();
-              }}
-            >
-              <Ionicons
-                name={item.icon as keyof typeof Ionicons.glyphMap}
-                size={18}
-                color={isActive ? "#1d4ed8" : "#334155"}
-              />
-              <Text style={[styles.navLabel, isActive && styles.navLabelActive]}>{item.label}</Text>
-            </Pressable>
-          );
-        })}
+              return (
+                <Pressable
+                  key={item.href}
+                  style={[styles.navItem, isActive && styles.navItemActive]}
+                  onPress={() => {
+                    router.push(item.href as never);
+                    onClose();
+                  }}
+                >
+                  <Ionicons
+                    name={item.icon as keyof typeof Ionicons.glyphMap}
+                    size={18}
+                    color={isActive ? "#1d4ed8" : "#475569"}
+                  />
+                  <Text style={[styles.navLabel, isActive && styles.navLabelActive]}>{item.label}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        ))}
       </ScrollView>
 
       <Pressable
@@ -119,27 +136,42 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   list: {
-    gap: 6,
+    gap: 8,
     paddingBottom: 12,
+  },
+  sectionGroup: {
+    marginBottom: 8,
+  },
+  sectionHeader: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#94a3b8",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    marginBottom: 6,
+    marginLeft: 12,
+    marginTop: 8,
   },
   navItem: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
-    borderRadius: 10,
-    paddingHorizontal: 10,
+    gap: 12,
+    borderRadius: 8,
+    paddingHorizontal: 12,
     paddingVertical: 10,
+    marginBottom: 2,
   },
   navItemActive: {
     backgroundColor: "#eff6ff",
   },
   navLabel: {
-    fontSize: 13,
-    color: "#334155",
-    fontWeight: "600",
+    fontSize: 14,
+    color: "#475569",
+    fontWeight: "500",
   },
   navLabelActive: {
     color: "#1d4ed8",
+    fontWeight: "600",
   },
   logoutButton: {
     marginTop: "auto",

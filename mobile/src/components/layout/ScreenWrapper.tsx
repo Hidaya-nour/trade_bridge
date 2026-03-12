@@ -35,8 +35,8 @@ export default function ScreenWrapper({ children, title, subtitle }: ScreenWrapp
         onRequestClose={() => setIsDrawerOpen(false)}
       >
         <View style={styles.modalRoot}>
-          <Pressable style={styles.overlay} onPress={() => setIsDrawerOpen(false)} />
           <DrawerContent currentPath={pathname} onClose={() => setIsDrawerOpen(false)} />
+          <Pressable style={styles.overlay} onPress={() => setIsDrawerOpen(false)} />
         </View>
       </Modal>
     </SafeAreaView>
@@ -54,7 +54,7 @@ const styles = StyleSheet.create({
   modalRoot: {
     flex: 1,
     flexDirection: "row",
-    justifyContent: "flex-end",
+    justifyContent: "flex-start",
   },
   overlay: {
     flex: 1,
