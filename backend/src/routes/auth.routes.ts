@@ -1,7 +1,7 @@
 import express from 'express';
 import rateLimit from 'express-rate-limit';
 import { AuthController } from '../controllers/auth.controller';
-import { authenticate, authenticateAllowPending } from '../middleware/auth.middleware';
+import { authenticate, authenticateAllowPending, authorize } from '../middleware/auth.middleware';
 import { validate } from '../middleware/validation.middleware';
 import {
   registerSchema,
@@ -69,5 +69,8 @@ router.get('/me', authenticateAllowPending, authController.getMe);
 router.patch('/me', authenticateAllowPending, validate(updateProfileSchema), authController.updateMe);
 router.patch('/change-password', authenticateAllowPending, validate(changePasswordSchema), authController.changePassword);
 router.post('/logout-all', authenticate, authController.logoutAll);
+
+// Admin routes
+router.post('/admin/approve/:id', authenticate, authorize('admin'), authController.approveUser);
 
 export default router;

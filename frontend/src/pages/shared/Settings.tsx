@@ -212,6 +212,15 @@ const SettingsPage: React.FC = () => {
   const [licenseExpiryDate, setLicenseExpiryDate] = useState("");
   const [licenseMessage, setLicenseMessage] = useState<string | null>(null);
   const [licenseUploading, setLicenseUploading] = useState(false);
+  const [extraDocs, setExtraDocs] = useState<
+    {
+      id: string;
+      document_type: "tax_certificate" | "id_card" | "other";
+      file: File | null;
+      issued_date: string;
+      expiry_date: string;
+    }[]
+  >([]);
   const [addressForm, setAddressForm] = useState({
     region: "",
     city: "",
@@ -348,9 +357,35 @@ const SettingsPage: React.FC = () => {
     }));
   }, [latestAddress]);
 
-  const handleUploadLicense = async () => {
-    if (!licenseFile) {
-      setLicenseMessage("Please select a license document first.");
+  const handleUploadDocuments = async () => {
+    const uploads: {
+      file: File;
+      document_type: "business_license" | "tax_certificate" | "id_card" | "other";
+      issued_date?: string;
+      expiry_date?: string;
+    }[] = [];
+
+    if (licenseFile) {
+      uploads.push({
+        file: licenseFile,
+        document_type: "business_license",
+        issued_date: licenseIssuedDate || undefined,
+        expiry_date: licenseExpiryDate || undefined,
+      });
+    }
+
+    extraDocs.forEach((doc) => {
+      if (!doc.file) return;
+      uploads.push({
+        file: doc.file,
+        document_type: doc.document_type,
+        issued_date: doc.issued_date || undefined,
+        expiry_date: doc.expiry_date || undefined,
+      });
+    });
+
+    if (uploads.length === 0) {
+      setLicenseMessage("Please select at least one document to upload.");
       return;
     }
     if (!addressForm.region.trim() || !addressForm.city.trim()) {
@@ -375,16 +410,21 @@ const SettingsPage: React.FC = () => {
         await createAddress(addressPayload);
       }
 
-      await documentService.uploadDocument(
-        licenseFile,
-        "business_license",
-        licenseIssuedDate || undefined,
-        licenseExpiryDate || undefined,
+      for (const doc of uploads) {
+        await documentService.uploadDocument(
+          doc.file,
+          doc.document_type,
+          doc.issued_date,
+          doc.expiry_date,
+        );
+      }
+      setLicenseMessage(
+        `Uploaded ${uploads.length} document${uploads.length === 1 ? "" : "s"}. Awaiting admin review.`,
       );
-      setLicenseMessage("Business license uploaded. Awaiting admin review.");
       setLicenseFile(null);
       setLicenseIssuedDate("");
       setLicenseExpiryDate("");
+      setExtraDocs([]);
       await fetchDocuments();
       await fetchAddresses();
       await fetchUser();
@@ -804,8 +844,9 @@ const SettingsPage: React.FC = () => {
                             Business Verification
                           </h4>
                           <p className="text-xs text-amber-800 mt-1">
-                            Upload your business license so an admin can review
-                            and approve your account.
+                            Upload your business license and any supporting
+                            documents so an admin can review and approve your
+                            account.
                           </p>
                         </div>
                         {user?.verified ? (
@@ -871,7 +912,7 @@ const SettingsPage: React.FC = () => {
                           )}
                         </div>
                       )}
-                      {!businessLicenseDoc && (
+                      <div className="space-y-4">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div className="space-y-2">
                             <Label htmlFor="businessRegion">Region</Label>
@@ -985,7 +1026,170 @@ const SettingsPage: React.FC = () => {
                             />
                           </div>
                         </div>
-                      )}
+
+                        <div className="rounded-md border border-amber-200 bg-white/60 p-4 space-y-3">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-sm font-medium text-amber-900">
+                                Additional verification documents
+                              </p>
+                              <p className="text-xs text-amber-800">
+                                Add TIN, ID card, or other supporting documents
+                                for admin review.
+                              </p>
+                            </div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() =>
+                                setExtraDocs((prev) => [
+                                  ...prev,
+                                  {
+                                    id: `${Date.now()}-${Math.random()}`,
+                                    document_type: "tax_certificate",
+                                    file: null,
+                                    issued_date: "",
+                                    expiry_date: "",
+                                  },
+                                ])
+                              }
+                            >
+                              Add Document
+                            </Button>
+                          </div>
+
+                          {extraDocs.length === 0 ? (
+                            <p className="text-xs text-amber-800">
+                              No additional documents added.
+                            </p>
+                          ) : (
+                            extraDocs.map((doc) => (
+                              <div
+                                key={doc.id}
+                                className="grid grid-cols-1 md:grid-cols-2 gap-3 border rounded-md p-3 bg-white"
+                              >
+                                <div className="space-y-2">
+                                  <Label htmlFor={`docType-${doc.id}`}>
+                                    Document Type
+                                  </Label>
+                                  <Select
+                                    value={doc.document_type}
+                                    onValueChange={(value) =>
+                                      setExtraDocs((prev) =>
+                                        prev.map((item) =>
+                                          item.id === doc.id
+                                            ? {
+                                                ...item,
+                                                document_type:
+                                                  value as "tax_certificate" | "id_card" | "other",
+                                              }
+                                            : item,
+                                        ),
+                                      )
+                                    }
+                                  >
+                                    <SelectTrigger id={`docType-${doc.id}`}>
+                                      <SelectValue placeholder="Select type" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="tax_certificate">
+                                        TIN / Tax Certificate
+                                      </SelectItem>
+                                      <SelectItem value="id_card">
+                                        ID Card
+                                      </SelectItem>
+                                      <SelectItem value="other">
+                                        Other Document
+                                      </SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                                <div className="space-y-2">
+                                  <Label htmlFor={`docFile-${doc.id}`}>
+                                    Document File
+                                  </Label>
+                                  <Input
+                                    id={`docFile-${doc.id}`}
+                                    type="file"
+                                    accept=".pdf,image/*"
+                                    onChange={(e) =>
+                                      setExtraDocs((prev) =>
+                                        prev.map((item) =>
+                                          item.id === doc.id
+                                            ? {
+                                                ...item,
+                                                file:
+                                                  e.target.files?.[0] || null,
+                                              }
+                                            : item,
+                                        ),
+                                      )
+                                    }
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <Label htmlFor={`docIssued-${doc.id}`}>
+                                    Issued Date (optional)
+                                  </Label>
+                                  <Input
+                                    id={`docIssued-${doc.id}`}
+                                    type="date"
+                                    value={doc.issued_date}
+                                    onChange={(e) =>
+                                      setExtraDocs((prev) =>
+                                        prev.map((item) =>
+                                          item.id === doc.id
+                                            ? {
+                                                ...item,
+                                                issued_date: e.target.value,
+                                              }
+                                            : item,
+                                        ),
+                                      )
+                                    }
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <Label htmlFor={`docExpiry-${doc.id}`}>
+                                    Expiry Date (optional)
+                                  </Label>
+                                  <Input
+                                    id={`docExpiry-${doc.id}`}
+                                    type="date"
+                                    value={doc.expiry_date}
+                                    onChange={(e) =>
+                                      setExtraDocs((prev) =>
+                                        prev.map((item) =>
+                                          item.id === doc.id
+                                            ? {
+                                                ...item,
+                                                expiry_date: e.target.value,
+                                              }
+                                            : item,
+                                        ),
+                                      )
+                                    }
+                                  />
+                                </div>
+                                <div className="flex items-center">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="text-destructive"
+                                    onClick={() =>
+                                      setExtraDocs((prev) =>
+                                        prev.filter((item) => item.id !== doc.id),
+                                      )
+                                    }
+                                  >
+                                    Remove
+                                  </Button>
+                                </div>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </div>
 
                       {(docsError || addressesError) && (
                         <p className="text-xs text-red-600">
@@ -1001,12 +1205,14 @@ const SettingsPage: React.FC = () => {
                       <div className="flex items-center gap-2">
                         <Button
                           variant="outline"
-                          onClick={() => void handleUploadLicense()}
+                          onClick={() => void handleUploadDocuments()}
                           disabled={
                             licenseUploading || docsLoading || addressesLoading
                           }
                         >
-                          {licenseUploading ? "Uploading..." : "Upload License"}
+                          {licenseUploading
+                            ? "Uploading..."
+                            : "Upload Documents"}
                         </Button>
                         <p className="text-xs text-amber-800">
                           Accepted formats: PDF, JPG, PNG, WEBP. Max 10MB.

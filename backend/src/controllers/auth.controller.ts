@@ -193,6 +193,32 @@ export class AuthController {
     }
   };
 
+  approveUser = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const adminId = req.user?.id;
+      if (!adminId) {
+        res.status(401).json({ success: false, message: 'Authentication required' });
+        return;
+      }
+
+      const { id } = req.params;
+      const user = await this.authService.approveUser(id, adminId);
+
+      res.json({
+        success: true,
+        message: 'User approved successfully',
+        data: { user }
+      });
+    } catch (error) {
+      if (error instanceof AppError) {
+        res.status(error.statusCode).json({ success: false, message: error.message });
+      } else {
+        logger.error('Approve user error:', error);
+        res.status(500).json({ success: false, message: 'Internal server error' });
+      }
+    }
+  };
+
   requestPasswordReset = async (req: Request, res: Response): Promise<void> => {
     try {
       const { email } = req.body;

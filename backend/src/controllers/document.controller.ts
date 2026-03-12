@@ -40,6 +40,20 @@ export class DocumentController {
     }
   }
 
+  async getAllForAdmin(req: Request, res: Response) {
+    try {
+      const docs = await documentService.getAllForAdmin();
+      res.json({ success: true, data: docs });
+    } catch (error) {
+      if (error instanceof AppError) {
+        res.status(error.statusCode).json({ success: false, message: error.message });
+      } else {
+        logger.error('Get admin documents error:', error);
+        res.status(500).json({ success: false, message: 'Internal server error' });
+      }
+    }
+  }
+
   async getById(req: Request, res: Response) {
     try {
       const { id } = req.params;

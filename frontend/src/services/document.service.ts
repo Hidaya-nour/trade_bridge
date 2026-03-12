@@ -33,8 +33,21 @@ class DocumentService {
     return response.data;
   }
 
+  async getAllForAdmin(params?: any) {
+    const response = await api.get('/documents/admin/all', { params });
+    return response.data;
+  }
+
   async getById(id: string) {
     const response = await api.get(`/documents/${id}`);
+    return response.data;
+  }
+
+  async verifyDocument(id: string, status: "verified" | "rejected" | "pending", reason?: string) {
+    const response = await api.put(`/documents/${id}/verify`, {
+      status,
+      reason,
+    });
     return response.data;
   }
 

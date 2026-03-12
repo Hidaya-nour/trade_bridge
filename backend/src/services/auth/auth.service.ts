@@ -242,6 +242,23 @@ async register(data: RegisterDTO): Promise<{ user: SafeUser }> {
     logger.info(`Password changed for user: ${userId}`);
   }
 
+  async approveUser(userId: string, approvedBy: string): Promise<SafeUser> {
+    const user = await this.userRepo.findById(userId);
+    if (!user || user.deleted_at) {
+      throw new AppError('User not found', 404);
+    }
+
+    await this.userRepo.approveUser(userId, approvedBy);
+    const updated = await this.userRepo.findById(userId);
+    if (!updated) {
+      throw new AppError('Failed to approve user', 500);
+    }
+
+    const updatedResponse = updated.toJSON() as any;
+    const { password_hash: _, ...safeUser } = updatedResponse;
+    return safeUser as SafeUser;
+  }
+
   /**
    * Logout user by revoking refresh token
    */

@@ -16,6 +16,9 @@ router.post('/', uploadDocumentMiddleware, validate(DocumentController.uploadVal
 // Get current user's documents
 router.get('/', docController.getUserDocs);
 
+// Admin: get all documents with user info
+router.get('/admin/all', authenticate, authorize('admin'), docController.getAllForAdmin);
+
 // Get specific document (admin or owner)
 router.get('/:id', validate(DocumentController.idValidation), docController.getById);
 

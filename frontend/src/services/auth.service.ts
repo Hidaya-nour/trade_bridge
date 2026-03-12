@@ -61,5 +61,10 @@ export const authService = {
   async changePassword(data: ChangePasswordData) {
     const response = await api.patch('/auth/change-password', data);
     return response.data;
+  },
+
+  async approveUser(userId: string) {
+    const response = await api.post(`/auth/admin/approve/${userId}`);
+    return response.data;
   }
 };

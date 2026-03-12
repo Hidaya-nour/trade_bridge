@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   Shield,
@@ -8,21 +8,13 @@ import {
   FileText,
   Download,
   Search,
-  Filter,
   Factory,
-  Store,
   Package,
   Truck,
   Clock,
   AlertCircle,
   Calendar,
-  Mail,
-  Phone,
   MapPin,
-  Building2,
-  CreditCard,
-  FileCheck,
-  Ban,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -44,7 +36,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
   DialogContent,
@@ -54,19 +45,19 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 
 import {
   StatsCard,
-  SectionHeader,
   StatusBadge,
   EmptyState,
   PaginationBar,
 } from "@/components/shared";
 import { formatDate } from "@/lib/formatters";
 import { cn, getInitials } from "@/lib/utils";
+import documentService from "@/services/document.service";
+import { authService } from "@/services/auth.service";
 
 // ============================================================================
 // TYPES
@@ -81,7 +72,7 @@ type VerificationStatus =
   | "more_info";
 
 interface VerificationRequest {
-  id: number;
+  id: string;
   type: VerificationType;
   businessName: string;
   ownerName: string;
@@ -90,130 +81,60 @@ interface VerificationRequest {
   location: string;
   submittedDate: string;
   documents: {
+    id: string;
     name: string;
     url: string;
     type: "license" | "tin" | "certificate" | "id" | "other";
+    status: "pending" | "verified" | "rejected";
+    rejectionReason?: string;
   }[];
   status: VerificationStatus;
   priority: "high" | "medium" | "low";
+  userStatus?: string;
+  userApprovedAt?: string | null;
+  userVerified?: boolean;
   notes?: string;
   reviewedBy?: string;
   reviewedDate?: string;
   rejectionReason?: string;
 }
 
-// ============================================================================
-// MOCK DATA
-// ============================================================================
+interface AdminAddress {
+  id: string;
+  region?: string | null;
+  city?: string | null;
+  subcity?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  created_at?: string;
+  updated_at?: string | null;
+}
 
-const mockVerifications: VerificationRequest[] = [
-  {
-    id: 101,
-    type: "factory",
-    businessName: "Bahir Dar Honey Processing",
-    ownerName: "Mulugeta Dessie",
-    email: "info@bahirdarhoney.com",
-    phone: "+251 58 234 5678",
-    location: "Bahir Dar",
-    submittedDate: "2026-02-12",
-    documents: [
-      { name: "Business License.pdf", url: "#", type: "license" },
-      { name: "TIN Certificate.pdf", url: "#", type: "tin" },
-      { name: "Quality Certificate.pdf", url: "#", type: "certificate" },
-    ],
-    status: "pending",
-    priority: "high",
-  },
-  {
-    id: 102,
-    type: "distributor",
-    businessName: "Hawassa Wholesale Trading",
-    ownerName: "Tigist Haile",
-    email: "info@hawassawholesale.com",
-    phone: "+251 46 123 4567",
-    location: "Hawassa",
-    submittedDate: "2026-02-11",
-    documents: [
-      { name: "Business License.pdf", url: "#", type: "license" },
-      { name: "Tax Clearance.pdf", url: "#", type: "tin" },
-    ],
-    status: "under_review",
-    priority: "medium",
-  },
-  {
-    id: 103,
-    type: "driver",
-    businessName: "Tsegaye Mulugeta Transport",
-    ownerName: "Tsegaye Mulugeta",
-    email: "tsegaye.m@driver.com",
-    phone: "+251 91 234 5678",
-    location: "Adama",
-    submittedDate: "2026-02-10",
-    documents: [
-      { name: "Drivers License.pdf", url: "#", type: "license" },
-      { name: "Vehicle Registration.pdf", url: "#", type: "certificate" },
-    ],
-    status: "pending",
-    priority: "low",
-  },
-  {
-    id: 104,
-    type: "factory",
-    businessName: "Adama Plastics Manufacturing",
-    ownerName: "Kebede Asfaw",
-    email: "info@adamaplastics.com",
-    phone: "+251 22 678 9012",
-    location: "Adama",
-    submittedDate: "2026-02-09",
-    documents: [
-      { name: "Business License.pdf", url: "#", type: "license" },
-      { name: "TIN Certificate.pdf", url: "#", type: "tin" },
-      { name: "Environmental Certificate.pdf", url: "#", type: "certificate" },
-    ],
-    status: "more_info",
-    priority: "high",
-    notes: "Need additional environmental compliance documents",
-  },
-  {
-    id: 105,
-    type: "distributor",
-    businessName: "Mekelle Steel Distributors",
-    ownerName: "Berhanu Tekle",
-    email: "info@mekellesteel.com",
-    phone: "+251 34 567 8901",
-    location: "Mekelle",
-    submittedDate: "2026-02-08",
-    documents: [
-      { name: "Business License.pdf", url: "#", type: "license" },
-      { name: "TIN Certificate.pdf", url: "#", type: "tin" },
-    ],
-    status: "approved",
-    priority: "medium",
-    reviewedBy: "Admin User",
-    reviewedDate: "2026-02-13",
-  },
-  {
-    id: 106,
-    type: "factory",
-    businessName: "Oromia Dairy Products",
-    ownerName: "Worku Desta",
-    email: "info@oromiadairy.com",
-    phone: "+251 22 345 6789",
-    location: "Adama",
-    submittedDate: "2026-02-07",
-    documents: [
-      { name: "Business License.pdf", url: "#", type: "license" },
-      { name: "TIN Certificate.pdf", url: "#", type: "tin" },
-      { name: "Health Certificate.pdf", url: "#", type: "certificate" },
-    ],
-    status: "rejected",
-    priority: "low",
-    reviewedBy: "Admin User",
-    reviewedDate: "2026-02-12",
-    rejectionReason:
-      "Incomplete documentation - missing health inspection certificate",
-  },
-];
+interface AdminUser {
+  id: string;
+  full_name?: string;
+  email?: string;
+  phone?: string;
+  business_name?: string;
+  role?: string;
+  status?: string;
+  approved_at?: string | null;
+  approved_by?: string | null;
+  addresses?: AdminAddress[];
+}
+
+interface AdminDocument {
+  id: string;
+  document_type: "business_license" | "tax_certificate" | "id_card" | "other";
+  file_secure_url?: string | null;
+  original_file_name?: string | null;
+  verification_status: "pending" | "verified" | "rejected";
+  rejection_reason?: string | null;
+  uploaded_at?: string;
+  reviewed_at?: string | null;
+  verified_by?: string | null;
+  user?: AdminUser;
+}
 
 // ============================================================================
 // CONSTANTS
@@ -247,36 +168,174 @@ const statusLabels: Record<VerificationStatus, string> = {
   more_info: "More Info Needed",
 };
 
+const docStatusColors: Record<"pending" | "verified" | "rejected", string> = {
+  pending: "bg-yellow-100 text-yellow-800 border-yellow-200",
+  verified: "bg-green-100 text-green-800 border-green-200",
+  rejected: "bg-red-100 text-red-800 border-red-200",
+};
+
+const docStatusLabels: Record<"pending" | "verified" | "rejected", string> = {
+  pending: "Pending",
+  verified: "Verified",
+  rejected: "Rejected",
+};
+
 // ============================================================================
 // COMPONENT
 // ============================================================================
 
 export const VerificationsPage: React.FC = () => {
+  const [requests, setRequests] = useState<VerificationRequest[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedType, setSelectedType] = useState<string>("all");
   const [selectedStatus, setSelectedStatus] = useState<string>("pending");
-  const [selectedRequest, setSelectedRequest] =
-    useState<VerificationRequest | null>(null);
-  const [showDetailsDialog, setShowDetailsDialog] = useState(false);
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [rejectionReason, setRejectionReason] = useState("");
+  const [rejectingDocumentId, setRejectingDocumentId] = useState<string | null>(
+    null,
+  );
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
+  const mapDocType = (
+    docType: AdminDocument["document_type"],
+  ): VerificationRequest["documents"][number]["type"] => {
+    switch (docType) {
+      case "business_license":
+        return "license";
+      case "tax_certificate":
+        return "tin";
+      case "id_card":
+        return "id";
+      default:
+        return "other";
+    }
+  };
+
+  const formatLocation = (addresses?: AdminAddress[]) => {
+    if (!addresses || addresses.length === 0) return "Unknown";
+    const sorted = [...addresses].sort((a, b) => {
+      const aDate = new Date(a.created_at || a.updated_at || 0).getTime();
+      const bDate = new Date(b.created_at || b.updated_at || 0).getTime();
+      return bDate - aDate;
+    });
+    const latest = sorted[0];
+    const parts = [latest.city, latest.region].filter(Boolean);
+    return parts.length > 0 ? parts.join(", ") : "Unknown";
+  };
+
+  const computeStatus = (docs: AdminDocument[]): VerificationStatus => {
+    const statuses = docs.map((d) => d.verification_status);
+    if (statuses.includes("rejected")) return "rejected";
+    if (statuses.length > 0 && statuses.every((s) => s === "verified"))
+      return "approved";
+    if (statuses.some((s) => s === "pending")) return "pending";
+    if (statuses.some((s) => s === "verified")) return "under_review";
+    return "pending";
+  };
+
+  const buildRequests = (docs: AdminDocument[]): VerificationRequest[] => {
+    const grouped = new Map<string, AdminDocument[]>();
+
+    docs.forEach((doc) => {
+      const user = doc.user;
+      if (!user?.id) return;
+      if (!["factory", "distributor", "driver"].includes(user.role || "")) {
+        return;
+      }
+      if (!grouped.has(user.id)) grouped.set(user.id, []);
+      grouped.get(user.id)!.push(doc);
+    });
+
+    return Array.from(grouped.entries()).map(([userId, userDocs]) => {
+      const sortedDocs = [...userDocs].sort((a, b) => {
+        const aDate = new Date(a.uploaded_at || 0).getTime();
+        const bDate = new Date(b.uploaded_at || 0).getTime();
+        return bDate - aDate;
+      });
+
+      const user = sortedDocs[0]?.user;
+      const submittedDate =
+        sortedDocs[0]?.uploaded_at || new Date().toISOString();
+      const rejectionDoc = sortedDocs.find(
+        (doc) => doc.verification_status === "rejected",
+      );
+      const reviewedDoc = sortedDocs.find((doc) => doc.reviewed_at);
+
+      return {
+        id: userId,
+        type: (user?.role as VerificationType) || "factory",
+        businessName:
+          user?.business_name ||
+          user?.full_name ||
+          `User ${userId.slice(0, 8)}`,
+        ownerName: user?.full_name || "Unknown",
+        email: user?.email || "—",
+        phone: user?.phone || "—",
+        location: formatLocation(user?.addresses),
+        submittedDate,
+        documents: sortedDocs.map((doc) => ({
+          id: doc.id,
+          name:
+            doc.original_file_name ||
+            `${mapDocType(doc.document_type)} document`,
+          url: doc.file_secure_url || "#",
+          type: mapDocType(doc.document_type),
+          status: doc.verification_status,
+          rejectionReason: doc.rejection_reason || undefined,
+        })),
+        status: computeStatus(sortedDocs),
+        priority: "medium",
+        userStatus: user?.status,
+        userApprovedAt: user?.approved_at || null,
+        userVerified: user?.status === "active" || Boolean(user?.approved_at),
+        reviewedBy: reviewedDoc?.verified_by
+          ? `Admin ${reviewedDoc.verified_by.slice(0, 8)}`
+          : undefined,
+        reviewedDate: reviewedDoc?.reviewed_at || undefined,
+        rejectionReason: rejectionDoc?.rejection_reason || undefined,
+      };
+    });
+  };
+
+  const fetchRequests = async () => {
+    setIsLoading(true);
+    setLoadError(null);
+    try {
+      const response = await documentService.getAllForAdmin();
+      const data = response.data || response;
+      setRequests(buildRequests(data || []));
+    } catch (error: any) {
+      setLoadError(
+        error?.response?.data?.message || "Failed to load verification requests",
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void fetchRequests();
+  }, []);
+
   // Filter verification requests
-  const filteredRequests = mockVerifications.filter((req) => {
-    const matchesSearch =
-      searchQuery === "" ||
-      req.businessName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      req.ownerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      req.email.toLowerCase().includes(searchQuery.toLowerCase());
+  const filteredRequests = useMemo(() => {
+    return requests.filter((req) => {
+      const matchesSearch =
+        searchQuery === "" ||
+        req.businessName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        req.ownerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        req.email.toLowerCase().includes(searchQuery.toLowerCase());
 
-    const matchesType = selectedType === "all" || req.type === selectedType;
-    const matchesStatus =
-      selectedStatus === "all" || req.status === selectedStatus;
+      const matchesType = selectedType === "all" || req.type === selectedType;
+      const matchesStatus =
+        selectedStatus === "all" || req.status === selectedStatus;
 
-    return matchesSearch && matchesType && matchesStatus;
-  });
+      return matchesSearch && matchesType && matchesStatus;
+    });
+  }, [requests, searchQuery, selectedType, selectedStatus]);
 
   // Pagination
   const totalPages = Math.ceil(filteredRequests.length / itemsPerPage);
@@ -287,37 +346,79 @@ export const VerificationsPage: React.FC = () => {
   );
 
   // Stats
-  const stats = {
-    pending: mockVerifications.filter((r) => r.status === "pending").length,
-    underReview: mockVerifications.filter((r) => r.status === "under_review")
-      .length,
-    approved: mockVerifications.filter((r) => r.status === "approved").length,
-    rejected: mockVerifications.filter((r) => r.status === "rejected").length,
+  const stats = useMemo(() => {
+    return {
+      pending: requests.filter((r) => r.status === "pending").length,
+      underReview: requests.filter((r) => r.status === "under_review").length,
+      approved: requests.filter((r) => r.status === "approved").length,
+      rejected: requests.filter((r) => r.status === "rejected").length,
+    };
+  }, [requests]);
+
+  const handleVerifyDocument = async (docId: string) => {
+    try {
+      await documentService.verifyDocument(docId, "verified");
+      await fetchRequests();
+    } catch (error) {
+      console.error("Verify document failed:", error);
+    }
   };
 
-  // Handle approve
-  const handleApprove = (request: VerificationRequest) => {
-    console.log("Approving:", request);
-    // In real app, call API
-    setShowDetailsDialog(false);
-    // Show success toast
+  const handleRejectDocument = async () => {
+    if (!rejectingDocumentId) return;
+    try {
+      await documentService.verifyDocument(
+        rejectingDocumentId,
+        "rejected",
+        rejectionReason,
+      );
+      setShowRejectDialog(false);
+      setRejectionReason("");
+      setRejectingDocumentId(null);
+      await fetchRequests();
+    } catch (error) {
+      console.error("Reject document failed:", error);
+    }
   };
 
-  // Handle reject
-  const handleReject = () => {
-    console.log("Rejecting:", selectedRequest?.id, "Reason:", rejectionReason);
-    setShowRejectDialog(false);
-    setShowDetailsDialog(false);
-    setRejectionReason("");
-    // In real app, call API
+  const handleApproveUser = async (request: VerificationRequest) => {
+    try {
+      await authService.approveUser(request.id);
+      await fetchRequests();
+    } catch (error) {
+      console.error("Approve user failed:", error);
+    }
   };
 
   // Handle request more info
-  const handleRequestMoreInfo = (request: VerificationRequest) => {
+  const handleRequestMoreInfo = async (request: VerificationRequest) => {
     console.log("Requesting more info for:", request.id);
     setShowDetailsDialog(false);
-    // In real app, call API
   };
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <EmptyState
+          icon={Shield}
+          title="Loading verification requests..."
+          description="Fetching the latest data from the database."
+        />
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="space-y-6">
+        <EmptyState
+          icon={AlertCircle}
+          title="Failed to load verifications"
+          description={loadError}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -428,6 +529,10 @@ export const VerificationsPage: React.FC = () => {
         <div className="space-y-4">
           {paginatedRequests.map((request) => {
             const TypeIcon = typeIcons[request.type];
+            const canApproveUser =
+              request.documents.length > 0 &&
+              request.documents.every((doc) => doc.status === "verified") &&
+              !request.userVerified;
             return (
               <Card
                 key={request.id}
@@ -454,6 +559,11 @@ export const VerificationsPage: React.FC = () => {
                             <Badge className={statusColors[request.status]}>
                               {statusLabels[request.status]}
                             </Badge>
+                            {request.userVerified && (
+                              <Badge className="bg-green-50 text-green-700 border-green-200">
+                                User Verified
+                              </Badge>
+                            )}
                             <Badge
                               className={cn(
                                 "text-xs",
@@ -509,24 +619,69 @@ export const VerificationsPage: React.FC = () => {
                             <p className="text-sm text-muted-foreground mb-2">
                               Documents
                             </p>
-                            <div className="flex flex-wrap gap-2">
-                              {request.documents.map((doc, idx) => (
-                                <Button
-                                  key={idx}
-                                  variant="outline"
-                                  size="sm"
-                                  className="h-7 text-xs gap-1"
-                                  asChild
+                            <div className="space-y-2">
+                              {request.documents.map((doc) => (
+                                <div
+                                  key={doc.id}
+                                  className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 border rounded-md p-2 bg-muted/20"
                                 >
-                                  <a
-                                    href={doc.url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                  >
-                                    <FileText className="h-3 w-3" />
-                                    {doc.name}
-                                  </a>
-                                </Button>
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className="h-7 text-xs gap-1"
+                                      asChild
+                                    >
+                                      <a
+                                        href={doc.url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                      >
+                                        <FileText className="h-3 w-3" />
+                                        {doc.name}
+                                      </a>
+                                    </Button>
+                                    <Badge
+                                      variant="outline"
+                                      className={docStatusColors[doc.status]}
+                                    >
+                                      {docStatusLabels[doc.status]}
+                                    </Badge>
+                                  </div>
+
+                                  {doc.status === "pending" ? (
+                                    <div className="flex items-center gap-2">
+                                      <Button
+                                        size="sm"
+                                        className="h-7 text-xs bg-green-600 hover:bg-green-700"
+                                        onClick={() =>
+                                          void handleVerifyDocument(doc.id)
+                                        }
+                                      >
+                                        <CheckCircle2 className="h-3 w-3 mr-1" />
+                                        Verify
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="h-7 text-xs text-red-600"
+                                        onClick={() => {
+                                          setRejectingDocumentId(doc.id);
+                                          setShowRejectDialog(true);
+                                        }}
+                                      >
+                                        <XCircle className="h-3 w-3 mr-1" />
+                                        Reject
+                                      </Button>
+                                    </div>
+                                  ) : (
+                                    doc.rejectionReason && (
+                                      <p className="text-xs text-red-700">
+                                        {doc.rejectionReason}
+                                      </p>
+                                    )
+                                  )}
+                                </div>
                               ))}
                             </div>
                           </div>
@@ -563,46 +718,32 @@ export const VerificationsPage: React.FC = () => {
                     </div>
 
                     {/* Action Buttons */}
-                    {request.status === "pending" ||
-                    request.status === "under_review" ? (
+                    {!request.userVerified ? (
                       <div className="flex flex-col gap-2 min-w-[120px]">
                         <Button
                           size="sm"
                           className="bg-green-600 hover:bg-green-700 w-full"
                           onClick={() => {
-                            setSelectedRequest(request);
-                            handleApprove(request);
+                            handleApproveUser(request);
                           }}
+                          disabled={!canApproveUser}
                         >
                           <CheckCircle2 className="h-4 w-4 mr-2" />
-                          Approve
+                          Approve User
                         </Button>
                         <Button
                           size="sm"
                           variant="outline"
                           className="text-amber-600 w-full"
                           onClick={() => {
-                            setSelectedRequest(request);
                             handleRequestMoreInfo(request);
                           }}
                         >
-                          <AlertCircle className="h-4 w-4 mr-2" />
-                          Request Info
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="text-red-600 w-full"
-                          onClick={() => {
-                            setSelectedRequest(request);
-                            setShowRejectDialog(true);
-                          }}
-                        >
-                          <XCircle className="h-4 w-4 mr-2" />
-                          Reject
-                        </Button>
-                      </div>
-                    ) : (
+                        <AlertCircle className="h-4 w-4 mr-2" />
+                        Request Info
+                      </Button>
+                    </div>
+                  ) : (
                       <div className="flex flex-col gap-2 min-w-[120px]">
                         <Button size="sm" variant="outline" asChild>
                           <Link to={`/admin/users/${request.id}`}>
@@ -630,12 +771,21 @@ export const VerificationsPage: React.FC = () => {
       )}
 
       {/* Reject Dialog */}
-      <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
+      <Dialog
+        open={showRejectDialog}
+        onOpenChange={(open) => {
+          setShowRejectDialog(open);
+          if (!open) {
+            setRejectingDocumentId(null);
+            setRejectionReason("");
+          }
+        }}
+      >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Reject Verification Request</DialogTitle>
+            <DialogTitle>Reject Document</DialogTitle>
             <DialogDescription>
-              Please provide a reason for rejecting this application
+              Please provide a reason for rejecting this document
             </DialogDescription>
           </DialogHeader>
 
@@ -660,10 +810,10 @@ export const VerificationsPage: React.FC = () => {
             </Button>
             <Button
               variant="destructive"
-              onClick={handleReject}
-              disabled={!rejectionReason.trim()}
+              onClick={handleRejectDocument}
+              disabled={!rejectionReason.trim() || !rejectingDocumentId}
             >
-              Reject Application
+              Reject Document
             </Button>
           </DialogFooter>
         </DialogContent>

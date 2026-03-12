@@ -50,6 +50,10 @@ export class DocumentService {
     return this.docRepo.findByUser(userId) as Promise<IDocument[]>;
   }
 
+  async getAllForAdmin(): Promise<IDocument[]> {
+    return this.docRepo.findAllForAdmin() as Promise<IDocument[]>;
+  }
+
   async getDocumentById(id: string): Promise<IDocument | null> {
     return this.docRepo.findById(id) as Promise<IDocument | null>;
   }
@@ -59,15 +63,6 @@ export class DocumentService {
     if (!doc) throw new AppError('Document not found', 404);
 
     const updated = await this.docRepo.update(id, { verification_status: status, verified_by: verifiedBy || null, rejection_reason: reason || null, reviewed_at: new Date() } as any);
-
-    // If a business license is verified for factory/distributor, approve the account.
-    if (status === 'verified' && doc.document_type === 'business_license' && doc.user_id) {
-      const user = await this.userRepo.findById(doc.user_id);
-      if (user && ['factory', 'distributor'].includes(user.role)) {
-        await this.userRepo.approveUser(user.id, verifiedBy || user.id);
-        logger.info(`User ${user.id} approved after license verification.`);
-      }
-    }
 
     return updated;
   }

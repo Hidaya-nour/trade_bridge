@@ -318,7 +318,14 @@ function App() {
               </DashboardLayout>
             }
           />
-          <Route path="/admin/approvals" element={<VerificationsPage />} />{" "}
+          <Route
+            path="/admin/approvals"
+            element={
+              <DashboardLayout>
+                <VerificationsPage />
+              </DashboardLayout>
+            }
+          />{" "}
           <Route
             path="/driver/dashboard"
             element={

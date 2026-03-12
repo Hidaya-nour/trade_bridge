@@ -196,7 +196,7 @@ const roleNavigation = {
     { name: "User Management", href: "/admin/users", icon: Users, badge: "5" },
     {
       name: "Supplier Approvals",
-      href: "/admin/approve",
+      href: "/admin/approvals",
       icon: Shield,
       badge: "3",
     },
