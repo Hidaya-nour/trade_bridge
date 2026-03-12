@@ -96,8 +96,7 @@ async register(data: RegisterDTO): Promise<{ user: SafeUser }> {
   // Hash password
   const password_hash = await this.passwordService.hashPassword(data.password);
 
-  const requiresApproval = ['factory', 'distributor'].includes(data.role);
-  const status = data.role === 'admin' ? 'active' : requiresApproval ? 'pending' : 'active';
+  const status = 'active';
 
   // Create user
   const user = await this.userRepo.create({

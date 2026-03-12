@@ -309,7 +309,8 @@ export const VerificationsPage: React.FC = () => {
       setRequests(buildRequests(data || []));
     } catch (error: any) {
       setLoadError(
-        error?.response?.data?.message || "Failed to load verification requests",
+        error?.response?.data?.message ||
+          "Failed to load verification requests",
       );
     } finally {
       setIsLoading(false);
@@ -393,7 +394,7 @@ export const VerificationsPage: React.FC = () => {
   // Handle request more info
   const handleRequestMoreInfo = async (request: VerificationRequest) => {
     console.log("Requesting more info for:", request.id);
-    setShowDetailsDialog(false);
+    // setShowDetailsDialog(false);
   };
 
   if (isLoading) {
@@ -739,11 +740,11 @@ export const VerificationsPage: React.FC = () => {
                             handleRequestMoreInfo(request);
                           }}
                         >
-                        <AlertCircle className="h-4 w-4 mr-2" />
-                        Request Info
-                      </Button>
-                    </div>
-                  ) : (
+                          <AlertCircle className="h-4 w-4 mr-2" />
+                          Request Info
+                        </Button>
+                      </div>
+                    ) : (
                       <div className="flex flex-col gap-2 min-w-[120px]">
                         <Button size="sm" variant="outline" asChild>
                           <Link to={`/admin/users/${request.id}`}>
