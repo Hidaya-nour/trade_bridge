@@ -9,9 +9,13 @@ export class AuthController {
   register = async (req: Request, res: Response): Promise<void> => {
     try {
       const result = await this.authService.register(req.body);
+      const role = req.body?.role;
+      const needsApproval = role === 'factory' || role === 'distributor';
       res.status(201).json({
         success: true,
-        message: 'Registration successful. Please wait for admin approval.',
+        message: needsApproval
+          ? 'Registration successful. Please upload your business license for admin approval.'
+          : 'Registration successful.',
         data: result
       });
     } catch (error) {

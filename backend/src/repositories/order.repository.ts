@@ -6,6 +6,7 @@ import { Order } from '../models/order.model';
 import { Product } from '../models/product.model';
 import { Payment } from '../models/payment.model';
 import { Delivery } from '../models/delivery.model';
+import Driver from '../models/driver.model';
 import { User } from '../models/user.model';
 import Document from '../models/document.model';
 
@@ -61,9 +62,17 @@ export class OrderRepository extends BaseRepository<Order> {
           as: 'delivery',
           include: [
             {
-              model: User,
+              model: Driver,
               as: 'driver',
-              attributes: ['id', 'full_name', 'phone']
+              attributes: ['id', 'driver_id', 'vehicle_type', 'license_plate', 'driver_type'],
+              include: [
+                {
+                  model: User,
+                  as: 'driverUser',
+                  attributes: ['id', 'full_name', 'phone', 'email'],
+                  required: false,
+                },
+              ],
             }
           ]
         }

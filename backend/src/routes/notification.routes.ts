@@ -1,12 +1,12 @@
 import { Router } from 'express';
 import { query, param, body } from 'express-validator';
-import { authenticate } from '../middleware/auth.middleware';
+import { authenticateAllowPending } from '../middleware/auth.middleware';
 import { validate } from '../middleware/validation.middleware';
 import notificationController from '../controllers/notification.controller';
 
 const router = Router();
 
-router.use(authenticate);
+router.use(authenticateAllowPending);
 
 router.get(
   '/',
@@ -49,4 +49,3 @@ router.delete(
 // router.delete('/clear-all', notificationController.clearAll);
 
 export default router;
-

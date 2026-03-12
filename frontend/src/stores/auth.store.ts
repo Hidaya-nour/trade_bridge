@@ -29,7 +29,6 @@ export interface User {
   status: string;
   phone?: string;
   business_name?: string;
-  business_address?: string;
   tin_number?: string;
   profile_image?: string;
   verified: boolean;

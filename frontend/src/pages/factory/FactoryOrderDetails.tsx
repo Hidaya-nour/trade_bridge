@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo } from "react";
-import { useLocation, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 
 import OrderDetailsView, {
   type OrderDetailsData,
@@ -55,7 +55,6 @@ const mapPaymentStatus = (paymentStatus?: string) => {
 
 const mapOrderToDetails = (
   order: Order,
-  mode: "incoming" | "outgoing",
   drivers: { id: string; name: string; vehicle?: string; available?: boolean }[],
 ) => {
   const items =
@@ -74,28 +73,16 @@ const mapOrderToDetails = (
   const total = order.total_price || subtotal;
   const tax = Math.max(0, total - subtotal);
 
-  const supplierName =
-    order.supplier?.business_name || order.supplier?.full_name || "Supplier";
   const buyerName =
     order.buyer?.business_name || order.buyer?.full_name || "Customer";
 
-  const party =
-    mode === "incoming"
-      ? {
-          id: order.buyer_id,
-          name: buyerName,
-          contact: order.buyer?.full_name,
-        }
-      : {
-          id: order.supplier_id,
-          name: supplierName,
-          contact: order.supplier?.full_name,
-        };
+  const party = {
+    id: order.buyer_id,
+    name: buyerName,
+    contact: order.buyer?.full_name,
+  };
 
-  const recipientName =
-    mode === "incoming"
-      ? buyerName
-      : order.buyer?.business_name || order.buyer?.full_name || "Recipient";
+  const recipientName = buyerName;
 
   const address =
     order.delivery?.dropoff_location ||
@@ -135,24 +122,16 @@ const mapOrderToDetails = (
         (order.delivery as any)?.driver?.driverUser?.phone,
     },
     party,
-    drivers: mode === "incoming" ? drivers : undefined,
-    canAssignDriver: mode === "incoming",
+    drivers,
+    canAssignDriver: true,
     canCancel: true,
-    canReview: mode === "outgoing",
-    canReorder: mode === "outgoing",
   } as OrderDetailsData;
 };
 
-const DistributorOrderDetailsPage: React.FC = () => {
+const FactoryOrderDetailsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const location = useLocation();
   const { currentOrder, fetchOrderById, isLoading, error } = useOrderStore();
   const { drivers, fetchMyDrivers } = useDriverStore();
-
-  const isPurchaseOrder = location.pathname.includes("/purchase-orders/");
-  const mode: "incoming" | "outgoing" = isPurchaseOrder
-    ? "outgoing"
-    : "incoming";
 
   useEffect(() => {
     if (id) {
@@ -161,10 +140,8 @@ const DistributorOrderDetailsPage: React.FC = () => {
   }, [id, fetchOrderById]);
 
   useEffect(() => {
-    if (mode === "incoming") {
-      fetchMyDrivers();
-    }
-  }, [mode, fetchMyDrivers]);
+    fetchMyDrivers();
+  }, [fetchMyDrivers]);
 
   const driverOptions = useMemo(
     () =>
@@ -182,8 +159,8 @@ const DistributorOrderDetailsPage: React.FC = () => {
 
   const orderDetails = useMemo(() => {
     if (!currentOrder) return null;
-    return mapOrderToDetails(currentOrder, mode, driverOptions);
-  }, [currentOrder, mode, driverOptions]);
+    return mapOrderToDetails(currentOrder, driverOptions);
+  }, [currentOrder, driverOptions]);
 
   if (isLoading && !orderDetails) {
     return (
@@ -201,10 +178,9 @@ const DistributorOrderDetailsPage: React.FC = () => {
 
   return (
     <OrderDetailsView
-      key={`${mode}-${orderDetails.id}`}
       initialOrder={orderDetails}
-      mode={mode}
-      partyLabel={mode === "incoming" ? "Customer" : "Supplier"}
+      mode="incoming"
+      partyLabel="Customer"
       onAssignDriver={async (deliveryId, driverId) => {
         try {
           await deliveryService.assignDriver(deliveryId, driverId);
@@ -217,25 +193,12 @@ const DistributorOrderDetailsPage: React.FC = () => {
           throw err;
         }
       }}
-      links={
-        mode === "incoming"
-          ? {
-              party: (buyerId) => `/distributor/retailers/${buyerId}`,
-            }
-          : {
-              party: (supplierId) => `/distributor/suppliers/${supplierId}`,
-              product: (productId) => `/distributor/products/${productId}`,
-              reorder: (orderId) => `/distributor/reorder?order=${orderId}`,
-              message: (supplierId) => `/messages?supplier=${supplierId}`,
-            }
-      }
-      cancelReasonOptions={
-        mode === "incoming"
-          ? ["Out of stock", "Customer request", "Payment issue", "Other"]
-          : undefined
-      }
+      links={{
+        party: (buyerId) => `/factory/distributors/${buyerId}`,
+      }}
+      cancelReasonOptions={["Out of stock", "Customer request", "Payment issue", "Other"]}
     />
   );
 };
 
-export default DistributorOrderDetailsPage;
+export default FactoryOrderDetailsPage;

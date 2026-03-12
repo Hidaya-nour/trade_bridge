@@ -30,7 +30,6 @@ export class SupplierService {
           'phone', 
           'verified', 
           'profile_image',
-          'business_address',
           'created_at'
         ]
       });
@@ -59,7 +58,6 @@ export class SupplierService {
         'phone', 
         'verified', 
         'profile_image',
-        'business_address',
         'created_at'
       ],
       limit: 1

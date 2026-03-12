@@ -137,11 +137,6 @@ const roleNavigation = {
         href: "/distributor/analytics",
         icon: BarChart3,
       },
-      {
-        name: "Supplier Partnerships",
-        href: "/distributor/partners",
-        icon: Users,
-      },
     ],
   },
 
@@ -159,8 +154,8 @@ const roleNavigation = {
       badge: "7",
     },
     {
-      name: "Distributor Partners",
-      href: "/factory/partners",
+      name: "Agents",
+      href: "/factory/agents",
       icon: Warehouse,
     },
     { name: "Demand Forecast", href: "/factory/forecast", icon: TrendingUp },

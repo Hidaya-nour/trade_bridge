@@ -18,7 +18,6 @@ export interface UpdateProfileData {
   full_name?: string;
   phone?: string;
   business_name?: string;
-  business_address?: string;
   tin_number?: string;
   profile_image?: string;
 }

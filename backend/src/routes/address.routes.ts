@@ -1,12 +1,13 @@
 import express from 'express';
 import { AddressController } from '../controllers/address.controller';
-import { authenticate } from '../middleware/auth.middleware';
+import { authenticateAllowPending } from '../middleware/auth.middleware';
 import { validate } from '../middleware/validation.middleware';
 
 const router = express.Router();
 const addrController = new AddressController();
 
-router.use(authenticate);
+// Allow pending users to submit address during verification
+router.use(authenticateAllowPending);
 
 router.post('/', validate(AddressController.createValidation), addrController.create);
 router.get('/', addrController.getUserAddresses);

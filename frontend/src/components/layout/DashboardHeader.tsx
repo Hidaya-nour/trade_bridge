@@ -661,6 +661,22 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ onMenuClick }) => {
         </div>
       </div>
 
+      {user &&
+        (user.role === "factory" || user.role === "distributor") &&
+        !user.verified && (
+          <div className="border-t border-amber-200 bg-amber-50 px-4 py-2 text-xs text-amber-900">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+              <span>
+                Your account is not verified yet. Please upload your business
+                license for admin approval.
+              </span>
+              <Button asChild size="sm" variant="outline">
+                <Link to="/settings?tab=business">Verify account</Link>
+              </Button>
+            </div>
+          </div>
+        )}
+
       {/* Mobile Search */}
       <div className="lg:hidden px-4 pb-3 animate-in slide-in-from-top-2 duration-200">
         <form onSubmit={handleSearch}>

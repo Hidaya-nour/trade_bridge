@@ -45,6 +45,7 @@ const mapOrderToIncoming = (order: Order): IncomingOrder => {
 
   return {
     id: order.id,
+    deliveryId: order.delivery?.id,
     customerId: Number(order.buyer_id) || 0,
     customerName,
     customerContact: order.buyer?.full_name || customerName,
@@ -71,8 +72,15 @@ const mapOrderToIncoming = (order: Order): IncomingOrder => {
       "Payment Proof",
     notes: undefined,
     trackingNumber: undefined,
-    driver: order.delivery?.driver?.full_name,
-    driverId: undefined,
+    driver:
+      (order.delivery as any)?.driver?.full_name ||
+      (order.delivery as any)?.driver?.driverUser?.full_name,
+    driverPhone:
+      (order.delivery as any)?.driver?.phone ||
+      (order.delivery as any)?.driver?.driverUser?.phone,
+    driverId:
+      (order.delivery as any)?.driver?.id ||
+      (order.delivery as any)?.driver?.driver_id,
     deliveredDate: order.delivery?.completed_at,
     cancelledDate: undefined,
     cancellationReason: undefined,
@@ -140,7 +148,9 @@ const FactoryIncomingOrdersPage: React.FC = () => {
       onApproveOrder={(id) => updateOrderStatus(id, { status: "approved" })}
       onRejectOrder={(id, reason) => cancelOrder(id, reason)}
       onProcessOrder={(id) => updateOrderStatus(id, { status: "processing" })}
-      // No onAssignDriver for factory
+      onAssignDriver={async (_orderId, _deliveryId, _driverId) => {
+        await fetchOrdersAsSupplier();
+      }}
     />
   );
 };

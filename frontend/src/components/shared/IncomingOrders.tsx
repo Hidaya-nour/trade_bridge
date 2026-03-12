@@ -73,6 +73,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
+import { Label } from "@/components/ui/label";
 
 import {
   StatusBadge,
@@ -83,6 +84,9 @@ import {
 } from "@/components/shared";
 import { formatPrice, formatDate, formatDateTime } from "@/lib/formatters";
 import { getInitials, cn } from "@/lib/utils";
+import { useDriverStore } from "@/stores/driver.store";
+import deliveryService from "@/services/delivery.service";
+import toast from "react-hot-toast";
 
 // ============================================================================
 // TYPES
@@ -101,6 +105,7 @@ export interface OrderItem {
 
 export interface IncomingOrder {
   id: string;
+  deliveryId?: string;
   customerId: number;
   customerName: string;
   customerContact: string;
@@ -130,7 +135,8 @@ export interface IncomingOrder {
   notes?: string;
   trackingNumber?: string;
   driver?: string;
-  driverId?: number;
+  driverPhone?: string;
+  driverId?: number | string;
   deliveredDate?: string;
   cancelledDate?: string;
   cancellationReason?: string;
@@ -163,7 +169,11 @@ interface IncomingOrdersProps {
   onApproveOrder: (orderId: string) => void;
   onRejectOrder: (orderId: string, reason: string) => void;
   onProcessOrder: (orderId: string) => void;
-  onAssignDriver?: (orderId: string) => void; // Only for distributor
+  onAssignDriver?: (
+    orderId: string,
+    deliveryId: string,
+    driverId: string,
+  ) => void | Promise<void>;
   onConfirmPayment?: (
     orderId: string,
     paymentId: string,
@@ -211,10 +221,43 @@ export const IncomingOrders: React.FC<IncomingOrdersProps> = ({
   const itemsPerPage = 5;
   const [showConfirmPaymentDialog, setShowConfirmPaymentDialog] =
     useState(false);
+  const [showAssignDialog, setShowAssignDialog] = useState(false);
+  const [assigningOrder, setAssigningOrder] = useState<IncomingOrder | null>(
+    null,
+  );
+  const [selectedDriver, setSelectedDriver] = useState("");
+  const [assignLoading, setAssignLoading] = useState(false);
+
+  const {
+    drivers,
+    fetchMyDrivers,
+    isLoading: driversLoading,
+    error: driversError,
+  } = useDriverStore();
+
+  const driverOptions = React.useMemo(
+    () =>
+      drivers
+        .filter((d) => d.active)
+        .map((d) => ({
+          id: d.driver_id,
+          name: d.driver?.full_name ?? "Driver",
+          phone: d.driver?.phone ?? "",
+          vehicleType: d.vehicle_type || "Vehicle",
+          licensePlate: d.license_plate || "",
+        })),
+    [drivers],
+  );
 
   useEffect(() => {
     setOrders(initialOrders);
   }, [initialOrders]);
+
+  useEffect(() => {
+    if (config.role === "distributor" || config.role === "factory") {
+      fetchMyDrivers();
+    }
+  }, [config.role, fetchMyDrivers]);
 
   // Filter orders
   const filteredOrders = orders.filter((order) => {
@@ -302,6 +345,48 @@ export const IncomingOrders: React.FC<IncomingOrdersProps> = ({
     );
     setShowConfirmPaymentDialog(false);
     setSelectedOrder(null);
+  };
+
+  const openAssignDialog = (order: IncomingOrder) => {
+    setAssigningOrder(order);
+    setSelectedDriver("");
+    setShowAssignDialog(true);
+  };
+
+  const handleAssignDriver = async () => {
+    if (!assigningOrder?.deliveryId || !selectedDriver) return;
+    const driver = driverOptions.find((d) => d.id === selectedDriver);
+    if (!driver) return;
+
+    setAssignLoading(true);
+    try {
+      await deliveryService.assignDriver(assigningOrder.deliveryId, selectedDriver);
+      setOrders((prev) =>
+        prev.map((o) =>
+          o.id === assigningOrder.id
+            ? {
+                ...o,
+                driver: driver.name,
+                driverPhone: driver.phone,
+                driverId: selectedDriver,
+              }
+            : o,
+        ),
+      );
+      if (onAssignDriver) {
+        await onAssignDriver(assigningOrder.id, assigningOrder.deliveryId, selectedDriver);
+      }
+      toast.success(`Driver ${driver.name} assigned.`);
+      setShowAssignDialog(false);
+      setAssigningOrder(null);
+    } catch (err: any) {
+      toast.error(
+        err?.response?.data?.message ||
+          "Failed to assign driver. Please try again.",
+      );
+    } finally {
+      setAssignLoading(false);
+    }
   };
 
   const statsData = [
@@ -595,6 +680,12 @@ export const IncomingOrders: React.FC<IncomingOrdersProps> = ({
                         New {config.customerLabel}
                       </Badge>
                     )}
+                    {order.driver && (
+                      <Badge variant="outline" className="bg-purple-50">
+                        <Truck className="h-3 w-3 mr-1" />
+                        Driver: {order.driver}
+                      </Badge>
+                    )}
                   </div>
 
                   <div className="flex items-center gap-2 flex-wrap">
@@ -638,19 +729,16 @@ export const IncomingOrders: React.FC<IncomingOrdersProps> = ({
                     )}
 
                     {order.status === "processing" &&
-                      config.role === "distributor" &&
-                      onAssignDriver && (
+                      (config.role === "distributor" ||
+                        config.role === "factory") &&
+                      order.deliveryId && (
                         <Button
                           size="sm"
                           className="bg-purple-600 hover:bg-purple-700"
-                          asChild
+                          onClick={() => openAssignDialog(order)}
                         >
-                          <Link
-                            to={`/${config.role}/delivery/assign/${order.id}`}
-                          >
-                            <Truck className="h-4 w-4 mr-2" />
-                            Assign Driver
-                          </Link>
+                          <Truck className="h-4 w-4 mr-2" />
+                          {order.driver ? "Change Driver" : "Assign Driver"}
                         </Button>
                       )}
 
@@ -1163,6 +1251,73 @@ export const IncomingOrders: React.FC<IncomingOrdersProps> = ({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Assign Driver Dialog */}
+      <Dialog open={showAssignDialog} onOpenChange={setShowAssignDialog}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Assign Driver</DialogTitle>
+            <DialogDescription>
+              {assigningOrder?.id
+                ? `Select a driver for order ${assigningOrder.id}`
+                : "Select a driver for this order"}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Available Drivers</Label>
+              {driversLoading && driverOptions.length === 0 ? (
+                <div className="rounded-md border border-muted p-3 text-sm text-muted-foreground">
+                  Loading your drivers...
+                </div>
+              ) : driverOptions.length === 0 ? (
+                <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                  No drivers linked yet. Add drivers in the Delivery page to
+                  assign them here.
+                </div>
+              ) : (
+                <Select value={selectedDriver} onValueChange={setSelectedDriver}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Choose a driver" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {driverOptions.map((driver) => (
+                      <SelectItem key={driver.id} value={driver.id}>
+                        <div className="flex items-center justify-between w-full">
+                          <span>{driver.name}</span>
+                          <span className="text-xs text-muted-foreground ml-2">
+                            {driver.vehicleType} • {driver.licensePlate}
+                          </span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+              {driversError && (
+                <p className="text-xs text-red-600">{driversError}</p>
+              )}
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowAssignDialog(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleAssignDriver}
+              disabled={!selectedDriver || assignLoading || driverOptions.length === 0}
+              className="bg-purple-600 hover:bg-purple-700"
+            >
+              Assign Driver
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

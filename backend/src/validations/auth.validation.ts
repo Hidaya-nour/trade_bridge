@@ -62,7 +62,6 @@ export const updateProfileSchema = Joi.object({
   full_name: Joi.string().min(2).max(100).optional(),
   phone: Joi.string().allow('', null).optional(),
   business_name: Joi.string().allow('', null).optional(),
-  business_address: Joi.string().allow('', null).optional(),
   tin_number: Joi.string().allow('', null).optional(),
   profile_image: Joi.string().uri().allow('', null).optional()
 }).min(1).messages({

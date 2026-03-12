@@ -1,4 +1,5 @@
 import { DocumentRepository } from '../../repositories/document.repository';
+import { UserRepository } from '../../repositories/user.repository';
 import { AppError } from '../../utils/errors';
 import { IDocument } from '../../types/document.types';
 import logger from '../../utils/logger';
@@ -6,6 +7,7 @@ import { isCloudinaryConfigured, uploadBufferToCloudinary } from '../../config/c
 
 export class DocumentService {
   private docRepo = new DocumentRepository();
+  private userRepo = new UserRepository();
 
   async uploadDocument(data: Partial<IDocument>, file: Express.Multer.File): Promise<IDocument> {
     if (!data.user_id || !data.document_type) {
@@ -56,6 +58,17 @@ export class DocumentService {
     const doc = await this.getDocumentById(id);
     if (!doc) throw new AppError('Document not found', 404);
 
-    return this.docRepo.update(id, { verification_status: status, verified_by: verifiedBy || null, rejection_reason: reason || null, reviewed_at: new Date() } as any);
+    const updated = await this.docRepo.update(id, { verification_status: status, verified_by: verifiedBy || null, rejection_reason: reason || null, reviewed_at: new Date() } as any);
+
+    // If a business license is verified for factory/distributor, approve the account.
+    if (status === 'verified' && doc.document_type === 'business_license' && doc.user_id) {
+      const user = await this.userRepo.findById(doc.user_id);
+      if (user && ['factory', 'distributor'].includes(user.role)) {
+        await this.userRepo.approveUser(user.id, verifiedBy || user.id);
+        logger.info(`User ${user.id} approved after license verification.`);
+      }
+    }
+
+    return updated;
   }
 }

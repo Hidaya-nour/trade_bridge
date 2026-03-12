@@ -1,6 +1,6 @@
 import express from 'express';
 import { OrderController } from '../controllers/order.controller';
-import { authenticate, authorize } from '../middleware/auth.middleware';
+import { authenticate, authorize, requireVerifiedSupplier } from '../middleware/auth.middleware';
 import { validate } from '../middleware/validation.middleware';
 import { body, param, query } from 'express-validator';
 
@@ -101,6 +101,7 @@ router.post(
 router.patch(
   '/:id/status',
   authorize('distributor', 'factory', 'admin'),
+  requireVerifiedSupplier,
   validate(updateStatusValidation),
   orderController.updateOrderStatus
 );

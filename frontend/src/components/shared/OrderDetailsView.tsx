@@ -61,6 +61,7 @@ import { StatusBadge } from "@/components/shared";
 import OrderTrackingDialog from "@/components/shared/OrderTrackingDialog";
 import { formatPrice, formatDate, formatDateTime } from "@/lib/formatters";
 import { getInitials, cn } from "@/lib/utils";
+import toast from "react-hot-toast";
 
 export type OrderStatus =
   | "pending"
@@ -107,9 +108,11 @@ export type OrderDriver = {
   name: string;
   vehicle?: string;
   available?: boolean;
+  phone?: string;
 };
 
 export type OrderDelivery = {
+  deliveryId?: string;
   address: string;
   recipient: string;
   phone: string;
@@ -160,6 +163,7 @@ type OrderDetailsViewProps = {
   partyLabel: string;
   links?: OrderDetailsLinks;
   cancelReasonOptions?: string[];
+  onAssignDriver?: (deliveryId: string, driverId: string) => Promise<void>;
 };
 
 const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
@@ -168,6 +172,7 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
   partyLabel,
   links,
   cancelReasonOptions,
+  onAssignDriver,
 }) => {
   const navigate = useNavigate();
   const [order, setOrder] = useState<OrderDetailsData>(initialOrder);
@@ -181,6 +186,7 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
   const [rating, setRating] = useState(5);
   const [review, setReview] = useState("");
   const [showTrackingDialog, setShowTrackingDialog] = useState(false);
+  const [assignLoading, setAssignLoading] = useState(false);
 
   useEffect(() => {
     setOrder(initialOrder);
@@ -226,22 +232,45 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
     setShowStatusDialog(false);
   };
 
-  const assignDriver = () => {
+  const assignDriver = async () => {
     const driver = order.drivers?.find(
       (d) => d.id.toString() === selectedDriver,
     );
     if (driver) {
-      setOrder({
-        ...order,
-        delivery: {
-          ...order.delivery,
-          driverId: driver.id,
-          driverName: driver.name,
-          driverPhone: "+251 91 234 5678",
-          trackingNumber: `TRK-${order.id}-01`,
-        },
-        status: "shipped",
-      });
+      if (onAssignDriver && order.delivery?.deliveryId) {
+        setAssignLoading(true);
+        try {
+          await onAssignDriver(order.delivery.deliveryId, driver.id.toString());
+          setOrder({
+            ...order,
+            delivery: {
+              ...order.delivery,
+              driverId: driver.id,
+              driverName: driver.name,
+              driverPhone: driver.phone,
+            },
+          });
+          toast.success(`Driver ${driver.name} assigned.`);
+        } catch (err: any) {
+          toast.error(
+            err?.response?.data?.message ||
+              "Failed to assign driver. Please try again.",
+          );
+          return;
+        } finally {
+          setAssignLoading(false);
+        }
+      } else {
+        setOrder({
+          ...order,
+          delivery: {
+            ...order.delivery,
+            driverId: driver.id,
+            driverName: driver.name,
+            driverPhone: driver.phone,
+          },
+        });
+      }
     }
     setShowAssignDialog(false);
   };
@@ -691,7 +720,7 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                     onClick={() => setShowAssignDialog(true)}
                   >
                     <Truck className="mr-2 h-4 w-4" />
-                    Assign Driver
+                    {order.delivery.driverName ? "Change Driver" : "Assign Driver"}
                   </Button>
                 )}
 
@@ -824,7 +853,10 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
             >
               Cancel
             </Button>
-            <Button onClick={assignDriver} disabled={!selectedDriver}>
+            <Button
+              onClick={assignDriver}
+              disabled={!selectedDriver || assignLoading}
+            >
               Assign Driver
             </Button>
           </DialogFooter>

@@ -13,7 +13,6 @@ export class User extends Model<IUser, UserCreationAttributes> implements IUser 
   public phone?: string;
   public password_hash!: string;
   public business_name?: string;
-  public business_address?: string;
   public tin_number?: string;
   public profile_image?: string;
   public verified!: boolean;
@@ -63,10 +62,6 @@ User.init(
     },
     business_name: {
       type: DataTypes.STRING(100),
-      allowNull: true,
-    },
-    business_address: {
-      type: DataTypes.TEXT,
       allowNull: true,
     },
     tin_number: {

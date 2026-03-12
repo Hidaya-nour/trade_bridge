@@ -10,7 +10,6 @@ export interface IUser {
   phone?: string;
   password_hash: string;
   business_name?: string;
-  business_address?: string;
   tin_number?: string;
   profile_image?: string;
   verified: boolean;

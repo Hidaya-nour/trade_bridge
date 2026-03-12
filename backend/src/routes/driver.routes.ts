@@ -1,12 +1,12 @@
 import { Router } from 'express';
-import { authenticate, authorize } from '../middleware/auth.middleware';
+import { authenticate, authorize, requireVerifiedSupplier } from '../middleware/auth.middleware';
 import driverController from '../controllers/driver.controller';
 import { validate } from '../middleware/validation.middleware';
 
 const router = Router();
 
 // Only authenticated factory / distributor users manage their drivers
-router.use(authenticate, authorize('factory', 'distributor'));
+router.use(authenticate, requireVerifiedSupplier, authorize('factory', 'distributor'));
 
 router.get('/', driverController.list);
 router.get('/available-drivers', driverController.getAvailableDrivers);
@@ -27,4 +27,3 @@ router.delete(
 );
 
 export default router;
-
