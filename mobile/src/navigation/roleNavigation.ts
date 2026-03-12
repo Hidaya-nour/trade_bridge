@@ -4,6 +4,7 @@ export interface SidebarNavItem {
   label: string;
   href: string;
   icon: string;
+  section?: string;
 }
 
 export const roleDefaultRoute: Record<UserRole, string> = {
@@ -25,14 +26,31 @@ export const roleSidebarNavigation: Record<UserRole, SidebarNavItem[]> = {
   ],
   retailer: [
     { label: "Dashboard", href: "/retailer/dashboard", icon: "grid-outline" },
-    { label: "Products", href: "/retailer/products", icon: "storefront-outline" },
-    { label: "Suppliers", href: "/retailer/suppliers", icon: "business-outline" },
-    { label: "Orders", href: "/retailer/orders", icon: "receipt-outline" },
-    { label: "Cart", href: "/retailer/cart", icon: "cart-outline" },
-    { label: "Compare", href: "/retailer/compare", icon: "git-compare-outline" },
+    { label: "Browse Products", href: "/retailer/products", icon: "storefront-outline" },
+    { label: "Browse Suppliers", href: "/retailer/suppliers", icon: "trending-up-outline" },
+    { label: "My Orders", href: "/retailer/orders", icon: "cube-outline" },
+    { label: "Shopping Cart", href: "/retailer/cart", icon: "cart-outline" },
+    { label: "Analytics", href: "/retailer/analytics", icon: "bar-chart-outline" },
   ],
   distributor: [
-    { label: "Dashboard", href: "/distributor/dashboard", icon: "grid-outline" },
+    // Main
+    { section: "Main Menu", label: "Dashboard", href: "/distributor/dashboard", icon: "grid-outline" },
+    { section: "Main Menu", label: "Manage Products", href: "/distributor/products", icon: "cube-outline" },
+    { section: "Main Menu", label: "Inventory", href: "/distributor/inventory", icon: "home-outline" },
+
+    // Retail Operations
+    { section: "Retail Operations", label: "Retailer Orders", href: "/distributor/orders", icon: "cart-outline" },
+    { section: "Retail Operations", label: "Delivery Management", href: "/distributor/delivery", icon: "car-outline" },
+    { section: "Retail Operations", label: "Broadcast Promotions", href: "/distributor/promotions", icon: "trending-up-outline" },
+
+    // Purchasing
+    { section: "Purchasing", label: "Purchase Products", href: "/distributor/browse-products", icon: "business-outline" },
+    { section: "Purchasing", label: "Purchase Cart", href: "/distributor/cart", icon: "cart-outline" },
+    { section: "Purchasing", label: "Purchase Orders", href: "/distributor/purchase-orders", icon: "document-text-outline" },
+
+    // Analytics
+    { section: "Analytics", label: "Sales Analytics", href: "/distributor/analytics", icon: "bar-chart-outline" },
+    { section: "Analytics", label: "Supplier Partnerships", href: "/distributor/partners", icon: "people-outline" },
   ],
   factory: [
     { label: "Dashboard", href: "/factory/dashboard", icon: "grid-outline" },
