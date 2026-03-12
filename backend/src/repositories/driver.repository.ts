@@ -14,7 +14,7 @@ export class DriverRepository extends BaseRepository<Driver> {
       include: [
         {
           model: User,
-          as: 'driver',
+          as: 'driverUser',
           attributes: ['id', 'full_name', 'phone', 'email'],
           required: false,
         },
@@ -26,4 +26,3 @@ export class DriverRepository extends BaseRepository<Driver> {
     return this.findOne({ supplier_id: supplierId, driver_id: driverId } as any);
   }
 }
-

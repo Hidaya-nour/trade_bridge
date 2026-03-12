@@ -120,6 +120,7 @@ export interface IncomingOrder {
     | "shipped"
     | "delivered"
     | "cancelled";
+  paymentId?: string;
   paymentStatus: string;
   paymentMethod: string;
   paymentAmount?: number;
@@ -163,6 +164,11 @@ interface IncomingOrdersProps {
   onRejectOrder: (orderId: string, reason: string) => void;
   onProcessOrder: (orderId: string) => void;
   onAssignDriver?: (orderId: string) => void; // Only for distributor
+  onConfirmPayment?: (
+    orderId: string,
+    paymentId: string,
+    amountPaid?: number,
+  ) => void;
 }
 
 // ============================================================================
@@ -189,6 +195,7 @@ export const IncomingOrders: React.FC<IncomingOrdersProps> = ({
   onRejectOrder,
   onProcessOrder,
   onAssignDriver,
+  onConfirmPayment,
 }) => {
   const [orders, setOrders] = useState<IncomingOrder[]>(initialOrders);
   const [searchQuery, setSearchQuery] = useState("");
@@ -202,6 +209,8 @@ export const IncomingOrders: React.FC<IncomingOrdersProps> = ({
   const [rejectionReason, setRejectionReason] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
+  const [showConfirmPaymentDialog, setShowConfirmPaymentDialog] =
+    useState(false);
 
   useEffect(() => {
     setOrders(initialOrders);
@@ -270,6 +279,29 @@ export const IncomingOrders: React.FC<IncomingOrdersProps> = ({
     setOrders((prev) =>
       prev.map((o) => (o.id === orderId ? { ...o, status: "processing" } : o)),
     );
+  };
+
+  const handleConfirmPayment = () => {
+    if (!selectedOrder?.paymentId || !onConfirmPayment) return;
+    const amountPaid =
+      typeof selectedOrder.paymentAmount === "number"
+        ? selectedOrder.paymentAmount
+        : selectedOrder.paymentPaid;
+    onConfirmPayment(selectedOrder.id, selectedOrder.paymentId, amountPaid);
+    setOrders((prev) =>
+      prev.map((o) =>
+        o.id === selectedOrder.id
+          ? {
+              ...o,
+              paymentStatus: "paid",
+              paymentPaid:
+                typeof amountPaid === "number" ? amountPaid : o.paymentPaid,
+            }
+          : o,
+      ),
+    );
+    setShowConfirmPaymentDialog(false);
+    setSelectedOrder(null);
   };
 
   const statsData = [
@@ -856,6 +888,78 @@ export const IncomingOrders: React.FC<IncomingOrdersProps> = ({
                   </div>
                 )}
 
+                {(selectedOrder.paymentId || selectedOrder.paymentProofUrl) && (
+                  <div className="space-y-3">
+                    <h4 className="text-sm font-medium">Payment Details</h4>
+                    <div className="bg-muted/50 rounded-lg p-3 space-y-2">
+                      <div className="flex justify-between">
+                        <span className="text-xs text-muted-foreground">
+                          Method
+                        </span>
+                        <span className="text-xs font-medium">
+                          {selectedOrder.paymentMethod}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-xs text-muted-foreground">
+                          Status
+                        </span>
+                        <span className="text-xs font-medium">
+                          {selectedOrder.paymentStatus}
+                        </span>
+                      </div>
+                      {typeof selectedOrder.paymentAmount === "number" && (
+                        <div className="flex justify-between">
+                          <span className="text-xs text-muted-foreground">
+                            Amount Due
+                          </span>
+                          <span className="text-xs font-medium">
+                            {formatPrice(selectedOrder.paymentAmount)}
+                          </span>
+                        </div>
+                      )}
+                      {typeof selectedOrder.paymentPaid === "number" && (
+                        <div className="flex justify-between">
+                          <span className="text-xs text-muted-foreground">
+                            Amount Paid
+                          </span>
+                          <span className="text-xs font-medium">
+                            {formatPrice(selectedOrder.paymentPaid)}
+                          </span>
+                        </div>
+                      )}
+                      {selectedOrder.paymentProofUrl && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 text-xs"
+                          asChild
+                        >
+                          <a
+                            href={selectedOrder.paymentProofUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            View Proof Document
+                          </a>
+                        </Button>
+                      )}
+                      {onConfirmPayment &&
+                        selectedOrder.paymentId &&
+                        selectedOrder.paymentStatus !== "paid" &&
+                        selectedOrder.paymentStatus !== "refunded" && (
+                          <Button
+                            size="sm"
+                            className="bg-emerald-600 hover:bg-emerald-700"
+                            onClick={() => setShowConfirmPaymentDialog(true)}
+                          >
+                            Confirm Payment
+                          </Button>
+                        )}
+                    </div>
+                  </div>
+                )}
+
                 {selectedOrder.cancellationReason && (
                   <div className="space-y-3">
                     <h4 className="text-sm font-medium text-red-600">
@@ -1025,6 +1129,36 @@ export const IncomingOrders: React.FC<IncomingOrdersProps> = ({
               disabled={!rejectionReason}
             >
               Reject Order
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Confirm Payment Dialog */}
+      <AlertDialog
+        open={showConfirmPaymentDialog}
+        onOpenChange={setShowConfirmPaymentDialog}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Payment</AlertDialogTitle>
+            <AlertDialogDescription>
+              Confirm that payment has been received for order{" "}
+              {selectedOrder?.id}.
+              {typeof selectedOrder?.paymentAmount === "number" && (
+                <div className="mt-3 text-sm">
+                  Amount Due: {formatPrice(selectedOrder.paymentAmount)}
+                </div>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmPayment}
+              className="bg-emerald-600 hover:bg-emerald-700"
+            >
+              Mark as Paid
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

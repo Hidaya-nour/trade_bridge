@@ -8,10 +8,11 @@ class DriverController {
   async create(req: Request, res: Response): Promise<any> {
     try {
       const supplierId = (req as any).user.id as string;
-      const { driver_id, vehicle_type, license_plate } = req.body;
+      const { driver_id, driver_type, vehicle_type, license_plate } = req.body;
 
       const record = await driverService.addDriverToSupplier(supplierId, {
         driver_id,
+        driver_type,
         vehicle_type,
         license_plate,
       });
@@ -30,11 +31,15 @@ class DriverController {
     try {
       const supplierId = (req as any).user.id as string;
       const rows = await driverService.listDrivers(supplierId);
-      // Serialize to plain objects so nested `driver` (User) is included for frontend
+      // Serialize to plain objects so nested driver user is included for frontend
       const drivers = (rows as any[]).map((r) => {
         const plain = typeof r.get === 'function' ? r.get({ plain: true }) : { ...r };
-        if (plain.driver && typeof (plain.driver as any).get === 'function') {
-          plain.driver = (plain.driver as any).get({ plain: true });
+        if (plain.driverUser && typeof (plain.driverUser as any).get === 'function') {
+          plain.driverUser = (plain.driverUser as any).get({ plain: true });
+        }
+        // Preserve API shape expected by frontend
+        if (plain.driverUser && !plain.driver) {
+          plain.driver = plain.driverUser;
         }
         return plain;
       });
@@ -96,6 +101,7 @@ class DriverController {
 
   static createValidation = [
     body('driver_id').isUUID().withMessage('driver_id must be a valid UUID'),
+    body('driver_type').optional().isString().isLength({ max: 50 }),
     body('vehicle_type').optional().isString().isLength({ max: 100 }),
     body('license_plate').optional().isString().isLength({ max: 50 }),
   ];
@@ -104,4 +110,3 @@ class DriverController {
 }
 
 export default new DriverController();
-

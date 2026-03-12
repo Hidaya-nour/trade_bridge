@@ -450,7 +450,7 @@ export const DeliveryManagement: React.FC<DeliveryManagementProps> = ({
     fetchMyDrivers();
   }, [config.hasDrivers, fetchMyDrivers]);
 
-  // Map API supplier-drivers into Driver shape for list and assign dropdown
+  // Map API drivers into Driver shape for list and assign dropdown
   useEffect(() => {
     if (!config.hasDrivers) return;
     const mapped: Driver[] = Drivers.filter((d) => d.active).map((d) => ({

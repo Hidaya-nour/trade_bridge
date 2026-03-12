@@ -19,7 +19,7 @@ export interface Driver {
 }
 
 class DriverService {
-  private readonly BASE_PATH = "/supplier-drivers";
+  private readonly BASE_PATH = "/drivers";
 
   async getMyDrivers(): Promise<{ drivers: Driver[] }> {
     const response = await api.get(this.BASE_PATH);

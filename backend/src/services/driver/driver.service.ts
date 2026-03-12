@@ -26,6 +26,7 @@ export class DriverService {
     const created = await this.DriverRepo.create({
       supplier_id: supplierId,
       driver_id: data.driver_id,
+      driver_type: data.driver_type,
       vehicle_type: data.vehicle_type,
       license_plate: data.license_plate,
       active: true,
@@ -73,4 +74,3 @@ export class DriverService {
 }
 
 export default new DriverService();
-

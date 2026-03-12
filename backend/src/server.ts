@@ -165,8 +165,8 @@ const startServer = async () => {
   }
 
   if (process.env.NODE_ENV === 'development') {
-  await sequelize.sync()
-    logger.info('✅ Database synced');
+    await sequelize.sync({ alter: true });
+    logger.info('✅ Database synced (alter)');
   }
 
   app.listen(PORT, () => {

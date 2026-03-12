@@ -4,8 +4,10 @@ import {
   type IncomingOrder,
 } from "@/components/shared/IncomingOrders";
 import { Store } from "lucide-react";
+import toast from "react-hot-toast";
 
 import { useOrderStore } from "@/stores/order.store";
+import paymentService from "@/services/payment.service";
 import type { Order } from "@/types/order.types";
 
 const mapPaymentStatus = (status?: string) => {
@@ -60,6 +62,7 @@ const mapOrderToIncoming = (order: Order): IncomingOrder => {
     tax,
     total,
     status: order.order_status,
+    paymentId: order.payment?.id,
     paymentStatus: mapPaymentStatus(order.payment?.payment_status),
     paymentMethod: order.payment?.payment_method || "N/A",
     paymentAmount: Number((order.payment as any)?.total_amount) || undefined,
@@ -93,6 +96,23 @@ const DistributorIncomingOrdersPage: React.FC = () => {
   useEffect(() => {
     fetchOrdersAsSupplier();
   }, [fetchOrdersAsSupplier]);
+
+  const handleConfirmPayment = async (
+    orderId: string,
+    paymentId: string,
+    amountPaid?: number,
+  ) => {
+    const toastId = toast.loading("Confirming payment...");
+    try {
+      await paymentService.updateStatus(paymentId, "completed", amountPaid);
+      await fetchOrdersAsSupplier();
+      toast.success("Payment marked as completed", { id: toastId });
+    } catch (error: any) {
+      toast.error(error?.message || "Failed to confirm payment", {
+        id: toastId,
+      });
+    }
+  };
 
   const orders = useMemo(
     () => (storeOrders as Order[]).map(mapOrderToIncoming),
@@ -138,6 +158,7 @@ const DistributorIncomingOrdersPage: React.FC = () => {
       onRejectOrder={(id, reason) => cancelOrder(id, reason)}
       onProcessOrder={(id) => updateOrderStatus(id, { status: "processing" })}
       onAssignDriver={(id) => console.log("Assign driver", id)}
+      onConfirmPayment={handleConfirmPayment}
     />
   );
 };
