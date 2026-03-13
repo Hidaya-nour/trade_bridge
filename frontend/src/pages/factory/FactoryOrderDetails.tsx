@@ -1,14 +1,13 @@
 import React, { useEffect, useMemo } from "react";
 import { useParams } from "react-router-dom";
 
-import OrderDetailsView, {
-  type OrderDetailsData,
-} from "@/components/shared/OrderDetailsView";
+import OrderDetailsView from "@/features/order/OrderDetailsView";
 import { useOrderStore } from "@/stores/order.store";
 import { useDriverStore } from "@/stores/driver.store";
 import deliveryService from "@/services/delivery.service";
 import toast from "react-hot-toast";
-import type { Order, OrderStatus } from "@/types/order.types";
+import type { Order, OrderStatus, OrderDetailsData } from "@/types/order.types";
+import { WithAsync } from "@/components/shared/WithAsync";
 
 const statusIndex: Record<OrderStatus, number> = {
   pending: 0,
@@ -55,7 +54,12 @@ const mapPaymentStatus = (paymentStatus?: string) => {
 
 const mapOrderToDetails = (
   order: Order,
-  drivers: { id: string; name: string; vehicle?: string; available?: boolean }[],
+  drivers: {
+    id: string;
+    name: string;
+    vehicle?: string;
+    available?: boolean;
+  }[],
 ) => {
   const items =
     order.items?.map((item) => ({
@@ -162,42 +166,49 @@ const FactoryOrderDetailsPage: React.FC = () => {
     return mapOrderToDetails(currentOrder, driverOptions);
   }, [currentOrder, driverOptions]);
 
-  if (isLoading && !orderDetails) {
-    return (
-      <div className="p-6 text-sm text-muted-foreground">Loading order...</div>
-    );
-  }
-
-  if (!orderDetails) {
-    return (
-      <div className="p-6 text-sm text-muted-foreground">
-        {error || "Order not found."}
-      </div>
-    );
-  }
+  const resolvedError =
+    !isLoading && !orderDetails ? error || "Order not found." : null;
 
   return (
-    <OrderDetailsView
-      initialOrder={orderDetails}
-      mode="incoming"
-      partyLabel="Customer"
-      onAssignDriver={async (deliveryId, driverId) => {
-        try {
-          await deliveryService.assignDriver(deliveryId, driverId);
-          await fetchOrderById(orderDetails.id);
-        } catch (err: any) {
-          toast.error(
-            err?.response?.data?.message ||
-              "Failed to assign driver. Please try again.",
-          );
-          throw err;
-        }
-      }}
-      links={{
-        party: (buyerId) => `/factory/distributors/${buyerId}`,
-      }}
-      cancelReasonOptions={["Out of stock", "Customer request", "Payment issue", "Other"]}
-    />
+    <WithAsync
+      isLoading={isLoading && !orderDetails}
+      error={resolvedError}
+      loadingComponent={
+        <div className="p-6 text-sm text-muted-foreground">
+          Loading order...
+        </div>
+      }
+      errorComponent={
+        <div className="p-6 text-sm text-muted-foreground">{resolvedError}</div>
+      }
+    >
+      <OrderDetailsView
+        initialOrder={orderDetails as OrderDetailsData}
+        mode="incoming"
+        partyLabel="Customer"
+        onAssignDriver={async (deliveryId, driverId) => {
+          try {
+            await deliveryService.assignDriver(deliveryId, driverId);
+            await fetchOrderById(orderDetails!.id);
+          } catch (err: any) {
+            toast.error(
+              err?.response?.data?.message ||
+                "Failed to assign driver. Please try again.",
+            );
+            throw err;
+          }
+        }}
+        links={{
+          party: (buyerId) => `/factory/distributors/${buyerId}`,
+        }}
+        cancelReasonOptions={[
+          "Out of stock",
+          "Customer request",
+          "Payment issue",
+          "Other",
+        ]}
+      />
+    </WithAsync>
   );
 };
 

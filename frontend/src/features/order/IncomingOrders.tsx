@@ -81,83 +81,16 @@ import {
   EmptyState,
   PaginationBar,
   SearchFilter,
-} from "@/components/shared";
+} from "@/components";
 import { formatPrice, formatDate, formatDateTime } from "@/lib/formatters";
 import { getInitials, cn } from "@/lib/utils";
 import { useDriverStore } from "@/stores/driver.store";
 import deliveryService from "@/services/delivery.service";
 import toast from "react-hot-toast";
-
-// ============================================================================
-// TYPES
-// ============================================================================
-
-export type OrderRole = "distributor" | "factory";
-
-export interface OrderItem {
-  name: string;
-  sku: string;
-  quantity: number;
-  unit: string;
-  price: number;
-  total: number;
-}
-
-export interface IncomingOrder {
-  id: string;
-  deliveryId?: string;
-  customerId: number;
-  customerName: string;
-  customerContact: string;
-  customerPhone: string;
-  customerLocation: string;
-  orderDate: string;
-  requestedDelivery: string;
-  items: OrderItem[];
-  subtotal: number;
-  shipping: number;
-  tax: number;
-  total: number;
-  status:
-    | "pending"
-    | "processing"
-    | "approved"
-    | "shipped"
-    | "delivered"
-    | "cancelled";
-  paymentId?: string;
-  paymentStatus: string;
-  paymentMethod: string;
-  paymentAmount?: number;
-  paymentPaid?: number;
-  paymentProofUrl?: string;
-  paymentProofName?: string;
-  notes?: string;
-  trackingNumber?: string;
-  driver?: string;
-  driverPhone?: string;
-  driverId?: number | string;
-  deliveredDate?: string;
-  cancelledDate?: string;
-  cancellationReason?: string;
-  customerRating: number | null;
-  previousOrders: number;
-}
-
-export interface IncomingOrdersConfig {
-  role: OrderRole;
-  title: string;
-  description: string;
-  customerLabel: string; // "Retailer" or "Distributor"
-  customerPath: string; // "/retailers" or "/distributors"
-  icon: React.ElementType; // Store or Factory
-  stats: {
-    pending: number;
-    processing: number;
-    approved: number;
-    totalRevenue: number;
-  };
-}
+import type {
+  IncomingOrder,
+  IncomingOrdersConfig,
+} from "@/types/order.types";
 
 // ============================================================================
 // PROPS
@@ -360,7 +293,10 @@ export const IncomingOrders: React.FC<IncomingOrdersProps> = ({
 
     setAssignLoading(true);
     try {
-      await deliveryService.assignDriver(assigningOrder.deliveryId, selectedDriver);
+      await deliveryService.assignDriver(
+        assigningOrder.deliveryId,
+        selectedDriver,
+      );
       setOrders((prev) =>
         prev.map((o) =>
           o.id === assigningOrder.id
@@ -374,7 +310,11 @@ export const IncomingOrders: React.FC<IncomingOrdersProps> = ({
         ),
       );
       if (onAssignDriver) {
-        await onAssignDriver(assigningOrder.id, assigningOrder.deliveryId, selectedDriver);
+        await onAssignDriver(
+          assigningOrder.id,
+          assigningOrder.deliveryId,
+          selectedDriver,
+        );
       }
       toast.success(`Driver ${driver.name} assigned.`);
       setShowAssignDialog(false);
@@ -1277,7 +1217,10 @@ export const IncomingOrders: React.FC<IncomingOrdersProps> = ({
                   assign them here.
                 </div>
               ) : (
-                <Select value={selectedDriver} onValueChange={setSelectedDriver}>
+                <Select
+                  value={selectedDriver}
+                  onValueChange={setSelectedDriver}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Choose a driver" />
                   </SelectTrigger>
@@ -1310,7 +1253,9 @@ export const IncomingOrders: React.FC<IncomingOrdersProps> = ({
             </Button>
             <Button
               onClick={handleAssignDriver}
-              disabled={!selectedDriver || assignLoading || driverOptions.length === 0}
+              disabled={
+                !selectedDriver || assignLoading || driverOptions.length === 0
+              }
               className="bg-purple-600 hover:bg-purple-700"
             >
               Assign Driver

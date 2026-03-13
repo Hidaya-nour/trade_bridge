@@ -41,7 +41,7 @@ import {
   SectionHeader,
   StatusBadge,
   WelcomeHeader,
-} from "@/components/shared";
+} from "@/components";
 import { formatPrice, formatCompactPrice, formatDate } from "@/lib/formatters";
 import { getInitials } from "@/lib/utils";
 import { useAuthStore } from "@/stores/auth.store";

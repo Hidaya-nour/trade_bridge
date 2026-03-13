@@ -1,5 +1,5 @@
 import React from "react";
-import { BroadcastPage } from "@/components/shared";
+import { BroadcastPage } from "@/components";
 import { promotions, retailerSegments } from "./data";
 
 const DistributorBroadcastPage: React.FC = () => {

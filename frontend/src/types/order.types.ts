@@ -90,8 +90,10 @@ export type OrderDriver = {
   name: string;
   vehicle?: string;
   available?: boolean;
+  phone?: string;
 };
 export type OrderDelivery = {
+  deliveryId?: string;
   address: string;
   recipient: string;
   phone: string;
@@ -104,12 +106,123 @@ export type OrderDelivery = {
   driverName?: string | null;
   driverPhone?: string | null;
 };
+
+// UI-focused order details types
+export type OrderDetailsPaymentStatus =
+  | "pending"
+  | "approved"
+  | "paid"
+  | "refunded";
+
+export type OrderDetailsItem = {
+  id: number | string;
+  name: string;
+  sku: string;
+  quantity: number;
+  unit: string;
+  price: number;
+  total: number;
+  stockAvailable?: number;
+  image?: string | null;
+};
+
 export type OrderDetailsData = {
-  order: Order;
-  driver?: OrderDriver;
+  id: string;
+  orderDate: string;
+  status: OrderStatus;
+  paymentStatus: OrderDetailsPaymentStatus;
+  paymentMethod: string;
+  paymentTerms: string;
+  subtotal: number;
+  shipping: number;
+  tax: number;
+  total: number;
+  notes?: string;
+  invoice?: string;
+  items: OrderDetailsItem[];
+  timeline: OrderTimelineItem[];
+  delivery: OrderDelivery;
+  party: OrderParty;
+  drivers?: OrderDriver[];
   canAssignDriver?: boolean;
   canCancel?: boolean;
+  canReview?: boolean;
+  canReorder?: boolean;
 };
+
+export type OrderDetailsLinks = {
+  party?: (id: number | string) => string;
+  product?: (id: number | string) => string;
+  reorder?: (orderId: string) => string;
+  message?: (partyId: number | string) => string;
+};
+
+export type OrderRole = "distributor" | "factory";
+
+export interface IncomingOrderItem {
+  name: string;
+  sku: string;
+  quantity: number;
+  unit: string;
+  price: number;
+  total: number;
+}
+
+export interface IncomingOrder {
+  id: string;
+  deliveryId?: string;
+  customerId: number;
+  customerName: string;
+  customerContact: string;
+  customerPhone: string;
+  customerLocation: string;
+  orderDate: string;
+  requestedDelivery: string;
+  items: IncomingOrderItem[];
+  subtotal: number;
+  shipping: number;
+  tax: number;
+  total: number;
+  status:
+    | "pending"
+    | "processing"
+    | "approved"
+    | "shipped"
+    | "delivered"
+    | "cancelled";
+  paymentId?: string;
+  paymentStatus: string;
+  paymentMethod: string;
+  paymentAmount?: number;
+  paymentPaid?: number;
+  paymentProofUrl?: string;
+  paymentProofName?: string;
+  notes?: string;
+  trackingNumber?: string;
+  driver?: string;
+  driverPhone?: string;
+  driverId?: number | string;
+  deliveredDate?: string;
+  cancelledDate?: string;
+  cancellationReason?: string;
+  customerRating: number | null;
+  previousOrders: number;
+}
+
+export interface IncomingOrdersConfig {
+  role: OrderRole;
+  title: string;
+  description: string;
+  customerLabel: string;
+  customerPath: string;
+  icon: React.ElementType;
+  stats: {
+    pending: number;
+    processing: number;
+    approved: number;
+    totalRevenue: number;
+  };
+}
 export interface Payment {
   id: string;
   order_id: string;

@@ -1,5 +1,5 @@
 import React from "react";
-import { ProductManagement } from "@/components/shared/ProductManagement";
+import { ProductManagement } from "@/features/products/ProductManagement";
 import { factoryProducts, categories } from "./data"; // Factory-specific data
 
 const FactoryManageProductsPage: React.FC = () => {

@@ -1,14 +1,13 @@
 import React, { useEffect, useMemo } from "react";
 import { useLocation, useParams } from "react-router-dom";
 
-import OrderDetailsView, {
-  type OrderDetailsData,
-} from "@/components/shared/OrderDetailsView";
+import OrderDetailsView from "@/features/order/OrderDetailsView";
 import { useOrderStore } from "@/stores/order.store";
 import { useDriverStore } from "@/stores/driver.store";
 import deliveryService from "@/services/delivery.service";
 import toast from "react-hot-toast";
-import type { Order, OrderStatus } from "@/types/order.types";
+import type { Order, OrderStatus, OrderDetailsData } from "@/types/order.types";
+import { WithAsync } from "@/components/shared/WithAsync";
 
 const statusIndex: Record<OrderStatus, number> = {
   pending: 0,
@@ -56,7 +55,12 @@ const mapPaymentStatus = (paymentStatus?: string) => {
 const mapOrderToDetails = (
   order: Order,
   mode: "incoming" | "outgoing",
-  drivers: { id: string; name: string; vehicle?: string; available?: boolean }[],
+  drivers: {
+    id: string;
+    name: string;
+    vehicle?: string;
+    available?: boolean;
+  }[],
 ) => {
   const items =
     order.items?.map((item) => ({
@@ -185,56 +189,58 @@ const DistributorOrderDetailsPage: React.FC = () => {
     return mapOrderToDetails(currentOrder, mode, driverOptions);
   }, [currentOrder, mode, driverOptions]);
 
-  if (isLoading && !orderDetails) {
-    return (
-      <div className="p-6 text-sm text-muted-foreground">Loading order...</div>
-    );
-  }
-
-  if (!orderDetails) {
-    return (
-      <div className="p-6 text-sm text-muted-foreground">
-        {error || "Order not found."}
-      </div>
-    );
-  }
+  const resolvedError =
+    !isLoading && !orderDetails ? error || "Order not found." : null;
 
   return (
-    <OrderDetailsView
-      key={`${mode}-${orderDetails.id}`}
-      initialOrder={orderDetails}
-      mode={mode}
-      partyLabel={mode === "incoming" ? "Customer" : "Supplier"}
-      onAssignDriver={async (deliveryId, driverId) => {
-        try {
-          await deliveryService.assignDriver(deliveryId, driverId);
-          await fetchOrderById(orderDetails.id);
-        } catch (err: any) {
-          toast.error(
-            err?.response?.data?.message ||
-              "Failed to assign driver. Please try again.",
-          );
-          throw err;
+    <WithAsync
+      isLoading={isLoading && !orderDetails}
+      error={resolvedError}
+      loadingComponent={
+        <div className="p-6 text-sm text-muted-foreground">
+          Loading order...
+        </div>
+      }
+      errorComponent={
+        <div className="p-6 text-sm text-muted-foreground">{resolvedError}</div>
+      }
+    >
+      <OrderDetailsView
+        key={`${mode}-${orderDetails?.id}`}
+        initialOrder={orderDetails as OrderDetailsData}
+        mode={mode}
+        partyLabel={mode === "incoming" ? "Customer" : "Supplier"}
+        onAssignDriver={async (deliveryId, driverId) => {
+          try {
+            await deliveryService.assignDriver(deliveryId, driverId);
+            await fetchOrderById(orderDetails!.id);
+          } catch (err: any) {
+            toast.error(
+              err?.response?.data?.message ||
+                "Failed to assign driver. Please try again.",
+            );
+            throw err;
+          }
+        }}
+        links={
+          mode === "incoming"
+            ? {
+                party: (buyerId) => `/distributor/retailers/${buyerId}`,
+              }
+            : {
+                party: (supplierId) => `/distributor/suppliers/${supplierId}`,
+                product: (productId) => `/distributor/products/${productId}`,
+                reorder: (orderId) => `/distributor/reorder?order=${orderId}`,
+                message: (supplierId) => `/messages?supplier=${supplierId}`,
+              }
         }
-      }}
-      links={
-        mode === "incoming"
-          ? {
-              party: (buyerId) => `/distributor/retailers/${buyerId}`,
-            }
-          : {
-              party: (supplierId) => `/distributor/suppliers/${supplierId}`,
-              product: (productId) => `/distributor/products/${productId}`,
-              reorder: (orderId) => `/distributor/reorder?order=${orderId}`,
-              message: (supplierId) => `/messages?supplier=${supplierId}`,
-            }
-      }
-      cancelReasonOptions={
-        mode === "incoming"
-          ? ["Out of stock", "Customer request", "Payment issue", "Other"]
-          : undefined
-      }
-    />
+        cancelReasonOptions={
+          mode === "incoming"
+            ? ["Out of stock", "Customer request", "Payment issue", "Other"]
+            : undefined
+        }
+      />
+    </WithAsync>
   );
 };
 

@@ -87,7 +87,7 @@ import {
   SearchFilter,
   StatsCard,
   SectionHeader,
-} from "@/components/shared";
+} from "@/components";
 
 // ============================================================================
 // TYPES

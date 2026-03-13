@@ -45,29 +45,41 @@ export interface ReviewItem {
   created_at: string;
   updated_at: string;
 }
+export type CatalogRole = "retailer" | "distributor";
+
 export interface CatalogProduct {
-  id: string ;
+  id: string;
   name: string;
-  supplier: string;
-  supplierId: string;
-  supplierName?: string; // Alias for supplier
-  price: number;
+  supplier_id: string;
+  supplier_name: string;
+  supplier?: {
+    id: string;
+    business_name?: string;
+    full_name?: string;
+    is_verified?: boolean;
+  };
+  supplier_type?: "factory" | "distributor";
   category: string;
-  image: string;
+  subcategory?: string;
+  price: number;
+  unit: string;
+  min_order_amount: number;
+  max_order_amount?: number;
+  stock_quantity?: number;
   rating: number;
   reviews: number;
   location: string;
-  min_order_amount: number;
-  unit: string;
+  delivery_time: string;
   description: string;
-  stock: number;
-  isAvailable: boolean;
-  deliveryTime?: string;
-  tags?: string[];
+  tags: string[];
+  image?: string | null;
+  volume_discount?: string;
+  lead_time?: string;
+  payment_terms?: string[];
 }
 
 export interface CatalogConfig {
-  role: 'retailer' | 'distributor' | 'factory';
+  role: CatalogRole;
   title: string;
   description: string;
   supplierLabel: string;
@@ -78,6 +90,12 @@ export interface CatalogConfig {
   showVolumeDiscount: boolean;
   cartPath: string;
   ordersPath: string;
+  productsPath: string;
+  continueShoppingPath: string;
+  vatPercentage?: number;
+  bulkDiscountPercentage?: number;
+  shippingCostPerSupplier?: number;
+  bulkDiscountThreshold?: number;
 }
 // ============================================================================
 // Filter Types
@@ -259,4 +277,74 @@ export interface ProductFormProps {
   onSubmit: (data: ProductFormData) => Promise<void>;
   onCancel?: () => void;
   isLoading?: boolean;
+}
+
+// ============================================================================
+// Product Detail Types (UI)
+// ============================================================================
+
+export type ProductDetailRole = "retailer" | "distributor" | "factory";
+
+export interface ProductDetailData {
+  id: string;
+  name: string;
+  sku: string;
+  category: string;
+  price: number;
+  unit_type: string;
+  min_order_amount: number;
+  maxOrder?: number;
+  stock_quantity: number;
+  reserved?: number;
+  is_available?: boolean;
+  description: string;
+  specifications?: Record<string, string> | null;
+  images?: string[];
+  created_at: string;
+  updated_at: string;
+  supplierId?: string;
+  supplierName?: string;
+  supplierType?: "factory" | "distributor";
+  supplierRating?: number;
+  supplierVerified?: boolean;
+  supplierLocation?: string;
+  supplierEstablished?: Date;
+  productionTime?: string;
+  batchSize?: number;
+  rawMaterials?: { name: string; quantity: number; unit: string }[];
+  deliveryOptions?: {
+    offered: boolean;
+    cost?: number;
+    freeThreshold?: number;
+    estimatedDays: string;
+    pickupAvailable: boolean;
+  };
+  bulkDiscounts?: {
+    quantity: number;
+    discount: number;
+  }[];
+  rating: number;
+  review_count: number;
+  reviews?: {
+    id: string;
+    user: string;
+    rating: number;
+    comment: string;
+    date: string;
+  }[];
+  relatedProducts?: {
+    id: number;
+    name: string;
+    price: number;
+    unit: string;
+    rating: number;
+  }[];
+}
+
+export interface ProductDetailProps {
+  role: ProductDetailRole;
+  product: ProductDetailData;
+  onAddToCart: (quantity: number) => void;
+  onViewSupplier?: () => void;
+  onCompare?: () => void;
 }

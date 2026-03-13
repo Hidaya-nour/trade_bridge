@@ -63,36 +63,18 @@ import {
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 
-import { StatusBadge, StatsCard, EmptyState } from "@/components/shared";
+import { StatusBadge, StatsCard, EmptyState } from "@/components";
 import { formatPrice, formatDate } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
+import type {
+  Payment,
+  CreditSummary,
+  PaymentRole,
+} from "@/types/payment.types";
 
 // ============================================================================
 // TYPES
 // ============================================================================
-
-export type PaymentRole = "retailer" | "distributor";
-
-interface Payment {
-  id: string;
-  orderId: string;
-  date: string;
-  dueDate: string;
-  amount: number;
-  status: "paid" | "pending" | "overdue" | "refunded";
-  method: "Credit" | "Mobile Banking" | "Cash" | "Bank Transfer" | "Cheque";
-  reference?: string;
-  invoiceUrl?: string;
-}
-
-interface CreditSummary {
-  totalSpent: number;
-  outstanding: number;
-  creditLimit: number;
-  available: number;
-  paymentTerms: string;
-  nextPaymentDate: string;
-}
 
 // ============================================================================
 // MOCK DATA

@@ -3,7 +3,7 @@
 // ============================================================================
 
 import type { AudienceSegment, BroadcastItem } from "@/components/shared/Broadcast";
-import type { IncomingOrder } from "@/components/shared/IncomingOrders";
+import type { IncomingOrder } from "@/features/order/IncomingOrders";
 
 export const distributorSegments: AudienceSegment[] = [
   {

@@ -42,7 +42,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 
 import { formatPrice } from "@/lib/formatters";
-import { EditProductDialog } from "./EditProductDialog";
+import { EditProductDialog } from "../../components/product/EditProductDialog";
 import type { Product } from "@/types/product.types";
 import toast from "react-hot-toast"; // Add toast import
 

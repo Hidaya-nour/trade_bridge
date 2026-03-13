@@ -39,7 +39,7 @@ import { useSupplierStore } from "@/stores/supplier.store";
 import { useOrderStore } from "@/stores/order.store";
 import { formatPrice } from "@/lib/formatters";
 import { getInitials } from "@/lib/utils";
-import { PlaceOrderDialog } from "./PlaceOrderDialog";
+import { PlaceOrderDialog } from "../../components/order/PlaceOrderDialog";
 import toast from "react-hot-toast";
 import type { CartConfig, CartItem } from "@/types/cart.types";
 import type { OrderItem } from "@/types/order.types";
@@ -87,9 +87,10 @@ export const CartPage: React.FC<CartPageProps> = ({ config }) => {
   const { createOrder, isLoading: orderLoading } = useOrderStore();
 
   const handlePlaceOrder = async (
-    paymentMethod: string | undefined,
-    deliveryOption: string,
+    paymentMethod?: string,
+    deliveryOption?: string,
   ) => {
+    const selectedDeliveryOption = deliveryOption || "standard";
     try {
       const supplierIds = selectedItems
         .map((item) => item.product?.supplier_id)
@@ -176,7 +177,7 @@ export const CartPage: React.FC<CartPageProps> = ({ config }) => {
           shipping_cost: supplierShipping,
           tax_amount: Number(supplierTax.toFixed(2)),
           discount_amount: Number(supplierDiscount.toFixed(2)),
-          delivery_option: deliveryOption,
+          delivery_option: selectedDeliveryOption,
           notes: "",
           ...(paymentMethod ? { payment_method: paymentMethod } : {}),
         };
@@ -198,8 +199,8 @@ export const CartPage: React.FC<CartPageProps> = ({ config }) => {
         // Remove all selected items from cart
         await Promise.all(selectedItems.map((item) => removeFromCart(item.id)));
         return {
-          primaryOrderId: orders[0].id,
-          orderIds: orders.map((o: any) => o.id),
+          primaryOrderId: String(orders[0].id),
+          orderIds: orders.map((o: any) => String(o.id)),
           total,
         };
       } else {
@@ -913,11 +914,11 @@ export const CartPage: React.FC<CartPageProps> = ({ config }) => {
     </div>
   );
 };
-  const toOrderItem = (item: CartItem): OrderItem => ({
-    id: item.id,
-    order_id: "",
-    product_id: item.product_id,
-    quantity: item.quantity,
-    unit_price: item.product?.price || 0,
-    product: item.product,
-  });
+const toOrderItem = (item: CartItem): OrderItem => ({
+  id: item.id,
+  order_id: "",
+  product_id: item.product_id,
+  quantity: item.quantity,
+  unit_price: item.product?.price || 0,
+  product: item.product,
+});

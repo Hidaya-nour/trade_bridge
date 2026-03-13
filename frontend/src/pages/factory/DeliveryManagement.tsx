@@ -1,5 +1,5 @@
 import React from "react";
-import { DeliveryManagement } from "@/components/shared/DeliveryManagement";
+import { DeliveryManagement } from "@/features/delivery/DeliveryManagement";
 
 const FactoryDeliveryPage: React.FC = () => {
   return (

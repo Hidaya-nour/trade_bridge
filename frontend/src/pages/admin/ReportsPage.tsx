@@ -50,7 +50,7 @@ import {
   SectionHeader,
   EmptyState,
   StatusBadge,
-} from "@/components/shared";
+} from "@/components";
 import { cn } from "@/lib/utils";
 
 // ============================================================================

@@ -55,72 +55,14 @@ import {
   EmptyState,
   PaginationBar,
   SearchFilter,
-} from "@/components/shared";
+} from "@/components";
 import { formatPrice } from "@/lib/formatters";
 import { useOrderStore } from "@/stores/order.store";
 import toast from "react-hot-toast";
-import { PlaceOrderDialog } from "./PlaceOrderDialog";
+import { PlaceOrderDialog } from "@/components/order/PlaceOrderDialog";
 import paymentService from "@/services/payment.service";
 import documentService from "@/services/document.service";
-
-// ============================================================================
-// TYPES
-// ============================================================================
-
-export type CatalogRole = "retailer" | "distributor";
-
-export interface CatalogProduct {
-  id: string;
-  name: string;
-  supplier_id: string;
-  supplier_name: string;
-  supplier?: {
-    id: string;
-    business_name?: string;
-    full_name?: string;
-    is_verified?: boolean;
-  };
-  supplier_type?: "factory" | "distributor";
-  category: string;
-  subcategory?: string;
-  price: number;
-  unit: string;
-  min_order_amount: number;
-  max_order_amount?: number;
-  stock_quantity?: number;
-  rating: number;
-  reviews: number;
-  location: string;
-  delivery_time: string;
-  description: string;
-  tags: string[];
-  image?: string | null;
-
-  // For distributor (buying from factories)
-  volume_discount?: string;
-  lead_time?: string;
-  payment_terms?: string[];
-}
-
-export interface CatalogConfig {
-  role: CatalogRole;
-  title: string;
-  description: string;
-  supplierLabel: string; // "Factory" or "Supplier"
-  supplierPath: string; // "/factories" or "/suppliers"
-  icon: React.ElementType; // Factory or Store
-  categories: string[];
-  locations: string[];
-  showVolumeDiscount: boolean;
-  cartPath: string;
-  ordersPath: string;
-  productsPath: string;
-  continueShoppingPath: string;
-  vatPercentage?: number;
-  bulkDiscountPercentage?: number;
-  shippingCostPerSupplier?: number;
-  bulkDiscountThreshold?: number;
-}
+import type { CatalogConfig, CatalogProduct } from "@/types/product.types";
 
 // ============================================================================
 // PROPS
@@ -291,10 +233,11 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
 
   // Handle place order
   const handlePlaceOrder = async (
-    paymentMethod: string | undefined,
-    deliveryOption: string,
+    paymentMethod?: string,
+    deliveryOption?: string,
   ) => {
     if (!selectedProduct) return;
+    const selectedDeliveryOption = deliveryOption || "standard";
 
     try {
       const itemTotal = selectedProduct.price * orderQuantity;
@@ -315,7 +258,7 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
         shipping_cost: shipping,
         tax_amount: Number(tax.toFixed(2)),
         discount_amount: discount,
-        delivery_option: deliveryOption,
+        delivery_option: selectedDeliveryOption,
         notes: "",
         ...(paymentMethod ? { payment_method: paymentMethod } : {}),
       };

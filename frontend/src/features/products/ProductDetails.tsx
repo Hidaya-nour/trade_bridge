@@ -40,7 +40,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
 
-import { StatusBadge } from "@/components/shared";
+import { StatusBadge } from "@/components";
 import { formatPrice } from "@/lib/formatters";
 import { getInitials, cn } from "@/lib/utils";
 

@@ -94,7 +94,7 @@ import {
   EmptyState,
   PaginationBar,
   SearchFilter,
-} from "@/components/shared";
+} from "@/components";
 import { formatPrice, formatDate } from "@/lib/formatters";
 import { getInitials, cn } from "@/lib/utils";
 

@@ -53,7 +53,8 @@ import {
   StatusBadge,
   EmptyState,
   PaginationBar,
-} from "@/components/shared";
+} from "@/components";
+import { WithAsync } from "@/components/shared/WithAsync";
 import { formatDate } from "@/lib/formatters";
 import { cn, getInitials } from "@/lib/utils";
 import documentService from "@/services/document.service";
@@ -404,429 +405,428 @@ export const VerificationsPage: React.FC = () => {
     // setShowDetailsDialog(false);
   };
 
-  if (isLoading) {
-    return (
-      <div className="space-y-6">
-        <EmptyState
-          icon={Shield}
-          title="Loading verification requests..."
-          description="Fetching the latest data from the database."
-        />
-      </div>
-    );
-  }
-
-  if (loadError) {
-    return (
-      <div className="space-y-6">
-        <EmptyState
-          icon={AlertCircle}
-          title="Failed to load verifications"
-          description={loadError}
-        />
-      </div>
-    );
-  }
-
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">
-            Supplier & Driver Verifications
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Review and verify new supplier, distributor, factory, and driver
-            applications
-          </p>
+    <WithAsync
+      isLoading={isLoading}
+      error={loadError}
+      loadingComponent={
+        <div className="space-y-6">
+          <EmptyState
+            icon={Shield}
+            title="Loading verification requests..."
+            description="Fetching the latest data from the database."
+          />
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline">
-            <Download className="h-4 w-4 mr-2" />
-            Export Report
-          </Button>
+      }
+      errorComponent={
+        <div className="space-y-6">
+          <EmptyState
+            icon={AlertCircle}
+            title="Failed to load verifications"
+            description={loadError || ""}
+          />
         </div>
-      </div>
+      }
+    >
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">
+              Supplier & Driver Verifications
+            </h1>
+            <p className="text-muted-foreground mt-1">
+              Review and verify new supplier, distributor, factory, and driver
+              applications
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="outline">
+              <Download className="h-4 w-4 mr-2" />
+              Export Report
+            </Button>
+          </div>
+        </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatsCard
-          title="Pending"
-          value={stats.pending}
-          icon={Clock}
-          iconBg="bg-yellow-100"
-          iconColor="text-yellow-600"
-          subtext="Awaiting review"
-        />
-        <StatsCard
-          title="Under Review"
-          value={stats.underReview}
-          icon={Eye}
-          iconBg="bg-blue-100"
-          iconColor="text-blue-600"
-          subtext="Being processed"
-        />
-        <StatsCard
-          title="Approved"
-          value={stats.approved}
-          icon={CheckCircle2}
-          iconBg="bg-green-100"
-          iconColor="text-green-600"
-          subtext="Verified suppliers"
-        />
-        <StatsCard
-          title="Rejected"
-          value={stats.rejected}
-          icon={XCircle}
-          iconBg="bg-red-100"
-          iconColor="text-red-600"
-          subtext="Not approved"
-        />
-      </div>
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <StatsCard
+            title="Pending"
+            value={stats.pending}
+            icon={Clock}
+            iconBg="bg-yellow-100"
+            iconColor="text-yellow-600"
+            subtext="Awaiting review"
+          />
+          <StatsCard
+            title="Under Review"
+            value={stats.underReview}
+            icon={Eye}
+            iconBg="bg-blue-100"
+            iconColor="text-blue-600"
+            subtext="Being processed"
+          />
+          <StatsCard
+            title="Approved"
+            value={stats.approved}
+            icon={CheckCircle2}
+            iconBg="bg-green-100"
+            iconColor="text-green-600"
+            subtext="Verified suppliers"
+          />
+          <StatsCard
+            title="Rejected"
+            value={stats.rejected}
+            icon={XCircle}
+            iconBg="bg-red-100"
+            iconColor="text-red-600"
+            subtext="Not approved"
+          />
+        </div>
 
-      {/* Filters */}
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search by business, owner, email..."
-                className="pl-9"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+        {/* Filters */}
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex flex-col md:flex-row gap-4">
+              <div className="flex-1 relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search by business, owner, email..."
+                  className="pl-9"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
+              <Select value={selectedType} onValueChange={setSelectedType}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="All Types" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Types</SelectItem>
+                  <SelectItem value="factory">Factories</SelectItem>
+                  <SelectItem value="distributor">Distributors</SelectItem>
+                  <SelectItem value="driver">Drivers</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="under_review">Under Review</SelectItem>
+                  <SelectItem value="approved">Approved</SelectItem>
+                  <SelectItem value="rejected">Rejected</SelectItem>
+                  <SelectItem value="more_info">More Info Needed</SelectItem>
+                  <SelectItem value="all">All Statuses</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Verifications List */}
+        {paginatedRequests.length === 0 ? (
+          <EmptyState
+            icon={Shield}
+            title="No verification requests found"
+            description="All applications have been processed"
+          />
+        ) : (
+          <div className="space-y-4">
+            {paginatedRequests.map((request) => {
+              const TypeIcon = typeIcons[request.type];
+              const canApproveUser =
+                request.documents.length > 0 &&
+                request.documents.every((doc) => doc.status === "verified") &&
+                !request.userVerified;
+              return (
+                <Card
+                  key={request.id}
+                  className="overflow-hidden hover:shadow-md transition-shadow"
+                >
+                  <CardContent className="p-6">
+                    <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+                      <div className="flex-1">
+                        <div className="flex items-start gap-4">
+                          <div
+                            className={cn(
+                              "p-3 rounded-full",
+                              typeColors[request.type],
+                            )}
+                          >
+                            <TypeIcon className="h-5 w-5" />
+                          </div>
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <h3 className="text-lg font-semibold">
+                                {request.businessName}
+                              </h3>
+                              <StatusBadge status={request.type} />
+                              <Badge className={statusColors[request.status]}>
+                                {statusLabels[request.status]}
+                              </Badge>
+                              {request.userVerified && (
+                                <Badge className="bg-green-50 text-green-700 border-green-200">
+                                  User Verified
+                                </Badge>
+                              )}
+                              <Badge
+                                className={cn(
+                                  "text-xs",
+                                  request.priority === "high"
+                                    ? "bg-red-100 text-red-800"
+                                    : request.priority === "medium"
+                                      ? "bg-yellow-100 text-yellow-800"
+                                      : "bg-green-100 text-green-800",
+                                )}
+                              >
+                                {request.priority} priority
+                              </Badge>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
+                              <div>
+                                <p className="text-sm text-muted-foreground">
+                                  Owner
+                                </p>
+                                <p className="text-sm font-medium">
+                                  {request.ownerName}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-sm text-muted-foreground">
+                                  Contact
+                                </p>
+                                <p className="text-sm">{request.email}</p>
+                                <p className="text-sm">{request.phone}</p>
+                              </div>
+                              <div>
+                                <p className="text-sm text-muted-foreground">
+                                  Location
+                                </p>
+                                <p className="text-sm flex items-center gap-1">
+                                  <MapPin className="h-3 w-3" />
+                                  {request.location}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-sm text-muted-foreground">
+                                  Submitted
+                                </p>
+                                <p className="text-sm flex items-center gap-1">
+                                  <Calendar className="h-3 w-3" />
+                                  {formatDate(request.submittedDate)}
+                                </p>
+                              </div>
+                            </div>
+
+                            {/* Documents */}
+                            <div className="mt-3">
+                              <p className="text-sm text-muted-foreground mb-2">
+                                Documents
+                              </p>
+                              <div className="space-y-2">
+                                {request.documents.map((doc) => (
+                                  <div
+                                    key={doc.id}
+                                    className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 border rounded-md p-2 bg-muted/20"
+                                  >
+                                    <div className="flex flex-wrap items-center gap-2">
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="h-7 text-xs gap-1"
+                                        asChild
+                                      >
+                                        <a
+                                          href={doc.url}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                        >
+                                          <FileText className="h-3 w-3" />
+                                          {doc.name}
+                                        </a>
+                                      </Button>
+                                      <Badge
+                                        variant="outline"
+                                        className={docStatusColors[doc.status]}
+                                      >
+                                        {docStatusLabels[doc.status]}
+                                      </Badge>
+                                    </div>
+
+                                    {doc.status === "pending" ? (
+                                      <div className="flex items-center gap-2">
+                                        <Button
+                                          size="sm"
+                                          className="h-7 text-xs bg-green-600 hover:bg-green-700"
+                                          onClick={() =>
+                                            void handleVerifyDocument(doc.id)
+                                          }
+                                        >
+                                          <CheckCircle2 className="h-3 w-3 mr-1" />
+                                          Verify
+                                        </Button>
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          className="h-7 text-xs text-red-600"
+                                          onClick={() => {
+                                            setRejectingDocumentId(doc.id);
+                                            setShowRejectDialog(true);
+                                          }}
+                                        >
+                                          <XCircle className="h-3 w-3 mr-1" />
+                                          Reject
+                                        </Button>
+                                      </div>
+                                    ) : (
+                                      doc.rejectionReason && (
+                                        <p className="text-xs text-red-700">
+                                          {doc.rejectionReason}
+                                        </p>
+                                      )
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+
+                            {request.notes && (
+                              <div className="mt-3 p-2 bg-blue-50 rounded-lg">
+                                <p className="text-xs text-blue-700">
+                                  {request.notes}
+                                </p>
+                              </div>
+                            )}
+
+                            {request.rejectionReason && (
+                              <div className="mt-3 p-2 bg-red-50 rounded-lg">
+                                <p className="text-xs text-red-700">
+                                  <span className="font-semibold">
+                                    Rejection reason:
+                                  </span>{" "}
+                                  {request.rejectionReason}
+                                </p>
+                              </div>
+                            )}
+
+                            {request.reviewedBy && (
+                              <p className="text-xs text-muted-foreground mt-2">
+                                Reviewed by {request.reviewedBy} on{" "}
+                                {request.reviewedDate
+                                  ? formatDate(request.reviewedDate)
+                                  : "—"}{" "}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Action Buttons */}
+                      {!request.userVerified ? (
+                        <div className="flex flex-col gap-2 min-w-[120px]">
+                          <Button
+                            size="sm"
+                            className="bg-green-600 hover:bg-green-700 w-full"
+                            onClick={() => {
+                              handleApproveUser(request);
+                            }}
+                            disabled={!canApproveUser}
+                          >
+                            <CheckCircle2 className="h-4 w-4 mr-2" />
+                            Approve User
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-amber-600 w-full"
+                            onClick={() => {
+                              handleRequestMoreInfo(request);
+                            }}
+                          >
+                            <AlertCircle className="h-4 w-4 mr-2" />
+                            Request Info
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="flex flex-col gap-2 min-w-[120px]">
+                          <Button size="sm" variant="outline" asChild>
+                            <Link to={`/admin/users/${request.id}`}>
+                              <Eye className="h-4 w-4 mr-2" />
+                              View User
+                            </Link>
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <PaginationBar
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={setCurrentPage}
+              />
+            )}
+          </div>
+        )}
+
+        {/* Reject Dialog */}
+        <Dialog
+          open={showRejectDialog}
+          onOpenChange={(open) => {
+            setShowRejectDialog(open);
+            if (!open) {
+              setRejectingDocumentId(null);
+              setRejectionReason("");
+            }
+          }}
+        >
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Reject Document</DialogTitle>
+              <DialogDescription>
+                Please provide a reason for rejecting this document
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="py-4">
+              <Label htmlFor="reason">Rejection Reason</Label>
+              <Textarea
+                id="reason"
+                placeholder="e.g., Incomplete documentation, invalid license, etc."
+                value={rejectionReason}
+                onChange={(e) => setRejectionReason(e.target.value)}
+                className="mt-2"
+                rows={4}
               />
             </div>
-            <Select value={selectedType} onValueChange={setSelectedType}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="All Types" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Types</SelectItem>
-                <SelectItem value="factory">Factories</SelectItem>
-                <SelectItem value="distributor">Distributors</SelectItem>
-                <SelectItem value="driver">Drivers</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="under_review">Under Review</SelectItem>
-                <SelectItem value="approved">Approved</SelectItem>
-                <SelectItem value="rejected">Rejected</SelectItem>
-                <SelectItem value="more_info">More Info Needed</SelectItem>
-                <SelectItem value="all">All Statuses</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </CardContent>
-      </Card>
 
-      {/* Verifications List */}
-      {paginatedRequests.length === 0 ? (
-        <EmptyState
-          icon={Shield}
-          title="No verification requests found"
-          description="All applications have been processed"
-        />
-      ) : (
-        <div className="space-y-4">
-          {paginatedRequests.map((request) => {
-            const TypeIcon = typeIcons[request.type];
-            const canApproveUser =
-              request.documents.length > 0 &&
-              request.documents.every((doc) => doc.status === "verified") &&
-              !request.userVerified;
-            return (
-              <Card
-                key={request.id}
-                className="overflow-hidden hover:shadow-md transition-shadow"
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setShowRejectDialog(false)}
               >
-                <CardContent className="p-6">
-                  <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
-                    <div className="flex-1">
-                      <div className="flex items-start gap-4">
-                        <div
-                          className={cn(
-                            "p-3 rounded-full",
-                            typeColors[request.type],
-                          )}
-                        >
-                          <TypeIcon className="h-5 w-5" />
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <h3 className="text-lg font-semibold">
-                              {request.businessName}
-                            </h3>
-                            <StatusBadge status={request.type} />
-                            <Badge className={statusColors[request.status]}>
-                              {statusLabels[request.status]}
-                            </Badge>
-                            {request.userVerified && (
-                              <Badge className="bg-green-50 text-green-700 border-green-200">
-                                User Verified
-                              </Badge>
-                            )}
-                            <Badge
-                              className={cn(
-                                "text-xs",
-                                request.priority === "high"
-                                  ? "bg-red-100 text-red-800"
-                                  : request.priority === "medium"
-                                    ? "bg-yellow-100 text-yellow-800"
-                                    : "bg-green-100 text-green-800",
-                              )}
-                            >
-                              {request.priority} priority
-                            </Badge>
-                          </div>
-
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
-                            <div>
-                              <p className="text-sm text-muted-foreground">
-                                Owner
-                              </p>
-                              <p className="text-sm font-medium">
-                                {request.ownerName}
-                              </p>
-                            </div>
-                            <div>
-                              <p className="text-sm text-muted-foreground">
-                                Contact
-                              </p>
-                              <p className="text-sm">{request.email}</p>
-                              <p className="text-sm">{request.phone}</p>
-                            </div>
-                            <div>
-                              <p className="text-sm text-muted-foreground">
-                                Location
-                              </p>
-                              <p className="text-sm flex items-center gap-1">
-                                <MapPin className="h-3 w-3" />
-                                {request.location}
-                              </p>
-                            </div>
-                            <div>
-                              <p className="text-sm text-muted-foreground">
-                                Submitted
-                              </p>
-                              <p className="text-sm flex items-center gap-1">
-                                <Calendar className="h-3 w-3" />
-                                {formatDate(request.submittedDate)}
-                              </p>
-                            </div>
-                          </div>
-
-                          {/* Documents */}
-                          <div className="mt-3">
-                            <p className="text-sm text-muted-foreground mb-2">
-                              Documents
-                            </p>
-                            <div className="space-y-2">
-                              {request.documents.map((doc) => (
-                                <div
-                                  key={doc.id}
-                                  className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 border rounded-md p-2 bg-muted/20"
-                                >
-                                  <div className="flex flex-wrap items-center gap-2">
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      className="h-7 text-xs gap-1"
-                                      asChild
-                                    >
-                                      <a
-                                        href={doc.url}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                      >
-                                        <FileText className="h-3 w-3" />
-                                        {doc.name}
-                                      </a>
-                                    </Button>
-                                    <Badge
-                                      variant="outline"
-                                      className={docStatusColors[doc.status]}
-                                    >
-                                      {docStatusLabels[doc.status]}
-                                    </Badge>
-                                  </div>
-
-                                  {doc.status === "pending" ? (
-                                    <div className="flex items-center gap-2">
-                                      <Button
-                                        size="sm"
-                                        className="h-7 text-xs bg-green-600 hover:bg-green-700"
-                                        onClick={() =>
-                                          void handleVerifyDocument(doc.id)
-                                        }
-                                      >
-                                        <CheckCircle2 className="h-3 w-3 mr-1" />
-                                        Verify
-                                      </Button>
-                                      <Button
-                                        size="sm"
-                                        variant="outline"
-                                        className="h-7 text-xs text-red-600"
-                                        onClick={() => {
-                                          setRejectingDocumentId(doc.id);
-                                          setShowRejectDialog(true);
-                                        }}
-                                      >
-                                        <XCircle className="h-3 w-3 mr-1" />
-                                        Reject
-                                      </Button>
-                                    </div>
-                                  ) : (
-                                    doc.rejectionReason && (
-                                      <p className="text-xs text-red-700">
-                                        {doc.rejectionReason}
-                                      </p>
-                                    )
-                                  )}
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-
-                          {request.notes && (
-                            <div className="mt-3 p-2 bg-blue-50 rounded-lg">
-                              <p className="text-xs text-blue-700">
-                                {request.notes}
-                              </p>
-                            </div>
-                          )}
-
-                          {request.rejectionReason && (
-                            <div className="mt-3 p-2 bg-red-50 rounded-lg">
-                              <p className="text-xs text-red-700">
-                                <span className="font-semibold">
-                                  Rejection reason:
-                                </span>{" "}
-                                {request.rejectionReason}
-                              </p>
-                            </div>
-                          )}
-
-                          {request.reviewedBy && (
-                            <p className="text-xs text-muted-foreground mt-2">
-                              Reviewed by {request.reviewedBy} on{" "}
-                              {request.reviewedDate
-                                ? formatDate(request.reviewedDate)
-                                : "—"}{" "}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Action Buttons */}
-                    {!request.userVerified ? (
-                      <div className="flex flex-col gap-2 min-w-[120px]">
-                        <Button
-                          size="sm"
-                          className="bg-green-600 hover:bg-green-700 w-full"
-                          onClick={() => {
-                            handleApproveUser(request);
-                          }}
-                          disabled={!canApproveUser}
-                        >
-                          <CheckCircle2 className="h-4 w-4 mr-2" />
-                          Approve User
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="text-amber-600 w-full"
-                          onClick={() => {
-                            handleRequestMoreInfo(request);
-                          }}
-                        >
-                          <AlertCircle className="h-4 w-4 mr-2" />
-                          Request Info
-                        </Button>
-                      </div>
-                    ) : (
-                      <div className="flex flex-col gap-2 min-w-[120px]">
-                        <Button size="sm" variant="outline" asChild>
-                          <Link to={`/admin/users/${request.id}`}>
-                            <Eye className="h-4 w-4 mr-2" />
-                            View User
-                          </Link>
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <PaginationBar
-              currentPage={currentPage}
-              totalPages={totalPages}
-              onPageChange={setCurrentPage}
-            />
-          )}
-        </div>
-      )}
-
-      {/* Reject Dialog */}
-      <Dialog
-        open={showRejectDialog}
-        onOpenChange={(open) => {
-          setShowRejectDialog(open);
-          if (!open) {
-            setRejectingDocumentId(null);
-            setRejectionReason("");
-          }
-        }}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Reject Document</DialogTitle>
-            <DialogDescription>
-              Please provide a reason for rejecting this document
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="py-4">
-            <Label htmlFor="reason">Rejection Reason</Label>
-            <Textarea
-              id="reason"
-              placeholder="e.g., Incomplete documentation, invalid license, etc."
-              value={rejectionReason}
-              onChange={(e) => setRejectionReason(e.target.value)}
-              className="mt-2"
-              rows={4}
-            />
-          </div>
-
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setShowRejectDialog(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleRejectDocument}
-              disabled={!rejectionReason.trim() || !rejectingDocumentId}
-            >
-              Reject Document
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleRejectDocument}
+                disabled={!rejectionReason.trim() || !rejectingDocumentId}
+              >
+                Reject Document
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+    </WithAsync>
   );
 };
 

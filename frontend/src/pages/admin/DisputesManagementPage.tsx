@@ -57,7 +57,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
- DropdownMenuSeparator,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -80,7 +80,7 @@ import {
   StatusBadge,
   EmptyState,
   PaginationBar,
-} from "@/components/shared";
+} from "@/components";
 import { formatPrice, formatDate, formatDateTime } from "@/lib/formatters";
 import { cn, getInitials } from "@/lib/utils";
 
@@ -88,15 +88,20 @@ import { cn, getInitials } from "@/lib/utils";
 // TYPES
 // ============================================================================
 
-type DisputeStatus = "open" | "investigating" | "resolved" | "escalated" | "closed";
+type DisputeStatus =
+  | "open"
+  | "investigating"
+  | "resolved"
+  | "escalated"
+  | "closed";
 type DisputePriority = "high" | "medium" | "low";
-type DisputeReason = 
-  | "damaged_goods" 
-  | "late_delivery" 
-  | "wrong_items" 
-  | "missing_items" 
-  | "payment_issue" 
-  | "quality_issue" 
+type DisputeReason =
+  | "damaged_goods"
+  | "late_delivery"
+  | "wrong_items"
+  | "missing_items"
+  | "payment_issue"
+  | "quality_issue"
   | "other";
 
 interface DisputeMessage {
@@ -165,7 +170,8 @@ const mockDisputes: Dispute[] = [
       business: "Adama Wholesalers",
     },
     reason: "damaged_goods",
-    description: "Goods arrived with damaged packaging. Several items were crushed and unusable.",
+    description:
+      "Goods arrived with damaged packaging. Several items were crushed and unusable.",
     amount: 12500,
     status: "open",
     priority: "high",
@@ -177,7 +183,8 @@ const mockDisputes: Dispute[] = [
         userId: 1,
         userName: "ABC Retail Shop",
         userRole: "retailer",
-        message: "The flour bags were torn and cement bags were broken. Please advise.",
+        message:
+          "The flour bags were torn and cement bags were broken. Please advise.",
         timestamp: "2026-02-12T10:30:00",
       },
     ],
@@ -221,7 +228,8 @@ const mockDisputes: Dispute[] = [
         userId: 999,
         userName: "Admin User",
         userRole: "admin",
-        message: "I've contacted the supplier. They claim weather caused delays.",
+        message:
+          "I've contacted the supplier. They claim weather caused delays.",
         timestamp: "2026-02-11T09:20:00",
       },
     ],
@@ -244,7 +252,8 @@ const mockDisputes: Dispute[] = [
       business: "Adama Wholesalers",
     },
     reason: "wrong_items",
-    description: "Received cooking oil instead of dairy products. Order was completely wrong.",
+    description:
+      "Received cooking oil instead of dairy products. Order was completely wrong.",
     amount: 11750,
     status: "escalated",
     priority: "high",
@@ -259,7 +268,8 @@ const mockDisputes: Dispute[] = [
         userId: 5,
         userName: "Addis Mart",
         userRole: "retailer",
-        message: "The driver delivered wrong items. We need a replacement urgently.",
+        message:
+          "The driver delivered wrong items. We need a replacement urgently.",
         timestamp: "2026-02-09T16:30:00",
       },
       {
@@ -267,7 +277,8 @@ const mockDisputes: Dispute[] = [
         userId: 102,
         userName: "Adama Wholesalers",
         userRole: "distributor",
-        message: "Our warehouse made an error. We can send correct items tomorrow.",
+        message:
+          "Our warehouse made an error. We can send correct items tomorrow.",
         timestamp: "2026-02-10T09:00:00",
       },
       {
@@ -275,7 +286,8 @@ const mockDisputes: Dispute[] = [
         userId: 999,
         userName: "Admin User",
         userRole: "admin",
-        message: "Customer requested refund instead of replacement. Processing now.",
+        message:
+          "Customer requested refund instead of replacement. Processing now.",
         timestamp: "2026-02-13T11:00:00",
       },
     ],
@@ -335,8 +347,10 @@ export const DisputesManagementPage: React.FC = () => {
       dispute.raisedBy.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       dispute.against.name.toLowerCase().includes(searchQuery.toLowerCase());
 
-    const matchesStatus = selectedStatus === "all" || dispute.status === selectedStatus;
-    const matchesPriority = selectedPriority === "all" || dispute.priority === selectedPriority;
+    const matchesStatus =
+      selectedStatus === "all" || dispute.status === selectedStatus;
+    const matchesPriority =
+      selectedPriority === "all" || dispute.priority === selectedPriority;
 
     return matchesSearch && matchesStatus && matchesPriority;
   });
@@ -344,13 +358,17 @@ export const DisputesManagementPage: React.FC = () => {
   // Pagination
   const totalPages = Math.ceil(filteredDisputes.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedDisputes = filteredDisputes.slice(startIndex, startIndex + itemsPerPage);
+  const paginatedDisputes = filteredDisputes.slice(
+    startIndex,
+    startIndex + itemsPerPage,
+  );
 
   // Stats
   const stats = {
     total: mockDisputes.length,
     open: mockDisputes.filter((d) => d.status === "open").length,
-    investigating: mockDisputes.filter((d) => d.status === "investigating").length,
+    investigating: mockDisputes.filter((d) => d.status === "investigating")
+      .length,
     resolved: mockDisputes.filter((d) => d.status === "resolved").length,
     escalated: mockDisputes.filter((d) => d.status === "escalated").length,
     highPriority: mockDisputes.filter((d) => d.priority === "high").length,
@@ -359,7 +377,12 @@ export const DisputesManagementPage: React.FC = () => {
   // Handle resolve
   const handleResolve = () => {
     if (selectedDispute) {
-      console.log("Resolving dispute:", selectedDispute.id, "Resolution:", resolution);
+      console.log(
+        "Resolving dispute:",
+        selectedDispute.id,
+        "Resolution:",
+        resolution,
+      );
       setShowResolveDialog(false);
       setShowDetailsDialog(false);
       setResolution("");
@@ -381,7 +404,9 @@ export const DisputesManagementPage: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Disputes Management</h1>
+          <h1 className="text-3xl font-bold tracking-tight">
+            Disputes Management
+          </h1>
           <p className="text-muted-foreground mt-1">
             Handle disputes between retailers, distributors, and factories
           </p>
@@ -466,7 +491,10 @@ export const DisputesManagementPage: React.FC = () => {
                 <SelectItem value="closed">Closed</SelectItem>
               </SelectContent>
             </Select>
-            <Select value={selectedPriority} onValueChange={setSelectedPriority}>
+            <Select
+              value={selectedPriority}
+              onValueChange={setSelectedPriority}
+            >
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Priority" />
               </SelectTrigger>
@@ -590,7 +618,9 @@ export const DisputesManagementPage: React.FC = () => {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <div className="text-sm">{formatDate(dispute.createdAt)}</div>
+                      <div className="text-sm">
+                        {formatDate(dispute.createdAt)}
+                      </div>
                     </TableCell>
                     <TableCell className="text-right">
                       <Button
@@ -636,7 +666,7 @@ export const DisputesManagementPage: React.FC = () => {
               {selectedDispute?.disputeNumber} - {selectedDispute?.orderNumber}
             </DialogDescription>
           </DialogHeader>
-          
+
           {selectedDispute && (
             <div className="space-y-6">
               {/* Status and Priority */}
@@ -671,9 +701,12 @@ export const DisputesManagementPage: React.FC = () => {
                         </AvatarFallback>
                       </Avatar>
                       <div>
-                        <p className="font-medium">{selectedDispute.raisedBy.name}</p>
+                        <p className="font-medium">
+                          {selectedDispute.raisedBy.name}
+                        </p>
                         <p className="text-sm text-muted-foreground">
-                          {selectedDispute.raisedBy.role} • {selectedDispute.raisedBy.business}
+                          {selectedDispute.raisedBy.role} •{" "}
+                          {selectedDispute.raisedBy.business}
                         </p>
                       </div>
                     </div>
@@ -697,9 +730,12 @@ export const DisputesManagementPage: React.FC = () => {
                         </AvatarFallback>
                       </Avatar>
                       <div>
-                        <p className="font-medium">{selectedDispute.against.name}</p>
+                        <p className="font-medium">
+                          {selectedDispute.against.name}
+                        </p>
                         <p className="text-sm text-muted-foreground">
-                          {selectedDispute.against.role} • {selectedDispute.against.business}
+                          {selectedDispute.against.role} •{" "}
+                          {selectedDispute.against.business}
                         </p>
                       </div>
                     </div>
@@ -745,7 +781,9 @@ export const DisputesManagementPage: React.FC = () => {
               {/* Timeline / Messages */}
               <Card>
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-sm">Communication Timeline</CardTitle>
+                  <CardTitle className="text-sm">
+                    Communication Timeline
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
@@ -768,7 +806,9 @@ export const DisputesManagementPage: React.FC = () => {
                         </Avatar>
                         <div className="flex-1">
                           <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium">{msg.userName}</span>
+                            <span className="text-sm font-medium">
+                              {msg.userName}
+                            </span>
                             <span className="text-xs text-muted-foreground">
                               {msg.userRole}
                             </span>
@@ -801,28 +841,32 @@ export const DisputesManagementPage: React.FC = () => {
               </Card>
 
               {/* Action Buttons */}
-              {selectedDispute.status !== "resolved" && selectedDispute.status !== "closed" && (
-                <div className="flex justify-end gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setShowResolveDialog(true);
-                    }}
-                  >
-                    <CheckCircle2 className="h-4 w-4 mr-2" />
-                    Resolve
-                  </Button>
-                  <Button variant="destructive">
-                    <Flag className="h-4 w-4 mr-2" />
-                    Escalate
-                  </Button>
-                </div>
-              )}
+              {selectedDispute.status !== "resolved" &&
+                selectedDispute.status !== "closed" && (
+                  <div className="flex justify-end gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setShowResolveDialog(true);
+                      }}
+                    >
+                      <CheckCircle2 className="h-4 w-4 mr-2" />
+                      Resolve
+                    </Button>
+                    <Button variant="destructive">
+                      <Flag className="h-4 w-4 mr-2" />
+                      Escalate
+                    </Button>
+                  </div>
+                )}
             </div>
           )}
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowDetailsDialog(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setShowDetailsDialog(false)}
+            >
               Close
             </Button>
           </DialogFooter>
@@ -866,7 +910,10 @@ export const DisputesManagementPage: React.FC = () => {
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowResolveDialog(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setShowResolveDialog(false)}
+            >
               Cancel
             </Button>
             <Button onClick={handleResolve} disabled={!resolution.trim()}>

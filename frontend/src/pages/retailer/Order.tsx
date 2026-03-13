@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo } from "react";
-import { OrderList } from "@/components/shared/OrderList";
+import { OrderList } from "@/features/order/OrderList";
 import { useOrderStore } from "@/stores/order.store";
 import { Store } from "lucide-react";
 import type { Order } from "@/types/order.types";

@@ -31,8 +31,8 @@ import { Badge } from "@/components/ui/badge";
 import { formatPrice } from "@/lib/formatters";
 import toast from "react-hot-toast";
 import type { OrderItem } from "@/types/order.types";
-import { PaymentDialog } from "./PaymentDialog";
-import type { PaymentDetails, PaymentMethod } from "./PaymentDialog";
+import { PaymentDialog } from "../payment/PaymentDialog";
+import type { PaymentDetails, PaymentMethod } from "../payment/PaymentDialog";
 
 export interface OrderSummary {
   subtotal: number;
@@ -58,7 +58,7 @@ export interface PlaceOrderDialogProps {
   };
   onPlaceOrder?: (
     paymentMethod?: string,
-    deliveryOption: string,
+    deliveryOption?: string,
   ) => Promise<{
     primaryOrderId: string;
     orderIds?: string[];

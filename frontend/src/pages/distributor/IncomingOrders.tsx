@@ -1,14 +1,13 @@
 import React, { useEffect, useMemo } from "react";
-import {
-  IncomingOrders,
-  type IncomingOrder,
-} from "@/components/shared/IncomingOrders";
+import { IncomingOrders } from "@/features/order/IncomingOrders";
 import { Store } from "lucide-react";
 import toast from "react-hot-toast";
 
 import { useOrderStore } from "@/stores/order.store";
 import paymentService from "@/services/payment.service";
 import type { Order } from "@/types/order.types";
+import type { IncomingOrder } from "@/types/order.types";
+import { WithAsync } from "@/components/shared/WithAsync";
 
 const mapPaymentStatus = (status?: string) => {
   switch (status) {
@@ -138,38 +137,43 @@ const DistributorIncomingOrdersPage: React.FC = () => {
     };
   }, [orders]);
 
-  if (isLoading && orders.length === 0) {
-    return (
-      <div className="p-6 text-sm text-muted-foreground">
-        Loading incoming orders...
-      </div>
-    );
-  }
-
-  if (error && orders.length === 0) {
-    return <div className="p-6 text-sm text-muted-foreground">{error}</div>;
-  }
+  const showLoader = isLoading && orders.length === 0;
+  const resolvedError =
+    !isLoading && error && orders.length === 0 ? error : null;
 
   return (
-    <IncomingOrders
-      config={{
-        role: "distributor",
-        title: "Incoming Orders",
-        description: "Review and process orders from your retail customers",
-        customerLabel: "Retailer",
-        customerPath: "/retailers",
-        icon: Store,
-        stats,
-      }}
-      orders={orders}
-      onApproveOrder={(id) => updateOrderStatus(id, { status: "approved" })}
-      onRejectOrder={(id, reason) => cancelOrder(id, reason)}
-      onProcessOrder={(id) => updateOrderStatus(id, { status: "processing" })}
-      onAssignDriver={async (_orderId, _deliveryId, _driverId) => {
-        await fetchOrdersAsSupplier();
-      }}
-      onConfirmPayment={handleConfirmPayment}
-    />
+    <WithAsync
+      isLoading={showLoader}
+      error={resolvedError}
+      loadingComponent={
+        <div className="p-6 text-sm text-muted-foreground">
+          Loading incoming orders...
+        </div>
+      }
+      errorComponent={
+        <div className="p-6 text-sm text-muted-foreground">{resolvedError}</div>
+      }
+    >
+      <IncomingOrders
+        config={{
+          role: "distributor",
+          title: "Incoming Orders",
+          description: "Review and process orders from your retail customers",
+          customerLabel: "Retailer",
+          customerPath: "/retailers",
+          icon: Store,
+          stats,
+        }}
+        orders={orders}
+        onApproveOrder={(id) => updateOrderStatus(id, { status: "approved" })}
+        onRejectOrder={(id, reason) => cancelOrder(id, reason)}
+        onProcessOrder={(id) => updateOrderStatus(id, { status: "processing" })}
+        onAssignDriver={async (_orderId, _deliveryId, _driverId) => {
+          await fetchOrdersAsSupplier();
+        }}
+        onConfirmPayment={handleConfirmPayment}
+      />
+    </WithAsync>
   );
 };
 

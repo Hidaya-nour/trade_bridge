@@ -3,7 +3,6 @@ import { Link } from "react-router-dom";
 import {
   Truck,
   Package,
-  MapPin,
   Clock,
   CheckCircle2,
   XCircle,
@@ -12,42 +11,16 @@ import {
   Phone,
   User,
   Calendar,
-  DollarSign,
   Star,
   TrendingUp,
-  ChevronRight,
-  Settings,
-  LogOut,
-  Bell,
-  Search,
-  Filter,
-  MoreHorizontal,
   Eye,
-  Download,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardFooter,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import {
   Dialog,
   DialogContent,
@@ -64,7 +37,7 @@ import {
   StatusBadge,
   EmptyState,
   WelcomeHeader,
-} from "@/components/shared";
+} from "@/components";
 import {
   formatDate,
   formatTime,

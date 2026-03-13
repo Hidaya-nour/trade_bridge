@@ -1,6 +1,7 @@
-import type { AudienceSegment, BroadcastItem } from "@/components/shared";
-import type { IncomingOrder } from "@/components/shared/IncomingOrders";
+
+import type { AudienceSegment, BroadcastItem } from "@/components";
 import type { Partner } from "@/components/shared/Partnerships";
+import type { IncomingOrder } from "@/types/order.types";
 
 // ============================================================================
 // BROADCAST / PROMOTIONS DATA
@@ -555,7 +556,6 @@ export const incomingOrders: IncomingOrder[] = [
     status: "pending",
     paymentStatus: "pending",
     paymentMethod: "Credit",
-    priority: "high",
     notes: "Urgent delivery requested. Business running low on stock.",
     customerRating: 4.8,
     previousOrders: 12,
@@ -610,7 +610,6 @@ export const incomingOrders: IncomingOrder[] = [
     status: "pending",
     paymentStatus: "pending",
     paymentMethod: "Mobile Banking",
-    priority: "high",
     notes: "New customer, first order. Requesting credit terms.",
     customerRating: null,
     previousOrders: 0,
@@ -649,7 +648,6 @@ export const incomingOrders: IncomingOrder[] = [
     status: "processing",
     paymentStatus: "approved",
     paymentMethod: "Credit",
-    priority: "medium",
     notes: "Construction materials for new store branch.",
     customerRating: 4.7,
     previousOrders: 8,
@@ -688,7 +686,6 @@ export const incomingOrders: IncomingOrder[] = [
     status: "approved",
     paymentStatus: "paid",
     paymentMethod: "Credit",
-    priority: "low",
     notes: "Ready for pickup. Customer will arrange transport.",
     customerRating: 4.9,
     previousOrders: 24,
@@ -727,7 +724,6 @@ export const incomingOrders: IncomingOrder[] = [
     status: "shipped",
     paymentStatus: "paid",
     paymentMethod: "Mobile Banking",
-    priority: "medium",
     notes: "Shipped via Express Delivery. Tracking: TRK-7885-02",
     trackingNumber: "TRK-7885-02",
     driver: "Abebe Kebede",
@@ -777,7 +773,6 @@ export const incomingOrders: IncomingOrder[] = [
     status: "delivered",
     paymentStatus: "paid",
     paymentMethod: "Credit",
-    priority: "low",
     notes: "Delivered and signed by Dawit Tadesse.",
     deliveredDate: "2026-02-11",
     customerRating: 4.8,
@@ -817,7 +812,6 @@ export const incomingOrders: IncomingOrder[] = [
     status: "cancelled",
     paymentStatus: "refunded",
     paymentMethod: "Bank Transfer",
-    priority: "medium",
     notes: "Cancelled by customer - found alternative supplier.",
     cancellationReason: "Customer requested cancellation",
     cancelledDate: "2026-02-09",

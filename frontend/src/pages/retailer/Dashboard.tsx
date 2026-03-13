@@ -37,7 +37,7 @@ import {
   StatusBadge,
   WelcomeHeader,
   OrderSummaryCard,
-} from "@/components/shared";
+} from "@/components";
 import { formatPrice, formatDate } from "@/lib/formatters";
 import { getInitials } from "@/lib/utils";
 import { useAuthStore } from "@/stores/auth.store";

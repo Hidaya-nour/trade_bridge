@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { OrderList } from "@/components/shared/OrderList";
-import { PlaceOrderDialog } from "@/components/shared/PlaceOrderDialog";
+import { OrderList } from "@/features/order/OrderList";
+import { PlaceOrderDialog } from "@/components/order/PlaceOrderDialog";
 import { useOrderStore } from "@/stores/order.store";
 import { Factory } from "lucide-react";
 import type { Order, OrderItem } from "@/types/order.types";
@@ -95,9 +95,10 @@ const PurchaseOrdersPage: React.FC = () => {
   };
 
   const handlePlaceOrder = async (
-    paymentMethod: string | undefined,
-    deliveryOption: string,
+    paymentMethod?: string,
+    deliveryOption?: string,
   ) => {
+    const selectedDeliveryOption = deliveryOption || "standard";
     try {
       if (reorderItems.length === 0) {
         toast.error("No items to reorder");
@@ -121,7 +122,7 @@ const PurchaseOrdersPage: React.FC = () => {
         supplier_id: supplierId,
         items: itemsWithPrice,
         total_price: totalPrice,
-        delivery_option: deliveryOption,
+        delivery_option: selectedDeliveryOption,
         ...(paymentMethod ? { payment_method: paymentMethod } : {}),
       };
 

@@ -2,7 +2,7 @@
 import React from "react";
 import { Factory } from "lucide-react";
 import type { CartConfig } from "@/types/cart.types";
-import { CartPage } from "@/components/shared/CartPage";
+import { CartPage } from "@/features/cart/CartPage";
 
 const DistributorCartPage: React.FC = () => {
   const config: CartConfig = {

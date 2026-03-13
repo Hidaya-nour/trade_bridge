@@ -74,96 +74,16 @@ import {
   EmptyState,
   PaginationBar,
   SearchFilter,
-} from "@/components/shared";
+} from "@/components";
 import { formatDate, formatDateTime, formatPrice } from "@/lib/formatters";
 import { getInitials, cn } from "@/lib/utils";
 import { useDriverStore } from "@/stores/driver.store";
 import deliveryService from "@/services/delivery.service";
 import DriverService, { type DriverUser } from "@/services/driver.service";
 import toast from "react-hot-toast";
+import type { Delivery, Driver, DeliveryConfig } from "@/types/delivery.types";
 
-// ============================================================================
-// TYPES
-// ============================================================================
-
-export type DeliveryRole = "distributor" | "factory";
-
-export interface Delivery {
-  id: string;
-  orderId: string;
-  customerId: number;
-  customerName: string;
-  customerContact: string;
-  customerPhone: string;
-  customerLocation: string;
-  deliveryAddress: string;
-  items: {
-    name: string;
-    quantity: number;
-    unit: string;
-  }[];
-  totalItems: number;
-  totalWeight: string;
-  status:
-    | "pending"
-    | "assigned"
-    | "picked-up"
-    | "in-transit"
-    | "delivered"
-    | "failed"
-    | "cancelled";
-  priority: "high" | "medium" | "low";
-  scheduledDate: string;
-  scheduledTime: string;
-  estimatedDelivery: string;
-  actualDelivery?: string;
-  driverId?: number | string;
-  driverName?: string;
-  driverPhone?: string;
-  vehicleType?: string;
-  licensePlate?: string;
-  trackingNumber?: string;
-  currentLocation?: string;
-  lastUpdate?: string;
-  notes?: string;
-  signature?: string;
-  proofOfDelivery?: string;
-  failureReason?: string;
-
-  // ✅ NEW FIELDS
-  deliveryType: "free" | "paid"; // Free or paid delivery
-  deliveryCost?: number; // Cost if paid
-  paymentCollected?: boolean; // For cash on delivery
-  customerPickedUp?: boolean; // Self pickup option
-}
-
-export interface Driver {
-  id: string; // driver_id (user id)
-  name: string;
-  phone: string;
-  email: string;
-  vehicleType: string;
-  licensePlate: string;
-  status: "available" | "on-delivery" | "off-duty" | "on-break";
-  currentLocation: string;
-  deliveriesToday: number;
-  deliveriesCompleted: number;
-  rating: number;
-  avatar?: string;
-}
-
-export interface DeliveryConfig {
-  role: DeliveryRole;
-  hasDrivers: boolean; // ✅ Whether user can assign drivers
-  offersDelivery: boolean; // ✅ Whether user offers delivery service
-  defaultDeliveryCost?: number; // ✅ Default cost if paid
-  customerLabel: string; // "Retailer" or "Distributor"
-  customerPath: string; // "/retailers" or "/distributors"
-}
-
-// ============================================================================
-// MOCK DATA
-// ============================================================================
+// ============================================================================\n// TYPES\n// ============================================================================\n\n// ============================================================================\n// MOCK DATA\n// ============================================================================
 
 const deliveries: Delivery[] = [
   {
@@ -1893,3 +1813,4 @@ export const DeliveryManagement: React.FC<DeliveryManagementProps> = ({
     </div>
   );
 };
+

@@ -45,12 +45,12 @@ import {
   PaymentDialog,
   type PaymentMethod,
   type PaymentDetails,
-} from "@/components/shared";
+} from "@/components";
 import { formatPrice, formatDate } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 import { Label } from "@/components/ui/label";
 import type { Order } from "@/types/order.types";
-import OrderTrackingDialog from "@/components/shared/OrderTrackingDialog";
+import OrderTrackingDialog from "@/components/order/OrderTrackingDialog";
 import toast from "react-hot-toast";
 
 interface OrderListProps {

@@ -1,9 +1,6 @@
 import React, { useEffect } from "react";
-import {
-  ProductCatalog,
-  type CatalogConfig,
-  type CatalogProduct,
-} from "@/components/shared/ProductCatalog";
+import { ProductCatalog } from "@/features/products/ProductCatalog";
+import type { CatalogConfig, CatalogProduct } from "@/types/product.types";
 import { Store } from "lucide-react";
 import { useProductStore } from "@/stores/product.store";
 import { useCartStore } from "@/stores/cart.store";

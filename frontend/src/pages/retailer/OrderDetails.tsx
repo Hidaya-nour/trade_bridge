@@ -1,11 +1,10 @@
 import React, { useEffect, useMemo } from "react";
 import { useParams } from "react-router-dom";
 
-import OrderDetailsView, {
-  type OrderDetailsData,
-} from "@/components/shared/OrderDetailsView";
+import OrderDetailsView from "@/features/order/OrderDetailsView";
 import { useOrderStore } from "@/stores/order.store";
-import type { Order, OrderStatus } from "@/types/order.types";
+import type { Order, OrderStatus, OrderDetailsData } from "@/types/order.types";
+import { WithAsync } from "@/components/shared/WithAsync";
 
 const statusIndex: Record<OrderStatus, number> = {
   pending: 0,
@@ -126,33 +125,35 @@ const OrderDetailsPage: React.FC = () => {
     return mapOrderToDetails(currentOrder);
   }, [currentOrder]);
 
-  if (isLoading && !orderDetails) {
-    return (
-      <div className="p-6 text-sm text-muted-foreground">Loading order...</div>
-    );
-  }
-
-  if (!orderDetails) {
-    return (
-      <div className="p-6 text-sm text-muted-foreground">
-        {error || "Order not found."}
-      </div>
-    );
-  }
+  const resolvedError =
+    !isLoading && !orderDetails ? error || "Order not found." : null;
 
   return (
-    <OrderDetailsView
-      key={orderDetails.id}
-      initialOrder={orderDetails}
-      mode="outgoing"
-      partyLabel="Supplier"
-      links={{
-        party: (supplierId) => `/retailer/supplier/${supplierId}`,
-        product: (productId) => `/retailer/products/${productId}`,
-        reorder: (orderId) => `/retailer/reorder?order=${orderId}`,
-        message: (supplierId) => `/messages?supplier=${supplierId}`,
-      }}
-    />
+    <WithAsync
+      isLoading={isLoading && !orderDetails}
+      error={resolvedError}
+      loadingComponent={
+        <div className="p-6 text-sm text-muted-foreground">
+          Loading order...
+        </div>
+      }
+      errorComponent={
+        <div className="p-6 text-sm text-muted-foreground">{resolvedError}</div>
+      }
+    >
+      <OrderDetailsView
+        key={orderDetails?.id}
+        initialOrder={orderDetails as OrderDetailsData}
+        mode="outgoing"
+        partyLabel="Supplier"
+        links={{
+          party: (supplierId) => `/retailer/supplier/${supplierId}`,
+          product: (productId) => `/retailer/products/${productId}`,
+          reorder: (orderId) => `/retailer/reorder?order=${orderId}`,
+          message: (supplierId) => `/messages?supplier=${supplierId}`,
+        }}
+      />
+    </WithAsync>
   );
 };
 

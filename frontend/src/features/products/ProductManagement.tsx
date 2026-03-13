@@ -80,7 +80,7 @@ import {
   StatusBadge,
   PaginationBar,
   SearchFilter,
-} from "@/components/shared";
+} from "@/components";
 import {
   exportToCSV,
   exportToExcel,
@@ -89,7 +89,7 @@ import {
 } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/auth.store";
-import { EditProductDialog } from "./EditProductDialog";
+import { EditProductDialog } from "@/components/product/EditProductDialog";
 import type { Product } from "@/types/product.types";
 
 // ============================================================================

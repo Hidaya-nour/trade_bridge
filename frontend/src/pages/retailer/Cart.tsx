@@ -1,6 +1,6 @@
 // pages/retailer/cart.tsx
 import React from "react";
-import { CartPage } from "@/components/shared/CartPage";
+import { CartPage } from "@/features/cart/CartPage";
 import type { CartConfig } from "@/types/cart.types";
 import { Store } from "lucide-react";
 

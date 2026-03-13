@@ -29,7 +29,7 @@ import VerificationsPage from "./pages/admin/VerificationsPage";
 import { DisputesManagementPage } from "./pages/admin/DisputesManagementPage";
 import { ReportsPage } from "./pages/admin/ReportsPage";
 import { DriverDashboard } from "./pages/driver/DashboardPage";
-import PaymentsPage from "./components/shared/Payments";
+import PaymentsPage from "./features/payment/Payments";
 import DistributorOrderDetailsPage from "./pages/distributor/DistributorOrderDetails";
 import FactoryOrderDetailsPage from "./pages/factory/FactoryOrderDetails";
 import OrderDetailsPage from "./pages/retailer/OrderDetails";

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { ProductManagement } from "@/components/shared/ProductManagement";
+import { ProductManagement } from "@/features/products/ProductManagement";
 import { useProductStore } from "@/stores/product.store";
 // import { suppliers } from "./data";
 import toast from "react-hot-toast";

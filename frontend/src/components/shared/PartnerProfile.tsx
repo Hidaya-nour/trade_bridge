@@ -54,7 +54,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-import { StatusBadge } from "@/components/shared";
+import { StatusBadge } from "@/components";
 import { formatPrice, formatDate } from "@/lib/formatters";
 import { getInitials, cn } from "@/lib/utils";
 

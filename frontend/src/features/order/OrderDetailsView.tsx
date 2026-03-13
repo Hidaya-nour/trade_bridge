@@ -57,105 +57,16 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 
-import { StatusBadge } from "@/components/shared";
-import OrderTrackingDialog from "@/components/shared/OrderTrackingDialog";
+import { StatusBadge } from "@/components";
+import OrderTrackingDialog from "@/components/order/OrderTrackingDialog";
 import { formatPrice, formatDate, formatDateTime } from "@/lib/formatters";
 import { getInitials, cn } from "@/lib/utils";
 import toast from "react-hot-toast";
-
-export type OrderStatus =
-  | "pending"
-  | "approved"
-  | "processing"
-  | "shipped"
-  | "delivered"
-  | "cancelled";
-
-export type PaymentStatus = "pending" | "approved" | "paid" | "refunded";
-
-export type OrderParty = {
-  id: number | string;
-  name: string;
-  contact?: string;
-  phone?: string;
-  email?: string;
-  location?: string;
-  rating?: number;
-  verified?: boolean;
-  previousOrders?: number;
-};
-
-export type OrderItem = {
-  id: number | string;
-  name: string;
-  sku: string;
-  quantity: number;
-  unit: string;
-  price: number;
-  total: number;
-  stockAvailable?: number;
-  image?: string | null;
-};
-
-export type OrderTimelineItem = {
-  status: string;
-  date?: string | null;
-  completed: boolean;
-};
-
-export type OrderDriver = {
-  id: number | string;
-  name: string;
-  vehicle?: string;
-  available?: boolean;
-  phone?: string;
-};
-
-export type OrderDelivery = {
-  deliveryId?: string;
-  address: string;
-  recipient: string;
-  phone: string;
-  requestedDate?: string;
-  estimatedDate?: string;
-  actualDate?: string;
-  trackingNumber?: string | null;
-  carrier?: string | null;
-  driverId?: number | string | null;
-  driverName?: string | null;
-  driverPhone?: string | null;
-};
-
-export type OrderDetailsData = {
-  id: string;
-  orderDate: string;
-  status: OrderStatus;
-  paymentStatus: PaymentStatus;
-  paymentMethod: string;
-  paymentTerms: string;
-  subtotal: number;
-  shipping: number;
-  tax: number;
-  total: number;
-  notes?: string;
-  invoice?: string;
-  items: OrderItem[];
-  timeline: OrderTimelineItem[];
-  delivery: OrderDelivery;
-  party: OrderParty;
-  drivers?: OrderDriver[];
-  canAssignDriver?: boolean;
-  canCancel?: boolean;
-  canReview?: boolean;
-  canReorder?: boolean;
-};
-
-export type OrderDetailsLinks = {
-  party?: (id: number | string) => string;
-  product?: (id: number | string) => string;
-  reorder?: (orderId: string) => string;
-  message?: (partyId: number | string) => string;
-};
+import type {
+  OrderStatus,
+  OrderDetailsData,
+  OrderDetailsLinks,
+} from "@/types/order.types";
 
 type OrderDetailsViewProps = {
   initialOrder: OrderDetailsData;
@@ -720,7 +631,9 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                     onClick={() => setShowAssignDialog(true)}
                   >
                     <Truck className="mr-2 h-4 w-4" />
-                    {order.delivery.driverName ? "Change Driver" : "Assign Driver"}
+                    {order.delivery.driverName
+                      ? "Change Driver"
+                      : "Assign Driver"}
                   </Button>
                 )}
 

@@ -60,7 +60,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
 
-import { StatsCard } from "@/components/shared";
+import { StatsCard } from "@/components";
 import {
   formatPrice,
   formatCompactPrice,

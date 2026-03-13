@@ -79,7 +79,7 @@ import {
   WelcomeHeader,
   EmptyState,
   PaginationBar,
-} from "@/components/shared";
+} from "@/components";
 import { formatPrice, formatCompactPrice, formatDate } from "@/lib/formatters";
 import { getInitials, cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/auth.store";
