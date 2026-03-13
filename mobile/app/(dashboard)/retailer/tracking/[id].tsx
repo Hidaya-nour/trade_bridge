@@ -1,6 +1,6 @@
 import { useLocalSearchParams } from "expo-router";
 import { StyleSheet, Text, View } from "react-native";
-import ScreenWrapper from "../../../../src/components/layout/ScreenWrapper";
+import ScreenWrapper from "@/components/layout/ScreenWrapper";
 
 export default function RetailerTrackingScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();

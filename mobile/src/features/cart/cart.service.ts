@@ -1,6 +1,6 @@
-import api from "../lib/api";
-import { type ApiResponse } from "../types/auth.types";
-import { type Cart, type CartItem } from "../types/cart.types";
+import api from "@/lib/api";
+import { type ApiResponse } from "@/features/auth/auth.types";
+import { type Cart, type CartItem } from "./cart.types";
 
 const cartService = {
   async getCart() {

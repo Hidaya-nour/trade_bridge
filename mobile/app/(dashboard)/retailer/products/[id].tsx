@@ -9,9 +9,9 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import ScreenWrapper from "../../../../src/components/layout/ScreenWrapper";
-import { useCartStore } from "../../../../src/stores/cart.store";
-import { useProductStore } from "../../../../src/stores/product.store";
+import ScreenWrapper from "@/components/layout/ScreenWrapper";
+import { useCartStore } from "@/features/cart/cart.store";
+import { useProductStore } from "@/features/products/product.store";
 
 const formatCurrency = (value: number) => {
   return new Intl.NumberFormat("en-US", {

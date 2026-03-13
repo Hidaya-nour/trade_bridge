@@ -1,6 +1,6 @@
 import { create } from "zustand";
-import productService from "../services/product.service";
-import { type Product, type ProductFilters } from "../types/product.types";
+import productService from "./product.service";
+import { type Product, type ProductFilters } from "./product.types";
 
 interface ProductStoreState {
   products: Product[];

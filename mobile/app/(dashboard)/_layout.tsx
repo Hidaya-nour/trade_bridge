@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { ActivityIndicator, View } from "react-native";
 import { Redirect, Stack } from "expo-router";
-import { useAuthStore } from "../../src/stores/auth.store";
+import { useAuthStore } from "@/features/auth/auth.store";
 
 export default function DashboardLayout() {
   const { user, isInitialized, initialize } = useAuthStore();

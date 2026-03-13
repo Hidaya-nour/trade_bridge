@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
-import { useAuthStore } from "../stores/auth.store";
+import { useAuthStore } from "@/features/auth/auth.store";
 import { roleDefaultRoute, roleSidebarNavigation, type SidebarNavItem } from "./roleNavigation";
 
 interface DrawerContentProps {

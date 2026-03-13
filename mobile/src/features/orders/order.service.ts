@@ -1,6 +1,6 @@
-import api from "../lib/api";
-import { type ApiResponse } from "../types/auth.types";
-import { type MyOrdersResult, type OrderStats } from "../types/order.types";
+import api from "@/lib/api";
+import { type ApiResponse } from "@/features/auth/auth.types";
+import { type MyOrdersResult, type OrderStats } from "./order.types";
 
 interface OrdersQuery {
   limit?: number;

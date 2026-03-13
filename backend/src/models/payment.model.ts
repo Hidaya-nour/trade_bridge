@@ -91,7 +91,7 @@ Payment.init(
       allowNull: true,
     },
     proof_document_id: {
-      type: DataTypes.STRING(36),
+      type: DataTypes.UUID,
       allowNull: true,
     },
     refund_amount: {
