@@ -42,6 +42,7 @@ import { Toaster } from "react-hot-toast";
 import DistributorProductDetailPage from "./pages/distributor/ProductDetails";
 import DistributorMyProductDetailPage from "./pages/distributor/MyProductDetails";
 import FactoryMyProductDetailPage from "./pages/factory/ProductDetails";
+import AgentsPage from "./pages/factory/Agents";
 
 function App() {
   // const { accessToken, fetchUser } = useAuthStore();
@@ -372,6 +373,14 @@ function App() {
             element={
               <DashboardLayout>
                 <FactoryOrderDetailsPage />
+              </DashboardLayout>
+            }
+          />
+          <Route
+            path="/factory/agents"
+            element={
+              <DashboardLayout>
+                <AgentsPage />
               </DashboardLayout>
             }
           />
