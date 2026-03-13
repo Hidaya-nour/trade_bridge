@@ -6,7 +6,6 @@ import { useProductStore } from "@/stores/product.store";
 import { Button } from "@/components/ui/button";
 import { EditProductDialog } from "@/components/product/EditProductDialog";
 import { WithAsync } from "@/components/shared/WithAsync";
-import type { Product } from "@/types/product.types";
 
 const DistributorMyProductDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -61,34 +60,11 @@ const DistributorMyProductDetailPage: React.FC = () => {
   const resolvedError = !isLoading && !product ? "Product not found" : null;
 
   // Transform product for distributor's own view
-  const productForDetail:
-    | (Product & { available: number; average_rating: number })
-    | null = product
-    ? {
-        id: product.id,
-        supplier_id: product.supplier_id,
-        name: product.name,
-        category: product.category,
-        sku: product.sku,
-        description: product.description,
-        specifications: product.specifications,
-        price: product.price,
-        stock_quantity: product.stock_quantity,
-        min_order_amount: product.min_order_amount,
-        unit_type: product.unit_type,
-        images: product.images,
-        is_available: product.is_available,
-        rating: product.rating,
-        review_count: product.review_count,
-        reviews: product.reviews,
-        created_at: product.created_at,
-        updated_at: product.updated_at,
-        deleted_at: product.deleted_at,
-        supplier: product.supplier,
-        available: product.stock_quantity,
-        average_rating: product.rating ?? 0,
-      }
-    : null;
+  const productForDetail = {
+    ...product,
+    available: product?.stock_quantity,
+    average_rating: product?.rating ?? 0,
+  };
 
   return (
     <WithAsync
@@ -115,21 +91,19 @@ const DistributorMyProductDetailPage: React.FC = () => {
       }
     >
       <>
-        {productForDetail && (
-          <MyProductDetail
-            role="factory"
-            product={productForDetail}
-            onEdit={handleEdit}
-            onDelete={handleDelete}
-            onUpdateStock={handleUpdateStock}
-            onUpdatePrice={handleUpdatePrice}
-          />
-        )}
+        <MyProductDetail
+          role="factory"
+          product={productForDetail}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+          onUpdateStock={handleUpdateStock}
+          onUpdatePrice={handleUpdatePrice}
+        />
 
         <EditProductDialog
           open={editDialogOpen}
           onOpenChange={setEditDialogOpen}
-          product={product ?? null}
+          product={product}
           mode="edit"
           onSave={handleSaveProduct}
         />

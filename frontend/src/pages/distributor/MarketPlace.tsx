@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from "react";
 import { ProductCatalog } from "@/features/products/ProductCatalog";
-import type { CatalogConfig } from "@/types/product.types";
 import { useProductStore } from "@/stores/product.store";
 import { useCartStore } from "@/stores/cart.store";
 import { Factory } from "lucide-react";
 import toast from "react-hot-toast";
 import { useAuthStore } from "@/stores/auth.store";
+import type { CatalogConfig } from "@/types/product.types";
 
 const categories = ["Beverages", "Foods"];
 
