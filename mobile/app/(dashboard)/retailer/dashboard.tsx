@@ -10,10 +10,10 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { useAuthStore } from "../../../src/stores/auth.store";
-import { useOrderStore } from "../../../src/stores/order.store";
-import ScreenWrapper from "../../../src/components/layout/ScreenWrapper";
-import { type Order, type OrderStats, type OrderStatus } from "../../../src/types/order.types";
+import { useAuthStore } from "@/features/auth/auth.store";
+import { useOrderStore } from "@/features/orders/order.store";
+import ScreenWrapper from "@/components/layout/ScreenWrapper";
+import { type Order, type OrderStats, type OrderStatus } from "@/features/orders/order.types";
 
 const recommendedSuppliers = [
   {

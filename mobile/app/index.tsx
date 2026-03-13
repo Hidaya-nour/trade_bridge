@@ -1,5 +1,5 @@
 import { Redirect } from "expo-router";
 
 export default function IndexPage() {
-  return <Redirect href="/factory/dashboard" />;
+  return <Redirect href="/retailer/dashboard" />;
 }

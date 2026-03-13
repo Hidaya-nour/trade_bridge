@@ -1,4 +1,4 @@
-import { type UserRole } from "../types/auth.types";
+import { type UserRole } from "@/features/auth/auth.types";
 
 export interface SidebarNavItem {
   label: string;

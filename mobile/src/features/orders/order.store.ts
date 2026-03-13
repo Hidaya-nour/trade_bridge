@@ -1,6 +1,6 @@
 import { create } from "zustand";
-import orderService from "../services/order.service";
-import { type Order, type OrderStats } from "../types/order.types";
+import orderService from "./order.service";
+import { type Order, type OrderStats } from "./order.types";
 
 interface OrderState {
   orders: Order[];

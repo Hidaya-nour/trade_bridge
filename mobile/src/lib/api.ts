@@ -1,7 +1,7 @@
 import axios from "axios";
 import { Platform } from "react-native";
 import Constants from "expo-constants";
-import { useAuthStore } from "../stores/auth.store";
+import { useAuthStore } from "@/features/auth/auth.store";
 
 const getDefaultApiUrl = () => {
   if (Platform.OS === "android") {

@@ -56,7 +56,7 @@ Document.init(
     issued_date: { type: DataTypes.DATE, allowNull: true },
     expiry_date: { type: DataTypes.DATE, allowNull: true },
     verification_status: { type: DataTypes.ENUM('pending','verified','rejected'), allowNull: false, defaultValue: 'pending' },
-    verified_by: { type: DataTypes.CHAR(36), allowNull: true },
+    verified_by: { type: DataTypes.UUID, allowNull: true },
     rejection_reason: { type: DataTypes.TEXT, allowNull: true },
     uploaded_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
     reviewed_at: { type: DataTypes.DATE, allowNull: true },

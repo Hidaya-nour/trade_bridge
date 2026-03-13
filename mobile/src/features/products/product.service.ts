@@ -1,6 +1,6 @@
-import api from "../lib/api";
-import { type ApiResponse } from "../types/auth.types";
-import { type Product, type ProductFilters, type ProductsPayload } from "../types/product.types";
+import api from "@/lib/api";
+import { type ApiResponse } from "@/features/auth/auth.types";
+import { type Product, type ProductFilters, type ProductsPayload } from "./product.types";
 
 const buildProductQuery = (filters?: ProductFilters) => {
   const params = new URLSearchParams();

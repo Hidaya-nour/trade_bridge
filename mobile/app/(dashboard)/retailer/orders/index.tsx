@@ -11,9 +11,9 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import ScreenWrapper from "../../../src/components/layout/ScreenWrapper";
-import { useOrderStore } from "../../../src/stores/order.store";
-import { type Order, type OrderStatus } from "../../../src/types/order.types";
+import ScreenWrapper from "@/components/layout/ScreenWrapper";
+import { useOrderStore } from "@/features/orders/order.store";
+import { type Order, type OrderStatus } from "@/features/orders/order.types";
 
 const formatCurrency = (value: number) => {
   return new Intl.NumberFormat("en-US", {
@@ -63,7 +63,7 @@ export default function RetailerOrdersScreen() {
     return orders.filter((order) => {
       const supplierName =
         order.supplier?.business_name || order.supplier?.full_name || "Unknown";
-      
+
       const matchesSearch =
         searchQuery.trim() === "" ||
         order.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -126,7 +126,7 @@ export default function RetailerOrdersScreen() {
           <View style={styles.headerRight}>
             <Text style={styles.priceText}>{formatCurrency(order.total_price)}</Text>
             <Text style={[styles.statusBadge, { color: iconColor, backgroundColor: iconBg, borderColor: iconColor }]}>
-               {order.order_status.toUpperCase()}
+              {order.order_status.toUpperCase()}
             </Text>
           </View>
         </View>
@@ -152,8 +152,8 @@ export default function RetailerOrdersScreen() {
             </Pressable>
           )}
           <View style={{ flex: 1 }} />
-          <Pressable 
-            style={styles.detailsBtn} 
+          <Pressable
+            style={styles.detailsBtn}
             onPress={() => router.push(`/retailer/orders/${order.id}`)}
           >
             <Ionicons name="eye-outline" size={14} color="#334155" />
@@ -237,8 +237,8 @@ export default function RetailerOrdersScreen() {
               You haven't placed any orders yet, or none match your filters.
             </Text>
             {(searchQuery !== "" || statusFilter !== "all") && (
-              <Pressable 
-                style={styles.clearFiltersButton} 
+              <Pressable
+                style={styles.clearFiltersButton}
                 onPress={() => {
                   setSearchQuery("");
                   setStatusFilter("all");

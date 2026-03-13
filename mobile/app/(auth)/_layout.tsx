@@ -1,8 +1,8 @@
 import { useEffect } from "react";
 import { ActivityIndicator, View } from "react-native";
 import { Redirect, Stack } from "expo-router";
-import { roleNavigation } from "../../src/navigation/roleNavigation";
-import { useAuthStore } from "../../src/stores/auth.store";
+import { roleNavigation } from "@/navigation/roleNavigation";
+import { useAuthStore } from "@/features/auth/auth.store";
 
 export default function AuthLayout() {
   const { user, isInitialized, initialize } = useAuthStore();

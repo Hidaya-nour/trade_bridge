@@ -12,8 +12,8 @@ import {
   View,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { useAuthStore } from "../../src/stores/auth.store";
-import { roleNavigation } from "../../src/navigation/roleNavigation";
+import { useAuthStore } from "@/features/auth/auth.store";
+import { roleNavigation } from "@/navigation/roleNavigation";
 
 export default function LoginScreen() {
   const router = useRouter();

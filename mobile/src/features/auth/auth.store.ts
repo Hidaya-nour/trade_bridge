@@ -1,9 +1,9 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
-import { API_BASE_URL } from "../lib/api";
-import { authService } from "../services/auth.service";
-import { type Tokens, type User } from "../types/auth.types";
+import { API_BASE_URL } from "@/lib/api";
+import { authService } from "./auth.service";
+import { type Tokens, type User } from "./auth.types";
 
 const getReadableAuthError = (error: any) => {
   if (error?.code === "ECONNABORTED") {

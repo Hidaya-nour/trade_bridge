@@ -11,10 +11,10 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import ScreenWrapper from "../../../src/components/layout/ScreenWrapper";
-import { useProductStore } from "../../../src/stores/product.store";
-import { useCartStore } from "../../../src/stores/cart.store";
-import { type Product } from "../../../src/types/product.types";
+import ScreenWrapper from "@/components/layout/ScreenWrapper";
+import { useProductStore } from "@/features/products/product.store";
+import { useCartStore } from "@/features/cart/cart.store";
+import { type Product } from "@/features/products/product.types";
 
 const ITEMS_PER_PAGE = 8;
 const DEFAULT_MAX_PRICE = 10000;
