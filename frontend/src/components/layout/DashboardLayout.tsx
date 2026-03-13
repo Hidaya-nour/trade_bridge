@@ -1,7 +1,8 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import DashboardHeader from "./DashboardHeader";
 import DashboardSidebar from "./DashboardSidebar";
 import { cn } from "@/lib/utils";
+import { useAuthStore } from "@/stores/auth.store";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -10,6 +11,27 @@ interface DashboardLayoutProps {
 const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const { user, fetchUser } = useAuthStore();
+
+  useEffect(() => {
+    if (!user) return;
+
+    void fetchUser();
+
+    const handleFocus = () => {
+      void fetchUser();
+    };
+
+    window.addEventListener("focus", handleFocus);
+    const interval = window.setInterval(() => {
+      void fetchUser();
+    }, 60000);
+
+    return () => {
+      window.removeEventListener("focus", handleFocus);
+      window.clearInterval(interval);
+    };
+  }, [user?.id, fetchUser]);
 
   return (
     <div className="min-h-screen bg-background">

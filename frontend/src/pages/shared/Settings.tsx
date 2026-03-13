@@ -1,5 +1,14 @@
 import React, { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
+import L from "leaflet";
+import {
+  MapContainer,
+  Marker,
+  TileLayer,
+  useMap,
+  useMapEvents,
+} from "react-leaflet";
+import "leaflet/dist/leaflet.css";
 import {
   User,
   Building,
@@ -140,6 +149,58 @@ const userData = {
   },
 };
 
+const DEFAULT_MAP_CENTER = { lat: 8.9806, lng: 38.7578 };
+const docStatusStyles: Record<
+  "pending" | "verified" | "rejected",
+  string
+> = {
+  pending: "bg-amber-100 text-amber-800 border-amber-200",
+  verified: "bg-green-100 text-green-700 border-green-200",
+  rejected: "bg-red-100 text-red-700 border-red-200",
+};
+const mapMarkerIcon = new L.Icon({
+  iconUrl: new URL(
+    "leaflet/dist/images/marker-icon.png",
+    import.meta.url,
+  ).toString(),
+  iconRetinaUrl: new URL(
+    "leaflet/dist/images/marker-icon-2x.png",
+    import.meta.url,
+  ).toString(),
+  shadowUrl: new URL(
+    "leaflet/dist/images/marker-shadow.png",
+    import.meta.url,
+  ).toString(),
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41],
+});
+
+const MapCenterUpdater: React.FC<{ center: { lat: number; lng: number } }> = ({
+  center,
+}) => {
+  const map = useMap();
+
+  useEffect(() => {
+    map.setView(center);
+  }, [map, center.lat, center.lng]);
+
+  return null;
+};
+
+const MapClickHandler: React.FC<{
+  onPick: (lat: number, lng: number) => void;
+}> = ({ onPick }) => {
+  useMapEvents({
+    click(event) {
+      onPick(event.latlng.lat, event.latlng.lng);
+    },
+  });
+
+  return null;
+};
+
 const SettingsPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState("profile");
   const [isEditing, setIsEditing] = useState(false);
@@ -211,6 +272,7 @@ const SettingsPage: React.FC = () => {
   const [licenseIssuedDate, setLicenseIssuedDate] = useState("");
   const [licenseExpiryDate, setLicenseExpiryDate] = useState("");
   const [licenseMessage, setLicenseMessage] = useState<string | null>(null);
+  const [addressMessage, setAddressMessage] = useState<string | null>(null);
   const [licenseUploading, setLicenseUploading] = useState(false);
   const [extraDocs, setExtraDocs] = useState<
     {
@@ -228,6 +290,9 @@ const SettingsPage: React.FC = () => {
     latitude: "",
     longitude: "",
   });
+  const [locationMessage, setLocationMessage] = useState<string | null>(null);
+  const [isLocating, setIsLocating] = useState(false);
+  const [hasAutoLocated, setHasAutoLocated] = useState(false);
 
   const canManageSupplierPaymentMethods =
     user?.role === "factory" || user?.role === "distributor";
@@ -337,6 +402,23 @@ const SettingsPage: React.FC = () => {
     return sorted[0];
   }, [addresses]);
 
+  const sortedDocuments = React.useMemo(() => {
+    if (!documents || documents.length === 0) return [];
+    return [...documents].sort((a: any, b: any) => {
+      const aDate = new Date(a.uploaded_at || a.created_at || 0).getTime();
+      const bDate = new Date(b.uploaded_at || b.created_at || 0).getTime();
+      return bDate - aDate;
+    });
+  }, [documents]);
+
+  const getDocumentLabel = (doc: any) => {
+    if (doc.original_file_name) return doc.original_file_name;
+    if (doc.document_type === "business_license") return "Business License";
+    if (doc.document_type === "tax_certificate") return "Tax Certificate";
+    if (doc.document_type === "id_card") return "ID Card";
+    return "Other Document";
+  };
+
   useEffect(() => {
     if (!latestAddress) return;
     setAddressForm((prev) => ({
@@ -357,10 +439,57 @@ const SettingsPage: React.FC = () => {
     }));
   }, [latestAddress]);
 
+  const saveAddress = async (showMessage = true) => {
+    if (!addressForm.region.trim() || !addressForm.city.trim()) {
+      if (showMessage) {
+        setAddressMessage("Please provide your region and city address details.");
+      }
+      return false;
+    }
+
+    try {
+      const addressPayload: any = {
+        region: addressForm.region.trim(),
+        city: addressForm.city.trim(),
+        subcity: addressForm.subcity?.trim() || undefined,
+      };
+      if (addressForm.latitude) addressPayload.latitude = addressForm.latitude;
+      if (addressForm.longitude)
+        addressPayload.longitude = addressForm.longitude;
+
+      if (latestAddress?.id) {
+        await updateAddress(latestAddress.id, addressPayload);
+      } else {
+        await createAddress(addressPayload);
+      }
+
+      await fetchAddresses();
+      await fetchUser();
+
+      if (showMessage) {
+        setAddressMessage("Address saved successfully.");
+      }
+      return true;
+    } catch (error: any) {
+      if (showMessage) {
+        setAddressMessage(
+          error?.response?.data?.message ||
+            error?.message ||
+            "Failed to save address.",
+        );
+      }
+      return false;
+    }
+  };
+
   const handleUploadDocuments = async () => {
     const uploads: {
       file: File;
-      document_type: "business_license" | "tax_certificate" | "id_card" | "other";
+      document_type:
+        | "business_license"
+        | "tax_certificate"
+        | "id_card"
+        | "other";
       issued_date?: string;
       expiry_date?: string;
     }[] = [];
@@ -385,31 +514,22 @@ const SettingsPage: React.FC = () => {
     });
 
     if (uploads.length === 0) {
-      setLicenseMessage("Please select at least one document to upload.");
+      setLicenseMessage(null);
+      const saved = await saveAddress(true);
+      if (!saved) return;
+      setLicenseMessage("Address saved. No documents uploaded.");
       return;
     }
-    if (!addressForm.region.trim() || !addressForm.city.trim()) {
+
+    const addressSaved = await saveAddress(false);
+    if (!addressSaved) {
       setLicenseMessage("Please provide your region and city address details.");
       return;
     }
+
     setLicenseUploading(true);
     setLicenseMessage(null);
     try {
-      const addressPayload: any = {
-        region: addressForm.region.trim(),
-        city: addressForm.city.trim(),
-        subcity: addressForm.subcity?.trim() || undefined,
-      };
-      if (addressForm.latitude) addressPayload.latitude = addressForm.latitude;
-      if (addressForm.longitude)
-        addressPayload.longitude = addressForm.longitude;
-
-      if (latestAddress?.id) {
-        await updateAddress(latestAddress.id, addressPayload);
-      } else {
-        await createAddress(addressPayload);
-      }
-
       for (const doc of uploads) {
         await documentService.uploadDocument(
           doc.file,
@@ -527,6 +647,62 @@ const SettingsPage: React.FC = () => {
       .toUpperCase()
       .slice(0, 2);
   };
+
+  const parsedLatitude = Number.parseFloat(addressForm.latitude);
+  const parsedLongitude = Number.parseFloat(addressForm.longitude);
+  const hasCoordinates =
+    Number.isFinite(parsedLatitude) && Number.isFinite(parsedLongitude);
+  const isBusinessVerified = Boolean(user?.verified);
+
+  const handleUseCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      setLocationMessage("Geolocation is not supported by this browser.");
+      return;
+    }
+    setIsLocating(true);
+    setLocationMessage(null);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setAddressForm((prev) => ({
+          ...prev,
+          latitude: position.coords.latitude.toFixed(6),
+          longitude: position.coords.longitude.toFixed(6),
+        }));
+        setLocationMessage("Location updated.");
+        setIsLocating(false);
+      },
+      (error) => {
+        setLocationMessage(
+          error.message || "Unable to retrieve your location.",
+        );
+        setIsLocating(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 },
+    );
+  };
+
+  useEffect(() => {
+    if (hasAutoLocated || hasCoordinates) return;
+    if (!navigator.geolocation) return;
+    setHasAutoLocated(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setAddressForm((prev) => ({
+          ...prev,
+          latitude: position.coords.latitude.toFixed(6),
+          longitude: position.coords.longitude.toFixed(6),
+        }));
+      },
+      () => {
+        // Silent fail; user can click the map or use the button.
+      },
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 },
+    );
+  }, [hasAutoLocated, hasCoordinates]);
+
+  const mapCenter = hasCoordinates
+    ? { lat: parsedLatitude, lng: parsedLongitude }
+    : DEFAULT_MAP_CENTER;
 
   return (
     <div className="space-y-6">
@@ -849,7 +1025,7 @@ const SettingsPage: React.FC = () => {
                             account.
                           </p>
                         </div>
-                        {user?.verified ? (
+                        {isBusinessVerified ? (
                           <Badge className="ml-auto bg-green-100 text-green-700 border-green-200">
                             Verified
                           </Badge>
@@ -860,6 +1036,152 @@ const SettingsPage: React.FC = () => {
                         )}
                       </div>
 
+                      {isBusinessVerified ? (
+                        <div className="space-y-4">
+                          <div className="rounded-md border border-green-200 bg-green-50 p-4 text-sm text-green-800">
+                            <div className="flex items-center gap-2">
+                              <Check className="h-4 w-4" />
+                              Your business account is verified.
+                            </div>
+                            {businessLicenseDoc?.reviewed_at && (
+                              <p className="text-xs mt-1">
+                                Approved on{" "}
+                                {new Date(
+                                  businessLicenseDoc.reviewed_at,
+                                ).toLocaleDateString()}
+                                .
+                              </p>
+                            )}
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="rounded-md border bg-white p-3 text-sm">
+                              <p className="text-xs text-muted-foreground">
+                                Business Name
+                              </p>
+                              <p className="font-medium">
+                                {profileForm.business_name || "—"}
+                              </p>
+                            </div>
+                            <div className="rounded-md border bg-white p-3 text-sm">
+                              <p className="text-xs text-muted-foreground">
+                                TIN Number
+                              </p>
+                              <p className="font-medium">
+                                {profileForm.tin_number || "—"}
+                              </p>
+                            </div>
+                            <div className="rounded-md border bg-white p-3 text-sm">
+                              <p className="text-xs text-muted-foreground">
+                                Region
+                              </p>
+                              <p className="font-medium">
+                                {addressForm.region || "—"}
+                              </p>
+                            </div>
+                            <div className="rounded-md border bg-white p-3 text-sm">
+                              <p className="text-xs text-muted-foreground">
+                                City
+                              </p>
+                              <p className="font-medium">
+                                {addressForm.city || "—"}
+                              </p>
+                            </div>
+                            {addressForm.subcity && (
+                              <div className="rounded-md border bg-white p-3 text-sm">
+                                <p className="text-xs text-muted-foreground">
+                                  Subcity
+                                </p>
+                                <p className="font-medium">
+                                  {addressForm.subcity}
+                                </p>
+                              </div>
+                            )}
+                            <div className="rounded-md border bg-white p-3 text-sm">
+                              <p className="text-xs text-muted-foreground">
+                                Verification Status
+                              </p>
+                              <p className="font-medium">Verified</p>
+                            </div>
+                          </div>
+
+                          {hasCoordinates && (
+                            <div className="rounded-lg border overflow-hidden">
+                              <MapContainer
+                                id="businessMap"
+                                center={mapCenter}
+                                zoom={13}
+                                scrollWheelZoom
+                                className="h-56 w-full"
+                              >
+                                <TileLayer
+                                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                                />
+                                <MapCenterUpdater center={mapCenter} />
+                                <Marker
+                                  position={mapCenter}
+                                  icon={mapMarkerIcon}
+                                />
+                              </MapContainer>
+                            </div>
+                          )}
+
+                          {sortedDocuments.length > 0 && (
+                            <div className="rounded-md border border-amber-200 bg-white/70 p-3 text-xs">
+                              <div className="flex items-center justify-between">
+                                <span className="text-amber-900 font-medium">
+                                  Uploaded documents
+                                </span>
+                                <Badge variant="outline">
+                                  {sortedDocuments.length}
+                                </Badge>
+                              </div>
+                              <div className="mt-3 space-y-2">
+                                {sortedDocuments.map((doc: any) => (
+                                  <div
+                                    key={doc.id}
+                                    className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 rounded-md border bg-white px-3 py-2"
+                                  >
+                                    <div>
+                                      <p className="text-amber-900 font-medium">
+                                        {getDocumentLabel(doc)}
+                                      </p>
+                                      <p className="text-[11px] text-amber-800">
+                                        {doc.document_type?.replaceAll(
+                                          "_",
+                                          " ",
+                                        ) || "document"}
+                                      </p>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <Badge
+                                        variant="outline"
+                                        className={docStatusStyles[
+                                          doc.verification_status || "pending"
+                                        ]}
+                                      >
+                                        {doc.verification_status || "pending"}
+                                      </Badge>
+                                      {doc.rejection_reason && (
+                                        <span className="text-[11px] text-red-700">
+                                          {doc.rejection_reason}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          <p className="text-xs text-muted-foreground">
+                            Need to update verified business details? Please
+                            contact support.
+                          </p>
+                        </div>
+                      ) : (
+                        <>
                       {businessLicenseDoc && (
                         <div className="rounded-md border border-amber-200 bg-white/70 p-3 text-xs">
                           <div className="flex items-center justify-between">
@@ -912,6 +1234,51 @@ const SettingsPage: React.FC = () => {
                           )}
                         </div>
                       )}
+                      {sortedDocuments.length > 0 && (
+                        <div className="rounded-md border border-amber-200 bg-white/70 p-3 text-xs">
+                          <div className="flex items-center justify-between">
+                            <span className="text-amber-900 font-medium">
+                              Uploaded documents
+                            </span>
+                            <Badge variant="outline">
+                              {sortedDocuments.length}
+                            </Badge>
+                          </div>
+                          <div className="mt-3 space-y-2">
+                            {sortedDocuments.map((doc: any) => (
+                              <div
+                                key={doc.id}
+                                className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 rounded-md border bg-white px-3 py-2"
+                              >
+                                <div>
+                                  <p className="text-amber-900 font-medium">
+                                    {getDocumentLabel(doc)}
+                                  </p>
+                                  <p className="text-[11px] text-amber-800">
+                                    {doc.document_type?.replaceAll("_", " ") ||
+                                      "document"}
+                                  </p>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Badge
+                                    variant="outline"
+                                    className={docStatusStyles[
+                                      doc.verification_status || "pending"
+                                    ]}
+                                  >
+                                    {doc.verification_status || "pending"}
+                                  </Badge>
+                                  {doc.rejection_reason && (
+                                    <span className="text-[11px] text-red-700">
+                                      {doc.rejection_reason}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                       <div className="space-y-4">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div className="space-y-2">
@@ -958,72 +1325,101 @@ const SettingsPage: React.FC = () => {
                               placeholder="e.g. Bole"
                             />
                           </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="businessLatitude">
-                              Latitude (optional)
-                            </Label>
-                            <Input
-                              id="businessLatitude"
-                              value={addressForm.latitude}
-                              onChange={(e) =>
-                                setAddressForm((prev) => ({
-                                  ...prev,
-                                  latitude: e.target.value,
-                                }))
-                              }
-                              placeholder="e.g. 8.9806"
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="businessLongitude">
-                              Longitude (optional)
-                            </Label>
-                            <Input
-                              id="businessLongitude"
-                              value={addressForm.longitude}
-                              onChange={(e) =>
-                                setAddressForm((prev) => ({
-                                  ...prev,
-                                  longitude: e.target.value,
-                                }))
-                              }
-                              placeholder="e.g. 38.7578"
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="licenseFile">
-                              Business License
-                            </Label>
-                            <Input
-                              id="licenseFile"
-                              type="file"
-                              accept=".pdf,image/*"
-                              onChange={(e) =>
-                                setLicenseFile(e.target.files?.[0] || null)
-                              }
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="licenseIssued">Issued Date</Label>
-                            <Input
-                              id="licenseIssued"
-                              type="date"
-                              value={licenseIssuedDate}
-                              onChange={(e) =>
-                                setLicenseIssuedDate(e.target.value)
-                              }
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="licenseExpiry">Expiry Date</Label>
-                            <Input
-                              id="licenseExpiry"
-                              type="date"
-                              value={licenseExpiryDate}
-                              onChange={(e) =>
-                                setLicenseExpiryDate(e.target.value)
-                              }
-                            />
+                          <div className="space-y-2 md:col-span-2">
+                            <div className="flex items-center justify-between gap-3">
+                              <Label htmlFor="businessMap">
+                                Business location (optional)
+                              </Label>
+                              <div className="flex items-center gap-2">
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={handleUseCurrentLocation}
+                                  disabled={isLocating}
+                                >
+                                  {isLocating
+                                    ? "Locating..."
+                                    : "Use my current location"}
+                                </Button>
+                                {hasCoordinates && (
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() =>
+                                      setAddressForm((prev) => ({
+                                        ...prev,
+                                        latitude: "",
+                                        longitude: "",
+                                      }))
+                                    }
+                                  >
+                                    Clear location
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
+                            <div className="rounded-lg border overflow-hidden">
+                              <MapContainer
+                                id="businessMap"
+                                center={mapCenter}
+                                zoom={13}
+                                scrollWheelZoom
+                                className="h-64 w-full"
+                              >
+                                <TileLayer
+                                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                                />
+                                <MapCenterUpdater center={mapCenter} />
+                                <MapClickHandler
+                                  onPick={(lat, lng) =>
+                                    setAddressForm((prev) => ({
+                                      ...prev,
+                                      latitude: lat.toFixed(6),
+                                      longitude: lng.toFixed(6),
+                                    }))
+                                  }
+                                />
+                                {hasCoordinates && (
+                                  <Marker
+                                    position={mapCenter}
+                                    icon={mapMarkerIcon}
+                                  />
+                                )}
+                              </MapContainer>
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                              Click the map to drop a pin. We will use this to
+                              help verify and locate your business.
+                            </p>
+                            {locationMessage && (
+                              <p className="text-xs text-muted-foreground">
+                                {locationMessage}
+                              </p>
+                            )}
+                            {hasCoordinates && !locationMessage && (
+                              <p className="text-xs text-muted-foreground">
+                                Location selected.
+                              </p>
+                            )}
+                            <div className="flex items-center justify-between gap-2">
+                              {addressMessage && (
+                                <p className="text-xs text-muted-foreground">
+                                  {addressMessage}
+                                </p>
+                              )}
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => void saveAddress(true)}
+                                disabled={addressesLoading}
+                              >
+                                {addressesLoading ? "Saving..." : "Save Address"}
+                              </Button>
+                            </div>
                           </div>
                         </div>
 
@@ -1080,8 +1476,10 @@ const SettingsPage: React.FC = () => {
                                           item.id === doc.id
                                             ? {
                                                 ...item,
-                                                document_type:
-                                                  value as "tax_certificate" | "id_card" | "other",
+                                                document_type: value as
+                                                  | "tax_certificate"
+                                                  | "id_card"
+                                                  | "other",
                                               }
                                             : item,
                                         ),
@@ -1178,7 +1576,9 @@ const SettingsPage: React.FC = () => {
                                     className="text-destructive"
                                     onClick={() =>
                                       setExtraDocs((prev) =>
-                                        prev.filter((item) => item.id !== doc.id),
+                                        prev.filter(
+                                          (item) => item.id !== doc.id,
+                                        ),
                                       )
                                     }
                                   >
@@ -1218,6 +1618,8 @@ const SettingsPage: React.FC = () => {
                           Accepted formats: PDF, JPG, PNG, WEBP. Max 10MB.
                         </p>
                       </div>
+                        </>
+                      )}
                     </div>
                   )}
                 </CardContent>

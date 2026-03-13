@@ -226,11 +226,15 @@ export const VerificationsPage: React.FC = () => {
     return parts.length > 0 ? parts.join(", ") : "Unknown";
   };
 
-  const computeStatus = (docs: AdminDocument[]): VerificationStatus => {
+  const computeStatus = (
+    docs: AdminDocument[],
+    userVerified: boolean,
+  ): VerificationStatus => {
     const statuses = docs.map((d) => d.verification_status);
     if (statuses.includes("rejected")) return "rejected";
+    if (userVerified) return "approved";
     if (statuses.length > 0 && statuses.every((s) => s === "verified"))
-      return "approved";
+      return "pending";
     if (statuses.some((s) => s === "pending")) return "pending";
     if (statuses.some((s) => s === "verified")) return "under_review";
     return "pending";
@@ -264,6 +268,9 @@ export const VerificationsPage: React.FC = () => {
       );
       const reviewedDoc = sortedDocs.find((doc) => doc.reviewed_at);
 
+      const userVerified =
+        user?.status === "active" || Boolean(user?.approved_at);
+
       return {
         id: userId,
         type: (user?.role as VerificationType) || "factory",
@@ -286,11 +293,11 @@ export const VerificationsPage: React.FC = () => {
           status: doc.verification_status,
           rejectionReason: doc.rejection_reason || undefined,
         })),
-        status: computeStatus(sortedDocs),
+        status: computeStatus(sortedDocs, userVerified),
         priority: "medium",
         userStatus: user?.status,
         userApprovedAt: user?.approved_at || null,
-        userVerified: user?.status === "active" || Boolean(user?.approved_at),
+        userVerified,
         reviewedBy: reviewedDoc?.verified_by
           ? `Admin ${reviewedDoc.verified_by.slice(0, 8)}`
           : undefined,
