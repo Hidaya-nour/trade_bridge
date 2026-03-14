@@ -94,6 +94,18 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
   getTotalCartItems,
   getTotalCartValue,
 }) => {
+  const getMapUrl = (product: CatalogProduct) => {
+    const lat = product.latitude;
+    const lng = product.longitude;
+    if (typeof lat === "number" && typeof lng === "number") {
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+      return `https://www.google.com/maps?q=${lat},${lng}`;
+    }
+    if (product.location && product.location !== "Unknown Location") {
+      return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(product.location)}`;
+    }
+    return null;
+  };
   const getProductImages = (product: CatalogProduct) => {
     if (product.images && product.images.length > 0) return product.images;
     if (product.image) return [product.image];
@@ -736,38 +748,28 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
                       </span>
                     </div>
                     <span className="text-xs text-muted-foreground">•</span>
-                    <span className="text-xs text-muted-foreground flex items-center">
-                      <MapPin className="h-3 w-3 mr-1" />
-                      {product.location}
-                    </span>
-                    <span className="text-xs text-muted-foreground">•</span>
-                    <span className="text-xs text-muted-foreground flex items-center">
-                      <Truck className="h-3 w-3 mr-1" />
-                      {product.delivery_time}
-                    </span>
+                    {getMapUrl(product) ? (
+                      <a
+                        href={getMapUrl(product) ?? undefined}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-xs text-primary flex items-center underline underline-offset-2 hover:text-primary/80"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <MapPin className="h-3 w-3 mr-1" />
+                        {product.location} · View on Map
+                      </a>
+                    ) : (
+                      <span className="text-xs text-muted-foreground flex items-center">
+                        <MapPin className="h-3 w-3 mr-1" />
+                        {product.location}
+                      </span>
+                    )}
                   </div>
 
                   <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
                     {product.description}
                   </p>
-
-                  <div className="flex flex-wrap gap-1 mb-3">
-                    {product.tags.slice(0, 2).map((tag) => (
-                      <Badge
-                        key={tag}
-                        variant="outline"
-                        className="text-[10px]"
-                      >
-                        {tag}
-                      </Badge>
-                    ))}
-                    {product.tags.length > 2 && (
-                      <Badge variant="outline" className="text-[10px]">
-                        +{product.tags.length - 2}
-                      </Badge>
-                    )}
-                  </div>
-
                   {config.showVolumeDiscount && product.volume_discount && (
                     <div className="bg-blue-50/50 rounded-lg p-2 mb-3">
                       <p className="text-xs font-medium text-blue-700">
@@ -971,9 +973,21 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
                             <span className="text-xs text-muted-foreground">
                               •
                             </span>
-                            <span className="text-xs text-muted-foreground">
-                              {product.location}
-                            </span>
+                            {getMapUrl(product) ? (
+                              <a
+                                href={getMapUrl(product) ?? undefined}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-xs text-primary underline underline-offset-2 hover:text-primary/80"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                {product.location} · View on Map
+                              </a>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">
+                                {product.location}
+                              </span>
+                            )}
                           </div>
                         </div>
 

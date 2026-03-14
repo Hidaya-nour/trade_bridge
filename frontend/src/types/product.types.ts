@@ -2,6 +2,8 @@
 // Product Types - Matching Your Backend Schema
 // ============================================================================
 
+import type { Address } from "./address.types";
+
 export interface Product {
   id: string;
   supplier_id: string;
@@ -23,7 +25,6 @@ export interface Product {
   deleted_at?: string | null;
   
   
-  // Joined data (optional)
   supplier?: {
     id: string;
     full_name: string;
@@ -33,6 +34,7 @@ export interface Product {
     rating?:number;
     created_at?:Date;
     is_verified?: boolean;
+    addresses?: Address[];
   };
 }
 
@@ -57,6 +59,7 @@ export interface CatalogProduct {
     business_name?: string;
     full_name?: string;
     is_verified?: boolean;
+    addresses?: Address[];
   };
   supplier_type?: "factory" | "distributor";
   category: string;
@@ -69,6 +72,8 @@ export interface CatalogProduct {
   rating: number;
   reviews: number;
   location: string;
+  latitude?: number | null;
+  longitude?: number | null;
   delivery_time: string;
   description: string;
   tags: string[];

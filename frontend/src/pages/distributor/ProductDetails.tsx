@@ -25,14 +25,18 @@ const DistributorProductDetailPage: React.FC = () => {
     if (!product) return;
     try {
       if (currentCartItem) {
-        await updateQuantity(currentCartItem.id, currentCartItem.quantity + quantity);
+        await updateQuantity(
+          currentCartItem.id,
+          currentCartItem.quantity + quantity,
+        );
       } else {
         await addToCart(product.id, quantity);
       }
 
       const updatedItems = useCartStore.getState().items;
       const updatedQuantity =
-        updatedItems.find((item) => item.product_id === product.id)?.quantity || 0;
+        updatedItems.find((item) => item.product_id === product.id)?.quantity ||
+        0;
 
       toast.success(`Added to cart (${updatedQuantity})`);
     } catch (error: any) {
@@ -84,7 +88,7 @@ const DistributorProductDetailPage: React.FC = () => {
           product.supplier?.business_name ||
           product.supplier?.full_name ||
           "Unknown",
-        supplierRating: product.supplier?.rating || 4.5,
+        supplierRating: product.supplier?.rating,
         supplierVerified: product.supplier?.is_verified || false,
         supplierLocation: product.supplier?.email || "Unknown",
         supplierEstablished: product.supplier?.created_at,

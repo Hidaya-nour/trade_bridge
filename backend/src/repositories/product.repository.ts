@@ -6,6 +6,7 @@ import { Product } from '../models/product.model';
 
 import { User } from '../models/user.model';
 import Review from '../models/rating-reviews.model';
+import Address from '../models/address.model';
 
 export class ProductRepository extends BaseRepository<Product> {
   constructor() {
@@ -29,7 +30,14 @@ export class ProductRepository extends BaseRepository<Product> {
     {
       model: User,
       as: 'supplier',
-      attributes: ['id', 'full_name', 'business_name']
+      attributes: ['id', 'full_name', 'business_name'],
+      include: [
+        {
+          model: Address,
+          as: 'addresses',
+          attributes: ['id', 'region', 'city', 'subcity', 'latitude', 'longitude']
+        }
+      ]
     }
   ]
     });
@@ -82,7 +90,14 @@ if (filters.supplier_id) {
       include: [{
         model: User,
         as: 'supplier',
-        attributes: ['id', 'full_name', 'business_name', 'email', 'phone']
+        attributes: ['id', 'full_name', 'business_name', 'email', 'phone'],
+        include: [
+          {
+            model: Address,
+            as: 'addresses',
+            attributes: ['id', 'region', 'city', 'subcity', 'latitude', 'longitude']
+          }
+        ]
       }]
     });
 

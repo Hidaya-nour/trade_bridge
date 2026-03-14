@@ -74,6 +74,12 @@ const DistributorMarketplacePage: React.FC = () => {
         rating: Number(p.rating) || 0,
         reviews: p.review_count || 0,
         location: p.location || p.supplier?.city || "Addis Ababa",
+        latitude: Number.isFinite(Number(p.supplier?.addresses?.[0]?.latitude))
+          ? Number(p.supplier?.addresses?.[0]?.latitude)
+          : null,
+        longitude: Number.isFinite(Number(p.supplier?.addresses?.[0]?.longitude))
+          ? Number(p.supplier?.addresses?.[0]?.longitude)
+          : null,
         deliveryTime: p.delivery_time || "2-3 days",
         verified: p.is_verified || false,
         image: p.images?.[0] || null,

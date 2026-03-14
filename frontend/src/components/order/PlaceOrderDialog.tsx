@@ -56,6 +56,7 @@ export interface PlaceOrderDialogProps {
     vatPercentage?: number;
     bulkDiscountPercentage?: number;
   };
+  showPostOrderDialog?: boolean;
   onPlaceOrder?: (
     paymentMethod?: string,
     deliveryOption?: string,
@@ -127,6 +128,7 @@ export const PlaceOrderDialog: React.FC<PlaceOrderDialogProps> = ({
   items,
   summary,
   config,
+  showPostOrderDialog = true,
   onPlaceOrder,
   onProcessPayment,
   isPlacing: externalIsPlacing,
@@ -178,9 +180,14 @@ export const PlaceOrderDialog: React.FC<PlaceOrderDialogProps> = ({
       try {
         const result = await onPlaceOrder(undefined, deliveryOption);
         if (result?.primaryOrderId && onProcessPayment) {
-          setCreatedOrderId(result.primaryOrderId);
-          setCreatedOrderTotal(result.total || summary.total);
-          setOpenPostOrderChoice(true);
+          if (showPostOrderDialog) {
+            setCreatedOrderId(result.primaryOrderId);
+            setCreatedOrderTotal(result.total || summary.total);
+            setOpenPostOrderChoice(true);
+            return;
+          }
+          onOpenChange(false);
+          navigate(config.ordersPath);
           return;
         }
 

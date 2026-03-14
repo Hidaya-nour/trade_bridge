@@ -4,14 +4,13 @@ import type { CatalogConfig, CatalogProduct } from "@/types/product.types";
 import { Store } from "lucide-react";
 import { useProductStore } from "@/stores/product.store";
 import { useCartStore } from "@/stores/cart.store";
-// import { useAuthStore } from "@/stores/auth.store";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent } from "@/components/ui/card";
-import { useAuthStore } from "@/stores/auth.store";
+// import { useAuthStore } from "@/stores/auth.store";
 
 const categories = ["All Categories", "Beverages", "Food"];
-
-const locations = [
+const defaultLocations = [
+  "All Locations",
   "Addis Ababa",
   "Adama",
   "Bahir Dar",
@@ -21,7 +20,6 @@ const locations = [
 ];
 
 const RetailerProductsPage: React.FC = () => {
-  const { user } = useAuthStore();
   const {
     products,
     isLoading: productsLoading,
@@ -131,7 +129,22 @@ const RetailerProductsPage: React.FC = () => {
   // Get unique categories from products
   const availableCategories = [
     "All Categories",
-    ...new Set(products?.map((p) => p.category).filter(Boolean)),
+    ...new Set(
+      products
+        ?.map((p) => p.category)
+        .filter((category): category is string => Boolean(category)),
+    ),
+  ];
+  const availableLocations = [
+    "All Locations",
+    ...new Set(
+      products
+        ?.map((p) => {
+          const address = p.supplier?.addresses?.[0];
+          return address?.city || address?.region;
+        })
+        .filter((location): location is string => Boolean(location)),
+    ),
   ];
 
   const config: CatalogConfig = {
@@ -143,7 +156,8 @@ const RetailerProductsPage: React.FC = () => {
     icon: Store,
     categories:
       availableCategories.length > 1 ? availableCategories : categories,
-    locations,
+    locations:
+      availableLocations.length > 1 ? availableLocations : defaultLocations,
     showVolumeDiscount: false,
     cartPath: "/retailer/cart",
     ordersPath: "/retailer/orders",
@@ -153,28 +167,38 @@ const RetailerProductsPage: React.FC = () => {
 
   // Transform products to match CatalogProduct type
   const transformedProducts: CatalogProduct[] =
-    products?.map((product) => ({
-      id: product.id,
-      name: product.name,
-      supplier_id: product.supplier_id,
-      supplier_name:
-        product.supplier?.business_name ||
-        product.supplier?.full_name ||
-        "Unknown Supplier",
-      supplier: product.supplier,
-      price: Number(product.price),
-      category: product.category || "Uncategorized",
-      image: product.images?.[0] || "/placeholder-product.png",
-      rating: 4.5,
-      reviews: 0,
-      location: "Addis Ababa",
-      min_order_amount: product.min_order_amount,
-      unit: product.unit_type,
-      description: product.description || "",
-      stock_quantity: product.stock_quantity,
-      delivery_time: "2-3 days",
-      tags: [product.category].filter(Boolean),
-    })) || [];
+    products?.map((product) => {
+      const supplierAddress = product.supplier?.addresses?.[0];
+      return {
+        id: product.id,
+        name: product.name,
+        supplier_id: product.supplier_id,
+        supplier_name:
+          product.supplier?.business_name ||
+          product.supplier?.full_name ||
+          "Unknown Supplier",
+        supplier: product.supplier,
+        price: Number(product.price),
+        category: product.category || "Uncategorized",
+        image: product.images?.[0] || "/placeholder-product.png",
+        rating: product.rating,
+        reviews: product.review_count || 0,
+        location:
+          supplierAddress?.city || supplierAddress?.region || "Unknown Location",
+        latitude: Number.isFinite(Number(supplierAddress?.latitude))
+          ? Number(supplierAddress?.latitude)
+          : null,
+        longitude: Number.isFinite(Number(supplierAddress?.longitude))
+          ? Number(supplierAddress?.longitude)
+          : null,
+        min_order_amount: product.min_order_amount,
+        unit: product.unit_type,
+        description: product.description || "",
+        stock_quantity: product.stock_quantity,
+        delivery_time: "2-3 days",
+        tags: [product.category].filter((tag): tag is string => Boolean(tag)),
+      };
+    }) || [];
   // Show loading state
   if (productsLoading) {
     return (
@@ -199,16 +223,16 @@ const RetailerProductsPage: React.FC = () => {
   }
 
   return (
-      <ProductCatalog
-        config={config}
-        products={transformedProducts}
-        onAddToCart={addToCart}
-        onRemoveFromCart={removeFromCart}
-        onRemoveItemFromCart={removeItemFromCart}
-        getCartQuantity={getCartQuantity}
-        getTotalCartItems={getTotalCartItems}
-        getTotalCartValue={getTotalCartValue}
-      />
+    <ProductCatalog
+      config={config}
+      products={transformedProducts}
+      onAddToCart={addToCart}
+      onRemoveFromCart={removeFromCart}
+      onRemoveItemFromCart={removeItemFromCart}
+      getCartQuantity={getCartQuantity}
+      getTotalCartItems={getTotalCartItems}
+      getTotalCartValue={getTotalCartValue}
+    />
   );
 };
 

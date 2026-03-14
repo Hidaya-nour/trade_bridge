@@ -907,6 +907,7 @@ export const CartPage: React.FC<CartPageProps> = ({ config }) => {
           vatPercentage: config.vatPercentage,
           bulkDiscountPercentage: config.bulkDiscountPercentage,
         }}
+        showPostOrderDialog={false}
         onPlaceOrder={handlePlaceOrder}
         onProcessPayment={handleProcessPayment as any}
         isPlacing={orderLoading}
