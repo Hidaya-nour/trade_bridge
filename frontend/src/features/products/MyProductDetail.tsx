@@ -45,6 +45,8 @@ import { formatPrice } from "@/lib/formatters";
 import { EditProductDialog } from "../../components/product/AddEditProductDialog";
 import type { Product } from "@/types/product.types";
 import toast from "react-hot-toast"; // Add toast import
+import { ProductGallery } from "@/components/product/ProductGallery";
+import { ProductSpecifications } from "@/components/product/ProductSpecifications";
 
 // ============================================================================
 // TYPES
@@ -63,80 +65,6 @@ export interface MyProductDetailProps {
   onUpdateStock: (newStock: number) => Promise<void>;
   onUpdatePrice: (newPrice: number) => Promise<void>;
 }
-
-// ============================================================================
-// HELPER FUNCTIONS
-// ============================================================================
-
-const parseSpecifications = (specs: any): Record<string, any> => {
-  if (!specs) return {};
-  if (typeof specs === "object") return specs;
-  if (typeof specs === "string") {
-    try {
-      return JSON.parse(specs);
-    } catch (error) {
-      console.error("Failed to parse specifications:", error);
-      return {};
-    }
-  }
-  return {};
-};
-
-const formatLabel = (str: string): string => {
-  return str
-    .replace(/_/g, " ")
-    .replace(/([A-Z])/g, " $1")
-    .replace(/^./, (str) => str.toUpperCase())
-    .trim();
-};
-
-const SpecificationRow: React.FC<{ label: string; value: any }> = ({
-  label,
-  value,
-}) => {
-  const renderValue = () => {
-    if (value === null || value === undefined) return "N/A";
-
-    if (typeof value === "boolean") {
-      return value ? "Yes" : "No";
-    }
-
-    if (Array.isArray(value)) {
-      return (
-        <div className="flex flex-wrap gap-1">
-          {value.map((item, i) => (
-            <Badge key={i} variant="secondary" className="text-xs">
-              {String(item)}
-            </Badge>
-          ))}
-        </div>
-      );
-    }
-
-    if (typeof value === "object") {
-      return (
-        <div className="space-y-1">
-          {Object.entries(value).map(([k, v]) => (
-            <div key={k} className="text-xs">
-              <span className="font-medium">{formatLabel(k)}:</span> {String(v)}
-            </div>
-          ))}
-        </div>
-      );
-    }
-
-    return <span>{String(value)}</span>;
-  };
-
-  return (
-    <div className="grid grid-cols-3 gap-4 py-2 border-b last:border-0 hover:bg-muted/50 transition-colors">
-      <span className="text-sm font-medium text-muted-foreground">
-        {formatLabel(label)}
-      </span>
-      <div className="text-sm col-span-2">{renderValue()}</div>
-    </div>
-  );
-};
 
 // ============================================================================
 // COMPONENT
@@ -170,8 +98,6 @@ export const MyProductDetail: React.FC<MyProductDetailProps> = ({
     setNewStock(product.stock_quantity);
     setNewPrice(product.price);
   }, [product]);
-
-  const specifications = parseSpecifications(product.specifications);
 
   const getRoleIcon = () => {
     switch (role) {
@@ -312,89 +238,11 @@ export const MyProductDetail: React.FC<MyProductDetailProps> = ({
           </Dialog>
         </div>
       </div>
-
-      {/* Quick Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Total Orders</p>
-                <p className="text-2xl font-bold">156</p>
-              </div>
-              <div className="p-2 bg-blue-100 rounded-full">
-                <ShoppingCart className="h-5 w-5 text-blue-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Revenue</p>
-                <p className="text-2xl font-bold">{formatPrice(15600)}</p>
-              </div>
-              <div className="p-2 bg-green-100 rounded-full">
-                <DollarSign className="h-5 w-5 text-green-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Average Rating</p>
-                <div className="flex items-center gap-1">
-                  <p className="text-2xl font-bold">{product.average_rating}</p>
-                  <Star className="h-5 w-5 fill-yellow-400 text-yellow-400" />
-                </div>
-              </div>
-              <div className="p-2 bg-yellow-100 rounded-full">
-                <Users className="h-5 w-5 text-yellow-600" />
-              </div>
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Based on 24 reviews
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Last Updated</p>
-                <p className="text-sm font-medium">
-                  {new Date(product.updated_at).toLocaleDateString()}
-                </p>
-              </div>
-              <div className="p-2 bg-purple-100 rounded-full">
-                <Clock className="h-5 w-5 text-purple-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
       {/* Main Content */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Product Image */}
         <div className="lg:col-span-1">
-          <div className="aspect-square bg-gradient-to-br from-primary/5 to-primary/10 rounded-xl flex items-center justify-center border">
-            {product.images && product.images[0] ? (
-              <img
-                src={product.images[0]}
-                alt={product.name}
-                className="w-full h-full object-cover rounded-xl"
-              />
-            ) : (
-              <Package className="h-32 w-32 text-primary/30" />
-            )}
-          </div>
+          <ProductGallery images={product.images} name={product.name} />
         </div>
 
         {/* Product Info */}
@@ -509,47 +357,10 @@ export const MyProductDetail: React.FC<MyProductDetailProps> = ({
               </CardDescription>
             </CardHeader>
             <CardContent className="p-6">
-              {Object.keys(specifications).length > 0 ? (
-                <div className="space-y-6">
-                  {Object.entries(specifications).map(([key, value]) => {
-                    // Check if value is an object (potential category)
-                    if (
-                      typeof value === "object" &&
-                      value !== null &&
-                      !Array.isArray(value)
-                    ) {
-                      return (
-                        <div key={key}>
-                          <h4 className="text-sm font-medium text-muted-foreground mb-3 capitalize">
-                            {formatLabel(key)}
-                          </h4>
-                          <div className="space-y-3">
-                            {Object.entries(value).map(([subKey, subValue]) => (
-                              <SpecificationRow
-                                key={subKey}
-                                label={subKey}
-                                value={subValue}
-                              />
-                            ))}
-                          </div>
-                        </div>
-                      );
-                    }
-
-                    // Otherwise treat as direct specification
-                    return (
-                      <SpecificationRow key={key} label={key} value={value} />
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <Package className="h-12 w-12 mx-auto text-muted-foreground/30" />
-                  <p className="text-sm text-muted-foreground mt-2">
-                    No specifications available for this product.
-                  </p>
-                </div>
-              )}
+              <ProductSpecifications
+                specifications={product.specifications}
+                emptyMessage="No specifications available for this product."
+              />
             </CardContent>
           </Card>
         </TabsContent>

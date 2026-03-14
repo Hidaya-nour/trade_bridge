@@ -1,5 +1,7 @@
 // src/components/shared/EditProductDialog.tsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
+import toast from "react-hot-toast";
+import { X } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -22,6 +24,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { Product } from "@/types/product.types";
+import productService from "@/services/product.service";
 
 // Constants (could be moved to a shared constants file later)
 const PRODUCT_CATEGORIES = ["Beverages", "Food Products"];
@@ -75,6 +78,10 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
   };
 
   const [formData, setFormData] = useState(initialFormData);
+  const [existingImages, setExistingImages] = useState<string[]>([]);
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+  const [isUploadingImages, setIsUploadingImages] = useState(false);
 
   const [specifications, setSpecifications] = useState<
     { key: string; value: string }[]
@@ -118,6 +125,8 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
       } else {
         setSpecifications([]);
       }
+
+      setExistingImages(Array.isArray(product.images) ? product.images : []);
     }
 
     if (mode === "add" && open) {
@@ -127,8 +136,54 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
         unit_type: unitTypes[0] || "kg",
       });
       setSpecifications([]);
+      setExistingImages([]);
     }
   }, [product, mode, open, categories, unitTypes]);
+
+  useEffect(() => {
+    if (!open && (imagePreviews.length > 0 || imageFiles.length > 0)) {
+      imagePreviews.forEach((url) => URL.revokeObjectURL(url));
+      setImagePreviews([]);
+      setImageFiles([]);
+      setIsUploadingImages(false);
+    }
+  }, [open, imagePreviews.length, imageFiles.length]);
+
+  const canAddMoreImages = useMemo(() => {
+    return existingImages.length + imageFiles.length < 6;
+  }, [existingImages.length, imageFiles.length]);
+
+  const handleImageSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files || []);
+    if (files.length === 0) return;
+
+    const remainingSlots = 6 - (existingImages.length + imageFiles.length);
+    const filesToAdd = files.slice(0, Math.max(0, remainingSlots));
+
+    if (filesToAdd.length < files.length) {
+      toast.error("You can upload up to 6 images.");
+    }
+
+    const previews = filesToAdd.map((file) => URL.createObjectURL(file));
+    setImageFiles((prev) => [...prev, ...filesToAdd]);
+    setImagePreviews((prev) => [...prev, ...previews]);
+
+    event.target.value = "";
+  };
+
+  const removeExistingImage = (index: number) => {
+    setExistingImages((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const removeNewImage = (index: number) => {
+    setImageFiles((prev) => prev.filter((_, i) => i !== index));
+    setImagePreviews((prev) => {
+      const next = [...prev];
+      const [removed] = next.splice(index, 1);
+      if (removed) URL.revokeObjectURL(removed);
+      return next;
+    });
+  };
 
   const handleSave = async () => {
     const specificationsObject: Record<string, string> = {};
@@ -139,18 +194,29 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
       }
     });
 
-    const payload = {
-      ...formData,
-      price: parseFloat(formData.price),
-      stock_quantity: parseInt(formData.stock_quantity),
-      min_order_amount: parseInt(formData.min_order_amount),
-      specifications:
-        Object.keys(specificationsObject).length > 0
-          ? specificationsObject
-          : null,
-    };
-
     try {
+      let uploadedImages: string[] = [];
+
+      if (imageFiles.length > 0) {
+        setIsUploadingImages(true);
+        uploadedImages = await productService.uploadProductImages(
+          imageFiles,
+          mode === "edit" && product ? product.id : undefined,
+        );
+      }
+
+      const payload = {
+        ...formData,
+        price: parseFloat(formData.price),
+        stock_quantity: parseInt(formData.stock_quantity),
+        min_order_amount: parseInt(formData.min_order_amount),
+        specifications:
+          Object.keys(specificationsObject).length > 0
+            ? specificationsObject
+            : null,
+        images: [...existingImages, ...uploadedImages],
+      };
+
       if (mode === "edit" && product && onSave) {
         await onSave(product.id, payload);
       }
@@ -162,6 +228,9 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
       onOpenChange(false);
     } catch (error) {
       console.error("Failed to save product", error);
+      toast.error("Failed to upload or save product images.");
+    } finally {
+      setIsUploadingImages(false);
     }
   };
 
@@ -313,6 +382,69 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
               />
             </div>
 
+            {/* Product Images */}
+            <div className="space-y-2">
+              <Label>Product Images (Optional)</Label>
+              <Input
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={handleImageSelect}
+                disabled={!canAddMoreImages}
+              />
+              <p className="text-xs text-muted-foreground">
+                Upload up to 6 images. JPG, PNG, or WEBP. Max 10MB each.
+              </p>
+
+              {(existingImages.length > 0 || imagePreviews.length > 0) && (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {existingImages.map((url, index) => (
+                    <div
+                      key={`existing-${url}-${index}`}
+                      className="relative group"
+                    >
+                      <img
+                        src={url}
+                        alt="Product"
+                        className="h-24 w-full rounded-md border object-cover"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="absolute right-1 top-1 h-6 w-6 bg-white/80 hover:bg-white"
+                        onClick={() => removeExistingImage(index)}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ))}
+
+                  {imagePreviews.map((url, index) => (
+                    <div
+                      key={`new-${url}-${index}`}
+                      className="relative group"
+                    >
+                      <img
+                        src={url}
+                        alt="New product"
+                        className="h-24 w-full rounded-md border object-cover"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="absolute right-1 top-1 h-6 w-6 bg-white/80 hover:bg-white"
+                        onClick={() => removeNewImage(index)}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
             {/* Specifications */}
             <div className="space-y-3">
               <Label>Specifications (Optional)</Label>
@@ -380,7 +512,7 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button onClick={handleSave}>
+          <Button onClick={handleSave} disabled={isUploadingImages}>
             {mode === "add" ? "Add Product" : "Save Changes"}
           </Button>
         </DialogFooter>

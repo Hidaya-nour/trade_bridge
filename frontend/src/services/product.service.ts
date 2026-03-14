@@ -82,6 +82,21 @@ class ProductService {
     const response = await api.get('/products/out-of-stock');
     return response.data;
   }
+
+  // Upload product images to Cloudinary
+  async uploadProductImages(files: File[], productId?: string): Promise<string[]> {
+    const formData = new FormData();
+    files.forEach((file) => formData.append('files', file));
+    if (productId) {
+      formData.append('product_id', productId);
+    }
+
+    const response = await api.post('/products/images/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+
+    return response.data?.data?.images || [];
+  }
 }
 
 export default new ProductService();

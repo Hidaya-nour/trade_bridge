@@ -73,6 +73,7 @@ export interface CatalogProduct {
   description: string;
   tags: string[];
   image?: string | null;
+  images?: string[];
   volume_discount?: string;
   lead_time?: string;
   payment_terms?: string[];
@@ -157,6 +158,7 @@ export interface CreateProductData {
   name: string;
   category: string;
   description?: string;
+  specifications?: Record<string, string> | null;
   price: number;
   stock_quantity: number;
   min_order_amount: number;

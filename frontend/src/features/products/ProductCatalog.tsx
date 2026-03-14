@@ -91,6 +91,11 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
   getTotalCartItems,
   getTotalCartValue,
 }) => {
+  const getProductImages = (product: CatalogProduct) => {
+    if (product.images && product.images.length > 0) return product.images;
+    if (product.image) return [product.image];
+    return [];
+  };
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All Categories");
@@ -647,7 +652,10 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
         />
       ) : viewMode === "grid" ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {currentItems.map((product) => (
+          {currentItems.map((product) => {
+            const images = getProductImages(product);
+            const hasImages = images.length > 0;
+            return (
             <Card
               key={product.id}
               className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer"
@@ -656,13 +664,43 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
               }
             >
               <div className="relative h-40 bg-gradient-to-br from-primary/5 to-primary/10 flex items-center justify-center">
-                <Package className="h-16 w-16 text-primary/30" />
+                {hasImages ? (
+                  <img
+                    src={images[0]}
+                    alt={product.name}
+                    className="h-full w-full object-cover"
+                    loading="lazy"
+                  />
+                ) : (
+                  <Package className="h-16 w-16 text-primary/30" />
+                )}
                 <Badge className="absolute top-3 right-3 bg-white/90 text-foreground border-0">
                   Min: {product.min_order_amount}+
                 </Badge>
               </div>
 
               <CardContent className="p-4">
+                {images.length > 1 && (
+                  <div
+                    className="flex items-center gap-2 mb-2"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    {images.slice(0, 4).map((url, index) => (
+                      <img
+                        key={`${url}-${index}`}
+                        src={url}
+                        alt={`${product.name} ${index + 1}`}
+                        className="h-8 w-8 rounded border object-cover"
+                        loading="lazy"
+                      />
+                    ))}
+                    {images.length > 4 && (
+                      <span className="text-xs text-muted-foreground">
+                        +{images.length - 4}
+                      </span>
+                    )}
+                  </div>
+                )}
                 <div className="flex items-start justify-between mb-2">
                   <div>
                     <h3 className="font-semibold text-lg line-clamp-1">
@@ -832,12 +870,15 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
                 </div>
               </CardContent>
             </Card>
-          ))}
+          )})}
         </div>
       ) : (
         // List View
         <div className="space-y-4">
-          {currentItems.map((product) => (
+          {currentItems.map((product) => {
+            const images = getProductImages(product);
+            const hasImages = images.length > 0;
+            return (
             <Card
               key={product.id}
               className="overflow-hidden hover:shadow-md transition-shadow cursor-pointer"
@@ -847,11 +888,41 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
             >
               <CardContent className="p-6">
                 <div className="flex flex-col md:flex-row gap-6">
-                  <div className="md:w-32 h-32 bg-gradient-to-br from-primary/5 to-primary/10 rounded-lg flex items-center justify-center">
-                    <Package className="h-12 w-12 text-primary/30" />
+                  <div className="md:w-32 h-32 bg-gradient-to-br from-primary/5 to-primary/10 rounded-lg flex items-center justify-center overflow-hidden">
+                    {hasImages ? (
+                      <img
+                        src={images[0]}
+                        alt={product.name}
+                        className="h-full w-full object-cover"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <Package className="h-12 w-12 text-primary/30" />
+                    )}
                   </div>
 
                   <div className="flex-1">
+                    {images.length > 1 && (
+                      <div
+                        className="flex items-center gap-2 mb-3"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {images.slice(0, 4).map((url, index) => (
+                          <img
+                            key={`${url}-${index}`}
+                            src={url}
+                            alt={`${product.name} ${index + 1}`}
+                            className="h-8 w-8 rounded border object-cover"
+                            loading="lazy"
+                          />
+                        ))}
+                        {images.length > 4 && (
+                          <span className="text-xs text-muted-foreground">
+                            +{images.length - 4}
+                          </span>
+                        )}
+                      </div>
+                    )}
                     <div className="flex items-start justify-between">
                       <div>
                         <div className="flex items-center gap-2">
@@ -1023,7 +1094,7 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
                 </div>
               </CardContent>
             </Card>
-          ))}
+          )})}
         </div>
       )}
 

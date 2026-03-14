@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { ProductManagement } from "@/features/products/ProductManagement";
 import { useProductStore } from "@/stores/product.store";
 // import { suppliers } from "./data";
@@ -45,12 +45,9 @@ const DistributorManageProductsPage: React.FC = () => {
   // Transform store products to match component Product type (aligned with DB schema)
   useEffect(() => {
     if (products && products.length > 0) {
-      console.log("Store products:", products);
-
       const transformedProducts: Product[] = products.map((item: any) => ({
         ...item,
       }));
-      console.log("Transformed products:", transformedProducts);
       setLocalProducts(transformedProducts);
     } else {
       setLocalProducts([]);
@@ -77,6 +74,8 @@ const DistributorManageProductsPage: React.FC = () => {
         min_order_amount: parseInt(productData.min_order_amount),
         stock_quantity: parseInt(productData.stock_quantity),
         description: productData.description,
+        images: productData.images,
+        specifications: productData.specifications,
         is_available: productData.is_available,
       });
 
@@ -102,6 +101,8 @@ const DistributorManageProductsPage: React.FC = () => {
         price: parseFloat(productData.price),
         stock_quantity: parseInt(productData.stock_quantity),
         description: productData.description,
+        images: productData.images,
+        specifications: productData.specifications,
         is_available: productData.is_available,
       });
 
@@ -185,7 +186,10 @@ const DistributorManageProductsPage: React.FC = () => {
   };
 
   // Prepare categories for the filter (add "All Categories" at the beginning)
-  const filterCategories = ["All Categories", ...(categories || [])];
+  const filterCategories = useMemo(
+    () => ["All Categories", ...(categories || [])],
+    [categories],
+  );
 
   return (
     <ProductManagement

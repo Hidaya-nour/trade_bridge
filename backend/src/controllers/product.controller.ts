@@ -247,4 +247,39 @@ console.log("Filters:", filters);
       }
     }
   }
+
+  // Upload product images (Cloudinary)
+  async uploadImages(req: Request, res: Response) {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        res.status(401).json({ success: false, message: 'Authentication required' });
+        return;
+      }
+
+      const files = (req.files || []) as Express.Multer.File[];
+      const productId = req.body?.product_id as string | undefined;
+
+      if (productId) {
+        const product = await productService.getProductById(productId);
+        if (product.supplier_id !== userId) {
+          const user = req.user;
+          if (!user || user.role !== 'admin') {
+            res.status(403).json({ success: false, message: 'You can only upload images for your own products' });
+            return;
+          }
+        }
+      }
+
+      const images = await productService.uploadProductImages(userId, files, productId);
+      res.status(201).json({ success: true, data: { images } });
+    } catch (error) {
+      if (error instanceof AppError) {
+        res.status(error.statusCode).json({ success: false, message: error.message });
+      } else {
+        logger.error('Upload product images error:', error);
+        res.status(500).json({ success: false, message: 'Internal server error' });
+      }
+    }
+  }
 }

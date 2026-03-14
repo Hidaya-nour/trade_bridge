@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   Package,
@@ -146,9 +146,14 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({
     setProducts(initialProducts);
   }, [initialProducts]);
 
-  const formCategories = filterCategories.filter(
-    (category) => category !== "All Categories",
+  const formCategories = useMemo(
+    () =>
+      filterCategories.filter((category) => category !== "All Categories"),
+    [filterCategories],
   );
+  const getProductImages = (product: Product) => {
+    return Array.isArray(product.images) ? product.images : [];
+  };
 
   // Filter products
   const filteredProducts = products.filter((product) => {
@@ -448,6 +453,8 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({
                     product.stock_quantity || 0,
                     product.min_order_amount || 1,
                   );
+                  const images = getProductImages(product);
+                  const hasImages = images.length > 0;
                   return (
                     <TableRow
                       key={product.id}
@@ -463,8 +470,17 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({
                     >
                       <TableCell>
                         <div className="flex items-center gap-3">
-                          <div className="h-10 w-10 bg-gradient-to-br from-primary/5 to-primary/10 rounded-lg flex items-center justify-center">
-                            <Package className="h-5 w-5 text-primary/30" />
+                          <div className="h-10 w-10 bg-gradient-to-br from-primary/5 to-primary/10 rounded-lg flex items-center justify-center overflow-hidden">
+                            {hasImages ? (
+                              <img
+                                src={images[0]}
+                                alt={product.name}
+                                className="h-full w-full object-cover"
+                                loading="lazy"
+                              />
+                            ) : (
+                              <Package className="h-5 w-5 text-primary/30" />
+                            )}
                           </div>
                           <div>
                             <p className="font-medium">{product.name}</p>
@@ -624,6 +640,8 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({
                 product.stock_quantity || 0,
                 product.min_order_amount || 1,
               );
+              const images = getProductImages(product);
+              const hasImages = images.length > 0;
               return (
                 <Card
                   onClick={(e) => {
@@ -635,8 +653,17 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({
                   key={product.id}
                   className="overflow-hidden hover:shadow-lg transition-shadow"
                 >
-                  <div className="relative h-40 bg-gradient-to-br from-primary/5 to-primary/10 flex items-center justify-center">
-                    <Package className="h-16 w-16 text-primary/30" />
+                  <div className="relative h-40 bg-gradient-to-br from-primary/5 to-primary/10 flex items-center justify-center overflow-hidden">
+                    {hasImages ? (
+                      <img
+                        src={images[0]}
+                        alt={product.name}
+                        className="h-full w-full object-cover"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <Package className="h-16 w-16 text-primary/30" />
+                    )}
                     <Badge
                       className={cn(
                         "absolute top-3 right-3",
@@ -649,6 +676,27 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({
                     </Badge>
                   </div>
                   <CardContent className="p-4">
+                    {images.length > 1 && (
+                      <div
+                        className="flex items-center gap-2 mb-2"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {images.slice(0, 4).map((url, index) => (
+                          <img
+                            key={`${url}-${index}`}
+                            src={url}
+                            alt={`${product.name} ${index + 1}`}
+                            className="h-8 w-8 rounded border object-cover"
+                            loading="lazy"
+                          />
+                        ))}
+                        {images.length > 4 && (
+                          <span className="text-xs text-muted-foreground">
+                            +{images.length - 4}
+                          </span>
+                        )}
+                      </div>
+                    )}
                     <div className="flex items-start justify-between mb-2">
                       <div>
                         <h3 className="font-semibold">{product.name}</h3>

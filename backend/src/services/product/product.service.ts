@@ -3,6 +3,7 @@ import { UserRepository } from '../../repositories/user.repository';
 import { AppError } from '../../utils/errors';
 import { IProductFilters } from '../../types/product.types';
 import logger from '../../utils/logger';
+import { isCloudinaryConfigured, uploadBufferToCloudinary } from '../../config/cloudinary';
 
 export class ProductService {
   private productRepo = new ProductRepository();
@@ -204,5 +205,25 @@ export class ProductService {
 
   async getOutOfStockProducts() {
     return this.productRepo.findOutOfStock();
+  }
+
+  async uploadProductImages(userId: string, files: Express.Multer.File[], productId?: string) {
+    if (!files || files.length === 0) {
+      throw new AppError('At least one image is required', 400);
+    }
+
+    if (!isCloudinaryConfigured()) {
+      throw new AppError(
+        'Cloudinary is not configured. Please set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET.',
+        500
+      );
+    }
+
+    const folder = `trade_bridge/products/${userId}/${productId ?? 'unassigned'}`;
+    const uploads = await Promise.all(
+      files.map((file) => uploadBufferToCloudinary(file, folder))
+    );
+
+    return uploads.map((uploaded) => uploaded.secure_url);
   }
 }

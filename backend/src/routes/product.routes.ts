@@ -3,6 +3,7 @@ import { ProductController } from '../controllers/product.controller';
 import { authenticate, authorize, requireVerifiedSupplier } from '../middleware/auth.middleware';
 import { validate } from '../middleware/validation.middleware';
 import { body, query, param } from 'express-validator';
+import { uploadProductImagesMiddleware } from '../middleware/upload.middleware';
 
 const router = express.Router();
 const productController = new ProductController();
@@ -24,6 +25,14 @@ router.get('/', productController.getAllProducts);
 router.get('/categories', productController.getCategories);
 router.get('/low-stock', productController.getLowStock);
 router.get('/out-of-stock', productController.getOutOfStock);
+router.post(
+  '/images/upload',
+  authenticate,
+  requireVerifiedSupplier,
+  authorize('distributor', 'factory', 'admin'),
+  uploadProductImagesMiddleware,
+  productController.uploadImages
+);
 router.get('/:id', productController.getProductById);
 router.get('/supplier/:supplierId', productController.getProductsBySupplier);
 

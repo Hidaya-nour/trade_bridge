@@ -10,6 +10,13 @@ const allowedMimeTypes = new Set([
   'application/pdf',
 ]);
 
+const imageOnlyMimeTypes = new Set([
+  'image/jpeg',
+  'image/jpg',
+  'image/png',
+  'image/webp',
+]);
+
 const storage = multer.memoryStorage();
 
 const fileFilter: multer.Options['fileFilter'] = (_req, file, cb) => {
@@ -31,3 +38,21 @@ const uploader = multer({
 
 export const uploadDocumentMiddleware = uploader.single('file');
 
+const imageFileFilter: multer.Options['fileFilter'] = (_req, file, cb) => {
+  if (!imageOnlyMimeTypes.has(file.mimetype)) {
+    cb(new AppError('Unsupported file type. Allowed: JPG, PNG, WEBP', 400));
+    return;
+  }
+  cb(null, true);
+};
+
+const imageUploader = multer({
+  storage,
+  fileFilter: imageFileFilter,
+  limits: {
+    fileSize: MAX_FILE_SIZE_MB * 1024 * 1024,
+    files: 6,
+  },
+});
+
+export const uploadProductImagesMiddleware = imageUploader.array('files', 6);
