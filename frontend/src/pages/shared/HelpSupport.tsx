@@ -11,7 +11,6 @@ import {
   ExternalLink,
   PlayCircle,
   BookOpen,
-  Users,
   Shield,
   CreditCard,
   Truck,
@@ -20,7 +19,6 @@ import {
   Star,
   TrendingUp,
   AlertCircle,
-  CheckCircle2,
   Clock,
 } from "lucide-react";
 
