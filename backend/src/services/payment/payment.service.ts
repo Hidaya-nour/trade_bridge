@@ -29,6 +29,16 @@ interface SubmitPaymentPayload {
 }
 
 class PaymentService {
+  private async closeOrderIfPaidAndDelivered(orderId: string) {
+    const order = await Order.findByPk(orderId);
+    if (!order) return;
+    if (order.order_status !== 'delivered') return;
+    const payment = await Payment.findOne({ where: { order_id: orderId } });
+    if (!payment) return;
+    if (payment.payment_status !== 'completed') return;
+    order.order_status = 'closed' as any;
+    await order.save();
+  }
   private isValidEmail(email: string) {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   }
@@ -230,6 +240,9 @@ class PaymentService {
       payment.payment_date = new Date();
     }
     await payment.save();
+    if (isSuccess) {
+      await this.closeOrderIfPaidAndDelivered(payment.order_id);
+    }
 
     return {
       payment,
@@ -243,6 +256,9 @@ class PaymentService {
     if (amountPaid !== undefined) payment.amount_paid = amountPaid as any;
     payment.payment_status = status as any;
     await payment.save();
+    if (status === 'completed') {
+      await this.closeOrderIfPaidAndDelivered(payment.order_id);
+    }
     return payment;
   }
 
@@ -252,6 +268,9 @@ class PaymentService {
     if (amountPaid !== undefined) payment.amount_paid = amountPaid as any;
     payment.payment_status = status as any;
     await payment.save();
+    if (status === 'completed') {
+      await this.closeOrderIfPaidAndDelivered(orderId);
+    }
     return payment;
   }
 }

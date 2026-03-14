@@ -744,7 +744,7 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
                         {product.rating}
                       </span>
                       <span className="text-xs text-muted-foreground ml-1">
-                        ({product.reviews})
+                        ({product.review_count})
                       </span>
                     </div>
                     <span className="text-xs text-muted-foreground">•</span>
@@ -1012,7 +1012,7 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
                             {product.rating}
                           </span>
                           <span className="text-xs text-muted-foreground ml-1">
-                            ({product.reviews} reviews)
+                            ({product.review_count} reviews)
                           </span>
                         </div>
                         <div className="flex items-center gap-1 text-sm text-muted-foreground">

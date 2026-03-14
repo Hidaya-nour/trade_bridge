@@ -25,7 +25,7 @@ const updateStatusValidation = [
   param('id').isUUID().withMessage('Valid order ID is required'),
   body('status').isIn([
     'pending', 'approved', 'processing', 
-    'shipped', 'delivered', 'cancelled'
+    'shipped', 'delivered', 'closed', 'cancelled'
   ]).withMessage('Invalid order status'),
   body('notes').optional().isString(),
 ];

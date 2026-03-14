@@ -51,6 +51,7 @@ import { cn } from "@/lib/utils";
 import { Label } from "@/components/ui/label";
 import type { Order } from "@/types/order.types";
 import OrderTrackingDialog from "@/components/order/OrderTrackingDialog";
+import { PlaceOrderDialog } from "@/components/order/PlaceOrderDialog";
 import toast from "react-hot-toast";
 
 interface OrderListProps {
@@ -92,6 +93,18 @@ interface OrderListProps {
   orders?: Order[];
   onCancelOrder?: (orderId: string, reason: string) => void | Promise<boolean>;
   onReorder?: (order: Order) => void;
+  onReorderPlaceOrder?: (
+    order: Order,
+    paymentMethod?: string,
+    deliveryOption?: string,
+  ) => Promise<
+    | {
+        primaryOrderId: string;
+        orderIds?: string[];
+        total?: number;
+      }
+    | void
+  >;
   onRateProduct?: (
     productId: string,
     rating: number,
@@ -121,6 +134,7 @@ export const OrderList: React.FC<OrderListProps> = ({
   orders: propOrders = [],
   onCancelOrder,
   onReorder,
+  onReorderPlaceOrder,
   onRateProduct,
   onProcessPayment,
   isLoading = false,
@@ -138,9 +152,11 @@ export const OrderList: React.FC<OrderListProps> = ({
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [showRateDialog, setShowRateDialog] = useState(false);
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+  const [showReorderDialog, setShowReorderDialog] = useState(false);
   const [cancellationReason, setCancellationReason] = useState("");
   const [rating, setRating] = useState(5);
   const [review, setReview] = useState("");
+
   const [ratedProducts, setRatedProducts] = useState<
     Record<string, { rating: number; review: string }>
   >({});
@@ -285,6 +301,39 @@ export const OrderList: React.FC<OrderListProps> = ({
     setReview("");
   };
 
+  const handleReorderClick = (order: Order) => {
+    if (onReorderPlaceOrder) {
+      setSelectedOrder(order);
+      setShowReorderDialog(true);
+      return;
+    }
+    onReorder?.(order);
+  };
+
+  const buildReorderItems = (order: Order) =>
+    order.items?.map((item) => ({
+      id: item.id,
+      order_id: item.order_id,
+      product_id: item.product_id,
+      quantity: item.quantity,
+      unit_price: item.unit_price,
+      product: item.product,
+    })) || [];
+
+  const buildReorderSummary = (order: Order) => {
+    const items = buildReorderItems(order);
+    const subtotal = items.reduce((sum, item) => {
+      const unitPrice = item.product?.price || item.unit_price || 0;
+      return sum + unitPrice * item.quantity;
+    }, 0);
+    const shipping = 0;
+    const discount = 0;
+    const vatPercentage = config.paymentConfig?.vatPercentage ?? 0.15;
+    const tax = subtotal * vatPercentage;
+    const total = subtotal + shipping + tax - discount;
+    return { subtotal, shipping, discount, tax, total, vatPercentage };
+  };
+
   const getStatusProgress = (status: string) => {
     switch (status) {
       case "pending":
@@ -296,6 +345,8 @@ export const OrderList: React.FC<OrderListProps> = ({
       case "shipped":
         return 80;
       case "delivered":
+        return 100;
+      case "closed":
         return 100;
       case "cancelled":
         return 0;
@@ -423,6 +474,7 @@ export const OrderList: React.FC<OrderListProps> = ({
                   <SelectItem value="processing">Processing</SelectItem>
                   <SelectItem value="shipped">Shipped</SelectItem>
                   <SelectItem value="delivered">Delivered</SelectItem>
+                  <SelectItem value="closed">Closed</SelectItem>
                   <SelectItem value="cancelled">Cancelled</SelectItem>
                 </SelectContent>
               </Select>
@@ -489,7 +541,8 @@ export const OrderList: React.FC<OrderListProps> = ({
                               ? "bg-indigo-100"
                               : order.order_status === "shipped"
                                 ? "bg-purple-100"
-                                : order.order_status === "delivered"
+                                : order.order_status === "delivered" ||
+                                    order.order_status === "closed"
                                   ? "bg-green-100"
                                   : "bg-red-100",
                       )}
@@ -507,6 +560,9 @@ export const OrderList: React.FC<OrderListProps> = ({
                         <Truck className="h-5 w-5 text-purple-600" />
                       )}
                       {order.order_status === "delivered" && (
+                        <CheckCircle2 className="h-5 w-5 text-green-600" />
+                      )}
+                      {order.order_status === "closed" && (
                         <CheckCircle2 className="h-5 w-5 text-green-600" />
                       )}
                       {order.order_status === "cancelled" && (
@@ -612,7 +668,8 @@ export const OrderList: React.FC<OrderListProps> = ({
 
                 {/* Order Progress */}
                 {order.order_status !== "cancelled" &&
-                  order.order_status !== "delivered" && (
+                  order.order_status !== "delivered" &&
+                  order.order_status !== "closed" && (
                     <div className="mb-4">
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-xs font-medium">
@@ -686,7 +743,8 @@ export const OrderList: React.FC<OrderListProps> = ({
 
                               {/* Rating button for delivered orders */}
                               {config.showRating &&
-                                order.order_status === "delivered" &&
+                                (order.order_status === "delivered" ||
+                                  order.order_status === "closed") &&
                                 !isRated && (
                                   <Button
                                     size="sm"
@@ -765,13 +823,16 @@ export const OrderList: React.FC<OrderListProps> = ({
                 )}
 
                 {/* Delivery Confirmation */}
-                {order.order_status === "delivered" && (
+                {(order.order_status === "delivered" ||
+                  order.order_status === "closed") && (
                   <div className="bg-green-50 border border-green-100 rounded-lg p-3 mb-4">
                     <div className="flex items-center gap-2">
                       <CheckCircle2 className="h-4 w-4 text-green-600" />
                       <div>
                         <p className="text-xs font-medium text-green-800">
-                          Delivered
+                          {order.order_status === "closed"
+                            ? "Closed"
+                            : "Delivered"}
                         </p>
                         <p className="text-xs text-green-700">
                           {order.delivery?.completed_at && (
@@ -843,11 +904,12 @@ export const OrderList: React.FC<OrderListProps> = ({
                     )}
 
                     {config.showReorder &&
-                      order.order_status === "delivered" && (
+                      (order.order_status === "delivered" ||
+                        order.order_status === "closed") && (
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => onReorder?.(order)}
+                          onClick={() => handleReorderClick(order)}
                         >
                           <Repeat className="h-4 w-4 mr-2" />
                           Reorder
@@ -1034,6 +1096,25 @@ export const OrderList: React.FC<OrderListProps> = ({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Reorder Dialog */}
+      {selectedOrder && onReorderPlaceOrder && (
+        <PlaceOrderDialog
+          open={showReorderDialog}
+          onOpenChange={setShowReorderDialog}
+          items={buildReorderItems(selectedOrder)}
+          summary={buildReorderSummary(selectedOrder)}
+          config={{
+            role: config.role,
+            ordersPath: `/${config.role}/${config.type === "purchases" ? "purchase-orders" : "orders"}`,
+            vatPercentage: config.paymentConfig?.vatPercentage,
+          }}
+          onPlaceOrder={(paymentMethod, deliveryOption) =>
+            onReorderPlaceOrder(selectedOrder, paymentMethod, deliveryOption)
+          }
+          onProcessPayment={onProcessPayment as any}
+        />
+      )}
 
       {/* Live Tracking Dialog */}
       {trackingOrder && trackingOrder.delivery && (

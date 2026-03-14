@@ -5,6 +5,7 @@ import OrderDetailsView from "@/features/order/OrderDetailsView";
 import { useOrderStore } from "@/stores/order.store";
 import { useDriverStore } from "@/stores/driver.store";
 import deliveryService from "@/services/delivery.service";
+import paymentService from "@/services/payment.service";
 import toast from "react-hot-toast";
 import type { Order, OrderStatus, OrderDetailsData } from "@/types/order.types";
 import { WithAsync } from "@/components/shared/WithAsync";
@@ -15,6 +16,7 @@ const statusIndex: Record<OrderStatus, number> = {
   processing: 2,
   shipped: 3,
   delivered: 4,
+  closed: 5,
   cancelled: -1,
 };
 
@@ -25,6 +27,7 @@ const buildTimeline = (order: Order) => {
     "Processing",
     "Shipped",
     "Delivered",
+    "Closed",
   ];
   const index = statusIndex[order.order_status as OrderStatus] ?? 0;
   const effectiveIndex = index < 0 ? 0 : index;
@@ -64,6 +67,7 @@ const mapOrderToDetails = (
   const items =
     order.items?.map((item) => ({
       id: item.id,
+      productId: item.product_id,
       name: item.product?.name || "Item",
       sku: item.product?.sku || item.product_id,
       quantity: item.quantity,
@@ -100,6 +104,12 @@ const mapOrderToDetails = (
     paymentStatus: mapPaymentStatus(order.payment?.payment_status),
     paymentMethod: order.payment?.payment_method || "N/A",
     paymentTerms: "N/A",
+    paymentId: order.payment?.id,
+    paymentAmount: order.payment?.total_amount,
+    paymentPaid: order.payment?.amount_paid,
+    paymentProofUrl: (order.payment as any)?.proofDocument?.file_secure_url,
+    paymentProofName:
+      (order.payment as any)?.proofDocument?.original_file_name || undefined,
     subtotal,
     shipping: 0,
     tax,
@@ -134,7 +144,8 @@ const mapOrderToDetails = (
 
 const FactoryOrderDetailsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const { currentOrder, fetchOrderById, isLoading, error } = useOrderStore();
+  const { currentOrder, fetchOrderById, isLoading, error, updateOrderStatus } =
+    useOrderStore();
   const { drivers, fetchMyDrivers } = useDriverStore();
 
   useEffect(() => {
@@ -186,6 +197,31 @@ const FactoryOrderDetailsPage: React.FC = () => {
         initialOrder={orderDetails as OrderDetailsData}
         mode="incoming"
         partyLabel="Customer"
+        onUpdateStatus={async (status) => {
+          const ok = await updateOrderStatus(orderDetails!.id, { status });
+          if (ok) {
+            await fetchOrderById(orderDetails!.id);
+          }
+          return ok;
+        }}
+        onApprovePayment={async (paymentId, amountPaid) => {
+          try {
+            await paymentService.updateStatus(
+              paymentId,
+              "completed",
+              amountPaid,
+            );
+            await fetchOrderById(orderDetails!.id);
+            toast.success("Payment approved.");
+            return true;
+          } catch (err: any) {
+            toast.error(
+              err?.response?.data?.message ||
+                "Failed to approve payment. Please try again.",
+            );
+            return false;
+          }
+        }}
         onAssignDriver={async (deliveryId, driverId) => {
           try {
             await deliveryService.assignDriver(deliveryId, driverId);

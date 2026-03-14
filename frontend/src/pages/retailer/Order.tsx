@@ -5,12 +5,15 @@ import { Store } from "lucide-react";
 import type { Order } from "@/types/order.types";
 import paymentService from "@/services/payment.service";
 import documentService from "@/services/document.service";
+import ratingReviewService from "@/services/rating-review.service";
+import toast from "react-hot-toast";
 
 const OrdersPage: React.FC = () => {
   const {
     orders: storeOrders,
     fetchOrdersAsBuyer,
     cancelOrder,
+    createOrder,
     isLoading,
     error,
   } = useOrderStore();
@@ -34,15 +37,51 @@ const OrdersPage: React.FC = () => {
     };
   }, [orders]);
 
-  const handleRateProduct = (
+  const handleRateProduct = async (
     productId: string,
     rating: number,
     review: string,
     orderId: string,
   ) => {
-    console.log("Rate product:", { productId, rating, review, orderId });
-    // API call to rate the product
-    // You'll need to implement this in your store/service
+    try {
+      await ratingReviewService.createReview({
+        product_id: productId,
+        rating,
+        comment: review,
+      });
+      toast.success("Review submitted.");
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to submit review.");
+      console.error("Rate product error:", err);
+    }
+  };
+
+  const handleReorderPlaceOrder = async (
+    order: Order,
+    paymentMethod?: string,
+    deliveryOption?: string,
+  ) => {
+    const items =
+      order.items?.map((item) => ({
+        product_id: item.product_id,
+        quantity: item.quantity,
+      })) || [];
+    if (items.length === 0) return;
+    const payload = {
+      supplier_id: order.supplier_id,
+      items,
+      ...(paymentMethod ? { payment_method: paymentMethod } : {}),
+      ...(deliveryOption ? { delivery_option: deliveryOption } : {}),
+    };
+    const created = await createOrder(payload);
+    if (created) {
+      toast.success("Reorder placed successfully.");
+      return {
+        primaryOrderId: created.id,
+        total: Number(created.total_price),
+      };
+    }
+    return;
   };
 
   const handleProcessPayment = async (
@@ -110,7 +149,7 @@ const OrdersPage: React.FC = () => {
       }}
       orders={orders}
       onCancelOrder={cancelOrder}
-      onReorder={(id) => console.log("Reorder:", id)}
+      onReorderPlaceOrder={handleReorderPlaceOrder}
       onRateProduct={handleRateProduct}
       onProcessPayment={handleProcessPayment}
       isLoading={isLoading}

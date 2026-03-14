@@ -70,7 +70,12 @@ export interface CatalogProduct {
   max_order_amount?: number;
   stock_quantity?: number;
   rating: number;
-  reviews: number;
+  review_count: number;
+  reviews?: {
+      id: string;
+      user: string;
+      comment: string;
+  }
   location: string;
   latitude?: number | null;
   longitude?: number | null;
@@ -352,6 +357,8 @@ export interface ProductDetailProps {
   role: ProductDetailRole;
   product: ProductDetailData;
   onAddToCart: (quantity: number) => void;
+  cartQuantity?: number;
+  onSetCartQuantity?: (quantity: number) => void;
   onViewSupplier?: () => void;
   onCompare?: () => void;
 }

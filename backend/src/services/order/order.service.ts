@@ -12,6 +12,7 @@ import {
 import logger from '../../utils/logger';
 import { Op } from 'sequelize';
 import notificationService from '../../services/notification/notification.service';
+import Payment from '../../models/payment.model';
 
 export class OrderService {
   private orderRepo = new OrderRepository();
@@ -254,6 +255,29 @@ export class OrderService {
       logger.error('Failed to create notifications for status change', err);
     }
 
+    if (statusData.status === 'delivered') {
+      const payment = await Payment.findOne({ where: { order_id: orderId } });
+      if (payment?.payment_status === 'completed') {
+        await this.orderRepo.updateOrderStatus(orderId, 'closed');
+        try {
+          await notificationService.createNotification({
+            user_id: order.buyer_id,
+            type: 'order',
+            title: 'Order Closed',
+            message: `Order ${orderId} is now closed (delivered and paid)`,
+          });
+          await notificationService.createNotification({
+            user_id: order.supplier_id,
+            type: 'order',
+            title: 'Order Closed',
+            message: `Order ${orderId} is now closed (delivered and paid)`,
+          });
+        } catch (err) {
+          logger.error('Failed to create notifications for order close', err);
+        }
+      }
+    }
+
     return this.orderRepo.findByIdWithDetails(orderId);
   }
 
@@ -263,7 +287,8 @@ export class OrderService {
       'approved': ['processing', 'cancelled'],
       'processing': ['shipped', 'cancelled'],
       'shipped': ['delivered', 'cancelled'],
-      'delivered': [],
+      'delivered': ['closed'],
+      'closed': [],
       'cancelled': []
     };
 

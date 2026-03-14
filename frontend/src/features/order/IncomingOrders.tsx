@@ -70,7 +70,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
 import { Label } from "@/components/ui/label";
@@ -87,10 +86,7 @@ import { getInitials, cn } from "@/lib/utils";
 import { useDriverStore } from "@/stores/driver.store";
 import deliveryService from "@/services/delivery.service";
 import toast from "react-hot-toast";
-import type {
-  IncomingOrder,
-  IncomingOrdersConfig,
-} from "@/types/order.types";
+import type { IncomingOrder, IncomingOrdersConfig } from "@/types/order.types";
 
 // ============================================================================
 // PROPS
@@ -124,6 +120,7 @@ const statusColors = {
   approved: "bg-green-100 text-green-800 border-green-200",
   shipped: "bg-purple-100 text-purple-800 border-purple-200",
   delivered: "bg-emerald-100 text-emerald-800 border-emerald-200",
+  closed: "bg-emerald-100 text-emerald-800 border-emerald-200",
   cancelled: "bg-red-100 text-red-800 border-red-200",
 };
 
@@ -146,7 +143,6 @@ export const IncomingOrders: React.FC<IncomingOrdersProps> = ({
   const [selectedOrder, setSelectedOrder] = useState<IncomingOrder | null>(
     null,
   );
-  const [showOrderDialog, setShowOrderDialog] = useState(false);
   const [showApproveDialog, setShowApproveDialog] = useState(false);
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [rejectionReason, setRejectionReason] = useState("");
@@ -688,16 +684,11 @@ export const IncomingOrders: React.FC<IncomingOrdersProps> = ({
                       </Badge>
                     )}
 
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => {
-                        setSelectedOrder(order);
-                        setShowOrderDialog(true);
-                      }}
-                    >
-                      <Eye className="h-4 w-4 mr-2" />
-                      View Details
+                    <Button size="sm" variant="outline" asChild>
+                      <Link to={`/${config.role}/orders/${order.id}`}>
+                        <Eye className="h-4 w-4 mr-2" />
+                        View Details
+                      </Link>
                     </Button>
 
                     <DropdownMenu>
@@ -740,301 +731,6 @@ export const IncomingOrders: React.FC<IncomingOrdersProps> = ({
           )}
         </div>
       )}
-
-      {/* Order Details Dialog */}
-      <Dialog open={showOrderDialog} onOpenChange={setShowOrderDialog}>
-        <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader>
-            <DialogTitle>Order Details - {selectedOrder?.id}</DialogTitle>
-            <DialogDescription>
-              Complete order information and{" "}
-              {config.customerLabel.toLowerCase()} details
-            </DialogDescription>
-          </DialogHeader>
-
-          {selectedOrder && (
-            <ScrollArea className="h-[500px] pr-4">
-              <div className="space-y-6 py-2">
-                {/* Customer Information */}
-                <div className="space-y-3">
-                  <h4 className="text-sm font-medium flex items-center gap-2">
-                    <CustomerIcon className="h-4 w-4" />
-                    {config.customerLabel} Information
-                  </h4>
-                  <div className="bg-muted/50 rounded-lg p-3 space-y-2">
-                    <div className="flex justify-between">
-                      <span className="text-xs text-muted-foreground">
-                        Business Name
-                      </span>
-                      <span className="text-xs font-medium">
-                        {selectedOrder.customerName}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-xs text-muted-foreground">
-                        Contact Person
-                      </span>
-                      <span className="text-xs font-medium">
-                        {selectedOrder.customerContact}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-xs text-muted-foreground">
-                        Phone
-                      </span>
-                      <span className="text-xs font-medium">
-                        {selectedOrder.customerPhone}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-xs text-muted-foreground">
-                        Location
-                      </span>
-                      <span className="text-xs font-medium">
-                        {selectedOrder.customerLocation}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Order Information */}
-                <div className="space-y-3">
-                  <h4 className="text-sm font-medium flex items-center gap-2">
-                    <Package className="h-4 w-4" />
-                    Order Information
-                  </h4>
-                  <div className="bg-muted/50 rounded-lg p-3 space-y-2">
-                    <div className="flex justify-between">
-                      <span className="text-xs text-muted-foreground">
-                        Order Date
-                      </span>
-                      <span className="text-xs font-medium">
-                        {formatDateTime(selectedOrder.orderDate)}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-xs text-muted-foreground">
-                        Requested Delivery
-                      </span>
-                      <span className="text-xs font-medium">
-                        {formatDate(selectedOrder.requestedDelivery)}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-xs text-muted-foreground">
-                        Payment Method
-                      </span>
-                      <span className="text-xs font-medium">
-                        {selectedOrder.paymentMethod}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-xs text-muted-foreground">
-                        Payment Status
-                      </span>
-                      <Badge
-                        variant="outline"
-                        className={
-                          selectedOrder.paymentStatus === "paid"
-                            ? "bg-green-100 text-green-800"
-                            : selectedOrder.paymentStatus === "approved"
-                              ? "bg-blue-100 text-blue-800"
-                              : "bg-yellow-100 text-yellow-800"
-                        }
-                      >
-                        {selectedOrder.paymentStatus}
-                      </Badge>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Order Items */}
-                <div className="space-y-3">
-                  <h4 className="text-sm font-medium flex items-center gap-2">
-                    <Package className="h-4 w-4" />
-                    Order Items
-                  </h4>
-                  <div className="space-y-2">
-                    {selectedOrder.items.map((item, idx) => (
-                      <div key={idx} className="bg-muted/50 rounded-lg p-3">
-                        <div className="flex justify-between mb-1">
-                          <span className="text-sm font-medium">
-                            {item.name}
-                          </span>
-                          <span className="text-sm font-bold">
-                            {formatPrice(item.total)}
-                          </span>
-                        </div>
-                        <div className="flex justify-between text-xs text-muted-foreground">
-                          <span>SKU: {item.sku}</span>
-                          <span>
-                            {item.quantity} {item.unit} ×{" "}
-                            {formatPrice(item.price)}
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Order Summary */}
-                <div className="space-y-3">
-                  <h4 className="text-sm font-medium">Order Summary</h4>
-                  <div className="bg-primary/5 rounded-lg p-3 space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Subtotal</span>
-                      <span>{formatPrice(selectedOrder.subtotal)}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Shipping</span>
-                      <span>{formatPrice(selectedOrder.shipping)}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">VAT (15%)</span>
-                      <span>{formatPrice(selectedOrder.tax)}</span>
-                    </div>
-                    <Separator className="my-2" />
-                    <div className="flex justify-between text-base font-bold">
-                      <span>Total</span>
-                      <span className="text-primary">
-                        {formatPrice(selectedOrder.total)}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {selectedOrder.notes && (
-                  <div className="space-y-3">
-                    <h4 className="text-sm font-medium">
-                      {config.customerLabel} Notes
-                    </h4>
-                    <div className="bg-blue-50 rounded-lg p-3">
-                      <p className="text-sm text-blue-800">
-                        {selectedOrder.notes}
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                {(selectedOrder.paymentId || selectedOrder.paymentProofUrl) && (
-                  <div className="space-y-3">
-                    <h4 className="text-sm font-medium">Payment Details</h4>
-                    <div className="bg-muted/50 rounded-lg p-3 space-y-2">
-                      <div className="flex justify-between">
-                        <span className="text-xs text-muted-foreground">
-                          Method
-                        </span>
-                        <span className="text-xs font-medium">
-                          {selectedOrder.paymentMethod}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-xs text-muted-foreground">
-                          Status
-                        </span>
-                        <span className="text-xs font-medium">
-                          {selectedOrder.paymentStatus}
-                        </span>
-                      </div>
-                      {typeof selectedOrder.paymentAmount === "number" && (
-                        <div className="flex justify-between">
-                          <span className="text-xs text-muted-foreground">
-                            Amount Due
-                          </span>
-                          <span className="text-xs font-medium">
-                            {formatPrice(selectedOrder.paymentAmount)}
-                          </span>
-                        </div>
-                      )}
-                      {typeof selectedOrder.paymentPaid === "number" && (
-                        <div className="flex justify-between">
-                          <span className="text-xs text-muted-foreground">
-                            Amount Paid
-                          </span>
-                          <span className="text-xs font-medium">
-                            {formatPrice(selectedOrder.paymentPaid)}
-                          </span>
-                        </div>
-                      )}
-                      {selectedOrder.paymentProofUrl && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="h-7 text-xs"
-                          asChild
-                        >
-                          <a
-                            href={selectedOrder.paymentProofUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                          >
-                            View Proof Document
-                          </a>
-                        </Button>
-                      )}
-                      {onConfirmPayment &&
-                        selectedOrder.paymentId &&
-                        selectedOrder.paymentStatus !== "paid" &&
-                        selectedOrder.paymentStatus !== "refunded" && (
-                          <Button
-                            size="sm"
-                            className="bg-emerald-600 hover:bg-emerald-700"
-                            onClick={() => setShowConfirmPaymentDialog(true)}
-                          >
-                            Confirm Payment
-                          </Button>
-                        )}
-                    </div>
-                  </div>
-                )}
-
-                {selectedOrder.cancellationReason && (
-                  <div className="space-y-3">
-                    <h4 className="text-sm font-medium text-red-600">
-                      Cancellation Reason
-                    </h4>
-                    <div className="bg-red-50 rounded-lg p-3">
-                      <p className="text-sm text-red-800">
-                        {selectedOrder.cancellationReason}
-                      </p>
-                      {selectedOrder.cancelledDate && (
-                        <p className="text-xs text-red-600 mt-1">
-                          Cancelled on:{" "}
-                          {formatDate(selectedOrder.cancelledDate)}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {selectedOrder.deliveredDate && (
-                  <div className="space-y-3">
-                    <h4 className="text-sm font-medium text-green-600">
-                      Delivery Information
-                    </h4>
-                    <div className="bg-green-50 rounded-lg p-3">
-                      <p className="text-sm text-green-800">
-                        Delivered on: {formatDate(selectedOrder.deliveredDate)}
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </ScrollArea>
-          )}
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowOrderDialog(false)}>
-              Close
-            </Button>
-            <Button asChild>
-              <Link to={`/${config.role}/orders/${selectedOrder?.id}`}>
-                View Full Order
-              </Link>
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Approve Order Dialog */}
       <AlertDialog open={showApproveDialog} onOpenChange={setShowApproveDialog}>

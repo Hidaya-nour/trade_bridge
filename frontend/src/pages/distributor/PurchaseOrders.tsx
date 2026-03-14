@@ -7,6 +7,7 @@ import type { Order, OrderItem } from "@/types/order.types";
 import toast from "react-hot-toast";
 import paymentService from "@/services/payment.service";
 import documentService from "@/services/document.service";
+import ratingReviewService from "@/services/rating-review.service";
 
 const PurchaseOrdersPage: React.FC = () => {
   const {
@@ -40,19 +41,23 @@ const PurchaseOrdersPage: React.FC = () => {
     };
   }, [orders]);
 
-  const handleRateProduct = (
+  const handleRateProduct = async (
     productId: string,
     rating: number,
     review: string,
     orderId: string,
   ) => {
-    console.log("Rate product from factory:", {
-      productId,
-      rating,
-      review,
-      orderId,
-    });
-    // TODO: API call to rate the product
+    try {
+      await ratingReviewService.createReview({
+        product_id: productId,
+        rating,
+        comment: review,
+      });
+      toast.success("Review submitted.");
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to submit review.");
+      console.error("Rate product error:", err);
+    }
   };
 
   const handleReorder = (order: Order) => {

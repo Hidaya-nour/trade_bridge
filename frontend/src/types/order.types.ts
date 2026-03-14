@@ -11,6 +11,7 @@ export type OrderStatus =
   | 'processing' 
   | 'shipped' 
   | 'delivered' 
+  | 'closed'
   | 'cancelled';
 
 export type PaymentStatus = 
@@ -26,7 +27,12 @@ export type PaymentStatus =
     contact?: string;
     phone?: string;
     email?: string;
-    location?: string;
+    location?: {
+      region:string;
+      city:string;
+      latitude:number;
+      longitude:number
+    };
     rating?: number;
     verified?: boolean;
     previousOrders?: number;
@@ -116,6 +122,7 @@ export type OrderDetailsPaymentStatus =
 
 export type OrderDetailsItem = {
   id: number | string;
+  productId?: string;
   name: string;
   sku: string;
   quantity: number;
@@ -133,6 +140,11 @@ export type OrderDetailsData = {
   paymentStatus: OrderDetailsPaymentStatus;
   paymentMethod: string;
   paymentTerms: string;
+  paymentId?: string;
+  paymentAmount?: number;
+  paymentPaid?: number;
+  paymentProofUrl?: string;
+  paymentProofName?: string;
   subtotal: number;
   shipping: number;
   tax: number;
@@ -189,6 +201,7 @@ export interface IncomingOrder {
     | "approved"
     | "shipped"
     | "delivered"
+    | "closed"
     | "cancelled";
   paymentId?: string;
   paymentStatus: string;

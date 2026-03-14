@@ -59,6 +59,7 @@ import { Label } from "@/components/ui/label";
 
 import { StatusBadge } from "@/components";
 import OrderTrackingDialog from "@/components/order/OrderTrackingDialog";
+import { PlaceOrderDialog } from "@/components/order/PlaceOrderDialog";
 import { formatPrice, formatDate, formatDateTime } from "@/lib/formatters";
 import { getInitials, cn } from "@/lib/utils";
 import toast from "react-hot-toast";
@@ -75,6 +76,27 @@ type OrderDetailsViewProps = {
   links?: OrderDetailsLinks;
   cancelReasonOptions?: string[];
   onAssignDriver?: (deliveryId: string, driverId: string) => Promise<void>;
+  onUpdateStatus?: (status: OrderStatus) => Promise<boolean> | boolean | void;
+  onApprovePayment?: (
+    paymentId: string,
+    amountPaid?: number,
+  ) => Promise<boolean> | boolean | void;
+  onReorderPlaceOrder?: (
+    paymentMethod?: string,
+    deliveryOption?: string,
+  ) => Promise<{
+    primaryOrderId: string;
+    orderIds?: string[];
+    total?: number;
+  } | void>;
+  onProcessPayment?: (
+    orderId: string,
+    paymentMethod: string,
+    paymentDetails?: any,
+    documents?: File[],
+  ) => Promise<boolean>;
+  ordersPath?: string;
+  role?: "retailer" | "distributor";
 };
 
 const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
@@ -84,24 +106,29 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
   links,
   cancelReasonOptions,
   onAssignDriver,
+  onUpdateStatus,
+  onApprovePayment,
+  onReorderPlaceOrder,
+  onProcessPayment,
+  ordersPath,
+  role = "retailer",
 }) => {
   const navigate = useNavigate();
   const [order, setOrder] = useState<OrderDetailsData>(initialOrder);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [showAssignDialog, setShowAssignDialog] = useState(false);
-  const [showStatusDialog, setShowStatusDialog] = useState(false);
   const [showReviewDialog, setShowReviewDialog] = useState(false);
+  const [showReorderDialog, setShowReorderDialog] = useState(false);
   const [selectedDriver, setSelectedDriver] = useState("");
-  const [newStatus, setNewStatus] = useState<OrderStatus>(order.status);
   const [cancellationReason, setCancellationReason] = useState("");
   const [rating, setRating] = useState(5);
   const [review, setReview] = useState("");
   const [showTrackingDialog, setShowTrackingDialog] = useState(false);
   const [assignLoading, setAssignLoading] = useState(false);
+  const [paymentApproving, setPaymentApproving] = useState(false);
 
   useEffect(() => {
     setOrder(initialOrder);
-    setNewStatus(initialOrder.status);
   }, [initialOrder]);
 
   const getStatusProgress = (status: OrderStatus): number => {
@@ -115,6 +142,8 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
       case "shipped":
         return 80;
       case "delivered":
+        return 100;
+      case "closed":
         return 100;
       case "cancelled":
         return 0;
@@ -133,14 +162,48 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
         return [{ value: "shipped", label: "Mark as Shipped" }];
       case "shipped":
         return [{ value: "delivered", label: "Mark as Delivered" }];
+      case "delivered":
+        if (order.paymentStatus === "paid") {
+          return [{ value: "closed", label: "Close Order" }];
+        }
+        return [];
       default:
         return [];
     }
   };
 
-  const updateOrderStatus = () => {
-    setOrder({ ...order, status: newStatus });
-    setShowStatusDialog(false);
+  const updateOrderStatus = async (nextStatus: OrderStatus) => {
+    if (onUpdateStatus) {
+      const result = await onUpdateStatus(nextStatus);
+      if (result === false) return;
+    }
+    setOrder((prev) => ({ ...prev, status: nextStatus }));
+  };
+
+  const handleAdvanceStatus = async () => {
+    const next = getNextStatusOptions()[0];
+    if (!next) return;
+    await updateOrderStatus(next.value);
+  };
+
+  const handleApprovePayment = async () => {
+    if (!onApprovePayment || !order.paymentId) return;
+    setPaymentApproving(true);
+    try {
+      const amountPaid =
+        typeof order.paymentAmount === "number" && order.paymentAmount > 0
+          ? order.paymentAmount
+          : order.total;
+      const result = await onApprovePayment(order.paymentId, amountPaid);
+      if (result === false) return;
+      setOrder((prev) => ({
+        ...prev,
+        paymentStatus: "paid",
+        paymentPaid: amountPaid,
+      }));
+    } finally {
+      setPaymentApproving(false);
+    }
   };
 
   const assignDriver = async () => {
@@ -215,7 +278,13 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
       ? "paid"
       : order.paymentStatus === "approved"
         ? "approved"
-        : "pending";
+        : order.paymentStatus === "refunded"
+          ? "refunded"
+          : "pending";
+  const paymentMethodLabel =
+    !order.paymentMethod || order.paymentMethod === "N/A"
+      ? "Not selected"
+      : order.paymentMethod;
 
   const deliveryDates = [
     { label: "Requested Delivery", value: order.delivery.requestedDate },
@@ -500,22 +569,61 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Payment Method</span>
-                  <span className="font-medium">{order.paymentMethod}</span>
+                  <span className="font-medium">{paymentMethodLabel}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Payment Status</span>
                   <StatusBadge status={paymentBadgeStatus} />
                 </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Payment Terms</span>
-                  <span className="font-medium">{order.paymentTerms}</span>
-                </div>
-                {order.invoice && (
+                {typeof order.paymentAmount === "number" && (
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Invoice</span>
-                    <span className="font-medium">{order.invoice}</span>
+                    <span className="text-muted-foreground">Amount Due</span>
+                    <span className="font-medium">
+                      {formatPrice(order.paymentAmount)}
+                    </span>
                   </div>
                 )}
+                {typeof order.paymentPaid === "number" && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Amount Paid</span>
+                    <span className="font-medium">
+                      {formatPrice(order.paymentPaid)}
+                    </span>
+                  </div>
+                )}
+                {!order.paymentId && (
+                  <div className="rounded-md border border-amber-200 bg-amber-50 p-2 text-xs text-amber-800">
+                    No payment has been submitted yet.
+                  </div>
+                )}
+
+                {order.paymentProofUrl && (
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Payment Proof</span>
+                    <Button size="sm" variant="outline" className="h-7" asChild>
+                      <a
+                        href={order.paymentProofUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        View Proof
+                      </a>
+                    </Button>
+                  </div>
+                )}
+                {mode === "incoming" &&
+                  order.paymentId &&
+                  order.paymentStatus !== "paid" &&
+                  order.paymentStatus !== "refunded" && (
+                    <Button
+                      size="sm"
+                      className="w-full bg-emerald-600 hover:bg-emerald-700"
+                      onClick={handleApprovePayment}
+                      disabled={paymentApproving}
+                    >
+                      {paymentApproving ? "Approving..." : "Approve Payment"}
+                    </Button>
+                  )}
               </div>
             </CardContent>
           </Card>
@@ -572,12 +680,10 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
               </div>
 
               <div className="space-y-2">
-                {order.party.contact && (
-                  <div className="flex items-center gap-2 text-sm">
-                    <User className="h-4 w-4 text-muted-foreground" />
-                    <span>{order.party.contact}</span>
-                  </div>
-                )}
+                <div className="flex items-center gap-2 text-sm">
+                  <User className="h-4 w-4 text-muted-foreground" />
+                  <span>{order.party.contact}</span>
+                </div>
                 {order.party.phone && (
                   <div className="flex items-center gap-2 text-sm">
                     <Phone className="h-4 w-4 text-muted-foreground" />
@@ -593,7 +699,7 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                 {order.party.location && (
                   <div className="flex items-center gap-2 text-sm">
                     <MapPin className="h-4 w-4 text-muted-foreground" />
-                    <span>{order.party.location}</span>
+                    <span>{order.party.location.city}</span>
                   </div>
                 )}
               </div>
@@ -615,7 +721,7 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
               {mode === "incoming" && getNextStatusOptions().length > 0 && (
                 <Button
                   className="w-full justify-start bg-blue-600 hover:bg-blue-700"
-                  onClick={() => setShowStatusDialog(true)}
+                  onClick={handleAdvanceStatus}
                 >
                   <Clock className="mr-2 h-4 w-4" />
                   {getNextStatusOptions()[0].label}
@@ -637,25 +743,29 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                   </Button>
                 )}
 
-              {mode === "outgoing" && order.canReorder && links?.reorder && (
-                <Button className="w-full justify-start" asChild>
-                  <Link to={links.reorder(order.id)}>
+              {mode === "outgoing" &&
+                order.canReorder &&
+                onReorderPlaceOrder && (
+                  <Button
+                    className="w-full justify-start"
+                    onClick={() => setShowReorderDialog(true)}
+                  >
                     <RotateCcw className="mr-2 h-4 w-4" />
                     Reorder Items
-                  </Link>
-                </Button>
-              )}
+                  </Button>
+                )}
 
-              {mode === "outgoing" && order.canReview && (
-                <Button
-                  variant="outline"
-                  className="w-full justify-start"
-                  onClick={() => setShowReviewDialog(true)}
-                >
-                  <Star className="mr-2 h-4 w-4" />
-                  Rate & Review
-                </Button>
-              )}
+              {mode === "outgoing" &&
+                (order.status === "delivered" || order.status === "closed") && (
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start"
+                    onClick={() => setShowReviewDialog(true)}
+                  >
+                    <Star className="mr-2 h-4 w-4" />
+                    Rate & Review
+                  </Button>
+                )}
 
               <Button variant="outline" className="w-full justify-start">
                 <Download className="mr-2 h-4 w-4" />
@@ -776,48 +886,6 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
         </DialogContent>
       </Dialog>
 
-      {/* Update Status Dialog */}
-      <Dialog open={showStatusDialog} onOpenChange={setShowStatusDialog}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>Update Order Status</DialogTitle>
-            <DialogDescription>
-              Change the current status of this order
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>New Status</Label>
-              <Select
-                value={newStatus}
-                onValueChange={(value) => setNewStatus(value as OrderStatus)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="approved">Approve Order</SelectItem>
-                  <SelectItem value="processing">Start Processing</SelectItem>
-                  <SelectItem value="shipped">Mark as Shipped</SelectItem>
-                  <SelectItem value="delivered">Mark as Delivered</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setShowStatusDialog(false)}
-            >
-              Cancel
-            </Button>
-            <Button onClick={updateOrderStatus}>Update Status</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
       {/* Review Dialog */}
       <Dialog open={showReviewDialog} onOpenChange={setShowReviewDialog}>
         <DialogContent className="sm:max-w-[500px]">
@@ -881,6 +949,41 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Reorder Dialog */}
+      {onReorderPlaceOrder && (
+        <PlaceOrderDialog
+          open={showReorderDialog}
+          onOpenChange={setShowReorderDialog}
+          items={order.items.map((item) => ({
+            id: String(item.id),
+            order_id: "",
+            product_id: item.productId || String(item.id),
+            quantity: item.quantity,
+            unit_price: item.price,
+            product: {
+              id: item.productId || String(item.id),
+              name: item.name,
+              unit_type: item.unit,
+            } as any,
+          }))}
+          summary={{
+            subtotal: order.subtotal,
+            shipping: order.shipping,
+            discount: 0,
+            tax: order.tax,
+            total: order.total,
+            promoApplied: false,
+            vatPercentage: 0.15,
+          }}
+          config={{
+            role,
+            ordersPath: ordersPath || "/orders",
+          }}
+          onPlaceOrder={onReorderPlaceOrder}
+          onProcessPayment={onProcessPayment as any}
+        />
+      )}
 
       {/* Live Tracking Dialog */}
       <OrderTrackingDialog

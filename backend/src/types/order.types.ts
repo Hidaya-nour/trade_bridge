@@ -12,6 +12,7 @@ export type OrderStatus =
   | 'processing' 
   | 'shipped' 
   | 'delivered' 
+  | 'closed'
   | 'cancelled';
 
 export type PaymentStatus = 

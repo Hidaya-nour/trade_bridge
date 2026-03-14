@@ -9,6 +9,7 @@ export type StatusType =
   | "processing"
   | "shipped"
   | "delivered"
+  | "closed"
   | "cancelled"
   // Delivery statuses
   | "in-transit"
@@ -65,6 +66,7 @@ export const statusColorMap: Record<StatusType, string> = {
   processing: "bg-indigo-100 text-indigo-800 border-indigo-200",
   shipped: "bg-purple-100 text-purple-800 border-purple-200",
   delivered: "bg-green-100 text-green-800 border-green-200",
+  closed: "bg-emerald-100 text-emerald-800 border-emerald-200",
   cancelled: "bg-red-100 text-red-800 border-red-200",
 
   // Delivery statuses
@@ -136,6 +138,7 @@ export const statusLabelMap: Partial<Record<StatusType, string>> = {
 
   // Order
   confirmed: "Confirmed",
+  closed: "Closed",
   "in-transit": "In Transit",
   "picked-up": "Picked Up",
   "in-progress": "In Progress",

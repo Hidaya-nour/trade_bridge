@@ -14,7 +14,7 @@ export class Payment extends Model<IPayment, PaymentCreationAttributes> implemen
   public payment_method!: 'cash' | 'credit' | 'cheque' | 'mobile_banking' | 'bank_transfer' | 'chapa';
   public total_amount!: number;
   public amount_paid!: number;
-  public payment_status!: PaymentStatus; // ✅ Now using the specific type
+  public payment_status!: PaymentStatus; 
   public cheque_number?: string;
   public cheque_bank?: string;
   public cheque_date?: Date;

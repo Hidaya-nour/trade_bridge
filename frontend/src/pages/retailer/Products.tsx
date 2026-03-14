@@ -182,9 +182,11 @@ const RetailerProductsPage: React.FC = () => {
         category: product.category || "Uncategorized",
         image: product.images?.[0] || "/placeholder-product.png",
         rating: product.rating,
-        reviews: product.review_count || 0,
+        review_count: product.review_count || 0,
         location:
-          supplierAddress?.city || supplierAddress?.region || "Unknown Location",
+          supplierAddress?.city ||
+          supplierAddress?.region ||
+          "Unknown Location",
         latitude: Number.isFinite(Number(supplierAddress?.latitude))
           ? Number(supplierAddress?.latitude)
           : null,
