@@ -6,6 +6,7 @@ import { AppError, AuthError } from '../../utils/errors';
 import logger from '../../utils/logger';
 import { IUser, ITokens, UserRole } from '../../types/auth.types';
 import crypto from 'crypto';
+import { isCloudinaryConfigured, uploadBufferToCloudinary } from '../../config/cloudinary';
 
 export interface RegisterDTO {
   email: string;
@@ -256,6 +257,23 @@ async register(data: RegisterDTO): Promise<{ user: SafeUser }> {
     const updatedResponse = updated.toJSON() as any;
     const { password_hash: _, ...safeUser } = updatedResponse;
     return safeUser as SafeUser;
+  }
+
+  async uploadProfileImage(userId: string, file: Express.Multer.File): Promise<string> {
+    if (!file) {
+      throw new AppError('Profile image is required', 400);
+    }
+
+    if (!isCloudinaryConfigured()) {
+      throw new AppError(
+        'Cloudinary is not configured. Please set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET.',
+        500
+      );
+    }
+
+    const folder = `trade_bridge/avatars/${userId}`;
+    const uploaded = await uploadBufferToCloudinary(file, folder);
+    return uploaded.secure_url;
   }
 
   /**

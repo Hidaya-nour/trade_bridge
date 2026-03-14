@@ -56,3 +56,14 @@ const imageUploader = multer({
 });
 
 export const uploadProductImagesMiddleware = imageUploader.array('files', 6);
+
+const profileImageUploader = multer({
+  storage,
+  fileFilter: imageFileFilter,
+  limits: {
+    fileSize: MAX_FILE_SIZE_MB * 1024 * 1024,
+    files: 1,
+  },
+});
+
+export const uploadProfileImageMiddleware = profileImageUploader.single('file');

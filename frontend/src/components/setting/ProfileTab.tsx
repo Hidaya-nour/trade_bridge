@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useRef } from "react";
 import { Camera, Save } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -38,6 +38,8 @@ type ProfileTabProps = {
   saveMessage: string | null;
   handleProfileSave: () => Promise<void> | void;
   isLoading: boolean;
+  onAvatarUpload: (file: File) => Promise<void> | void;
+  avatarUploading: boolean;
 };
 
 const getInitials = (name: string) => {
@@ -57,7 +59,11 @@ const ProfileTab: React.FC<ProfileTabProps> = ({
   saveMessage,
   handleProfileSave,
   isLoading,
+  onAvatarUpload,
+  avatarUploading,
 }) => {
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
   return (
     <TabsContent value="profile" className="mt-0">
       <Card>
@@ -79,18 +85,39 @@ const ProfileTab: React.FC<ProfileTabProps> = ({
           {/* Avatar */}
           <div className="flex items-center gap-6">
             <Avatar className="h-24 w-24">
+              {profileForm.avatar && (
+                <AvatarImage src={profileForm.avatar} alt={profileForm.full_name} />
+              )}
               <AvatarFallback className="bg-primary/10 text-primary text-2xl">
                 {getInitials(profileForm.full_name || "User")}
               </AvatarFallback>
             </Avatar>
             {isEditing && (
               <div className="space-y-2">
-                <Button variant="outline" size="sm">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    if (file) {
+                      void onAvatarUpload(file);
+                      event.target.value = "";
+                    }
+                  }}
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={avatarUploading}
+                >
                   <Camera className="h-4 w-4 mr-2" />
-                  Upload Photo
+                  {avatarUploading ? "Uploading..." : "Upload Photo"}
                 </Button>
                 <p className="text-xs text-muted-foreground">
-                  JPG, PNG or GIF. Max 2MB.
+                  JPG, PNG or WEBP. Max 10MB.
                 </p>
               </div>
             )}

@@ -86,6 +86,7 @@ import { useNotificationStore } from "@/stores/notification.store";
 import { useDocumentStore } from "@/stores/document.store";
 import { useAddressStore } from "@/stores/address.store";
 import documentService from "@/services/document.service";
+import { authService } from "@/services/auth.service";
 import ProfileTab from "../../components/setting/ProfileTab";
 import BusinessTab from "../../components/setting/BusinessTab";
 import NotificationsTab from "../../components/setting/NotificationsTab";
@@ -207,6 +208,7 @@ const MapClickHandler: React.FC<{
 const SettingsPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState("profile");
   const [isEditing, setIsEditing] = useState(false);
+  const [avatarUploading, setAvatarUploading] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [businessMessage, setBusinessMessage] = useState<string | null>(null);
@@ -363,6 +365,22 @@ const SettingsPage: React.FC = () => {
       setIsEditing(false);
     } catch {
       setSaveMessage("Failed to update profile");
+    }
+  };
+
+  const handleAvatarUpload = async (file: File) => {
+    try {
+      setAvatarUploading(true);
+      const response = await authService.uploadProfileImage(file);
+      const imageUrl = response?.data?.imageUrl;
+      if (imageUrl) {
+        setProfileForm((prev) => ({ ...prev, avatar: imageUrl }));
+        await updateProfile({ profile_image: imageUrl });
+      }
+    } catch (error) {
+      console.error("Failed to upload profile image", error);
+    } finally {
+      setAvatarUploading(false);
     }
   };
 
@@ -818,6 +836,8 @@ const SettingsPage: React.FC = () => {
               saveMessage={saveMessage}
               handleProfileSave={handleProfileSave}
               isLoading={isLoading}
+              onAvatarUpload={handleAvatarUpload}
+              avatarUploading={avatarUploading}
             />
 
             {/* Business Info Tab */}

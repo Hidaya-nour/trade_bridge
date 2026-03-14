@@ -45,14 +45,14 @@ export const ProductGallery: React.FC<ProductGalleryProps> = ({
       </div>
 
       {images.length > 1 && (
-        <div className="grid grid-cols-5 gap-2">
+        <div className="grid grid-cols-4 sm:grid-cols-5 gap-2">
           {images.slice(0, maxThumbnails).map((url, index) => (
             <button
               key={`${url}-${index}`}
               type="button"
               onClick={() => setActiveImageIndex(index)}
               className={cn(
-                "h-16 w-full rounded-md border overflow-hidden",
+                "aspect-square w-full rounded-md border overflow-hidden",
                 index === activeImageIndex
                   ? "ring-2 ring-primary border-primary"
                   : "border-muted",

@@ -58,6 +58,15 @@ export const authService = {
     return response.data;
   },
 
+  async uploadProfileImage(file: File) {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await api.post('/auth/profile-image', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
+  },
+
   async changePassword(data: ChangePasswordData) {
     const response = await api.patch('/auth/change-password', data);
     return response.data;

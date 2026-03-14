@@ -12,6 +12,7 @@ import {
   updateProfileSchema,
   changePasswordSchema
 } from '../validations/auth.validation';
+import { uploadProfileImageMiddleware } from '../middleware/upload.middleware';
 
 const router = express.Router();
 const authController = new AuthController();
@@ -68,6 +69,7 @@ router.post('/logout', authController.logout);
 router.get('/me', authenticateAllowPending, authController.getMe);
 router.patch('/me', authenticateAllowPending, validate(updateProfileSchema), authController.updateMe);
 router.patch('/change-password', authenticateAllowPending, validate(changePasswordSchema), authController.changePassword);
+router.post('/profile-image', authenticateAllowPending, uploadProfileImageMiddleware, authController.uploadProfileImage);
 router.post('/logout-all', authenticate, authController.logoutAll);
 
 // Admin routes

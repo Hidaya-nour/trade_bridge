@@ -219,6 +219,31 @@ export class AuthController {
     }
   };
 
+  uploadProfileImage = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        res.status(401).json({ success: false, message: 'Authentication required' });
+        return;
+      }
+
+      const file = req.file as Express.Multer.File | undefined;
+      const imageUrl = await this.authService.uploadProfileImage(userId, file as Express.Multer.File);
+
+      res.status(201).json({
+        success: true,
+        data: { imageUrl }
+      });
+    } catch (error) {
+      if (error instanceof AppError) {
+        res.status(error.statusCode).json({ success: false, message: error.message });
+      } else {
+        logger.error('Upload profile image error:', error);
+        res.status(500).json({ success: false, message: 'Internal server error' });
+      }
+    }
+  };
+
   requestPasswordReset = async (req: Request, res: Response): Promise<void> => {
     try {
       const { email } = req.body;
