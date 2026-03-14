@@ -11,7 +11,6 @@ import {
   CheckCircle2,
   XCircle,
   AlertCircle,
-  DollarSign,
   Layers,
   Star,
   Download,
@@ -27,9 +26,6 @@ import {
   CardFooter,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -54,14 +50,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -72,8 +60,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Progress } from "@/components/ui/progress";
-import { Switch } from "@/components/ui/switch";
-import { ScrollArea } from "@/components/ui/scroll-area";
 
 import {
   StatsCard,
@@ -89,7 +75,7 @@ import {
 } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/auth.store";
-import { EditProductDialog } from "@/components/product/EditProductDialog";
+import { EditProductDialog } from "@/components/product/AddEditProductDialog";
 import type { Product } from "@/types/product.types";
 
 // ============================================================================
@@ -126,26 +112,6 @@ interface ProductManagementProps {
 // CONSTANTS
 // ============================================================================
 
-// Hardcoded product categories for adding new products
-const PRODUCT_CATEGORIES = ["Beverages", "Food"];
-
-const UNIT_TYPES = [
-  "kg",
-  "liter",
-  "piece",
-  "box",
-  "carton",
-  "dozen",
-  "meter",
-  "square meter",
-  "ton",
-  "gram",
-  "milliliter",
-  "set",
-  "pair",
-  "bundle",
-];
-
 // ============================================================================
 // COMPONENT
 // ============================================================================
@@ -154,7 +120,6 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({
   config,
   products: initialProducts,
   categories: filterCategories, // Categories for filtering (from props)
-  suppliers = [],
   onAddProduct,
   onEditProduct,
   onDeleteProduct,
@@ -164,7 +129,6 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({
   const [products, setProducts] = useState<Product[]>(initialProducts);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All Categories");
-  const [selectedSupplier, setSelectedSupplier] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [stockFilter, setStockFilter] = useState<string>("all");
   const [viewMode, setViewMode] = useState<"grid" | "table">("table");
@@ -182,18 +146,9 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({
     setProducts(initialProducts);
   }, [initialProducts]);
 
-  // New product form state (aligned with DB schema)
-  const [newProduct, setNewProduct] = useState({
-    name: "",
-    category: PRODUCT_CATEGORIES[0],
-    price: "",
-    unit_type: "kg",
-    min_order_amount: "",
-    stock_quantity: "",
-    description: "",
-    specifications: "",
-    is_available: true,
-  });
+  const formCategories = filterCategories.filter(
+    (category) => category !== "All Categories",
+  );
 
   // Filter products
   const filteredProducts = products.filter((product) => {
@@ -279,28 +234,6 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({
     return isNaN(percentage) ? 0 : percentage;
   };
 
-  const handleAddProduct = () => {
-    onAddProduct({
-      ...newProduct,
-      price: parseFloat(newProduct.price),
-      stock_quantity: parseInt(newProduct.stock_quantity),
-      min_order_amount: parseInt(newProduct.min_order_amount),
-      specifications: newProduct.specifications || null,
-    });
-    setShowAddDialog(false);
-    setNewProduct({
-      name: "",
-      category: PRODUCT_CATEGORIES[0],
-      price: "",
-      unit_type: "kg",
-      min_order_amount: "",
-      stock_quantity: "",
-      description: "",
-      specifications: "",
-
-      is_available: true,
-    });
-  };
   const handleExport = (format: "csv" | "excel" | "pdf") => {
     const dataToExport = filteredProducts.map((product) => ({
       "Product Name": product.name,
@@ -805,185 +738,14 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({
       )}
 
       {/* Add Product Dialog */}
-      <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-        <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader>
-            <DialogTitle>Add New Product</DialogTitle>
-            <DialogDescription>
-              Fill in the product details to add to your inventory
-            </DialogDescription>
-          </DialogHeader>
-
-          <ScrollArea className="h-[500px] pr-4">
-            <div className="space-y-4 py-2">
-              <div className="space-y-2">
-                <Label htmlFor="name">Product Name *</Label>
-                <Input
-                  id="name"
-                  placeholder="Enter product name"
-                  value={newProduct.name}
-                  onChange={(e) =>
-                    setNewProduct({ ...newProduct, name: e.target.value })
-                  }
-                  required
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="category">Category *</Label>
-                  <Select
-                    value={newProduct.category}
-                    onValueChange={(value) =>
-                      setNewProduct({ ...newProduct, category: value })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {PRODUCT_CATEGORIES.map((category) => (
-                        <SelectItem key={category} value={category}>
-                          {category}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="unit_type">Unit Type *</Label>
-                  <Select
-                    value={newProduct.unit_type}
-                    onValueChange={(value) =>
-                      setNewProduct({ ...newProduct, unit_type: value })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select unit" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {UNIT_TYPES.map((unit) => (
-                        <SelectItem key={unit} value={unit}>
-                          {unit}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="price">Price (ETB) *</Label>
-                  <Input
-                    id="price"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    placeholder="0.00"
-                    value={newProduct.price}
-                    onChange={(e) =>
-                      setNewProduct({ ...newProduct, price: e.target.value })
-                    }
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="stock_quantity">Stock Quantity *</Label>
-                  <Input
-                    id="stock_quantity"
-                    type="number"
-                    min="0"
-                    placeholder="0"
-                    value={newProduct.stock_quantity}
-                    onChange={(e) =>
-                      setNewProduct({
-                        ...newProduct,
-                        stock_quantity: e.target.value,
-                      })
-                    }
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="min_order_amount">Minimum Order *</Label>
-                  <Input
-                    id="min_order_amount"
-                    type="number"
-                    min="1"
-                    placeholder="1"
-                    value={newProduct.min_order_amount}
-                    onChange={(e) =>
-                      setNewProduct({
-                        ...newProduct,
-                        min_order_amount: e.target.value,
-                      })
-                    }
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
-                <Textarea
-                  id="description"
-                  placeholder="Enter product description"
-                  rows={3}
-                  value={newProduct.description}
-                  onChange={(e) =>
-                    setNewProduct({
-                      ...newProduct,
-                      description: e.target.value,
-                    })
-                  }
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="specifications">
-                  Specifications (Optional)
-                </Label>
-                <Textarea
-                  id="specifications"
-                  placeholder="Enter product specifications (technical details, dimensions, etc.)"
-                  rows={3}
-                  value={newProduct.specifications}
-                  onChange={(e) =>
-                    setNewProduct({
-                      ...newProduct,
-                      specifications: e.target.value,
-                    })
-                  }
-                />
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="is_available"
-                  checked={newProduct.is_available}
-                  onCheckedChange={(checked) =>
-                    setNewProduct({ ...newProduct, is_available: checked })
-                  }
-                />
-                <Label htmlFor="is_available">
-                  Active (visible to customers)
-                </Label>
-              </div>
-            </div>
-          </ScrollArea>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowAddDialog(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleAddProduct}>Add Product</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <EditProductDialog
+        open={showAddDialog}
+        onOpenChange={setShowAddDialog}
+        product={null}
+        mode="add"
+        onAdd={onAddProduct}
+        categories={formCategories}
+      />
 
       {/* Edit Product Dialog */}
       <EditProductDialog
@@ -992,6 +754,7 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({
         product={selectedProduct}
         onSave={onEditProduct}
         mode="edit"
+        categories={formCategories}
       />
 
       {/* Delete Confirmation Dialog */}

@@ -46,9 +46,11 @@ interface EditProductDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   product: Product | null;
-  onSave: (productId: string, updatedProduct: Partial<Product>) => void;
+  onSave?: (productId: string, updatedProduct: Partial<Product>) => void;
   mode: "add" | "edit";
   onAdd?: (product: any) => void; // For add mode
+  categories?: string[];
+  unitTypes?: string[];
 }
 
 export const EditProductDialog: React.FC<EditProductDialogProps> = ({
@@ -58,17 +60,21 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
   onSave,
   mode,
   onAdd,
+  categories = PRODUCT_CATEGORIES,
+  unitTypes = UNIT_TYPES,
 }) => {
-  const [formData, setFormData] = useState({
+  const initialFormData = {
     name: "",
-    category: PRODUCT_CATEGORIES[0],
+    category: categories[0] || PRODUCT_CATEGORIES[0],
     price: "",
-    unit_type: "kg",
+    unit_type: unitTypes[0] || "kg",
     min_order_amount: "",
     stock_quantity: "",
     description: "",
     is_available: true,
-  });
+  };
+
+  const [formData, setFormData] = useState(initialFormData);
 
   const [specifications, setSpecifications] = useState<
     { key: string; value: string }[]
@@ -76,13 +82,12 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
 
   // Reset form when product changes or dialog opens
   useEffect(() => {
-    if (!product) return;
-    if (product && mode === "edit") {
+    if (mode === "edit" && product) {
       setFormData({
         name: product.name || "",
-        category: product.category || PRODUCT_CATEGORIES[0],
+        category: product.category || categories[0] || PRODUCT_CATEGORIES[0],
         price: product.price?.toString() || "",
-        unit_type: product.unit_type || "kg",
+        unit_type: product.unit_type || unitTypes[0] || "kg",
         min_order_amount: product.min_order_amount?.toString() || "",
         stock_quantity: product.stock_quantity?.toString() || "",
         description: product.description || "",
@@ -115,10 +120,15 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
       }
     }
 
-    if (mode === "add") {
+    if (mode === "add" && open) {
+      setFormData({
+        ...initialFormData,
+        category: categories[0] || PRODUCT_CATEGORIES[0],
+        unit_type: unitTypes[0] || "kg",
+      });
       setSpecifications([]);
     }
-  }, [product, mode, open]);
+  }, [product, mode, open, categories, unitTypes]);
 
   const handleSave = async () => {
     const specificationsObject: Record<string, string> = {};
@@ -141,7 +151,7 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
     };
 
     try {
-      if (mode === "edit" && product) {
+      if (mode === "edit" && product && onSave) {
         await onSave(product.id, payload);
       }
 
@@ -199,7 +209,7 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
                     <SelectValue placeholder="Select category" />
                   </SelectTrigger>
                   <SelectContent>
-                    {PRODUCT_CATEGORIES.map((category) => (
+                    {categories.map((category) => (
                       <SelectItem key={category} value={category}>
                         {category}
                       </SelectItem>
@@ -219,7 +229,7 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
                     <SelectValue placeholder="Select unit" />
                   </SelectTrigger>
                   <SelectContent>
-                    {UNIT_TYPES.map((unit) => (
+                    {unitTypes.map((unit) => (
                       <SelectItem key={unit} value={unit}>
                         {unit}
                       </SelectItem>

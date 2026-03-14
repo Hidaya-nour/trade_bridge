@@ -5,7 +5,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { MyProductDetail } from "@/features/products/MyProductDetail";
 import { useProductStore } from "@/stores/product.store";
 import { Button } from "@/components/ui/button";
-import { EditProductDialog } from "@/components/product/EditProductDialog";
+import { EditProductDialog } from "@/components/product/AddEditProductDialog";
 import { WithAsync } from "@/components/shared/WithAsync";
 import type { Product } from "@/types/product.types";
 

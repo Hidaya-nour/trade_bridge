@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import toast from "react-hot-toast";
 import {
   Shield,
   CheckCircle2,
@@ -18,16 +19,8 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardFooter,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -44,7 +37,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 
@@ -56,21 +48,19 @@ import {
 } from "@/components";
 import { WithAsync } from "@/components/shared/WithAsync";
 import { formatDate } from "@/lib/formatters";
-import { cn, getInitials } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import documentService from "@/services/document.service";
 import { authService } from "@/services/auth.service";
+import type { Address } from "@/types/address.types";
+import type { Document } from "@/types/document.types";
+import type { User } from "@/types/user.types";
 
 // ============================================================================
 // TYPES
 // ============================================================================
 
 type VerificationType = "factory" | "distributor" | "driver";
-type VerificationStatus =
-  | "pending"
-  | "under_review"
-  | "approved"
-  | "rejected"
-  | "more_info";
+type VerificationStatus = "pending" | "approved";
 
 interface VerificationRequest {
   id: string;
@@ -80,7 +70,7 @@ interface VerificationRequest {
   email: string;
   phone: string;
   location: string;
-  submittedDate: string;
+  submittedDate: string | Date;
   documents: {
     id: string;
     name: string;
@@ -91,51 +81,16 @@ interface VerificationRequest {
   }[];
   status: VerificationStatus;
   priority: "high" | "medium" | "low";
-  userStatus?: string;
-  userApprovedAt?: string | null;
+  userApprovedAt?: User["approved_at"] | null;
   userVerified?: boolean;
   notes?: string;
   reviewedBy?: string;
-  reviewedDate?: string;
+  reviewedDate?: string | Date;
   rejectionReason?: string;
 }
 
-interface AdminAddress {
-  id: string;
-  region?: string | null;
-  city?: string | null;
-  subcity?: string | null;
-  latitude?: number | null;
-  longitude?: number | null;
-  created_at?: string;
-  updated_at?: string | null;
-}
-
-interface AdminUser {
-  id: string;
-  full_name?: string;
-  email?: string;
-  phone?: string;
-  business_name?: string;
-  role?: string;
-  status?: string;
-  approved_at?: string | null;
-  approved_by?: string | null;
-  addresses?: AdminAddress[];
-}
-
-interface AdminDocument {
-  id: string;
-  document_type: "business_license" | "tax_certificate" | "id_card" | "other";
-  file_secure_url?: string | null;
-  original_file_name?: string | null;
-  verification_status: "pending" | "verified" | "rejected";
-  rejection_reason?: string | null;
-  uploaded_at?: string;
-  reviewed_at?: string | null;
-  verified_by?: string | null;
-  user?: AdminUser;
-}
+type AdminUser = Partial<User> & { id: string; addresses?: Address[] };
+type AdminDocument = Document & { user?: AdminUser };
 
 // ============================================================================
 // CONSTANTS
@@ -155,18 +110,12 @@ const typeColors: Record<VerificationType, string> = {
 
 const statusColors: Record<VerificationStatus, string> = {
   pending: "bg-yellow-100 text-yellow-800 border-yellow-200",
-  under_review: "bg-blue-100 text-blue-800 border-blue-200",
   approved: "bg-green-100 text-green-800 border-green-200",
-  rejected: "bg-red-100 text-red-800 border-red-200",
-  more_info: "bg-orange-100 text-orange-800 border-orange-200",
 };
 
 const statusLabels: Record<VerificationStatus, string> = {
-  pending: "Pending",
-  under_review: "Under Review",
-  approved: "Approved",
-  rejected: "Rejected",
-  more_info: "More Info Needed",
+  pending: "Not Verified",
+  approved: "Verified",
 };
 
 const docStatusColors: Record<"pending" | "verified" | "rejected", string> = {
@@ -191,7 +140,7 @@ export const VerificationsPage: React.FC = () => {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedType, setSelectedType] = useState<string>("all");
-  const [selectedStatus, setSelectedStatus] = useState<string>("pending");
+  const [selectedStatus, setSelectedStatus] = useState<string>("all");
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [rejectionReason, setRejectionReason] = useState("");
   const [rejectingDocumentId, setRejectingDocumentId] = useState<string | null>(
@@ -215,7 +164,7 @@ export const VerificationsPage: React.FC = () => {
     }
   };
 
-  const formatLocation = (addresses?: AdminAddress[]) => {
+  const formatLocation = (addresses?: Address[]) => {
     if (!addresses || addresses.length === 0) return "Unknown";
     const sorted = [...addresses].sort((a, b) => {
       const aDate = new Date(a.created_at || a.updated_at || 0).getTime();
@@ -228,17 +177,10 @@ export const VerificationsPage: React.FC = () => {
   };
 
   const computeStatus = (
-    docs: AdminDocument[],
+    _docs: AdminDocument[],
     userVerified: boolean,
   ): VerificationStatus => {
-    const statuses = docs.map((d) => d.verification_status);
-    if (statuses.includes("rejected")) return "rejected";
-    if (userVerified) return "approved";
-    if (statuses.length > 0 && statuses.every((s) => s === "verified"))
-      return "pending";
-    if (statuses.some((s) => s === "pending")) return "pending";
-    if (statuses.some((s) => s === "verified")) return "under_review";
-    return "pending";
+    return userVerified ? "approved" : "pending";
   };
 
   const buildRequests = (docs: AdminDocument[]): VerificationRequest[] => {
@@ -270,7 +212,7 @@ export const VerificationsPage: React.FC = () => {
       const reviewedDoc = sortedDocs.find((doc) => doc.reviewed_at);
 
       const userVerified =
-        user?.status === "active" || Boolean(user?.approved_at);
+        Boolean(user?.verified) || Boolean(user?.approved_at);
 
       return {
         id: userId,
@@ -280,8 +222,8 @@ export const VerificationsPage: React.FC = () => {
           user?.full_name ||
           `User ${userId.slice(0, 8)}`,
         ownerName: user?.full_name || "Unknown",
-        email: user?.email || "—",
-        phone: user?.phone || "—",
+        email: user?.email || "\u2014",
+        phone: user?.phone || "\u2014",
         location: formatLocation(user?.addresses),
         submittedDate,
         documents: sortedDocs.map((doc) => ({
@@ -296,7 +238,6 @@ export const VerificationsPage: React.FC = () => {
         })),
         status: computeStatus(sortedDocs, userVerified),
         priority: "medium",
-        userStatus: user?.status,
         userApprovedAt: user?.approved_at || null,
         userVerified,
         reviewedBy: reviewedDoc?.verified_by
@@ -358,9 +299,7 @@ export const VerificationsPage: React.FC = () => {
   const stats = useMemo(() => {
     return {
       pending: requests.filter((r) => r.status === "pending").length,
-      underReview: requests.filter((r) => r.status === "under_review").length,
       approved: requests.filter((r) => r.status === "approved").length,
-      rejected: requests.filter((r) => r.status === "rejected").length,
     };
   }, [requests]);
 
@@ -391,11 +330,25 @@ export const VerificationsPage: React.FC = () => {
   };
 
   const handleApproveUser = async (request: VerificationRequest) => {
+    const toastId = toast.loading("Approving user...");
     try {
       await authService.approveUser(request.id);
+      setRequests((prev) =>
+        prev.map((item) => {
+          if (item.id !== request.id) return item;
+          return {
+            ...item,
+            userVerified: true,
+            userApprovedAt: new Date().toISOString(),
+            status: "approved",
+          };
+        }),
+      );
+      toast.success("User approved successfully", { id: toastId });
       await fetchRequests();
     } catch (error) {
       console.error("Approve user failed:", error);
+      toast.error("Failed to approve user", { id: toastId });
     }
   };
 
@@ -451,36 +404,20 @@ export const VerificationsPage: React.FC = () => {
         {/* Stats Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <StatsCard
-            title="Pending"
+            title="Not Verified"
             value={stats.pending}
             icon={Clock}
             iconBg="bg-yellow-100"
             iconColor="text-yellow-600"
-            subtext="Awaiting review"
+            subtext="Awaiting verification"
           />
           <StatsCard
-            title="Under Review"
-            value={stats.underReview}
-            icon={Eye}
-            iconBg="bg-blue-100"
-            iconColor="text-blue-600"
-            subtext="Being processed"
-          />
-          <StatsCard
-            title="Approved"
+            title="Verified"
             value={stats.approved}
             icon={CheckCircle2}
             iconBg="bg-green-100"
             iconColor="text-green-600"
-            subtext="Verified suppliers"
-          />
-          <StatsCard
-            title="Rejected"
-            value={stats.rejected}
-            icon={XCircle}
-            iconBg="bg-red-100"
-            iconColor="text-red-600"
-            subtext="Not approved"
+            subtext="Verification complete"
           />
         </div>
 
@@ -513,11 +450,8 @@ export const VerificationsPage: React.FC = () => {
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="under_review">Under Review</SelectItem>
-                  <SelectItem value="approved">Approved</SelectItem>
-                  <SelectItem value="rejected">Rejected</SelectItem>
-                  <SelectItem value="more_info">More Info Needed</SelectItem>
+                  <SelectItem value="pending">Not Verified</SelectItem>
+                  <SelectItem value="approved">Verified</SelectItem>
                   <SelectItem value="all">All Statuses</SelectItem>
                 </SelectContent>
               </Select>
@@ -566,11 +500,6 @@ export const VerificationsPage: React.FC = () => {
                               <Badge className={statusColors[request.status]}>
                                 {statusLabels[request.status]}
                               </Badge>
-                              {request.userVerified && (
-                                <Badge className="bg-green-50 text-green-700 border-green-200">
-                                  User Verified
-                                </Badge>
-                              )}
                               <Badge
                                 className={cn(
                                   "text-xs",
@@ -616,7 +545,7 @@ export const VerificationsPage: React.FC = () => {
                                 </p>
                                 <p className="text-sm flex items-center gap-1">
                                   <Calendar className="h-3 w-3" />
-                                  {formatDate(request.submittedDate)}
+                                  {formatDate(String(request.submittedDate))}
                                 </p>
                               </div>
                             </div>
@@ -716,8 +645,8 @@ export const VerificationsPage: React.FC = () => {
                               <p className="text-xs text-muted-foreground mt-2">
                                 Reviewed by {request.reviewedBy} on{" "}
                                 {request.reviewedDate
-                                  ? formatDate(request.reviewedDate)
-                                  : "—"}{" "}
+                                  ? formatDate(String(request.reviewedDate))
+                                  : "\u2014"}{" "}
                               </p>
                             )}
                           </div>

@@ -233,14 +233,38 @@ const BusinessTab: React.FC<BusinessTabProps> = ({
           </div>
 
           {isSupplier && (
-            <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 space-y-4">
+            <div
+              className={
+                isBusinessVerified
+                  ? "rounded-lg border border-green-200 bg-green-50 p-4 space-y-4"
+                  : "rounded-lg border border-amber-200 bg-amber-50 p-4 space-y-4"
+              }
+            >
               <div className="flex items-start gap-3">
-                <Shield className="h-5 w-5 text-amber-700 mt-0.5" />
+                <Shield
+                  className={
+                    isBusinessVerified
+                      ? "h-5 w-5 text-green-700 mt-0.5"
+                      : "h-5 w-5 text-amber-700 mt-0.5"
+                  }
+                />
                 <div className="flex-1">
-                  <h4 className="text-sm font-medium text-amber-900">
+                  <h4
+                    className={
+                      isBusinessVerified
+                        ? "text-sm font-medium text-green-900"
+                        : "text-sm font-medium text-amber-900"
+                    }
+                  >
                     Business Verification
                   </h4>
-                  <p className="text-xs text-amber-800 mt-1">
+                  <p
+                    className={
+                      isBusinessVerified
+                        ? "text-xs text-green-800 mt-1"
+                        : "text-xs text-amber-800 mt-1"
+                    }
+                  >
                     Upload your business license and any supporting documents so
                     an admin can review and approve your account.
                   </p>
@@ -294,9 +318,21 @@ const BusinessTab: React.FC<BusinessTabProps> = ({
                   </div>
 
                   {sortedDocuments.length > 0 && (
-                    <div className="rounded-md border border-amber-200 bg-white/70 p-3 text-xs">
+                    <div
+                      className={
+                        isBusinessVerified
+                          ? "rounded-md border border-green-200 bg-white/70 p-3 text-xs"
+                          : "rounded-md border border-amber-200 bg-white/70 p-3 text-xs"
+                      }
+                    >
                       <div className="flex items-center justify-between">
-                        <span className="text-amber-900 font-medium">
+                        <span
+                          className={
+                            isBusinessVerified
+                              ? "text-green-900 font-medium"
+                              : "text-amber-900 font-medium"
+                          }
+                        >
                           Uploaded documents
                         </span>
                         <Badge variant="outline">{sortedDocuments.length}</Badge>
