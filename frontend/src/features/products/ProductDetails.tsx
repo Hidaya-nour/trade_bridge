@@ -45,7 +45,88 @@ import { formatPrice } from "@/lib/formatters";
 import { getInitials, cn } from "@/lib/utils";
 import { ProductGallery } from "@/components/product/ProductGallery";
 import { ProductSpecifications } from "@/components/product/ProductSpecifications";
-import type { ProductDetailProps } from "@/types/product.types";
+
+// ============================================================================
+// TYPES
+// ============================================================================
+
+export type ProductDetailRole = "retailer" | "distributor" | "factory";
+
+export interface ProductDetailProps {
+  role: ProductDetailRole;
+  product: {
+    id: string;
+    name: string;
+    sku: string;
+    category: string;
+    price: number;
+    unit_type: string;
+    min_order_amount: number;
+    maxOrder?: number;
+    stock_quantity: number;
+    reserved?: number;
+    is_available?: boolean;
+    description: string;
+    specifications?: Record<string, string> | null;
+    images?: string[];
+    created_at: string;
+    updated_at: string;
+    // Supplier info
+    supplierId?: string;
+    supplierName?: string;
+    supplierType?: "factory" | "distributor";
+    supplierRating?: number;
+    supplierVerified?: boolean;
+    supplierLocation?: string;
+    supplierEstablished?: Date;
+
+    // Factory info (for factory's own products)
+    productionTime?: string;
+    batchSize?: number;
+    rawMaterials?: { name: string; quantity: number; unit: string }[];
+
+    // Delivery options
+    deliveryOptions?: {
+      offered: boolean;
+      cost?: number;
+      freeThreshold?: number;
+      estimatedDays: string;
+      pickupAvailable: boolean;
+    };
+
+    // Bulk discounts
+    bulkDiscounts?: {
+      quantity: number;
+      discount: number;
+    }[];
+
+    // Reviews
+    rating: number;
+    review_count: number;
+    reviews?: {
+      id: string;
+      user: string;
+      rating: number;
+      comment: string;
+      date: string;
+    }[];
+
+    // Related products
+    relatedProducts?: {
+      id: number;
+      name: string;
+      price: number;
+      unit: string;
+      rating: number;
+    }[];
+  };
+
+  onAddToCart: (quantity: number) => void;
+  cartQuantity?: number;
+  onSetCartQuantity?: (quantity: number) => void;
+  onViewSupplier?: () => void;
+  onCompare?: () => void;
+}
 
 // ============================================================================
 // COMPONENT

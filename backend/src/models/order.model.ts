@@ -57,7 +57,7 @@ Order.init(
       },
     },
     order_status: {
-      type: DataTypes.ENUM('pending', 'approved', 'processing', 'shipped', 'delivered', 'closed', 'cancelled'),
+      type: DataTypes.ENUM('pending', 'approved', 'processing', 'shipped', 'delivered','closed', 'cancelled'),
       defaultValue: 'pending',
     },
     created_at: {
