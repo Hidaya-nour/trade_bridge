@@ -122,6 +122,8 @@ export interface ProductDetailProps {
   };
 
   onAddToCart: (quantity: number) => void;
+  cartQuantity?: number;
+  onSetCartQuantity?: (quantity: number) => void;
   onViewSupplier?: () => void;
   onCompare?: () => void;
 }
@@ -134,6 +136,8 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
   role,
   product,
   onAddToCart,
+  cartQuantity = 0,
+  onSetCartQuantity,
   onViewSupplier,
   onCompare,
 }) => {
@@ -169,17 +173,12 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
 
   const incrementQuantity = () => {
     setQuantity((prev) =>
-      Math.min(
-        prev + product.min_order_amount,
-        product.maxOrder || prev + product.min_order_amount,
-      ),
+      Math.min(prev + 1, product.maxOrder || prev + product.min_order_amount),
     );
   };
 
   const decrementQuantity = () => {
-    setQuantity((prev) =>
-      Math.max(prev - product.min_order_amount, product.min_order_amount),
-    );
+    setQuantity((prev) => Math.max(prev - 1, product.min_order_amount));
   };
 
   const handleAddToCart = () => {
@@ -278,15 +277,6 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
                       </Badge>
                     )}
                   </div>
-                  {/* <Progress
-                    value={
-                      (product.is_available / product.stock_quantity) * 100
-                    }
-                    className="h-1.5 w-48"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    {product.is_available} of {product.stock_quantity} available
-                  </p> */}
                 </div>
               ) : (
                 <div className="flex items-center gap-2">
@@ -299,41 +289,6 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
                   </span>
                 </div>
               )}
-            </div>
-
-            {/* Quantity Selector */}
-            <div className="mt-6">
-              <label className="text-sm font-medium mb-2 block">Quantity</label>
-              <div className="flex items-center gap-4">
-                <div className="flex items-center border rounded-md">
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="h-10 w-10 rounded-r-none"
-                    onClick={decrementQuantity}
-                    disabled={quantity <= product.min_order_amount}
-                  >
-                    <Minus className="h-4 w-4" />
-                  </Button>
-                  <span className="w-20 text-center font-medium">
-                    {quantity}
-                  </span>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="h-10 w-10 rounded-l-none"
-                    onClick={incrementQuantity}
-                    disabled={
-                      product.maxOrder ? quantity >= product.maxOrder : false
-                    }
-                  >
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
-                <span className="text-sm text-muted-foreground">
-                  {product.unit_type}
-                </span>
-              </div>
             </div>
 
             {/* Bulk Discounts */}
@@ -359,10 +314,55 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
 
             {/* Action Buttons */}
             <div className="flex gap-3 mt-6">
-              <Button size="lg" className="flex-1" onClick={handleAddToCart}>
-                <ShoppingCart className="h-4 w-4 mr-2" />
-                Add to Cart
-              </Button>
+              {cartQuantity > 0 && onSetCartQuantity ? (
+                <div className="flex flex-1 items-center gap-3">
+                  <div className="flex items-center border rounded-lg overflow-hidden bg-background shadow-sm">
+                    <Button
+                      size="lg"
+                      variant="ghost"
+                      className="h-11 w-11 rounded-r-none hover:bg-muted/70"
+                      onClick={() =>
+                        onSetCartQuantity(Math.max(cartQuantity - 1))
+                      }
+                      disabled={
+                        cartQuantity <= (product?.min_order_amount || 1)
+                      }
+                    >
+                      <Minus className="h-4 w-4" />
+                    </Button>
+                    <div className="px-5 text-base font-semibold text-foreground">
+                      {cartQuantity}
+                    </div>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-11 w-11 rounded-l-none hover:bg-muted/70"
+                      onClick={() => onSetCartQuantity(cartQuantity + 1)}
+                      disabled={
+                        product.maxOrder
+                          ? cartQuantity + 1 > product.maxOrder
+                          : false
+                      }
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+                    onClick={() => onSetCartQuantity(0)}
+                  >
+                    <XCircle className="h-4 w-4 mr-2" />
+                    Remove
+                  </Button>
+                </div>
+              ) : (
+                <Button size="lg" className="flex-1" onClick={handleAddToCart}>
+                  <ShoppingCart className="h-4 w-4 mr-2" />
+                  Add to Cart
+                </Button>
+              )}
               <Button size="lg" variant="outline">
                 <Share2 className="h-4 w-4" />
               </Button>

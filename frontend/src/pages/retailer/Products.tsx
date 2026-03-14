@@ -91,6 +91,22 @@ const RetailerProductsPage: React.FC = () => {
     }
   };
 
+  const removeItemFromCart = async (productId: string | number) => {
+    try {
+      const productIdStr = productId.toString();
+      const existingItem = cartItems?.find(
+        (item: any) => item.product_id === productIdStr,
+      );
+
+      if (existingItem) {
+        await removeFromCartStore(existingItem.id);
+        await fetchCart();
+      }
+    } catch (error) {
+      console.error("Failed to remove item from cart:", error);
+    }
+  };
+
   const getCartQuantity = (productId: string | number): number => {
     const productIdStr = productId.toString();
     const item = cartItems?.find(
@@ -183,15 +199,16 @@ const RetailerProductsPage: React.FC = () => {
   }
 
   return (
-    <ProductCatalog
-      config={config}
-      products={transformedProducts}
-      onAddToCart={addToCart}
-      onRemoveFromCart={removeFromCart}
-      getCartQuantity={getCartQuantity}
-      getTotalCartItems={getTotalCartItems}
-      getTotalCartValue={getTotalCartValue}
-    />
+      <ProductCatalog
+        config={config}
+        products={transformedProducts}
+        onAddToCart={addToCart}
+        onRemoveFromCart={removeFromCart}
+        onRemoveItemFromCart={removeItemFromCart}
+        getCartQuantity={getCartQuantity}
+        getTotalCartItems={getTotalCartItems}
+        getTotalCartValue={getTotalCartValue}
+      />
   );
 };
 

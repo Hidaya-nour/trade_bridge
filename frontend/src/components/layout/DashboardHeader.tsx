@@ -320,7 +320,7 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ onMenuClick }) => {
         <div className="flex items-center gap-1.5">
           {/* Quick Actions */}
           <div className="hidden md:flex items-center gap-1">
-            {user.role !== "retailer" && (
+            {(user.role === "retailer" || user.role === "distributor") && (
               <TooltipProvider>
                 <Tooltip delayDuration={300}>
                   <TooltipTrigger asChild>

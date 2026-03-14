@@ -20,6 +20,7 @@ import {
   Store,
   ChevronRight,
   CreditCard,
+  XCircle,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -73,6 +74,7 @@ interface ProductCatalogProps {
   products: CatalogProduct[];
   onAddToCart: (productId: string, quantity: number) => void;
   onRemoveFromCart: (productId: string) => void;
+  onRemoveItemFromCart: (productId: string) => void;
   getCartQuantity: (productId: string) => number;
   getTotalCartItems: () => number;
   getTotalCartValue: () => number;
@@ -87,6 +89,7 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
   products: initialProducts,
   onAddToCart,
   onRemoveFromCart,
+  onRemoveItemFromCart,
   getCartQuantity,
   getTotalCartItems,
   getTotalCartValue,
@@ -236,6 +239,11 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
     setOrderDialogOpen(true);
   };
 
+  const handleRemoveAllFromCart = (productId: string) => {
+    if (getCartQuantity(productId) <= 0) return;
+    onRemoveItemFromCart(productId);
+  };
+
   // Handle place order
   const handlePlaceOrder = async (
     paymentMethod?: string,
@@ -354,11 +362,11 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
         </div>
         <div className="flex items-center gap-2">
           {getTotalCartItems() > 0 && (
-            <Button asChild variant="default">
+            <Button asChild variant="outline">
               <Link to={config.cartPath} className="gap-2">
                 <ShoppingCart className="h-4 w-4" />
                 View Cart ({getTotalCartItems()})
-                <Badge variant="secondary" className="ml-1 bg-white/20">
+                <Badge className="ml-1 bg-white/20">
                   {formatPrice(getTotalCartValue())}
                 </Badge>
               </Link>
@@ -656,399 +664,209 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
             const images = getProductImages(product);
             const hasImages = images.length > 0;
             return (
-            <Card
-              key={product.id}
-              className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer"
-              onClick={() =>
-                (window.location.href = `/${config.role}/products/${product.id}`)
-              }
-            >
-              <div className="relative h-40 bg-gradient-to-br from-primary/5 to-primary/10 flex items-center justify-center">
-                {hasImages ? (
-                  <img
-                    src={images[0]}
-                    alt={product.name}
-                    className="h-full w-full object-cover"
-                    loading="lazy"
-                  />
-                ) : (
-                  <Package className="h-16 w-16 text-primary/30" />
-                )}
-                <Badge className="absolute top-3 right-3 bg-white/90 text-foreground border-0">
-                  Min: {product.min_order_amount}+
-                </Badge>
-              </div>
+              <Card
+                key={product.id}
+                className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer"
+                onClick={() =>
+                  (window.location.href = `/${config.role}/products/${product.id}`)
+                }
+              >
+                <div className="relative h-40 bg-gradient-to-br from-primary/5 to-primary/10 flex items-center justify-center">
+                  {hasImages ? (
+                    <img
+                      src={images[0]}
+                      alt={product.name}
+                      className="h-full w-full object-cover"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <Package className="h-16 w-16 text-primary/30" />
+                  )}
+                  <Badge className="absolute top-3 right-3 bg-white/90 text-foreground border-0">
+                    Min: {product.min_order_amount}+
+                  </Badge>
+                </div>
 
-              <CardContent className="p-4">
-                {images.length > 1 && (
-                  <div
-                    className="flex items-center gap-2 mb-2"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    {images.slice(0, 4).map((url, index) => (
-                      <img
-                        key={`${url}-${index}`}
-                        src={url}
-                        alt={`${product.name} ${index + 1}`}
-                        className="h-8 w-8 rounded border object-cover"
-                        loading="lazy"
-                      />
-                    ))}
-                    {images.length > 4 && (
-                      <span className="text-xs text-muted-foreground">
-                        +{images.length - 4}
-                      </span>
-                    )}
-                  </div>
-                )}
-                <div className="flex items-start justify-between mb-2">
-                  <div>
-                    <h3 className="font-semibold text-lg line-clamp-1">
-                      {product.name}
-                    </h3>
-                    <Link
-                      to={`/${config.role}${config.supplierPath}/${product.supplier_id}`}
-                      className="text-sm text-muted-foreground hover:text-primary flex items-center gap-1 mt-1"
+                <CardContent className="p-4">
+                  {images.length > 1 && (
+                    <div
+                      className="flex items-center gap-2 mb-2"
                       onClick={(e) => e.stopPropagation()}
                     >
-                      <SupplierIcon className="h-3 w-3" />
-                      {product.supplier_name}
-                    </Link>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="flex items-center">
-                    <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                    <span className="text-xs font-medium ml-1">
-                      {product.rating}
-                    </span>
-                    <span className="text-xs text-muted-foreground ml-1">
-                      ({product.reviews})
-                    </span>
-                  </div>
-                  <span className="text-xs text-muted-foreground">•</span>
-                  <span className="text-xs text-muted-foreground flex items-center">
-                    <MapPin className="h-3 w-3 mr-1" />
-                    {product.location}
-                  </span>
-                  <span className="text-xs text-muted-foreground">•</span>
-                  <span className="text-xs text-muted-foreground flex items-center">
-                    <Truck className="h-3 w-3 mr-1" />
-                    {product.delivery_time}
-                  </span>
-                </div>
-
-                <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
-                  {product.description}
-                </p>
-
-                <div className="flex flex-wrap gap-1 mb-3">
-                  {product.tags.slice(0, 2).map((tag) => (
-                    <Badge key={tag} variant="outline" className="text-[10px]">
-                      {tag}
-                    </Badge>
-                  ))}
-                  {product.tags.length > 2 && (
-                    <Badge variant="outline" className="text-[10px]">
-                      +{product.tags.length - 2}
-                    </Badge>
-                  )}
-                </div>
-
-                {config.showVolumeDiscount && product.volume_discount && (
-                  <div className="bg-blue-50/50 rounded-lg p-2 mb-3">
-                    <p className="text-xs font-medium text-blue-700">
-                      {product.volume_discount}
-                    </p>
-                  </div>
-                )}
-
-                <div className="flex items-end justify-between">
-                  <div>
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-xl font-bold text-primary">
-                        {formatPrice(product.price)}
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        /{product.unit}
-                      </span>
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Min. order: {product.min_order_amount}
-                    </p>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    {getCartQuantity(product.id) > 0 ? (
-                      <div className="flex items-center border rounded-md">
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-8 w-8 rounded-r-none"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onRemoveFromCart(product.id);
-                          }}
-                        >
-                          <Minus className="h-3 w-3" />
-                        </Button>
-
-                        {/* Manual Input Field */}
-                        <Input
-                          type="number"
-                          min={product.min_order_amount}
-                          value={
-                            manualInputValue[product.id] !== undefined
-                              ? manualInputValue[product.id]
-                              : getCartQuantity(product.id)
-                          }
-                          onChange={(e) =>
-                            handleManualInputChange(
-                              product.id,
-                              e.target.value,
-                              product.min_order_amount,
-                            )
-                          }
-                          onBlur={() =>
-                            handleManualInputBlur(
-                              product.id,
-                              product.min_order_amount,
-                            )
-                          }
-                          onKeyDown={(e) => {
-                            e.stopPropagation();
-                            handleManualInputKeyDown(
-                              e,
-                              product.id,
-                              product.min_order_amount,
-                            );
-                          }}
-                          onClick={(e) => e.stopPropagation()}
-                          className="w-16 h-8 text-center rounded-none border-0 focus-visible:ring-0 focus-visible:ring-offset-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      {images.slice(0, 4).map((url, index) => (
+                        <img
+                          key={`${url}-${index}`}
+                          src={url}
+                          alt={`${product.name} ${index + 1}`}
+                          className="h-8 w-8 rounded border object-cover"
+                          loading="lazy"
                         />
-
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-8 w-8 rounded-l-none"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onAddToCart(product.id, 1);
-                          }}
-                        >
-                          <Plus className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    ) : (
-                      <>
-                        <Button
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onAddToCart(product.id, product.min_order_amount);
-                          }}
-                        >
-                          <ShoppingCart className="h-4 w-4 mr-2" />
-                          Add
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDirectOrder(product);
-                          }}
-                          className="gap-1"
-                        >
-                          <CreditCard className="h-4 w-4" />
-                          Order
-                        </Button>
-                      </>
-                    )}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )})}
-        </div>
-      ) : (
-        // List View
-        <div className="space-y-4">
-          {currentItems.map((product) => {
-            const images = getProductImages(product);
-            const hasImages = images.length > 0;
-            return (
-            <Card
-              key={product.id}
-              className="overflow-hidden hover:shadow-md transition-shadow cursor-pointer"
-              onClick={() =>
-                (window.location.href = `/${config.role}/products/${product.id}`)
-              }
-            >
-              <CardContent className="p-6">
-                <div className="flex flex-col md:flex-row gap-6">
-                  <div className="md:w-32 h-32 bg-gradient-to-br from-primary/5 to-primary/10 rounded-lg flex items-center justify-center overflow-hidden">
-                    {hasImages ? (
-                      <img
-                        src={images[0]}
-                        alt={product.name}
-                        className="h-full w-full object-cover"
-                        loading="lazy"
-                      />
-                    ) : (
-                      <Package className="h-12 w-12 text-primary/30" />
-                    )}
-                  </div>
-
-                  <div className="flex-1">
-                    {images.length > 1 && (
-                      <div
-                        className="flex items-center gap-2 mb-3"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        {images.slice(0, 4).map((url, index) => (
-                          <img
-                            key={`${url}-${index}`}
-                            src={url}
-                            alt={`${product.name} ${index + 1}`}
-                            className="h-8 w-8 rounded border object-cover"
-                            loading="lazy"
-                          />
-                        ))}
-                        {images.length > 4 && (
-                          <span className="text-xs text-muted-foreground">
-                            +{images.length - 4}
-                          </span>
-                        )}
-                      </div>
-                    )}
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-lg font-semibold hover:text-primary">
-                            {product.name}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-3 mt-1">
-                          <Link
-                            to={`/${config.role}${config.supplierPath}/${product.supplier_id}`}
-                            className="text-sm text-muted-foreground hover:text-primary"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            {product.supplier_name}
-                          </Link>
-                          <span className="text-xs text-muted-foreground">
-                            •
-                          </span>
-                          <span className="text-xs text-muted-foreground">
-                            {product.location}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="text-right">
-                        <div className="text-xl font-bold text-primary">
-                          {formatPrice(product.price)}
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          /{product.unit} • Min: {product.min_order_amount}
-                        </div>
-                      </div>
-                    </div>
-
-                    <p className="text-sm text-muted-foreground mt-2 line-clamp-2">
-                      {product.description}
-                    </p>
-
-                    <div className="flex items-center gap-4 mt-4">
-                      <div className="flex items-center">
-                        <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                        <span className="text-sm font-medium ml-1">
-                          {product.rating}
+                      ))}
+                      {images.length > 4 && (
+                        <span className="text-xs text-muted-foreground">
+                          +{images.length - 4}
                         </span>
-                        <span className="text-xs text-muted-foreground ml-1">
-                          ({product.reviews} reviews)
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                        <Truck className="h-4 w-4" />
-                        {product.delivery_time}
-                      </div>
-                      {product.stock_quantity !== undefined && (
-                        <div className="text-sm text-muted-foreground">
-                          Stock: {product.stock_quantity.toLocaleString()}
-                        </div>
                       )}
                     </div>
+                  )}
+                  <div className="flex items-start justify-between mb-2">
+                    <div>
+                      <h3 className="font-semibold text-lg line-clamp-1">
+                        {product.name}
+                      </h3>
+                      <Link
+                        to={`/${config.role}${config.supplierPath}/${product.supplier_id}`}
+                        className="text-sm text-muted-foreground hover:text-primary flex items-center gap-1 mt-1"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <SupplierIcon className="h-3 w-3" />
+                        {product.supplier_name}
+                      </Link>
+                    </div>
+                  </div>
 
-                    {config.showVolumeDiscount && product.volume_discount && (
-                      <div className="mt-3 bg-blue-50 p-2 rounded-lg">
-                        <p className="text-xs font-medium text-blue-700">
-                          {product.volume_discount}
-                        </p>
-                      </div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="flex items-center">
+                      <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                      <span className="text-xs font-medium ml-1">
+                        {product.rating}
+                      </span>
+                      <span className="text-xs text-muted-foreground ml-1">
+                        ({product.reviews})
+                      </span>
+                    </div>
+                    <span className="text-xs text-muted-foreground">•</span>
+                    <span className="text-xs text-muted-foreground flex items-center">
+                      <MapPin className="h-3 w-3 mr-1" />
+                      {product.location}
+                    </span>
+                    <span className="text-xs text-muted-foreground">•</span>
+                    <span className="text-xs text-muted-foreground flex items-center">
+                      <Truck className="h-3 w-3 mr-1" />
+                      {product.delivery_time}
+                    </span>
+                  </div>
+
+                  <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
+                    {product.description}
+                  </p>
+
+                  <div className="flex flex-wrap gap-1 mb-3">
+                    {product.tags.slice(0, 2).map((tag) => (
+                      <Badge
+                        key={tag}
+                        variant="outline"
+                        className="text-[10px]"
+                      >
+                        {tag}
+                      </Badge>
+                    ))}
+                    {product.tags.length > 2 && (
+                      <Badge variant="outline" className="text-[10px]">
+                        +{product.tags.length - 2}
+                      </Badge>
                     )}
+                  </div>
 
-                    <div className="flex items-center gap-2 mt-4">
+                  {config.showVolumeDiscount && product.volume_discount && (
+                    <div className="bg-blue-50/50 rounded-lg p-2 mb-3">
+                      <p className="text-xs font-medium text-blue-700">
+                        {product.volume_discount}
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="flex items-end justify-between">
+                    <div>
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-xl font-bold text-primary">
+                          {formatPrice(product.price)}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          /{product.unit}
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Min. order: {product.min_order_amount}
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-2">
                       {getCartQuantity(product.id) > 0 ? (
-                        <div className="flex items-center border rounded-md">
+                        <div className="flex items-center gap-2">
+                          <div className="flex items-center border rounded-lg overflow-hidden bg-background shadow-sm">
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-9 w-9 rounded-r-none hover:bg-muted/70"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onRemoveFromCart(product.id);
+                              }}
+                              disabled={
+                                getCartQuantity(product.id) <=
+                                (product?.min_order_amount || 1)
+                              }
+                            >
+                              <Minus className="h-3 w-3" />
+                            </Button>
+
+                            {/* Manual Input Field */}
+                            <Input
+                              type="number"
+                              min={product.min_order_amount}
+                              value={
+                                manualInputValue[product.id] !== undefined
+                                  ? manualInputValue[product.id]
+                                  : getCartQuantity(product.id)
+                              }
+                              onChange={(e) =>
+                                handleManualInputChange(
+                                  product.id,
+                                  e.target.value,
+                                  product.min_order_amount,
+                                )
+                              }
+                              onBlur={() =>
+                                handleManualInputBlur(
+                                  product.id,
+                                  product.min_order_amount,
+                                )
+                              }
+                              onKeyDown={(e) => {
+                                e.stopPropagation();
+                                handleManualInputKeyDown(
+                                  e,
+                                  product.id,
+                                  product.min_order_amount,
+                                );
+                              }}
+                              onClick={(e) => e.stopPropagation()}
+                              className="w-16 h-9 text-center rounded-none border-0 focus-visible:ring-0 focus-visible:ring-offset-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                            />
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-9 w-9 rounded-l-none hover:bg-muted/70"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onAddToCart(product.id, 1);
+                              }}
+                            >
+                              <Plus className="h-3 w-3" />
+                            </Button>
+                          </div>
                           <Button
                             size="sm"
-                            variant="ghost"
-                            className="h-8 w-8 rounded-r-none"
+                            variant="outline"
+                            className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
                             onClick={(e) => {
                               e.stopPropagation();
-                              onRemoveFromCart(product.id);
+                              handleRemoveAllFromCart(product.id);
                             }}
                           >
-                            <Minus className="h-3 w-3" />
-                          </Button>
-
-                          {/* Manual Input Field for List View */}
-                          <Input
-                            type="number"
-                            min={product.min_order_amount}
-                            value={
-                              manualInputValue[product.id] !== undefined
-                                ? manualInputValue[product.id]
-                                : getCartQuantity(product.id)
-                            }
-                            onChange={(e) =>
-                              handleManualInputChange(
-                                product.id,
-                                e.target.value,
-                                product.min_order_amount,
-                              )
-                            }
-                            onBlur={() =>
-                              handleManualInputBlur(
-                                product.id,
-                                product.min_order_amount,
-                              )
-                            }
-                            onKeyDown={(e) => {
-                              e.stopPropagation();
-                              handleManualInputKeyDown(
-                                e,
-                                product.id,
-                                product.min_order_amount,
-                              );
-                            }}
-                            onClick={(e) => e.stopPropagation()}
-                            className="w-16 h-8 text-center rounded-none border-0 focus-visible:ring-0 focus-visible:ring-offset-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                          />
-
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="h-8 w-8 rounded-l-none"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onAddToCart(product.id, 1);
-                            }}
-                          >
-                            <Plus className="h-3 w-3" />
+                            <XCircle className="h-4 w-4 mr-2" />
+                            Remove
                           </Button>
                         </div>
                       ) : (
@@ -1061,7 +879,7 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
                             }}
                           >
                             <ShoppingCart className="h-4 w-4 mr-2" />
-                            Add to Cart
+                            Add
                           </Button>
                           <Button
                             size="sm"
@@ -1073,28 +891,258 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
                             className="gap-1"
                           >
                             <CreditCard className="h-4 w-4" />
-                            Order Now
+                            Order
                           </Button>
                         </>
                       )}
-
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        asChild
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <Link to={`/${config.role}/products/${product.id}`}>
-                          <Eye className="h-4 w-4 mr-2" />
-                          Details
-                        </Link>
-                      </Button>
                     </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          )})}
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      ) : (
+        // List View
+        <div className="space-y-4">
+          {currentItems.map((product) => {
+            const images = getProductImages(product);
+            const hasImages = images.length > 0;
+            return (
+              <Card
+                key={product.id}
+                className="overflow-hidden hover:shadow-md transition-shadow cursor-pointer"
+                onClick={() =>
+                  (window.location.href = `/${config.role}/products/${product.id}`)
+                }
+              >
+                <CardContent className="p-6">
+                  <div className="flex flex-col md:flex-row gap-6">
+                    <div className="md:w-32 h-32 bg-gradient-to-br from-primary/5 to-primary/10 rounded-lg flex items-center justify-center overflow-hidden">
+                      {hasImages ? (
+                        <img
+                          src={images[0]}
+                          alt={product.name}
+                          className="h-full w-full object-cover"
+                          loading="lazy"
+                        />
+                      ) : (
+                        <Package className="h-12 w-12 text-primary/30" />
+                      )}
+                    </div>
+
+                    <div className="flex-1">
+                      {images.length > 1 && (
+                        <div
+                          className="flex items-center gap-2 mb-3"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {images.slice(0, 4).map((url, index) => (
+                            <img
+                              key={`${url}-${index}`}
+                              src={url}
+                              alt={`${product.name} ${index + 1}`}
+                              className="h-8 w-8 rounded border object-cover"
+                              loading="lazy"
+                            />
+                          ))}
+                          {images.length > 4 && (
+                            <span className="text-xs text-muted-foreground">
+                              +{images.length - 4}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-lg font-semibold hover:text-primary">
+                              {product.name}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-3 mt-1">
+                            <Link
+                              to={`/${config.role}${config.supplierPath}/${product.supplier_id}`}
+                              className="text-sm text-muted-foreground hover:text-primary"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              {product.supplier_name}
+                            </Link>
+                            <span className="text-xs text-muted-foreground">
+                              •
+                            </span>
+                            <span className="text-xs text-muted-foreground">
+                              {product.location}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="text-right">
+                          <div className="text-xl font-bold text-primary">
+                            {formatPrice(product.price)}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            /{product.unit} • Min: {product.min_order_amount}
+                          </div>
+                        </div>
+                      </div>
+
+                      <p className="text-sm text-muted-foreground mt-2 line-clamp-2">
+                        {product.description}
+                      </p>
+
+                      <div className="flex items-center gap-4 mt-4">
+                        <div className="flex items-center">
+                          <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                          <span className="text-sm font-medium ml-1">
+                            {product.rating}
+                          </span>
+                          <span className="text-xs text-muted-foreground ml-1">
+                            ({product.reviews} reviews)
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                          <Truck className="h-4 w-4" />
+                          {product.delivery_time}
+                        </div>
+                        {product.stock_quantity !== undefined && (
+                          <div className="text-sm text-muted-foreground">
+                            Stock: {product.stock_quantity.toLocaleString()}
+                          </div>
+                        )}
+                      </div>
+
+                      {config.showVolumeDiscount && product.volume_discount && (
+                        <div className="mt-3 bg-blue-50 p-2 rounded-lg">
+                          <p className="text-xs font-medium text-blue-700">
+                            {product.volume_discount}
+                          </p>
+                        </div>
+                      )}
+
+                      <div className="flex items-center gap-2 mt-4">
+                        {getCartQuantity(product.id) > 0 ? (
+                          <div className="flex items-center gap-2">
+                            <div className="flex items-center border rounded-lg overflow-hidden bg-background shadow-sm">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-9 w-9 rounded-r-none hover:bg-muted/70"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onRemoveFromCart(product.id);
+                                }}
+                              >
+                                <Minus className="h-3 w-3" />
+                              </Button>
+
+                              {/* Manual Input Field for List View */}
+                              <Input
+                                type="number"
+                                min={product.min_order_amount}
+                                value={
+                                  manualInputValue[product.id] !== undefined
+                                    ? manualInputValue[product.id]
+                                    : getCartQuantity(product.id)
+                                }
+                                onChange={(e) =>
+                                  handleManualInputChange(
+                                    product.id,
+                                    e.target.value,
+                                    product.min_order_amount,
+                                  )
+                                }
+                                onBlur={() =>
+                                  handleManualInputBlur(
+                                    product.id,
+                                    product.min_order_amount,
+                                  )
+                                }
+                                onKeyDown={(e) => {
+                                  e.stopPropagation();
+                                  handleManualInputKeyDown(
+                                    e,
+                                    product.id,
+                                    product.min_order_amount,
+                                  );
+                                }}
+                                onClick={(e) => e.stopPropagation()}
+                                className="w-16 h-9 text-center rounded-none border-0 focus-visible:ring-0 focus-visible:ring-offset-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                              />
+
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-9 w-9 rounded-l-none hover:bg-muted/70"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onAddToCart(product.id, 1);
+                                }}
+                              >
+                                <Plus className="h-3 w-3" />
+                              </Button>
+                            </div>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleRemoveAllFromCart(product.id);
+                              }}
+                            >
+                              <XCircle className="h-4 w-4 mr-2" />
+                              Remove
+                            </Button>
+                          </div>
+                        ) : (
+                          <>
+                            <Button
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onAddToCart(
+                                  product.id,
+                                  product.min_order_amount,
+                                );
+                              }}
+                            >
+                              <ShoppingCart className="h-4 w-4 mr-2" />
+                              Add to Cart
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDirectOrder(product);
+                              }}
+                              className="gap-1"
+                            >
+                              <CreditCard className="h-4 w-4" />
+                              Order Now
+                            </Button>
+                          </>
+                        )}
+
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          asChild
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <Link to={`/${config.role}/products/${product.id}`}>
+                            <Eye className="h-4 w-4 mr-2" />
+                            Details
+                          </Link>
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
 

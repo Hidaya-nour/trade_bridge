@@ -5,16 +5,52 @@ import React, { useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { WithAsync } from "@/components/shared/WithAsync";
 import type { ProductDetailData } from "@/types/product.types";
+import toast from "react-hot-toast";
 
 const RetailerProductDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { product, fetchProductById, isLoading } = useProductStore();
-  const { addToCart } = useCartStore();
+  const { addToCart, updateQuantity, removeFromCart, items } = useCartStore();
   const navigate = useNavigate();
 
-  const handleAddToCart = (quantity: number) => {
-    if (product) {
-      addToCart(product.id, quantity);
+  const currentCartItem = product
+    ? items.find((item) => item.product_id === product.id) || null
+    : null;
+
+  const cartQuantity = currentCartItem?.quantity || 0;
+
+  const handleAddToCart = async (quantity: number) => {
+    if (!product) return;
+    try {
+      if (currentCartItem) {
+        await updateQuantity(currentCartItem.id, currentCartItem.quantity + quantity);
+      } else {
+        await addToCart(product.id, quantity);
+      }
+
+      const updatedItems = useCartStore.getState().items;
+      const updatedQuantity =
+        updatedItems.find((item) => item.product_id === product.id)?.quantity || 0;
+
+      toast.success(`Added to cart (${updatedQuantity})`);
+    } catch (error: any) {
+      toast.error(error?.message || "Failed to add to cart");
+    }
+  };
+
+  const handleSetCartQuantity = async (quantity: number) => {
+    if (!product || !currentCartItem) return;
+    try {
+      if (quantity <= 0) {
+        await removeFromCart(currentCartItem.id);
+        toast.success("Removed from cart");
+        return;
+      }
+
+      await updateQuantity(currentCartItem.id, quantity);
+      toast.success(`Updated cart (${quantity})`);
+    } catch (error: any) {
+      toast.error(error?.message || "Failed to update cart");
     }
   };
   const handleCompare = () => {
@@ -73,6 +109,8 @@ const RetailerProductDetailPage: React.FC = () => {
           role="retailer"
           product={productForDetail}
           onAddToCart={handleAddToCart}
+          cartQuantity={cartQuantity}
+          onSetCartQuantity={handleSetCartQuantity}
           onCompare={handleCompare}
         />
       )}

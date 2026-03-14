@@ -137,6 +137,31 @@ const DistributorMarketplacePage: React.FC = () => {
       const cartItem = cartItems.find((item) => item.product_id === productId);
       if (!cartItem) return;
 
+      const nextQuantity = cartItem.quantity - 1;
+      if (nextQuantity <= 0) {
+        const result = await removeFromCart(cartItem.id);
+        if (result) {
+          toast.success(`Removed ${product.name} from cart`);
+        }
+      } else {
+        const result = await updateQuantity(cartItem.id, nextQuantity);
+        if (result) {
+          toast.success(`Updated ${product.name} quantity`);
+        }
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Failed to remove from cart");
+    }
+  };
+
+  const handleRemoveItemFromCart = async (productId: string) => {
+    try {
+      const product = localProducts.find((p) => p.id === productId);
+      if (!product) return;
+
+      const cartItem = cartItems.find((item) => item.product_id === productId);
+      if (!cartItem) return;
+
       const result = await removeFromCart(cartItem.id);
       if (result) {
         toast.success(`Removed ${product.name} from cart`);
@@ -218,6 +243,7 @@ const DistributorMarketplacePage: React.FC = () => {
       products={localProducts}
       onAddToCart={handleAddToCart}
       onRemoveFromCart={handleRemoveFromCart}
+      onRemoveItemFromCart={handleRemoveItemFromCart}
       getCartQuantity={getCartQuantity}
       getTotalCartItems={getTotalCartItems}
       getTotalCartValue={getTotalCartValue}
