@@ -1,6 +1,10 @@
 import React, { useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import DashboardLayout from "@/components/layout/DashboardLayout";
+import HomePage from "./pages/Home";
+import AboutPage from "./pages/About";
+import ContactSupportPage from "./pages/ContactSupport";
+import WorkspacesPage from "./pages/Workspaces";
 import RetailerDashboard from "./pages/retailer/Dashboard";
 import ProductsPage from "./pages/retailer/Products";
 import OrdersPage from "./pages/retailer/Order";
@@ -57,6 +61,11 @@ function App() {
     <>
       <Router>
         <Routes>
+          {/* Landing */}
+          <Route path="/" element={<HomePage />} />
+          <Route path="/about" element={<AboutPage />} />
+          <Route path="/contact" element={<ContactSupportPage />} />
+          <Route path="/workspaces" element={<WorkspacesPage />} />
           {/* Public Auth Routes */}
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
