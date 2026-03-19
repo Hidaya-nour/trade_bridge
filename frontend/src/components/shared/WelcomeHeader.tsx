@@ -1,12 +1,13 @@
 import { Badge } from "@/components/ui/badge";
-import { Store, Package, Factory, Shield, Users, Settings } from "lucide-react";
+import { Store, Package, Factory, Shield, Users } from "lucide-react";
 
 export type UserRole =
   | "retailer"
   | "distributor"
   | "factory"
   | "admin"
-  | "driver";
+  | "driver"
+  | "login";
 
 interface WelcomeHeaderProps {
   user: {
@@ -16,6 +17,7 @@ interface WelcomeHeaderProps {
     role: UserRole;
     verified?: boolean;
   };
+  variant?: "dashboard" | "login";
 }
 
 const roleIcons = {
@@ -24,6 +26,7 @@ const roleIcons = {
   factory: Factory,
   admin: Shield,
   driver: Users,
+  login: Store,
 };
 
 const roleTitles = {
@@ -32,12 +35,23 @@ const roleTitles = {
   factory: "production facility",
   admin: "platform administration",
   driver: "delivery service",
+  login: "your account",
 };
 
-export const WelcomeHeader = ({ user }: WelcomeHeaderProps) => {
+export const WelcomeHeader = ({ user, variant = "dashboard" }: WelcomeHeaderProps) => {
   const RoleIcon = roleIcons[user.role];
   const title = roleTitles[user.role];
-  const firstName = user.name.split(" ")[0];
+  const firstName = user.name.split(" ")[0] || "there";
+
+  if (variant === "login") {
+    return (
+      <div className="text-center">
+        <p className="mt-2 text-sm text-gray-600">
+          Welcome back! Sign in to your account to continue
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
