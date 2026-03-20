@@ -3,6 +3,8 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
+const dbSslEnabled = String(process.env.DB_SSL || '').toLowerCase() === 'true';
+
 const sequelize = new Sequelize(
   process.env.DB_NAME || 'defaultdb',
   process.env.DB_USER || 'avnadmin',
@@ -11,11 +13,15 @@ const sequelize = new Sequelize(
     host: process.env.DB_HOST || 'mysql-11c9a362-nourhidaya921-a902.l.aivencloud.com',
     port: parseInt(process.env.DB_PORT || '21581'),
     dialect: 'mysql',
-    dialectOptions: {
-      ssl: {
-        rejectUnauthorized: false // Required for Aiven
-      }
-    },
+    ...(dbSslEnabled
+      ? {
+          dialectOptions: {
+            ssl: {
+              rejectUnauthorized: false
+            }
+          }
+        }
+      : {}),
     logging: process.env.NODE_ENV === 'development' ? console.log : false,
     pool: {
       max: 10,
