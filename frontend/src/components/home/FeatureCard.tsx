@@ -3,6 +3,7 @@ type FeatureCardProps = {
   description: string;
 };
 
+// Implemented reusable components using props for dynamic rendering
 export default function FeatureCard({
   title,
   description,

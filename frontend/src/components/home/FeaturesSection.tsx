@@ -33,6 +33,7 @@ const FEATURES = [
   },
 ] as const;
 
+// Improved section components using dynamic mapping for scalability
 export default function FeaturesSection() {
   return (
     <section className="border-t border-slate-800/80 bg-slate-950/70">

@@ -4,6 +4,7 @@ import FeaturesSection from "@/components/home/FeaturesSection";
 import WorkspaceSection from "@/components/home/WorkspaceSection";
 import HomeFooter from "@/components/home/HomeFooter";
 
+// Refactored components into modular structure to reduce cognitive load
 export default function HomePage() {
   return (
     <main className="min-h-screen bg-slate-950 text-slate-50">
