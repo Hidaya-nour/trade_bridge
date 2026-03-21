@@ -18,3 +18,6 @@ export { default as LandingCheckbox } from "./LandingCheckbox";
 export { default as LandingInput } from "./LandingInput";
 export { default as LandingSelect } from "./LandingSelect";
 export { default as Logo } from '../../shared/Logo';
+export { default as FeatureCard } from '../cards/FeaturesCard';
+export { default as TeamMember } from '../cards/TeamMember';
+export { default as StepCard } from '../cards/StepCard';
