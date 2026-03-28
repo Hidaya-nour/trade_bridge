@@ -1,5 +1,9 @@
 import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
 import DashboardLayout from "@/components/layout/DashboardLayout";
+import HomePage from "./pages/Home";
+import AboutPage from "./pages/About";
+import ContactSupportPage from "./pages/ContactSupport";
+import WorkspacesPage from "./pages/Workspaces";
 import RetailerDashboard from "./pages/retailer/Dashboard";
 import ProductsPage from "./pages/retailer/Products";
 import OrdersPage from "./pages/retailer/Order";
@@ -59,6 +63,15 @@ function App() {
             <Route path="/register" element={<LandingRegister />} />
           </Route>
 
+          {/* Landing */}
+          <Route path="/" element={<HomePage />} />
+          <Route path="/about" element={<AboutPage />} />
+          <Route path="/contact" element={<ContactSupportPage />} />
+          <Route path="/workspaces" element={<WorkspacesPage />} />
+          {/* Public Auth Routes */}
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
+          {/* Dashboard Routes */}
           <Route
             path="/retailer/dashboard"
             element={
