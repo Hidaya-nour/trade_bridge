@@ -10,7 +10,6 @@ import {
   UpdateOrderStatusDTO
 } from '../../types/order.types';
 import logger from '../../utils/logger';
-import { Op } from 'sequelize';
 import notificationService from '../../services/notification/notification.service';
 import Payment from '../../models/payment.model';
 

@@ -48,10 +48,10 @@ import {
 } from "@/components";
 import { formatPrice, formatDate } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
-import { Label } from "@/components/ui/label";
 import type { Order } from "@/types/order.types";
 import OrderTrackingDialog from "@/components/order/OrderTrackingDialog";
 import { PlaceOrderDialog } from "@/components/order/PlaceOrderDialog";
+import { RateReviewDialog } from "@/components/product/RateReviewDialog";
 import toast from "react-hot-toast";
 
 interface OrderListProps {
@@ -97,14 +97,11 @@ interface OrderListProps {
     order: Order,
     paymentMethod?: string,
     deliveryOption?: string,
-  ) => Promise<
-    | {
-        primaryOrderId: string;
-        orderIds?: string[];
-        total?: number;
-      }
-    | void
-  >;
+  ) => Promise<{
+    primaryOrderId: string;
+    orderIds?: string[];
+    total?: number;
+  } | void>;
   onRateProduct?: (
     productId: string,
     rating: number,
@@ -282,19 +279,25 @@ export const OrderList: React.FC<OrderListProps> = ({
   };
 
   const handleRateProduct = () => {
-    if (selectedProduct) {
-      onRateProduct?.(
-        selectedProduct.id,
+    if (!selectedProduct) {
+      return;
+    }
+
+    onRateProduct?.(
+      selectedProduct.id,
+      rating,
+      review,
+      selectedProduct.orderId,
+    );
+
+    setRatedProducts((prev) => ({
+      ...prev,
+      [selectedProduct.id]: {
         rating,
         review,
-        selectedProduct.orderId,
-      );
-      setRatedProducts((prev) => ({
-        ...prev,
-        [selectedProduct.id]: { rating, review },
-      }));
-      toast.success("Thank you for your review!");
-    }
+      },
+    }));
+
     setShowRateDialog(false);
     setSelectedProduct(null);
     setRating(5);
@@ -758,6 +761,8 @@ export const OrderList: React.FC<OrderListProps> = ({
                                           `Product ${item.product_id}`,
                                         orderId: order.id,
                                       });
+                                      setRating(5);
+                                      setReview("");
                                       setShowRateDialog(true);
                                     }}
                                   >
@@ -1042,60 +1047,23 @@ export const OrderList: React.FC<OrderListProps> = ({
       </AlertDialog>
 
       {/* Rate Product Dialog */}
-      <AlertDialog open={showRateDialog} onOpenChange={setShowRateDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Rate Product</AlertDialogTitle>
-            <AlertDialogDescription>
-              Share your feedback about {selectedProduct?.name}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <div className="py-4 space-y-4">
-            <div className="space-y-2">
-              <Label>Rating</Label>
-              <div className="flex items-center gap-2">
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <Button
-                    key={star}
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="p-1"
-                    onClick={() => setRating(star)}
-                  >
-                    <Star
-                      className={`h-6 w-6 ${
-                        star <= rating
-                          ? "fill-yellow-400 text-yellow-400"
-                          : "text-gray-300"
-                      }`}
-                    />
-                  </Button>
-                ))}
-                <span className="text-sm ml-2">{rating}/5</span>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="review">Review (Optional)</Label>
-              <Input
-                id="review"
-                placeholder="Write your review..."
-                value={review}
-                onChange={(e) => setReview(e.target.value)}
-              />
-            </div>
-          </div>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleRateProduct}
-              className="bg-blue-600 hover:bg-blue-700"
-            >
-              Submit Review
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <RateReviewDialog
+        open={showRateDialog}
+        onOpenChange={(open) => {
+          setShowRateDialog(open);
+          if (!open) {
+            setSelectedProduct(null);
+            setRating(5);
+            setReview("");
+          }
+        }}
+        productName={selectedProduct?.name}
+        rating={rating}
+        onRatingChange={setRating}
+        review={review}
+        onReviewChange={setReview}
+        onSubmit={handleRateProduct}
+      />
 
       {/* Reorder Dialog */}
       {selectedOrder && onReorderPlaceOrder && (

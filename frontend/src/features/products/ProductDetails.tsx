@@ -45,6 +45,7 @@ import { formatPrice } from "@/lib/formatters";
 import { getInitials, cn } from "@/lib/utils";
 import { ProductGallery } from "@/components/product/ProductGallery";
 import { ProductSpecifications } from "@/components/product/ProductSpecifications";
+import { RateReviewDialog } from "@/components/product/RateReviewDialog";
 
 // ============================================================================
 // TYPES
@@ -126,6 +127,7 @@ export interface ProductDetailProps {
   onSetCartQuantity?: (quantity: number) => void;
   onViewSupplier?: () => void;
   onCompare?: () => void;
+  onRateProduct?: (productId: string, rating: number, review: string) => void;
 }
 
 // ============================================================================
@@ -140,10 +142,14 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
   onSetCartQuantity,
   onViewSupplier,
   onCompare,
+  onRateProduct,
 }) => {
   const navigate = useNavigate();
   const [quantity, setQuantity] = useState(product.min_order_amount);
   const [activeTab, setActiveTab] = useState("description");
+  const [showRateDialog, setShowRateDialog] = useState(false);
+  const [rating, setRating] = useState(5);
+  const [review, setReview] = useState("");
 
   const getRoleIcon = () => {
     switch (role) {
@@ -183,6 +189,13 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
 
   const handleAddToCart = () => {
     onAddToCart(quantity);
+  };
+
+  const handleSubmitReview = () => {
+    onRateProduct?.(product.id, rating, review);
+    setShowRateDialog(false);
+    setRating(5);
+    setReview("");
   };
   return (
     <div className="space-y-6">
@@ -571,6 +584,26 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
         <TabsContent value="reviews" className="mt-6">
           <Card>
             <CardContent className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="text-sm font-semibold">Customer Reviews</h3>
+                  <p className="text-xs text-muted-foreground">
+                    Share your experience with this product.
+                  </p>
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    setRating(5);
+                    setReview("");
+                    setShowRateDialog(true);
+                  }}
+                >
+                  <Star className="h-3 w-3 mr-2" />
+                  Rate Product
+                </Button>
+              </div>
               {product.reviews && product.reviews.length > 0 ? (
                 <div className="space-y-4">
                   {product.reviews.map((review) => (
@@ -653,6 +686,23 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
           </div>
         </div>
       )}
+
+      <RateReviewDialog
+        open={showRateDialog}
+        onOpenChange={(open) => {
+          setShowRateDialog(open);
+          if (!open) {
+            setRating(5);
+            setReview("");
+          }
+        }}
+        productName={product.name}
+        rating={rating}
+        onRatingChange={setRating}
+        review={review}
+        onReviewChange={setReview}
+        onSubmit={handleSubmitReview}
+      />
     </div>
   );
 };
