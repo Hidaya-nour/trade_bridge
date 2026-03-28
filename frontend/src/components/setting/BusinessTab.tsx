@@ -3,6 +3,7 @@ import L from "leaflet";
 import { MapContainer, Marker, TileLayer, useMap, useMapEvents } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import { Check, Shield } from "lucide-react";
+import LandingInput from "@/components/landing/shared/LandingInput";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -185,6 +186,7 @@ const BusinessTab: React.FC<BusinessTabProps> = ({
               <Label htmlFor="businessName">Business Name</Label>
               <Input
                 id="businessName"
+                label="Business Name"
                 value={profileForm.business_name}
                 onChange={(e) =>
                   setProfileForm((prev) => ({
@@ -208,19 +210,18 @@ const BusinessTab: React.FC<BusinessTabProps> = ({
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="tinNumber">TIN Number</Label>
-              <Input
-                id="tinNumber"
-                value={profileForm.tin_number}
-                onChange={(e) =>
-                  setProfileForm((prev) => ({
-                    ...prev,
-                    tin_number: e.target.value,
-                  }))
-                }
-              />
-            </div>
+            <LandingInput
+              label="TIN Number"
+              name="tin_number"
+              value={profileForm.tin_number}
+              onChange={(e) =>
+                setProfileForm((prev) => ({
+                  ...prev,
+                  tin_number: e.target.value,
+                }))
+              }
+            placeholder="Enter TIN number"
+          />
             <div className="space-y-2">
               <Label htmlFor="vatRegistered">VAT Registered</Label>
               <div className="flex items-center h-10">
@@ -533,6 +534,7 @@ const BusinessTab: React.FC<BusinessTabProps> = ({
                               <Label htmlFor={`docFile-${doc.id}`}>Document File</Label>
                               <Input
                                 id={`docFile-${doc.id}`}
+                                label="Document File"
                                 type="file"
                                 accept=".pdf,image/*"
                                 onChange={(e) =>
@@ -555,6 +557,7 @@ const BusinessTab: React.FC<BusinessTabProps> = ({
                               </Label>
                               <Input
                                 id={`docIssued-${doc.id}`}
+                                label="Issued Date (optional)"
                                 type="date"
                                 value={doc.issued_date}
                                 onChange={(e) =>
@@ -577,6 +580,7 @@ const BusinessTab: React.FC<BusinessTabProps> = ({
                               </Label>
                               <Input
                                 id={`docExpiry-${doc.id}`}
+                                label="Expiry Date (optional)"
                                 type="date"
                                 value={doc.expiry_date}
                                 onChange={(e) =>
@@ -648,6 +652,7 @@ const BusinessTab: React.FC<BusinessTabProps> = ({
                   <Label htmlFor="businessRegion">Region</Label>
                   <Input
                     id="businessRegion"
+                    label="Region"
                     value={addressForm.region}
                     onChange={(e) =>
                       setAddressForm((prev) => ({
@@ -662,6 +667,7 @@ const BusinessTab: React.FC<BusinessTabProps> = ({
                   <Label htmlFor="businessCity">City</Label>
                   <Input
                     id="businessCity"
+                    label="City"
                     value={addressForm.city}
                     onChange={(e) =>
                       setAddressForm((prev) => ({
@@ -676,6 +682,7 @@ const BusinessTab: React.FC<BusinessTabProps> = ({
                   <Label htmlFor="businessSubcity">Subcity</Label>
                   <Input
                     id="businessSubcity"
+                    label="Subcity"
                     value={addressForm.subcity}
                     onChange={(e) =>
                       setAddressForm((prev) => ({
