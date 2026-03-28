@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   Package,
   Truck,
@@ -58,10 +58,10 @@ import {
 import { Label } from "@/components/ui/label";
 
 import { StatusBadge } from "@/components";
-import OrderTrackingDialog from "@/components/order/OrderTrackingDialog";
 import { PlaceOrderDialog } from "@/components/order/PlaceOrderDialog";
 import { formatPrice, formatDate, formatDateTime } from "@/lib/formatters";
 import { getInitials, cn } from "@/lib/utils";
+import deliveryService from "@/services/delivery.service";
 import toast from "react-hot-toast";
 import type {
   OrderStatus,
@@ -114,6 +114,7 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
   role = "retailer",
 }) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [order, setOrder] = useState<OrderDetailsData>(initialOrder);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [showAssignDialog, setShowAssignDialog] = useState(false);
@@ -123,7 +124,6 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
   const [cancellationReason, setCancellationReason] = useState("");
   const [rating, setRating] = useState(5);
   const [review, setReview] = useState("");
-  const [showTrackingDialog, setShowTrackingDialog] = useState(false);
   const [assignLoading, setAssignLoading] = useState(false);
   const [paymentApproving, setPaymentApproving] = useState(false);
 
@@ -211,39 +211,49 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
       (d) => d.id.toString() === selectedDriver,
     );
     if (driver) {
-      if (onAssignDriver && order.delivery?.deliveryId) {
-        setAssignLoading(true);
-        try {
-          await onAssignDriver(order.delivery.deliveryId, driver.id.toString());
-          setOrder({
-            ...order,
-            delivery: {
-              ...order.delivery,
-              driverId: driver.id,
-              driverName: driver.name,
-              driverPhone: driver.phone,
-            },
-          });
-          toast.success(`Driver ${driver.name} assigned.`);
-        } catch (err: any) {
-          toast.error(
-            err?.response?.data?.message ||
-              "Failed to assign driver. Please try again.",
-          );
-          return;
-        } finally {
-          setAssignLoading(false);
+      setAssignLoading(true);
+      try {
+        let deliveryId = order.delivery?.deliveryId;
+        if (!deliveryId) {
+          const createPayload: any = {
+            order_id: order.id,
+            dropoff_location: order.delivery?.address || "Not provided",
+            pickup_location: "Not provided",
+          };
+          const created = await deliveryService.create(createPayload);
+          deliveryId = created?.data?.id || created?.id;
         }
-      } else {
+
+        if (!deliveryId) {
+          toast.error("Failed to create delivery record.");
+          return;
+        }
+
+        if (onAssignDriver) {
+          await onAssignDriver(deliveryId, driver.id.toString());
+        } else {
+          await deliveryService.assignDriver(deliveryId, driver.id.toString());
+        }
+
         setOrder({
           ...order,
           delivery: {
             ...order.delivery,
+            deliveryId,
             driverId: driver.id,
             driverName: driver.name,
             driverPhone: driver.phone,
           },
         });
+        toast.success(`Driver ${driver.name} assigned.`);
+      } catch (err: any) {
+        toast.error(
+          err?.response?.data?.message ||
+            "Failed to assign driver. Please try again.",
+        );
+        return;
+      } finally {
+        setAssignLoading(false);
       }
     }
     setShowAssignDialog(false);
@@ -459,35 +469,19 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                 </div>
               )}
 
-              {order.delivery.trackingNumber && (
-                <div className="bg-purple-50 border border-purple-100 rounded-lg p-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Truck className="h-4 w-4 text-purple-600" />
-                      <div>
-                        <p className="text-xs font-medium text-purple-800">
-                          Tracking Number
-                        </p>
-                        <p className="text-xs text-purple-600 font-mono">
-                          {order.delivery.trackingNumber}
-                        </p>
-                        {order.delivery.carrier && (
-                          <p className="text-xs text-purple-600">
-                            Carrier: {order.delivery.carrier}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="h-7 text-xs bg-white"
-                      onClick={() => setShowTrackingDialog(true)}
-                    >
-                      Track Package
-                    </Button>
-                  </div>
-                </div>
+              {order.status === "shipped" && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 text-xs bg-white"
+                  onClick={() =>
+                    navigate(
+                      `/${role}/tracking/${order.id}?from=${encodeURIComponent(location.pathname)}`,
+                    )
+                  }
+                >
+                  Track Driver
+                </Button>
               )}
 
               {order.delivery.driverName && (
@@ -985,13 +979,6 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
         />
       )}
 
-      {/* Live Tracking Dialog */}
-      <OrderTrackingDialog
-        open={showTrackingDialog}
-        onOpenChange={setShowTrackingDialog}
-        orderId={order.id}
-        deliveryId={order.delivery.trackingNumber || undefined}
-      />
     </div>
   );
 };

@@ -169,7 +169,7 @@ export const IncomingOrders: React.FC<IncomingOrdersProps> = ({
       drivers
         .filter((d) => d.active)
         .map((d) => ({
-          id: d.driver_id,
+          id: d.id,
           name: d.driver?.full_name ?? "Driver",
           phone: d.driver?.phone ?? "",
           vehicleType: d.vehicle_type || "Vehicle",
@@ -283,21 +283,35 @@ export const IncomingOrders: React.FC<IncomingOrdersProps> = ({
   };
 
   const handleAssignDriver = async () => {
-    if (!assigningOrder?.deliveryId || !selectedDriver) return;
+    if (!assigningOrder || !selectedDriver) return;
     const driver = driverOptions.find((d) => d.id === selectedDriver);
     if (!driver) return;
 
     setAssignLoading(true);
     try {
-      await deliveryService.assignDriver(
-        assigningOrder.deliveryId,
-        selectedDriver,
-      );
+      let deliveryId = assigningOrder.deliveryId;
+      if (!deliveryId) {
+        const createPayload: any = {
+          order_id: assigningOrder.id,
+          dropoff_location: assigningOrder.customerLocation || "Not provided",
+          pickup_location: "Not provided",
+        };
+        const created = await deliveryService.create(createPayload);
+        deliveryId = created?.data?.id || created?.id;
+      }
+
+      if (!deliveryId) {
+        toast.error("Failed to create delivery record.");
+        return;
+      }
+
+      await deliveryService.assignDriver(deliveryId, selectedDriver);
       setOrders((prev) =>
         prev.map((o) =>
           o.id === assigningOrder.id
             ? {
                 ...o,
+                deliveryId,
                 driver: driver.name,
                 driverPhone: driver.phone,
                 driverId: selectedDriver,
@@ -308,7 +322,7 @@ export const IncomingOrders: React.FC<IncomingOrdersProps> = ({
       if (onAssignDriver) {
         await onAssignDriver(
           assigningOrder.id,
-          assigningOrder.deliveryId,
+          deliveryId,
           selectedDriver,
         );
       }

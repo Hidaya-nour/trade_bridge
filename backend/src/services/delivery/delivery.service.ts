@@ -2,8 +2,39 @@ import Delivery from '../../models/delivery.model';
 import Order from '../../models/order.model';
 import Driver from '../../models/driver.model';
 import { AppError } from '../../utils/errors';
+import { Op } from 'sequelize';
 
 class DeliveryService {
+  async getDriverDeliveries(driverUserId: string) {
+    const driverRecord = await Driver.findOne({
+      where: { driver_id: driverUserId, active: true },
+      attributes: ['id'],
+    });
+
+    if (!driverRecord) {
+      return [];
+    }
+
+    const deliveries = await Delivery.findAll({
+      where: {
+        driver_id: driverRecord.id as any,
+        status: {
+          [Op.notIn]: ['delivered', 'failed', 'cancelled'],
+        } as any,
+      },
+      include: [
+        {
+          model: Order,
+          as: 'order',
+          attributes: ['id', 'order_status', 'created_at'],
+        },
+      ],
+      order: [['updated_at', 'DESC']],
+    });
+
+    return deliveries;
+  }
+
   async createDelivery(orderId: string, pickup: string, dropoff: string) {
     const delivery = await Delivery.create({
       order_id: orderId,

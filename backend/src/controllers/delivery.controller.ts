@@ -4,6 +4,21 @@ import logger from '../utils/logger';
 import { AppError } from '../utils/errors';
 
 class DeliveryController {
+  async getMyDeliveries(req: Request, res: Response): Promise<any> {
+    try {
+      const userId = (req as any).user?.id as string | undefined;
+      if (!userId) {
+        return res.status(401).json({ success: false, message: 'Unauthorized' });
+      }
+
+      const deliveries = await deliveryService.getDriverDeliveries(userId);
+      return res.json({ success: true, data: { deliveries } });
+    } catch (err) {
+      logger.error('Get my deliveries error', err);
+      return res.status(500).json({ success: false, message: 'Internal server error' });
+    }
+  }
+
   async create(req: Request, res: Response): Promise<any> {
     try {
       const { order_id, pickup_location, dropoff_location } = req.body;

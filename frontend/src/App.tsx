@@ -48,6 +48,8 @@ import About from "./pages/landing/About";
 import HowItWorks from "./pages/landing/HowItWorks";
 import { LoginPage } from "./pages/auth/Login";
 import { RegisterPage } from "./pages/auth/Register";
+import OrderTrackingPage from "./pages/shared/OrderTracking";
+import DriverLiveTrackingPage from "./pages/driver/LiveTrackingPage";
 
 function App() {
   return (
@@ -105,6 +107,14 @@ function App() {
             element={
               <DashboardLayout>
                 <OrderDetailsPage />
+              </DashboardLayout>
+            }
+          />
+          <Route
+            path="/retailer/tracking/:id"
+            element={
+              <DashboardLayout>
+                <OrderTrackingPage />
               </DashboardLayout>
             }
           />
@@ -239,6 +249,14 @@ function App() {
             }
           />
           <Route
+            path="/distributor/tracking/:id"
+            element={
+              <DashboardLayout>
+                <OrderTrackingPage />
+              </DashboardLayout>
+            }
+          />
+          <Route
             path="/distributor/purchase-orders"
             element={
               <DashboardLayout>
@@ -344,6 +362,22 @@ function App() {
             }
           />
           <Route
+            path="/factory/tracking/:id"
+            element={
+              <DashboardLayout>
+                <OrderTrackingPage />
+              </DashboardLayout>
+            }
+          />
+          <Route
+            path="/factory/delivery"
+            element={
+              <DashboardLayout>
+                <DeliveryManagementPage />
+              </DashboardLayout>
+            }
+          />
+          <Route
             path="/factory/analytics"
             element={
               <DashboardLayout>
@@ -422,6 +456,14 @@ function App() {
             element={
               <DashboardLayout>
                 <DriverDashboard />
+              </DashboardLayout>
+            }
+          />
+          <Route
+            path="/driver/tracking"
+            element={
+              <DashboardLayout>
+                <DriverLiveTrackingPage />
               </DashboardLayout>
             }
           />

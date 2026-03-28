@@ -795,37 +795,39 @@ export const OrderList: React.FC<OrderListProps> = ({
                   </div>
                 )}
 
-                {/* Tracking Info */}
-                {order.delivery && order.delivery.id && (
-                  <div className="bg-purple-50 border border-purple-100 rounded-lg p-3 mb-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Truck className="h-4 w-4 text-purple-600" />
-                        <div>
-                          <p className="text-xs font-medium text-purple-800">
-                            Tracking Number
-                          </p>
-                          <p className="text-xs text-purple-600 font-mono">
-                            {order.delivery.id}
-                          </p>
-                          {order.delivery.driver && (
-                            <p className="text-xs text-purple-600">
-                              Driver: {order.delivery.driver.full_name}
+                {/* Live Driver Tracking (Shipped Orders Only) */}
+                {order.order_status === "shipped" &&
+                  order.delivery &&
+                  order.delivery.id && (
+                    <div className="bg-purple-50 border border-purple-100 rounded-lg p-3 mb-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Truck className="h-4 w-4 text-purple-600" />
+                          <div>
+                            <p className="text-xs font-medium text-purple-800">
+                              Live Driver Tracking
                             </p>
-                          )}
+                            <p className="text-xs text-purple-600 font-mono">
+                              Delivery {order.delivery.id}
+                            </p>
+                            {order.delivery.driver && (
+                              <p className="text-xs text-purple-600">
+                                Driver: {order.delivery.driver.full_name}
+                              </p>
+                            )}
+                          </div>
                         </div>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 text-xs bg-white"
+                          onClick={() => setTrackingOrder(order)}
+                        >
+                          Track Driver
+                        </Button>
                       </div>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-7 text-xs bg-white"
-                        onClick={() => setTrackingOrder(order)}
-                      >
-                        Track Shipment
-                      </Button>
                     </div>
-                  </div>
-                )}
+                  )}
 
                 {/* Delivery Confirmation */}
                 {(order.order_status === "delivered" ||
@@ -1085,18 +1087,20 @@ export const OrderList: React.FC<OrderListProps> = ({
       )}
 
       {/* Live Tracking Dialog */}
-      {trackingOrder && trackingOrder.delivery && (
-        <OrderTrackingDialog
-          open={!!trackingOrder}
-          onOpenChange={(open) => {
-            if (!open) {
-              setTrackingOrder(null);
-            }
-          }}
-          orderId={trackingOrder.id}
-          deliveryId={trackingOrder.delivery.id}
-        />
-      )}
+      {trackingOrder &&
+        trackingOrder.order_status === "shipped" &&
+        trackingOrder.delivery && (
+          <OrderTrackingDialog
+            open={!!trackingOrder}
+            onOpenChange={(open) => {
+              if (!open) {
+                setTrackingOrder(null);
+              }
+            }}
+            orderId={trackingOrder.id}
+            deliveryId={trackingOrder.delivery.id}
+          />
+        )}
     </div>
   );
 };

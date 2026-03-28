@@ -3,6 +3,11 @@ import api from './api';
 class DeliveryService {
   private readonly BASE = '/deliveries';
 
+  async getMyDeliveries() {
+    const response = await api.get(`${this.BASE}/my-deliveries`);
+    return response.data;
+  }
+
   async getAll(params?: any) {
     const response = await api.get(this.BASE, { params });
     return response.data;
@@ -30,6 +35,11 @@ class DeliveryService {
 
   async assignDriver(deliveryId: string, driverId: string) {
     const response = await api.patch(`${this.BASE}/${deliveryId}/assign-driver`, { driver_id: driverId });
+    return response.data;
+  }
+
+  async updateStatus(deliveryId: string, status: string) {
+    const response = await api.patch(`${this.BASE}/${deliveryId}/status`, { status });
     return response.data;
   }
 }

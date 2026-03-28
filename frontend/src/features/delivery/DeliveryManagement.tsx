@@ -374,7 +374,7 @@ export const DeliveryManagement: React.FC<DeliveryManagementProps> = ({
   useEffect(() => {
     if (!config.hasDrivers) return;
     const mapped: Driver[] = Drivers.filter((d) => d.active).map((d) => ({
-      id: d.driver_id,
+      id: d.id,
       name: d.driver?.full_name ?? "Driver",
       phone: d.driver?.phone ?? "",
       email: d.driver?.email ?? "",
@@ -492,7 +492,7 @@ export const DeliveryManagement: React.FC<DeliveryManagementProps> = ({
   const assignDriver = async (deliveryId: string) => {
     const driver = driverList.find((d) => d.id === selectedDriver);
     if (!driver) return;
-    const driverId = selectedDriver; // user id of the driver
+    const driverId = selectedDriver; // delivery driver record id
 
     // Update UI immediately so the button "works" even if the delivery is mock
     setDeliveryList((prev) =>

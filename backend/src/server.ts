@@ -109,6 +109,7 @@ app.use('/api/factory-agents', factoryAgentRoutes);
 app.use('/api/reviews', ratingReviewRoutes);
 app.use('/api/suppliers', supplierRoutes);
 app.use('/api/drivers', driverRoutes);
+app.use('/api/delivery', deliveryRoutes);
 
 
 // Health check

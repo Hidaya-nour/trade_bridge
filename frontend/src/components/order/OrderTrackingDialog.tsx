@@ -1,4 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
+import L from "leaflet";
+import { MapContainer, Marker, TileLayer, useMap } from "react-leaflet";
+import "leaflet/dist/leaflet.css";
 import {
   MapPin,
   Navigation,
@@ -31,6 +34,37 @@ interface OrderTrackingDialogProps {
 }
 
 const POLL_INTERVAL_MS = 5000;
+
+const mapMarkerIcon = new L.Icon({
+  iconUrl: new URL(
+    "leaflet/dist/images/marker-icon.png",
+    import.meta.url,
+  ).toString(),
+  iconRetinaUrl: new URL(
+    "leaflet/dist/images/marker-icon-2x.png",
+    import.meta.url,
+  ).toString(),
+  shadowUrl: new URL(
+    "leaflet/dist/images/marker-shadow.png",
+    import.meta.url,
+  ).toString(),
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41],
+});
+
+const MapCenterUpdater: React.FC<{ center: { lat: number; lng: number } }> = ({
+  center,
+}) => {
+  const map = useMap();
+
+  useEffect(() => {
+    map.setView(center);
+  }, [map, center.lat, center.lng]);
+
+  return null;
+};
 
 export const OrderTrackingDialog: React.FC<OrderTrackingDialogProps> = ({
   open,
@@ -151,9 +185,38 @@ export const OrderTrackingDialog: React.FC<OrderTrackingDialogProps> = ({
                     Current Driver Position
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    Lat {latestLocation.latitude}, Lng {latestLocation.longitude}
+                    Live updates shown on the map below.
                   </p>
                 </div>
+              </div>
+              <div className="rounded-lg overflow-hidden border bg-white">
+                <MapContainer
+                  center={{
+                    lat: latestLocation.latitude,
+                    lng: latestLocation.longitude,
+                  }}
+                  zoom={14}
+                  scrollWheelZoom
+                  className="h-56 w-full"
+                >
+                  <TileLayer
+                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                  />
+                  <MapCenterUpdater
+                    center={{
+                      lat: latestLocation.latitude,
+                      lng: latestLocation.longitude,
+                    }}
+                  />
+                  <Marker
+                    position={{
+                      lat: latestLocation.latitude,
+                      lng: latestLocation.longitude,
+                    }}
+                    icon={mapMarkerIcon}
+                  />
+                </MapContainer>
               </div>
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <MapPin className="h-3 w-3" />
@@ -210,4 +273,3 @@ export const OrderTrackingDialog: React.FC<OrderTrackingDialogProps> = ({
 };
 
 export default OrderTrackingDialog;
-

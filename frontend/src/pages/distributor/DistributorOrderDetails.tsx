@@ -193,7 +193,7 @@ const DistributorOrderDetailsPage: React.FC = () => {
       drivers
         .filter((d) => d.active)
         .map((d) => ({
-          id: d.driver_id,
+          id: d.id,
           name: d.driver?.full_name ?? "Driver",
           vehicle: d.vehicle_type || undefined,
           phone: d.driver?.phone,
