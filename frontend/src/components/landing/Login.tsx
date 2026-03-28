@@ -1,6 +1,6 @@
 // Login.tsx
-import { useMemo } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useEffect, useMemo } from "react";
+import { useLocation, useNavigate, Link } from "react-router-dom";
 import { useAuthStore } from "@/stores/auth.store";
 import { WelcomeHeader } from "@/components/shared/WelcomeHeader";
 import { PageBackground } from "@/components/shared/PageBackground";
@@ -10,8 +10,17 @@ import tradebridgeLogo from "@/assets/image/logo.png";
 const Login = () => {
   const navigate = useNavigate();
   const { login, isLoading, error, clearError } = useAuthStore();
+  const location = useLocation();
+  const successMessage =
+    typeof location.state === "object" && location.state
+      ? (location.state as { message?: string }).message
+      : undefined;
 
   const displayError = useMemo(() => error ?? undefined, [error]);
+
+  useEffect(() => {
+    clearError();
+  }, [clearError]);
 
   const handleLogin = async (data: {
     email: string;
@@ -56,7 +65,7 @@ const Login = () => {
       <PageBackground />
       <div className="relative z-10 w-full max-w-[1100px] min-h-[640px] bg-white rounded-[22px] shadow-[0_20px_70px_rgba(20,40,80,0.14)] overflow-hidden flex flex-col md:flex-row">
         {/* Left illustration panel */}
-        <div className="hidden md:flex md:w-1/2 bg-gradient-to-b from-blue-600 to-blue-800 text-white relative items-center justify-center px-10 py-12">
+        <div className="hidden md:flex md:w-1/2 bg-gradient-to-b from-primary to-primary/80 text-white relative items-center justify-center px-10 py-12">
           <div className="space-y-6 max-w-sm">
             <p className="text-sm uppercase tracking-[0.25em] text-blue-100">
               TradeBridge
@@ -92,6 +101,12 @@ const Login = () => {
           />
 
           <div className="mt-8">
+            {successMessage && (
+              <div className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+                {successMessage}
+              </div>
+            )}
+
             {displayError && (
               <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
                 {displayError}

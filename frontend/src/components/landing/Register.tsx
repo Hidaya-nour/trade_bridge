@@ -6,7 +6,7 @@ import RegisterForm from "./auth/RegisterForm";
 
 const Register = () => {
   const navigate = useNavigate();
-  const { register, isLoading, clearError } = useAuthStore();
+  const { register, isLoading, error, clearError } = useAuthStore();
 
   const handleRegister = async (data: {
     fullName: string;
@@ -17,17 +17,31 @@ const Register = () => {
     agreeTerms: boolean;
   }) => {
     clearError();
+    if (!data.agreeTerms) return;
 
-    await register({
-      email: data.email,
-      password: data.password,
-      full_name: data.fullName,
-      role: data.role,
-      phone: "",
-      business_name: "",
-    });
+    try {
+      await register({
+        email: data.email,
+        password: data.password,
+        full_name: data.fullName,
+        role: data.role,
+        phone: "",
+        business_name: "",
+      });
 
-    navigate("/login");
+      const needsApproval =
+        data.role === "factory" || data.role === "distributor";
+
+      navigate("/login", {
+        state: {
+          message: needsApproval
+            ? "Registration successful. Please upload your business license for admin approval."
+            : "Registration successful.",
+        },
+      });
+    } catch (e) {
+      // Error is handled by the auth store
+    }
   };
 
   return (
@@ -38,6 +52,11 @@ const Register = () => {
       alternateLinkText="Sign in"
       alternateLinkTo="/login"
     >
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+          {error}
+        </div>
+      )}
       <RegisterForm onSubmit={handleRegister} isLoading={isLoading} />
     </AuthForm>
   );

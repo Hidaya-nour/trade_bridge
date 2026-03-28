@@ -3,11 +3,7 @@ import { useState } from "react";
 import { LandingButton, LandingCheckbox, LandingInput } from "../shared";
 
 const GoogleIcon = () => (
-  <svg
-    className="h-5 w-5"
-    viewBox="0 0 24 24"
-    aria-hidden="true"
-  >
+  <svg className="h-5 w-5" viewBox="0 0 24 24" aria-hidden="true">
     <path
       fill="#EA4335"
       d="M12 10.2v3.6h5.1c-.2 1.2-.9 2.2-1.9 2.9l3.1 2.4c1.8-1.7 2.7-4.1 2.7-6.7 0-.6-.1-1.3-.2-1.9H12z"
@@ -108,85 +104,81 @@ const LoginForm = ({ onSubmit, isLoading = false, error }: LoginFormProps) => {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6" noValidate>
-        {error && (
-          <div
-            className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded"
-            role="alert"
-          >
-            {error}
-          </div>
-        )}
+      {error && (
+        <div
+          className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded"
+          role="alert"
+        >
+          {error}
+        </div>
+      )}
 
+      <LandingInput
+        label="Email Address"
+        name="email"
+        type="email"
+        value={formData.email}
+        onChange={handleChange}
+        required
+        placeholder="you@example.com"
+        suffix={<MailIcon />}
+      />
+
+      <div>
         <LandingInput
-          label="Email Address"
-          name="email"
-          type="email"
-          value={formData.email}
+          label="Password"
+          name="password"
+          type={showPassword ? "text" : "password"}
+          value={formData.password}
           onChange={handleChange}
           required
-          placeholder="you@example.com"
-          suffix={<MailIcon />}
-        />
-
-        <div>
-          <LandingInput
-            label="Password"
-            name="password"
-            type={showPassword ? "text" : "password"}
-            value={formData.password}
-            onChange={handleChange}
-            required
-            placeholder="••••••••"
-            suffix={
-              <button
-                type="button"
-                onClick={() => setShowPassword((v) => !v)}
-                className="text-gray-500 hover:text-gray-700 transition-colors"
-                aria-label={showPassword ? "Hide password" : "Show password"}
-              >
-                <EyeIcon isOpen={showPassword} />
-              </button>
-            }
-          />
-          <div className="text-right mt-1">
-            <Link
-              to="/forgot-password"
-              className="text-sm text-blue-600 hover:text-blue-800"
+          placeholder="••••••••"
+          suffix={
+            <button
+              type="button"
+              onClick={() => setShowPassword((v) => !v)}
+              className="text-gray-500 hover:text-gray-700 transition-colors"
+              aria-label={showPassword ? "Hide password" : "Show password"}
             >
-              Forgot password?
-            </Link>
-          </div>
-        </div>
-
-        <LandingCheckbox
-          name="rememberMe"
-          checked={formData.rememberMe}
-          onChange={handleChange}
-          label="Remember me"
+              <EyeIcon isOpen={showPassword} />
+            </button>
+          }
         />
-
-        <div className="space-y-3">
-          <LandingButton
-            type="submit"
-            variant="primary"
-            fullWidth
-            disabled={isLoading}
+        <div className="text-right mt-1">
+          <Link
+            to="/forgot-password"
+            className="text-sm text-primary hover:text-primary/800"
           >
-            {isLoading ? "Signing in..." : "Sign In"}
-          </LandingButton>
-
-          <LandingButton
-            type="button"
-            variant="outline"
-            fullWidth
-          >
-            <span className="flex items-center justify-center gap-2">
-              <GoogleIcon />
-              <span>Sign in with Google</span>
-            </span>
-          </LandingButton>
+            Forgot password?
+          </Link>
         </div>
-      </form>
+      </div>
+
+      <LandingCheckbox
+        name="rememberMe"
+        checked={formData.rememberMe}
+        onChange={handleChange}
+        label="Remember me"
+      />
+
+      <div className="space-y-3">
+        <LandingButton
+          type="submit"
+          variant="primary"
+          fullWidth
+          disabled={isLoading}
+        >
+          {isLoading ? "Signing in..." : "Sign In"}
+        </LandingButton>
+
+        <LandingButton type="button" variant="outline" fullWidth>
+          <span className="flex items-center justify-center gap-2">
+            <GoogleIcon />
+            <span>Sign in with Google</span>
+          </span>
+        </LandingButton>
+      </div>
+    </form>
   );
 };
 

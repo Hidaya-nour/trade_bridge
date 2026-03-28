@@ -5,7 +5,7 @@ export interface InputProps
     React.InputHTMLAttributes<HTMLInputElement>,
     "className" | "prefix"
   > {
-  label: string;
+  label?: string;
   prefix?: React.ReactNode;
   suffix?: React.ReactNode;
   containerClassName?: string;
@@ -31,13 +31,16 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
 
     const inputId = useMemo(() => {
       if (providedId) return providedId;
-      const normalized = label
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/gi, "-")
-        .replace(/^-+|-+$/g, "");
-      return normalized
-        ? `input-${normalized}`
-        : `input-${Math.random().toString(36).slice(2, 9)}`;
+      if (label) {
+        const normalized = label
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/gi, "-")
+          .replace(/^-+|-+$/g, "");
+        if (normalized) {
+          return `input-${normalized}`;
+        }
+      }
+      return `input-${Math.random().toString(36).slice(2, 9)}`;
     }, [label, providedId]);
 
     const [isFocused, setIsFocused] = useState(false);
@@ -87,16 +90,18 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           `}</style>
         )}
 
-        <label
-          htmlFor={inputId}
-          className={`absolute left-6 z-10 transition-all duration-300 pointer-events-none font-medium ${
-            shrinkLabel
-              ? "-top-2.5 text-xs bg-white px-2 text-purple-600"
-              : "top-1/2 -translate-y-1/2 text-gray-600 text-base"
-          }`}
-        >
-          {label}
-        </label>
+        {label && (
+          <label
+            htmlFor={inputId}
+            className={`absolute left-6 z-10 transition-all duration-300 pointer-events-none font-medium ${
+              shrinkLabel
+                ? "-top-2.5 text-xs bg-white px-2 text-purple-600"
+                : "top-1/2 -translate-y-1/2 text-gray-600 text-base"
+            }`}
+          >
+            {label}
+          </label>
+        )}
 
         {prefix && (
           <div className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none">

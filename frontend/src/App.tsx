@@ -44,11 +44,10 @@ import DistributorMyProductDetailPage from "./pages/distributor/MyProductDetails
 import FactoryMyProductDetailPage from "./pages/factory/ProductDetails";
 import AgentsPage from "./pages/factory/Agents";
 import LandingLayout from "./components/landing/layout/LandingLayout";
-import LandingHome from "./pages/landing/Home";
 import About from "./pages/landing/About";
 import HowItWorks from "./pages/landing/HowItWorks";
-import LandingRegister from "./pages/landing/Register";
-import LandingLogin from "./pages/landing/Login";
+import { LoginPage } from "./pages/auth/Login";
+import { RegisterPage } from "./pages/auth/Register";
 
 function App() {
   return (
@@ -56,11 +55,8 @@ function App() {
       <Router>
         <Routes>
           <Route element={<LandingLayout />}>
-            <Route path="/" element={<LandingHome />} />
             <Route path="/about" element={<About />} />
             <Route path="/how-it-works" element={<HowItWorks />} />
-            <Route path="/login" element={<LandingLogin />} />
-            <Route path="/register" element={<LandingRegister />} />
           </Route>
 
           {/* Landing */}
