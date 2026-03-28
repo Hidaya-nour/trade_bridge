@@ -1,5 +1,4 @@
-import React, { useEffect } from "react";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import RetailerDashboard from "./pages/retailer/Dashboard";
 import ProductsPage from "./pages/retailer/Products";
@@ -25,7 +24,7 @@ import MarketPlace from "./pages/distributor/MarketPlace";
 import ProductionAnalyticsPage from "./pages/factory/ProductionAnalytics";
 import AdminDashboard from "./pages/admin/dashboard";
 import UserManagementPage from "./pages/admin/UserManagementPage";
-import VerificationsPage from "./pages/admin/VerificationsPage";
+import { VerificationsPage } from "./pages/admin/VerificationsPage";
 import { DisputesManagementPage } from "./pages/admin/DisputesManagementPage";
 import { ReportsPage } from "./pages/admin/ReportsPage";
 import { DriverDashboard } from "./pages/driver/DashboardPage";
@@ -35,32 +34,31 @@ import FactoryOrderDetailsPage from "./pages/factory/FactoryOrderDetails";
 import OrderDetailsPage from "./pages/retailer/OrderDetails";
 import RetailerProductDetailPage from "./pages/retailer/ProductDetail";
 import SupplierProfilePage from "./pages/retailer/SupplierProfile";
-import { RegisterPage } from "./pages/auth/Register";
-import { LoginPage } from "./pages/auth/Login";
-import { useAuthStore } from "./stores/auth.store";
 import { Toaster } from "react-hot-toast";
 import DistributorProductDetailPage from "./pages/distributor/ProductDetails";
 import DistributorMyProductDetailPage from "./pages/distributor/MyProductDetails";
 import FactoryMyProductDetailPage from "./pages/factory/ProductDetails";
 import AgentsPage from "./pages/factory/Agents";
+import LandingLayout from "./components/landing/layout/LandingLayout";
+import LandingHome from "./pages/landing/Home";
+import About from "./pages/landing/About";
+import HowItWorks from "./pages/landing/HowItWorks";
+import LandingRegister from "./pages/landing/Register";
+import LandingLogin from "./pages/landing/Login";
 
 function App() {
-  // const { accessToken, fetchUser } = useAuthStore();
-
-  // useEffect(() => {
-  //   if (accessToken) {
-  //     fetchUser();
-  //   }
-  // }, [accessToken]);
-
   return (
     <>
       <Router>
         <Routes>
-          {/* Public Auth Routes */}
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
-          {/* Dashboard Routes */}
+          <Route element={<LandingLayout />}>
+            <Route path="/" element={<LandingHome />} />
+            <Route path="/about" element={<About />} />
+            <Route path="/how-it-works" element={<HowItWorks />} />
+            <Route path="/login" element={<LandingLogin />} />
+            <Route path="/register" element={<LandingRegister />} />
+          </Route>
+
           <Route
             path="/retailer/dashboard"
             element={
@@ -86,6 +84,22 @@ function App() {
             }
           />
           <Route
+            path="/retailer/orders"
+            element={
+              <DashboardLayout>
+                <OrdersPage />
+              </DashboardLayout>
+            }
+          />
+          <Route
+            path="/retailer/orders/:id"
+            element={
+              <DashboardLayout>
+                <OrderDetailsPage />
+              </DashboardLayout>
+            }
+          />
+          <Route
             path="/retailer/cart"
             element={
               <DashboardLayout>
@@ -94,13 +108,38 @@ function App() {
             }
           />
           <Route
-            path="/retailer/orders"
+            path="/retailer/suppliers"
             element={
               <DashboardLayout>
-                <OrdersPage />
+                <SupplierDirectoryPage />
               </DashboardLayout>
             }
           />
+          <Route
+            path="/retailer/compare"
+            element={
+              <DashboardLayout>
+                <CompareSuppliersPage />
+              </DashboardLayout>
+            }
+          />
+          <Route
+            path="/retailer/supplier/:id"
+            element={
+              <DashboardLayout>
+                <SupplierProfilePage />
+              </DashboardLayout>
+            }
+          />
+          <Route
+            path="/retailer/payments"
+            element={
+              <DashboardLayout>
+                <PaymentsPage role="retailer" />
+              </DashboardLayout>
+            }
+          />
+
           <Route
             path="/messages"
             element={
@@ -133,22 +172,7 @@ function App() {
               </DashboardLayout>
             }
           />
-          <Route
-            path="/retailer/suppliers"
-            element={
-              <DashboardLayout>
-                <SupplierDirectoryPage />
-              </DashboardLayout>
-            }
-          />
-          <Route
-            path="/retailer/compare"
-            element={
-              <DashboardLayout>
-                <CompareSuppliersPage />
-              </DashboardLayout>
-            }
-          />
+
           <Route
             path="/distributor/dashboard"
             element={
@@ -198,6 +222,14 @@ function App() {
             }
           />
           <Route
+            path="/distributor/orders/:id"
+            element={
+              <DashboardLayout>
+                <DistributorOrderDetailsPage />
+              </DashboardLayout>
+            }
+          />
+          <Route
             path="/distributor/purchase-orders"
             element={
               <DashboardLayout>
@@ -238,6 +270,31 @@ function App() {
             }
           />
           <Route
+            path="/distributor/payments"
+            element={
+              <DashboardLayout>
+                <PaymentsPage role="distributor" />
+              </DashboardLayout>
+            }
+          />
+          <Route
+            path="/distributor/products/:id"
+            element={
+              <DashboardLayout>
+                <DistributorProductDetailPage />
+              </DashboardLayout>
+            }
+          />
+          <Route
+            path="/distributor/my-products/:id"
+            element={
+              <DashboardLayout>
+                <DistributorMyProductDetailPage />
+              </DashboardLayout>
+            }
+          />
+
+          <Route
             path="/factory/dashboard"
             element={
               <DashboardLayout>
@@ -270,6 +327,14 @@ function App() {
             }
           />
           <Route
+            path="/factory/orders/:id"
+            element={
+              <DashboardLayout>
+                <FactoryOrderDetailsPage />
+              </DashboardLayout>
+            }
+          />
+          <Route
             path="/factory/analytics"
             element={
               <DashboardLayout>
@@ -277,6 +342,23 @@ function App() {
               </DashboardLayout>
             }
           />
+          <Route
+            path="/factory/my-products/:id"
+            element={
+              <DashboardLayout>
+                <FactoryMyProductDetailPage />
+              </DashboardLayout>
+            }
+          />
+          <Route
+            path="/factory/agents"
+            element={
+              <DashboardLayout>
+                <AgentsPage />
+              </DashboardLayout>
+            }
+          />
+
           <Route
             path="/admin/dashboard"
             element={
@@ -293,10 +375,16 @@ function App() {
               </DashboardLayout>
             }
           />
-          {/* <Route path="/admin/users/:userId" element={<UserDetailPage />} /> */}
-          // In your router configuration
           <Route
             path="/admin/verifications"
+            element={
+              <DashboardLayout>
+                <VerificationsPage />
+              </DashboardLayout>
+            }
+          />
+          <Route
+            path="/admin/approvals"
             element={
               <DashboardLayout>
                 <VerificationsPage />
@@ -319,102 +407,12 @@ function App() {
               </DashboardLayout>
             }
           />
-          <Route
-            path="/admin/approvals"
-            element={
-              <DashboardLayout>
-                <VerificationsPage />
-              </DashboardLayout>
-            }
-          />{" "}
+
           <Route
             path="/driver/dashboard"
             element={
               <DashboardLayout>
                 <DriverDashboard />
-              </DashboardLayout>
-            }
-          />
-          <Route
-            path="/retailer/orders/:id"
-            element={
-              <DashboardLayout>
-                <OrderDetailsPage />
-              </DashboardLayout>
-            }
-          />
-          <Route
-            path="/retailer/supplier/:id"
-            element={
-              <DashboardLayout>
-                <SupplierProfilePage />
-              </DashboardLayout>
-            }
-          />
-          <Route
-            path="/retailer/payments"
-            element={
-              <DashboardLayout>
-                <PaymentsPage role="retailer" />
-              </DashboardLayout>
-            }
-          />
-          // Distributor routes
-          <Route
-            path="/distributor/orders/:id"
-            element={
-              <DashboardLayout>
-                <DistributorOrderDetailsPage />
-              </DashboardLayout>
-            }
-          />
-          <Route
-            path="/factory/orders/:id"
-            element={
-              <DashboardLayout>
-                <FactoryOrderDetailsPage />
-              </DashboardLayout>
-            }
-          />
-          <Route
-            path="/factory/agents"
-            element={
-              <DashboardLayout>
-                <AgentsPage />
-              </DashboardLayout>
-            }
-          />
-          <Route
-            path="/distributor/payments"
-            element={
-              <DashboardLayout>
-                <PaymentsPage role="distributor" />
-              </DashboardLayout>
-            }
-          />
-          {/* Distributor routes - buying from factories */}
-          <Route
-            path="/distributor/products/:id"
-            element={
-              <DashboardLayout>
-                <DistributorProductDetailPage />
-              </DashboardLayout>
-            }
-          />
-          {/* Distributor routes - managing their own products */}
-          <Route
-            path="/distributor/my-products/:id"
-            element={
-              <DashboardLayout>
-                <DistributorMyProductDetailPage />
-              </DashboardLayout>
-            }
-          />
-          <Route
-            path="/factory/my-products/:id"
-            element={
-              <DashboardLayout>
-                <FactoryMyProductDetailPage />
               </DashboardLayout>
             }
           />
