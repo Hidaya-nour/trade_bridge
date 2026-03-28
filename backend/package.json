@@ -24,7 +24,7 @@
     "mongoose": "^8.19.2",
     "morgan": "^1.10.1",
     "multer": "^2.1.1",
-    "mysql2": "^3.17.1",
+    "mysql2": "^3.20.0",
     "nodemailer": "^8.0.1",
     "sequelize": "^6.37.7",
     "uuid": "^8.3.2",
