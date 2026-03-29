@@ -266,61 +266,6 @@ const DistributorDashboard: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Column - 2 cols */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Sales Overview Card */}
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <div>
-                <CardTitle>Sales Overview</CardTitle>
-                <CardDescription>
-                  Your revenue performance over time
-                </CardDescription>
-              </div>
-              <div className="flex items-center gap-2">
-                <Tabs value={timeRange} onValueChange={setTimeRange}>
-                  <TabsList className="h-8">
-                    <TabsTrigger value="week" className="text-xs">
-                      Week
-                    </TabsTrigger>
-                    <TabsTrigger value="month" className="text-xs">
-                      Month
-                    </TabsTrigger>
-                    <TabsTrigger value="year" className="text-xs">
-                      Year
-                    </TabsTrigger>
-                  </TabsList>
-                </Tabs>
-                <Button variant="outline" size="sm">
-                  <Download className="h-4 w-4 mr-2" />
-                  Report
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="h-[200px] flex items-end justify-between gap-2">
-                {salesData.slice(-7).map((data, index) => (
-                  <div
-                    key={index}
-                    className="flex flex-col items-center flex-1"
-                  >
-                    <div
-                      className="w-full bg-primary/20 rounded-t-md hover:bg-primary/30 transition-colors"
-                      style={{
-                        height: `${(data.sales / 90000) * 150}px`,
-                        minHeight: "30px",
-                      }}
-                    />
-                    <span className="text-xs text-muted-foreground mt-2">
-                      {data.month}
-                    </span>
-                    <span className="text-xs font-medium">
-                      ETB {Math.round(data.sales / 1000)}k
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
           {/* Incoming Orders */}
           <Card>
             <CardHeader className="pb-2">
@@ -608,60 +553,6 @@ const DistributorDashboard: React.FC = () => {
                   Assign Driver
                 </Link>
               </Button>
-            </CardContent>
-          </Card>
-
-          {/* Performance Summary */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">Performance Summary</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">
-                    Order Fulfillment
-                  </span>
-                  <span className="font-medium">94.2%</span>
-                </div>
-                <Progress value={94.2} className="h-1.5" />
-
-                <div className="flex justify-between text-sm mt-3">
-                  <span className="text-muted-foreground">
-                    On-Time Delivery
-                  </span>
-                  <span className="font-medium">97.8%</span>
-                </div>
-                <Progress value={97.8} className="h-1.5" />
-
-                <div className="flex justify-between text-sm mt-3">
-                  <span className="text-muted-foreground">
-                    Customer Satisfaction
-                  </span>
-                  <span className="font-medium">4.8/5.0</span>
-                </div>
-                <Progress value={96} className="h-1.5" />
-              </div>
-
-              <Separator />
-
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-sm text-muted-foreground">
-                    Active Drivers
-                  </span>
-                  <span className="text-sm font-medium">8</span>
-                </div>
-
-                <div className="flex justify-between">
-                  <span className="text-sm text-muted-foreground">
-                    Avg. Order Value
-                  </span>
-                  <span className="text-sm font-medium">
-                    {formatPrice(8450)}
-                  </span>
-                </div>
-              </div>
             </CardContent>
           </Card>
 

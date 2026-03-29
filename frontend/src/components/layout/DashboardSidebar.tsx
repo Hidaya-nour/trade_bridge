@@ -30,10 +30,10 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn, getInitials } from "@/lib/utils";
-import { PerformanceCard } from "@/components/shared/PerformanceCard";
 import { useAuthStore } from "@/stores/auth.store";
 import { useNotificationStore } from "@/stores/notification.store";
 import { useMessageStore } from "@/stores/message.store";
+import tradebridgeLogo from "@/assets/image/logo.png";
 
 const roleNavigation = {
   retailer: [
@@ -57,13 +57,11 @@ const roleNavigation = {
       name: "My Orders",
       href: "/retailer/orders",
       icon: Package,
-      badge: "5",
     },
     {
       name: "Shopping Cart",
       href: "/retailer/cart",
       icon: ShoppingCart,
-      badge: "3",
     },
     {
       name: "Analytics",
@@ -84,7 +82,6 @@ const roleNavigation = {
         name: "Manage Products",
         href: "/distributor/products",
         icon: Package,
-        badge: "12",
       },
       {
         name: "Inventory",
@@ -98,7 +95,6 @@ const roleNavigation = {
         name: "Incoming Orders",
         href: "/distributor/orders",
         icon: ShoppingCart,
-        badge: "8",
       },
       {
         name: "Delivery Management",
@@ -116,19 +112,16 @@ const roleNavigation = {
         name: "purchase Products",
         href: "/distributor/browse-products",
         icon: Factory,
-        badge: "New",
       },
       {
         name: "Purchase Cart",
         href: "/distributor/cart",
         icon: ShoppingCart,
-        badge: "3",
       },
       {
         name: "Purchase Orders",
         href: "/distributor/purchase-orders",
         icon: FileText,
-        badge: "5",
       },
     ],
     analytics: [
@@ -151,7 +144,6 @@ const roleNavigation = {
       name: "Order Management",
       href: "/factory/orders",
       icon: Package,
-      badge: "7",
     },
     {
       name: "Agents",
@@ -174,7 +166,6 @@ const roleNavigation = {
       name: "Active Deliveries",
       href: "/driver/active",
       icon: Truck,
-      badge: "3",
     },
     { name: "Delivery History", href: "/driver/history", icon: Package },
     { name: "Live Tracking", href: "/driver/tracking", icon: TrendingUp },
@@ -187,18 +178,16 @@ const roleNavigation = {
       name: "Report Issues",
       href: "/driver/issues",
       icon: AlertCircle,
-      badge: "1",
     },
   ],
 
   admin: [
     { name: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
-    { name: "User Management", href: "/admin/users", icon: Users, badge: "5" },
+    { name: "User Management", href: "/admin/users", icon: Users },
     {
       name: "Supplier Approvals",
       href: "/admin/approvals",
       icon: Shield,
-      badge: "3",
     },
     { name: "Product Listings", href: "/admin/products", icon: Package },
     { name: "Order Oversight", href: "/admin/orders", icon: ShoppingCart },
@@ -206,7 +195,6 @@ const roleNavigation = {
       name: "Dispute Management",
       href: "/admin/disputes",
       icon: HelpCircle,
-      badge: "2",
     },
     { name: "Platform Analytics", href: "/admin/analytics", icon: BarChart3 },
     { name: "System Settings", href: "/admin/settings", icon: Settings },
@@ -409,14 +397,6 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
                       </span>
                     )}
                   </div>
-                  {!collapsed && item.badge && (
-                    <Badge
-                      variant="secondary"
-                      className="ml-auto text-[10px] px-1.5 py-0.5 font-medium"
-                    >
-                      {item.badge}
-                    </Badge>
-                  )}
                 </div>
               </Link>
             </Button>
@@ -478,18 +458,6 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
                       </span>
                     )}
                   </div>
-                  {!collapsed && item.badge && (
-                    <Badge
-                      variant="secondary"
-                      className={cn(
-                        "ml-auto text-[10px] px-1.5 py-0.5 font-medium",
-                        item.badge === "New" &&
-                          "bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-950/20 dark:text-emerald-400",
-                      )}
-                    >
-                      {item.badge}
-                    </Badge>
-                  )}
                 </div>
               </Link>
             </Button>
@@ -650,17 +618,23 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
       >
         {collapsed ? (
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary/80 shadow-sm">
-            <span className="font-bold text-lg text-primary-foreground">
-              TB
-            </span>
+            <div className="flex justify-center ">
+              <img
+                src={tradebridgeLogo}
+                alt="TradeBridge Logo"
+                className="h-11 object-contain drop-shadow-lg transform hover:scale-110 transition-transform duration-300"
+              />
+            </div>
           </div>
         ) : (
           <>
-            <Link to="/dashboard" className="flex items-center gap-2 group">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary/80 shadow-sm transition-transform group-hover:scale-105">
-                <span className="font-bold text-lg text-primary-foreground">
-                  TB
-                </span>
+            <Link to="/" className="flex items-center gap-2 group">
+              <div className="flex justify-center ">
+                <img
+                  src={tradebridgeLogo}
+                  alt="TradeBridge Logo"
+                  className="h-11 object-contain drop-shadow-lg transform hover:scale-110 transition-transform duration-300"
+                />
               </div>
               <span className="text-lg font-bold bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text text-transparent">
                 TradeBridge
@@ -715,51 +689,6 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
                 </p>
               </div>
             </button>
-
-            {isProfileOpen && (
-              <div className="space-y-2 px-2 pt-1 animate-in slide-in-from-top-2 duration-200">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1.5">
-                    <Badge
-                      variant="secondary"
-                      className="px-2 py-0.5 text-[11px] font-medium bg-primary/5 capitalize"
-                    >
-                      {user.role}
-                    </Badge>
-                    {user?.verified && (
-                      <Badge
-                        variant="outline"
-                        className="px-2 py-0.5 text-[11px] border-green-200 bg-green-50 text-green-700 dark:bg-green-950/20 dark:text-green-400 dark:border-green-800"
-                      >
-                        Verified
-                      </Badge>
-                    )}
-                  </div>
-                  {user.role == "retailer" ? (
-                    ""
-                  ) : (
-                    <span className="flex items-center text-xs font-medium">
-                      <Star className="h-3 w-3 fill-yellow-500 text-yellow-500 mr-1" />
-                      {/* {user.rating ? user.rating.toFixed(1) : "N/A"} */}
-                    </span>
-                  )}
-                </div>
-                <div className="grid grid-cols-2 gap-2 pt-1">
-                  <div className="rounded-md bg-muted/50 px-2 py-1.5">
-                    <p className="text-[10px] text-muted-foreground">Orders</p>
-                    {/* <p className="text-xs font-semibold">{user.totalOrders}</p> */}
-                  </div>
-                  <div className="rounded-md bg-muted/50 px-2 py-1.5">
-                    <p className="text-[10px] text-muted-foreground">Joined</p>
-                    <p className="text-xs font-semibold">
-                      {user?.created_at
-                        ? new Date(user.created_at).toLocaleDateString()
-                        : ""}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
         )}
       </div>
@@ -769,12 +698,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
         {isDistributor ? renderDistributorNav() : renderRegularNav()}
 
         {/* Secondary Navigation (Support) */}
-        <div
-          className={cn(
-            "px-3 py-4 border-t border-border/40",
-            collapsed ? "px-2" : "px-3",
-          )}
-        >
+        <div className={cn("px-3 py-4 border-t border-border/40")}>
           <div className="space-y-0.5">
             {!collapsed && (
               <p className="px-2 pb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
@@ -823,17 +747,6 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
               </Button>
             ))}
           </div>
-
-          {/* Quick Stats Card - Using new PerformanceCard component */}
-
-          {!collapsed && user.role !== "retailer" && (
-            <PerformanceCard
-              metrics={[
-                { label: "Order Fulfillment", value: 94 },
-                { label: "On-time Delivery", value: 92 },
-              ]}
-            />
-          )}
         </div>
       </ScrollArea>
 
@@ -863,7 +776,6 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
             <Button
               variant="ghost"
               className="w-full justify-start text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors group"
-              // asChild
               onClick={async () => {
                 await useAuthStore.getState().logout(); // clear Zustand store
                 navigate("/login"); // redirect to login page

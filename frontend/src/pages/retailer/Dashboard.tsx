@@ -155,8 +155,30 @@ const RetailerDashboard: React.FC = () => {
           sortOrder: "DESC",
         });
 
-        // Adjust this depending on your backend structure
-        setRecentOrders(response.data.orders);
+        const orders = response?.data?.orders ?? [];
+        const normalizedOrders = orders.map((order: any) => {
+          const supplierObj =
+            order && typeof order.supplier === "object" ? order.supplier : null;
+          const supplierName =
+            (typeof order.supplier === "string" && order.supplier) ||
+            order.supplier_name ||
+            supplierObj?.business_name ||
+            supplierObj?.full_name ||
+            "Unknown Supplier";
+
+          return {
+            id: order.id,
+            status: order.status || order.order_status || "pending",
+            supplierId:
+              order.supplierId || order.supplier_id || supplierObj?.id,
+            supplier: supplierName,
+            items: order.items?.length ?? order.item_count ?? 0,
+            total: order.total ?? order.total_price ?? 0,
+            date: order.date || order.created_at || new Date().toISOString(),
+          };
+        });
+
+        setRecentOrders(normalizedOrders);
       } catch (error) {
         console.error("Failed to fetch orders:", error);
       } finally {
@@ -273,7 +295,7 @@ const RetailerDashboard: React.FC = () => {
                         </div>
                         <p className="text-xs text-muted-foreground mt-1">
                           <Link
-                            to={`/retailer/suppliers/${order.supplierId}`}
+                            to={`/retailer/supplier/${order.supplierId ?? ""}`}
                             className="hover:text-primary"
                           >
                             {order.supplier}

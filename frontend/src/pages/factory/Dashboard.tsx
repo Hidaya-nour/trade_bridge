@@ -287,41 +287,6 @@ const inventoryAlerts: InventoryAlert[] = [
   },
 ];
 
-const topDistributors: Distributor[] = [
-  {
-    id: 102,
-    name: "Adama Wholesalers",
-    location: "Adama",
-    orders: 45,
-    revenue: 1250000,
-    rating: 4.8,
-  },
-  {
-    id: 101,
-    name: "Ethiopia Coffee Export",
-    location: "Addis Ababa",
-    orders: 38,
-    revenue: 980000,
-    rating: 4.9,
-  },
-  {
-    id: 105,
-    name: "Mekelle Steel Distributors",
-    location: "Mekelle",
-    orders: 32,
-    revenue: 2450000,
-    rating: 4.7,
-  },
-  {
-    id: 108,
-    name: "Dire Dawa Trading",
-    location: "Dire Dawa",
-    orders: 28,
-    revenue: 820000,
-    rating: 4.6,
-  },
-];
-
 const productionSchedule = [
   {
     product: "Portland Cement",
@@ -433,58 +398,6 @@ const FactoryDashboard: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Column - 2 cols */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Production Capacity & Quality */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Production Capacity
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">
-                      Current utilization
-                    </span>
-                    <span className="font-semibold">
-                      {mockStats.productionCapacity}%
-                    </span>
-                  </div>
-                  <Progress
-                    value={mockStats.productionCapacity}
-                    className="h-2"
-                  />
-                  <div className="flex justify-between text-xs text-muted-foreground pt-2">
-                    <span>Target: 85%</span>
-                    <span className="text-green-600">+12% vs last month</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Quality Metrics
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Defect rate</span>
-                    <span className="font-semibold">2.5%</span>
-                  </div>
-                  <Progress value={97.5} className="h-2" />
-                  <div className="flex justify-between text-xs text-muted-foreground pt-2">
-                    <span>Industry avg: 3.8%</span>
-                    <span className="text-green-600">-1.3% vs avg</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
           {/* Recent Orders / Approval Queue */}
           <Card>
             <CardHeader className="pb-2">
@@ -805,62 +718,6 @@ const FactoryDashboard: React.FC = () => {
               <Button variant="ghost" className="w-full text-xs" asChild>
                 <Link to="/factory/inventory">
                   Manage Inventory
-                  <ChevronRight className="h-3 w-3 ml-1" />
-                </Link>
-              </Button>
-            </CardFooter>
-          </Card>
-
-          {/* Top Distributors */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">Top Distributors</CardTitle>
-              <CardDescription>By order volume</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {topDistributors.map((distributor) => (
-                  <div
-                    key={distributor.id}
-                    className="flex items-center justify-between"
-                  >
-                    <div className="flex items-center gap-3">
-                      <Avatar className="h-8 w-8">
-                        <AvatarFallback className="bg-primary/10 text-primary text-xs">
-                          {getInitials(distributor.name)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <Link
-                          to={`/factory/distributors/${distributor.id}`}
-                          className="text-xs font-medium hover:text-primary"
-                        >
-                          {distributor.name}
-                        </Link>
-                        <p className="text-[10px] text-muted-foreground">
-                          {distributor.location} • {distributor.orders} orders
-                        </p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-xs font-semibold">
-                        {formatCompactPrice(distributor.revenue)}
-                      </p>
-                      <div className="flex items-center gap-0.5 mt-0.5">
-                        <Star className="h-2.5 w-2.5 fill-yellow-400 text-yellow-400" />
-                        <span className="text-[10px] text-muted-foreground">
-                          {distributor.rating}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-            <CardFooter className="border-t pt-4">
-              <Button variant="ghost" className="w-full text-xs" asChild>
-                <Link to="/factory/partners">
-                  View All Partners
                   <ChevronRight className="h-3 w-3 ml-1" />
                 </Link>
               </Button>
