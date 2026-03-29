@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useParams } from "react-router-dom";
 import L from "leaflet";
-import { MapContainer, Marker, TileLayer, useMap } from "react-leaflet";
+import { MapContainer, Marker, Polyline, TileLayer, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import { ArrowLeft, Clock, MapPin, Navigation, Package, Truck } from "lucide-react";
 
@@ -79,6 +79,21 @@ const OrderTrackingPage: React.FC = () => {
         : null,
     [locations],
   );
+  const sortedLocations = useMemo(
+    () =>
+      locations
+        .slice()
+        .sort(
+          (a, b) =>
+            new Date(a.recorded_at).getTime() - new Date(b.recorded_at).getTime(),
+        ),
+    [locations],
+  );
+  const startLocation = sortedLocations[0] ?? null;
+  const routePositions = sortedLocations.map((loc) => [loc.latitude, loc.longitude]) as [
+    number,
+    number,
+  ][];
 
   const backFrom = new URLSearchParams(location.search).get("from");
   const backPath = backFrom || resolveFallbackBackPath(location.pathname, orderId);
@@ -236,6 +251,18 @@ const OrderTrackingPage: React.FC = () => {
                       lng: latestLocation.longitude,
                     }}
                   />
+                  {routePositions.length > 1 && (
+                    <Polyline positions={routePositions} pathOptions={{ color: "#2563eb", weight: 4 }} />
+                  )}
+                  {startLocation && (
+                    <Marker
+                      position={{
+                        lat: startLocation.latitude,
+                        lng: startLocation.longitude,
+                      }}
+                      icon={mapMarkerIcon}
+                    />
+                  )}
                   <Marker
                     position={{
                       lat: latestLocation.latitude,
@@ -255,6 +282,10 @@ const OrderTrackingPage: React.FC = () => {
                   {latestLocation.latitude}, {latestLocation.longitude}
                 </span>
               </div>
+              <p className="text-xs text-muted-foreground">
+                Blue line shows the path from first recorded GPS point to current location.
+                Destination line-to-dropoff requires dropoff latitude/longitude.
+              </p>
 
               {locations.length > 1 && (
                 <>
