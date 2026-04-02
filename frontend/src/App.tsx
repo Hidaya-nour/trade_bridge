@@ -50,6 +50,8 @@ import { LoginPage } from "./pages/auth/Login";
 import { RegisterPage } from "./pages/auth/Register";
 import OrderTrackingPage from "./pages/shared/OrderTracking";
 import DriverLiveTrackingPage from "./pages/driver/LiveTrackingPage";
+import OrderReceiptPage from "./pages/shared/OrderReceipt";
+import VerifyReceiptPage from "./pages/shared/VerifyReceipt";
 
 function App() {
   return (
@@ -69,6 +71,7 @@ function App() {
           {/* Public Auth Routes */}
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
+          <Route path="/verify/receipt/:receiptNumber" element={<VerifyReceiptPage />} />
           {/* Dashboard Routes */}
           <Route
             path="/retailer/dashboard"
@@ -107,6 +110,14 @@ function App() {
             element={
               <DashboardLayout>
                 <OrderDetailsPage />
+              </DashboardLayout>
+            }
+          />
+          <Route
+            path="/retailer/orders/:id/receipt"
+            element={
+              <DashboardLayout>
+                <OrderReceiptPage />
               </DashboardLayout>
             }
           />
@@ -249,6 +260,14 @@ function App() {
             }
           />
           <Route
+            path="/distributor/orders/:id/receipt"
+            element={
+              <DashboardLayout>
+                <OrderReceiptPage />
+              </DashboardLayout>
+            }
+          />
+          <Route
             path="/distributor/tracking/:id"
             element={
               <DashboardLayout>
@@ -269,6 +288,14 @@ function App() {
             element={
               <DashboardLayout>
                 <DistributorOrderDetailsPage />
+              </DashboardLayout>
+            }
+          />
+          <Route
+            path="/distributor/purchase-orders/:id/receipt"
+            element={
+              <DashboardLayout>
+                <OrderReceiptPage />
               </DashboardLayout>
             }
           />
@@ -358,6 +385,14 @@ function App() {
             element={
               <DashboardLayout>
                 <FactoryOrderDetailsPage />
+              </DashboardLayout>
+            }
+          />
+          <Route
+            path="/factory/orders/:id/receipt"
+            element={
+              <DashboardLayout>
+                <OrderReceiptPage />
               </DashboardLayout>
             }
           />

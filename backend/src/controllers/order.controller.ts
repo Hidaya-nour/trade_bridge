@@ -272,4 +272,44 @@ export class OrderController {
       }
     }
   }
+
+  async getOrderReceipt(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      const userId = req.user?.id!;
+      const userRole = req.user?.role!;
+
+      const receipt = await orderService.getOrderReceipt(id, userId, userRole);
+
+      res.json({
+        success: true,
+        data: { receipt },
+      });
+    } catch (error) {
+      if (error instanceof AppError) {
+        res.status(error.statusCode).json({ success: false, message: error.message });
+      } else {
+        logger.error('Get order receipt error:', error);
+        res.status(500).json({ success: false, message: 'Internal server error' });
+      }
+    }
+  }
+
+  async verifyReceiptPublic(req: Request, res: Response) {
+    try {
+      const { receiptNumber } = req.params;
+      const verification = await orderService.verifyReceiptPublic(receiptNumber);
+      res.json({
+        success: true,
+        data: { verification },
+      });
+    } catch (error) {
+      if (error instanceof AppError) {
+        res.status(error.statusCode).json({ success: false, message: error.message });
+      } else {
+        logger.error('Verify receipt error:', error);
+        res.status(500).json({ success: false, message: 'Internal server error' });
+      }
+    }
+  }
 }

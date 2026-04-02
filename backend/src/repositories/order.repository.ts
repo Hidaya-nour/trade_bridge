@@ -28,12 +28,12 @@ export class OrderRepository extends BaseRepository<Order> {
         {
           model: User,
           as: 'buyer',
-          attributes: ['id', 'full_name', 'email', 'business_name', 'phone']
+          attributes: ['id', 'full_name', 'email', 'business_name', 'phone', 'tin_number']
         },
         {
           model: User,
           as: 'supplier',
-          attributes: ['id', 'full_name', 'email', 'business_name', 'phone']
+          attributes: ['id', 'full_name', 'email', 'business_name', 'phone', 'tin_number']
         },
         {
           model: OrderItems,
@@ -42,7 +42,7 @@ export class OrderRepository extends BaseRepository<Order> {
             {
               model: Product,
               as: 'product',
-              attributes: ['id', 'name', 'category', 'unit_type', 'images']
+              attributes: ['id', 'name', 'category', 'unit_type', 'images', 'price']
             }
           ]
         },

@@ -326,3 +326,59 @@ export interface UpdateOrderStatusData {
 export interface CancelOrderData {
   reason?: string;
 }
+
+export interface OrderReceiptItem {
+  product_id: string;
+  product_name: string;
+  unit_type: string;
+  quantity: number;
+  unit_price: number;
+  line_total: number;
+}
+
+export interface OrderReceipt {
+  receipt_number: string;
+  receipt_status: "draft" | "final";
+  issued_at: string;
+  order_id: string;
+  order_date: string;
+  buyer: {
+    id: string;
+    name: string;
+    business_name?: string;
+    tin_number?: string;
+  };
+  supplier: {
+    id: string;
+    name: string;
+    business_name?: string;
+    tin_number?: string;
+  };
+  payment: {
+    method: string;
+    status: string;
+    amount_paid: number;
+    payment_date?: string;
+  };
+  currency: "ETB";
+  subtotal: number;
+  shipping: number;
+  discount: number;
+  tax: number;
+  total: number;
+  items: OrderReceiptItem[];
+}
+
+export interface OrderReceiptVerification {
+  valid: boolean;
+  receipt_number: string;
+  receipt_status: "draft" | "final";
+  order_id: string;
+  order_status: OrderStatus;
+  order_date: string;
+  issued_at: string;
+  buyer_name: string;
+  supplier_name: string;
+  total: number;
+  payment_status: string;
+}

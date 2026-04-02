@@ -30,7 +30,7 @@ import { formatPrice } from "@/lib/formatters";
 import toast from "react-hot-toast";
 import type { OrderItem } from "@/types/order.types";
 import { PaymentDialog } from "../payment/PaymentDialog";
-import type { PaymentDetails, PaymentMethod } from "../payment/PaymentDialog";
+import type { PaymentDetails, PaymentMethod } from "@/types/payment.types";
 
 export interface OrderSummary {
   subtotal: number;

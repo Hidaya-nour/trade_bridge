@@ -5,6 +5,8 @@ import { AppError } from '../../utils/errors';
 import { 
   CreateOrderDTO, 
   OrderFilters, 
+  OrderReceipt,
+  OrderReceiptVerification,
   OrderStatus,
   // OrderWithDetails,
   UpdateOrderStatusDTO
@@ -383,5 +385,121 @@ export class OrderService {
     }
 
     return this.orderRepo.getOrderSummary(orderId);
+  }
+
+  async getOrderReceipt(orderId: string, userId: string, userRole: string): Promise<OrderReceipt> {
+    const order = await this.orderRepo.findByIdWithDetails(orderId) as any;
+
+    if (!order) {
+      throw new AppError('Order not found', 404);
+    }
+
+    if (userRole !== 'admin' && order.buyer_id !== userId && order.supplier_id !== userId) {
+      throw new AppError('You do not have permission to view this receipt', 403);
+    }
+
+    const toNumber = (value: unknown) => {
+      const parsed = Number(value);
+      return Number.isFinite(parsed) ? parsed : 0;
+    };
+
+    const items = (order.items || []).map((item: any) => {
+      const unitPrice = toNumber(item.unit_price || item.product?.price || 0);
+      const quantity = toNumber(item.quantity || 0);
+      return {
+        product_id: item.product_id,
+        product_name: item.product?.name || 'Product',
+        unit_type: item.product?.unit_type || 'unit',
+        quantity,
+        unit_price: unitPrice,
+        line_total: Number((quantity * unitPrice).toFixed(2)),
+      };
+    });
+
+    const subtotal = Number(
+      items.reduce((sum: number, item: any) => sum + item.line_total, 0).toFixed(2)
+    );
+    const total = Number(toNumber(order.total_price).toFixed(2));
+    const tax = Number(Math.max(total - subtotal, 0).toFixed(2));
+    const paymentStatus = String(order.payment?.payment_status || 'pending');
+    const receiptStatus: 'draft' | 'final' =
+      paymentStatus === 'completed' ? 'final' : 'draft';
+
+    return {
+      receipt_number: this.buildReceiptNumber(order.id),
+      receipt_status: receiptStatus,
+      issued_at: new Date().toISOString(),
+      order_id: order.id,
+      order_date: new Date(order.created_at).toISOString(),
+      buyer: {
+        id: order.buyer?.id || order.buyer_id,
+        name: order.buyer?.full_name || 'Buyer',
+        business_name: order.buyer?.business_name || undefined,
+        tin_number: order.buyer?.tin_number || undefined,
+      },
+      supplier: {
+        id: order.supplier?.id || order.supplier_id,
+        name: order.supplier?.full_name || 'Supplier',
+        business_name: order.supplier?.business_name || undefined,
+        tin_number: order.supplier?.tin_number || undefined,
+      },
+      payment: {
+        method: order.payment?.payment_method || 'Not selected',
+        status: paymentStatus,
+        amount_paid: Number(toNumber(order.payment?.amount_paid || 0).toFixed(2)),
+        payment_date: order.payment?.payment_date
+          ? new Date(order.payment.payment_date).toISOString()
+          : undefined,
+      },
+      currency: 'ETB',
+      subtotal,
+      shipping: 0,
+      discount: 0,
+      tax,
+      total,
+      items,
+    };
+  }
+
+  private buildReceiptNumber(orderId: string) {
+    return `RCP-${String(orderId).replace(/-/g, '').toUpperCase()}`;
+  }
+
+  private parseReceiptNumber(receiptNumber: string): string | null {
+    const cleaned = String(receiptNumber || '').trim().toUpperCase();
+    const match = cleaned.match(/^RCP-([0-9A-F]{32})$/);
+    if (!match) return null;
+    const hex = match[1];
+    return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`.toLowerCase();
+  }
+
+  async verifyReceiptPublic(receiptNumber: string): Promise<OrderReceiptVerification> {
+    const orderId = this.parseReceiptNumber(receiptNumber);
+    if (!orderId) {
+      throw new AppError('Invalid receipt number format', 400);
+    }
+
+    const order = await this.orderRepo.findByIdWithDetails(orderId) as any;
+    if (!order) {
+      throw new AppError('Receipt not found', 404);
+    }
+
+    const paymentStatus = String(order.payment?.payment_status || 'pending');
+    const receiptStatus: 'draft' | 'final' =
+      paymentStatus === 'completed' ? 'final' : 'draft';
+
+    return {
+      valid: true,
+      receipt_number: this.buildReceiptNumber(order.id),
+      receipt_status: receiptStatus,
+      order_id: order.id,
+      order_status: order.order_status,
+      order_date: new Date(order.created_at).toISOString(),
+      issued_at: new Date().toISOString(),
+      buyer_name: order.buyer?.business_name || order.buyer?.full_name || 'Buyer',
+      supplier_name: order.supplier?.business_name || order.supplier?.full_name || 'Supplier',
+      total: Number(order.total_price || 0),
+      payment_status: paymentStatus,
+    };
   }
 }

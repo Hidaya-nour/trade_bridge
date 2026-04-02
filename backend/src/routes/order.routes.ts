@@ -39,6 +39,20 @@ const orderIdValidation = [
   param('id').isUUID().withMessage('Valid order ID is required'),
 ];
 
+const receiptNumberValidation = [
+  param('receiptNumber')
+    .isString()
+    .matches(/^RCP-[0-9A-Fa-f]{32}$/)
+    .withMessage('Valid receipt number is required'),
+];
+
+// Public receipt verification route
+router.get(
+  '/verify/receipt/:receiptNumber',
+  validate(receiptNumberValidation),
+  orderController.verifyReceiptPublic
+);
+
 // All order routes require authentication
 router.use(authenticate);
 
@@ -86,6 +100,13 @@ router.get(
   '/:id/summary',
   orderIdValidation,
   orderController.getOrderSummary
+);
+
+// Get printable receipt
+router.get(
+  '/:id/receipt',
+  orderIdValidation,
+  orderController.getOrderReceipt
 );
 
 

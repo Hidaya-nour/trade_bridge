@@ -1,4 +1,13 @@
-import type { CancelOrderData, CreateOrderData, OrderFilters, OrderResponse, OrdersResponse, UpdateOrderStatusData } from '@/types/order.types';
+import type {
+  CancelOrderData,
+  CreateOrderData,
+  OrderFilters,
+  OrderReceipt,
+  OrderReceiptVerification,
+  OrderResponse,
+  OrdersResponse,
+  UpdateOrderStatusData,
+} from '@/types/order.types';
 import api from './api';
 
 
@@ -56,6 +65,16 @@ class OrderService {
 
   async getOrderSummary(id: string): Promise<any> {
     const response = await api.get(`/orders/${id}/summary`);
+    return response.data;
+  }
+
+  async getOrderReceipt(id: string): Promise<{ success: boolean; data: { receipt: OrderReceipt } }> {
+    const response = await api.get(`/orders/${id}/receipt`);
+    return response.data;
+  }
+
+  async verifyReceipt(receiptNumber: string): Promise<{ success: boolean; data: { verification: OrderReceiptVerification } }> {
+    const response = await api.get(`/orders/verify/receipt/${encodeURIComponent(receiptNumber)}`);
     return response.data;
   }
 

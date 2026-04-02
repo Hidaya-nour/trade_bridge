@@ -197,6 +197,8 @@ const FactoryOrderDetailsPage: React.FC = () => {
         initialOrder={orderDetails as OrderDetailsData}
         mode="incoming"
         partyLabel="Customer"
+        role="factory"
+        ordersPath="/factory/orders"
         onUpdateStatus={async (status) => {
           const ok = await updateOrderStatus(orderDetails!.id, { status });
           if (ok) {

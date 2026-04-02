@@ -96,7 +96,7 @@ type OrderDetailsViewProps = {
     documents?: File[],
   ) => Promise<boolean>;
   ordersPath?: string;
-  role?: "retailer" | "distributor";
+  role?: "retailer" | "distributor" | "factory";
 };
 
 const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
@@ -295,6 +295,8 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
     !order.paymentMethod || order.paymentMethod === "N/A"
       ? "Not selected"
       : order.paymentMethod;
+  const orderBasePath = ordersPath || `/${role}/orders`;
+  const receiptUrl = `${orderBasePath}/${order.id}/receipt`;
 
   const deliveryDates = [
     { label: "Requested Delivery", value: order.delivery.requestedDate },
@@ -761,14 +763,20 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                   </Button>
                 )}
 
-              <Button variant="outline" className="w-full justify-start">
-                <Download className="mr-2 h-4 w-4" />
-                Download Invoice
+              <Button variant="outline" className="w-full justify-start" asChild>
+                <Link to={receiptUrl}>
+                  <Download className="mr-2 h-4 w-4" />
+                  Download Receipt
+                </Link>
               </Button>
 
-              <Button variant="outline" className="w-full justify-start">
+              <Button
+                variant="outline"
+                className="w-full justify-start"
+                onClick={() => navigate(`${receiptUrl}?print=1`)}
+              >
                 <Printer className="mr-2 h-4 w-4" />
-                Print Order
+                Print Receipt
               </Button>
 
               {order.canCancel && (

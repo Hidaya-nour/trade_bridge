@@ -43,12 +43,11 @@ import {
   PaginationBar,
   StatsCard,
   PaymentDialog,
-  type PaymentMethod,
-  type PaymentDetails,
 } from "@/components";
 import { formatPrice, formatDate } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 import type { Order } from "@/types/order.types";
+import type { PaymentMethod, PaymentDetails } from "@/types/payment.types";
 import OrderTrackingDialog from "@/components/order/OrderTrackingDialog";
 import { PlaceOrderDialog } from "@/components/order/PlaceOrderDialog";
 import { RateReviewDialog } from "@/components/product/RateReviewDialog";
@@ -371,6 +370,27 @@ export const OrderList: React.FC<OrderListProps> = ({
     return !!ratedProducts[productId];
   };
 
+  const toAmount = (value: unknown): number => {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+  };
+
+  const getOrderDisplayTotal = (order: Order): number => {
+    if (order.payment?.total_amount !== undefined) {
+      return toAmount(order.payment.total_amount);
+    }
+    return toAmount(order.total_price);
+  };
+
+  const getOrderAmountDue = (order: Order): number => {
+    if (!order.payment) {
+      return toAmount(order.total_price);
+    }
+    const total = toAmount(order.payment.total_amount);
+    const paid = toAmount(order.payment.amount_paid);
+    return Math.max(total - paid, 0);
+  };
+
   const getStatsCards = (config: OrderListProps["config"], orders: Order[]) => [
     {
       title: "Pending",
@@ -625,7 +645,7 @@ export const OrderList: React.FC<OrderListProps> = ({
                   </div>
                   <div className="flex items-center gap-2 lg:flex-col lg:items-end">
                     <p className="text-2xl font-bold text-primary">
-                      {formatPrice(order.total_price)}
+                      {formatPrice(getOrderDisplayTotal(order))}
                     </p>
                     {/* Payment method badge - only show if payment exists */}
                     {order.payment && (
@@ -669,7 +689,7 @@ export const OrderList: React.FC<OrderListProps> = ({
                             Pay Now
                           </Button>
                           <p className="text-xs text-yellow-600">
-                            Amount due: {formatPrice(order.total_price)}
+                            Amount due: {formatPrice(getOrderAmountDue(order))}
                           </p>
                         </div>
                       </div>
@@ -934,6 +954,19 @@ export const OrderList: React.FC<OrderListProps> = ({
                     <Button
                       size="sm"
                       variant="outline"
+                      asChild
+                    >
+                      <Link
+                        to={`/${config.role}/${config.type === "purchases" ? "purchase-orders" : "orders"}/${order.id}/receipt`}
+                      >
+                        <Download className="h-4 w-4 mr-2" />
+                        Receipt
+                      </Link>
+                    </Button>
+
+                    <Button
+                      size="sm"
+                      variant="outline"
                       onClick={() => {
                         window.location.href = `/${config.role}/${config.type === "purchases" ? "purchase-orders" : "orders"}/${order.id}`;
                       }}
@@ -965,7 +998,7 @@ export const OrderList: React.FC<OrderListProps> = ({
           onOpenChange={setShowPaymentDialog}
           orderId={selectedOrder.id}
           orderNumber={selectedOrder.id.slice(-8)}
-          amount={selectedOrder.total_price}
+          amount={getOrderAmountDue(selectedOrder)}
           onPaymentSubmit={handlePaymentSubmit}
           isProcessing={paymentProcessing}
           config={{
