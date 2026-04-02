@@ -13,7 +13,12 @@ export default function DriverHistoryScreen() {
               <Text style={styles.date}>{item.deliveredAt}</Text>
             </View>
             <Text style={styles.destination}>To: {item.destination}</Text>
-            <Text style={[styles.status, item.issueReported ? styles.issue : styles.success]}>
+            <Text
+              style={[
+                styles.status,
+                item.issueReported ? styles.issue : styles.success,
+              ]}
+            >
               {item.issueReported ? "Issue reported" : "Completed"}
             </Text>
           </View>
@@ -25,8 +30,18 @@ export default function DriverHistoryScreen() {
 
 const styles = StyleSheet.create({
   container: { padding: 16, gap: 10, paddingBottom: 40 },
-  rowBetween: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  card: { backgroundColor: "#ffffff", borderRadius: 12, borderWidth: 1, borderColor: "#e2e8f0", padding: 12 },
+  rowBetween: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  card: {
+    backgroundColor: "#ffffff",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    padding: 12,
+  },
   orderCode: { fontSize: 13, fontWeight: "700", color: "#0f172a" },
   date: { fontSize: 11, color: "#64748b" },
   destination: { color: "#334155", fontSize: 12, marginTop: 6 },

@@ -9,9 +9,15 @@ export default function DriverActiveScreen() {
         {ACTIVE_DELIVERIES.map((delivery) => (
           <View key={delivery.id} style={styles.card}>
             <Text style={styles.orderCode}>{delivery.orderCode}</Text>
-            <Text style={styles.details}>{delivery.supplierName} → {delivery.buyerName}</Text>
-            <Text style={styles.details}>ETA: {delivery.etaMinutes} min • {delivery.routeProgress}%</Text>
-            <Text style={styles.status}>{delivery.status.replace("_"," ")}</Text>
+            <Text style={styles.details}>
+              {delivery.supplierName} → {delivery.buyerName}
+            </Text>
+            <Text style={styles.details}>
+              ETA: {delivery.etaMinutes} min • {delivery.routeProgress}%
+            </Text>
+            <Text style={styles.status}>
+              {delivery.status.replace("_", " ")}
+            </Text>
           </View>
         ))}
       </ScrollView>
@@ -21,7 +27,13 @@ export default function DriverActiveScreen() {
 
 const styles = StyleSheet.create({
   container: { padding: 16, gap: 10, paddingBottom: 40 },
-  card: { backgroundColor: "#ffffff", borderColor: "#e2e8f0", borderWidth: 1, borderRadius: 12, padding: 12 },
+  card: {
+    backgroundColor: "#ffffff",
+    borderColor: "#e2e8f0",
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 12,
+  },
   orderCode: { fontSize: 14, fontWeight: "700", color: "#0f172a" },
   details: { fontSize: 12, color: "#334155", marginTop: 4 },
   status: { marginTop: 6, fontSize: 11, fontWeight: "700", color: "#1d4ed8" },

@@ -76,7 +76,10 @@ function App() {
           {/* Public Auth Routes */}
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
-          <Route path="/verify/receipt/:receiptNumber" element={<VerifyReceiptPage />} />
+          <Route
+            path="/verify/receipt/:receiptNumber"
+            element={<VerifyReceiptPage />}
+          />
           {/* Dashboard Routes */}
           <Route
             path="/retailer/dashboard"
