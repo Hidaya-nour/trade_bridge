@@ -2,6 +2,7 @@ import { BaseRepository } from "./base.repository";
 import { Cart } from "../models/cart.model";
 import { CartItem } from "../models/cart-item.model";
 import { Product } from "../models/product.model";
+import User from "../models/user.model";
 import { CartWithItems } from "../types/cart.types";
 import { PromotionService } from "../services/promotion/promotion.service";
 import { UserRole } from "../types/auth.types";
@@ -38,7 +39,21 @@ export class CartRepository extends BaseRepository<Cart> {
                 'delivery_pricing',
                 'delivery_fee_per_km',
                 'free_delivery_max_distance_km',
-              ]
+              ],
+              include: [
+                {
+                  model: User,
+                  as: 'supplier',
+                  attributes: [
+                    'id',
+                    'full_name',
+                    'business_name',
+                    'verified',
+                    'is_vat_registered',
+                    'vat_rate',
+                  ],
+                },
+              ],
             }
           ]
         }

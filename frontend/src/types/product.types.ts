@@ -35,6 +35,8 @@ export interface Product {
     business_name?: string;
     email?: string;
     phone?: string;
+    is_vat_registered?: boolean;
+    vat_rate?: number;
     rating?:number;
     created_at?:Date;
     is_verified?: boolean;
@@ -62,6 +64,8 @@ export interface CatalogProduct {
     id: string;
     business_name?: string;
     full_name?: string;
+    is_vat_registered?: boolean;
+    vat_rate?: number;
     is_verified?: boolean;
     addresses?: Address[];
   };

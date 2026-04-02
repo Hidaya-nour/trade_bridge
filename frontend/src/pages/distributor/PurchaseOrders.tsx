@@ -85,7 +85,15 @@ const PurchaseOrdersPage: React.FC = () => {
     );
     const shipping = 0; // Replace with your shipping logic
     const discount = 0; // Replace with your discount logic
-    const vatPercentage = 0.15;
+    const supplier = items[0]?.product?.supplier as
+      | { is_vat_registered?: boolean; vat_rate?: number }
+      | undefined;
+    const vatPercentage =
+      supplier?.is_vat_registered === true
+        ? Number.isFinite(Number(supplier?.vat_rate))
+          ? Number(supplier?.vat_rate)
+          : 0.15
+        : 0;
     const tax = subtotal * vatPercentage;
     const total = subtotal + shipping + tax - discount;
 

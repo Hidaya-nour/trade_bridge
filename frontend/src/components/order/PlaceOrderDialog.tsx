@@ -362,7 +362,11 @@ export const PlaceOrderDialog: React.FC<PlaceOrderDialogProps> = ({
                   </div>
                 )}
                 <div className="flex justify-between text-sm">
-                  <span>VAT ({(summary.vatPercentage || 0.15) * 100}%)</span>
+                  <span>
+                    {typeof summary.vatPercentage === "number"
+                      ? `VAT (${summary.vatPercentage * 100}%)`
+                      : "VAT"}
+                  </span>
                   <span>{formatPrice(summary.tax)}</span>
                 </div>
                 <Separator />

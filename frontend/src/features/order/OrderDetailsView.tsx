@@ -546,7 +546,7 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">VAT (15%)</span>
+                  <span className="text-muted-foreground">VAT</span>
                   <span className="font-medium">{formatPrice(order.tax)}</span>
                 </div>
                 <Separator className="my-2" />
@@ -968,7 +968,10 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
             tax: order.tax,
             total: order.total,
             promoApplied: false,
-            vatPercentage: 0.15,
+            vatPercentage:
+              order.subtotal > 0 && order.tax > 0
+                ? Number((order.tax / order.subtotal).toFixed(4))
+                : 0,
           }}
           config={{
             role,

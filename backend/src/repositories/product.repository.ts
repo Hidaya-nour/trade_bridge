@@ -30,7 +30,7 @@ export class ProductRepository extends BaseRepository<Product> {
     {
       model: User,
       as: 'supplier',
-      attributes: ['id', 'full_name', 'business_name'],
+      attributes: ['id', 'full_name', 'business_name', 'is_vat_registered', 'vat_rate'],
       include: [
         {
           model: Address,
@@ -90,7 +90,7 @@ if (filters.supplier_id) {
       include: [{
         model: User,
         as: 'supplier',
-        attributes: ['id', 'full_name', 'business_name', 'email', 'phone'],
+        attributes: ['id', 'full_name', 'business_name', 'email', 'phone', 'is_vat_registered', 'vat_rate'],
         include: [
           {
             model: Address,

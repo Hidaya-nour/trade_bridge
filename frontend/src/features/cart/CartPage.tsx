@@ -57,6 +57,7 @@ export type { CartConfig };
 // ============================================================================
 
 export const CartPage: React.FC<CartPageProps> = ({ config }) => {
+  const DEFAULT_VAT_RATE = 0.15;
   const navigate = useNavigate();
   const [selectAll, setSelectAll] = useState(false);
   const [promoCode, setPromoCode] = useState("");
@@ -86,6 +87,17 @@ export const CartPage: React.FC<CartPageProps> = ({ config }) => {
   const { createOrder, isLoading: orderLoading } = useOrderStore();
 
   const CHECKOUT_DISTANCE_KM = 1;
+  const resolveProductVatRate = (product?: any) => {
+    const supplierId = product?.supplier_id;
+    const supplier =
+      product?.supplier || (supplierId ? suppliers?.[supplierId] : undefined);
+    if (!supplier || supplier.is_vat_registered !== true) return 0;
+    const parsedRate = Number(supplier.vat_rate);
+    if (Number.isFinite(parsedRate) && parsedRate >= 0 && parsedRate <= 1) {
+      return parsedRate;
+    }
+    return DEFAULT_VAT_RATE;
+  };
   const resolveProductShipping = (product?: any) => {
     const deliveryAvailable = product?.delivery_available !== false;
     if (!deliveryAvailable) return { shipping: 0, blocked: true };
@@ -147,6 +159,7 @@ export const CartPage: React.FC<CartPageProps> = ({ config }) => {
               items: [],
               subtotal: 0,
               shipping: 0,
+              vatRate: resolveProductVatRate(item.product),
               hasNoDeliveryItem: false,
             };
           }
@@ -203,10 +216,11 @@ export const CartPage: React.FC<CartPageProps> = ({ config }) => {
         // Calculate per-supplier totals
         const supplierSubtotal = orderData.subtotal;
         const supplierShipping = Number(orderData.shipping || 0);
-        const supplierTax = supplierSubtotal * (config.vatPercentage || 0.15);
         const supplierDiscount = promoApplied
           ? supplierSubtotal * (config.bulkDiscountPercentage || 0.1)
           : 0;
+        const supplierTax =
+          (supplierSubtotal - supplierDiscount) * Number(orderData.vatRate || 0);
 
         const orderPayload = {
           supplier_id: supplierId,
@@ -382,7 +396,33 @@ export const CartPage: React.FC<CartPageProps> = ({ config }) => {
     : 0;
 
   // Calculate tax
-  const tax = (subtotal - discount) * (config.vatPercentage || 0.15);
+  const tax = useMemo(() => {
+    const supplierTotals = selectedItems.reduce(
+      (acc, item) => {
+        const supplierId = item.product?.supplier_id;
+        if (!supplierId) return acc;
+
+        if (!acc[supplierId]) {
+          acc[supplierId] = {
+            subtotal: 0,
+            vatRate: resolveProductVatRate(item.product),
+          };
+        }
+
+        acc[supplierId].subtotal += (item.product?.price || 0) * item.quantity;
+        return acc;
+      },
+      {} as Record<string, { subtotal: number; vatRate: number }>,
+    );
+
+    return Object.values(supplierTotals).reduce((sum, supplierTotal) => {
+      const supplierDiscount = promoApplied
+        ? supplierTotal.subtotal * (config.bulkDiscountPercentage || 0.1)
+        : 0;
+      const taxableAmount = supplierTotal.subtotal - supplierDiscount;
+      return sum + taxableAmount * supplierTotal.vatRate;
+    }, 0);
+  }, [selectedItems, promoApplied, config.bulkDiscountPercentage]);
 
   // Calculate total
   const total = subtotal + shipping + tax - discount;
@@ -862,12 +902,10 @@ export const CartPage: React.FC<CartPageProps> = ({ config }) => {
                       <span>-{formatPrice(discount)}</span>
                     </div>
                   )}
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">
-                      VAT ({(config.vatPercentage || 0.15) * 100}%)
-                    </span>
-                    <span className="font-medium">{formatPrice(tax)}</span>
-                  </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">VAT</span>
+                  <span className="font-medium">{formatPrice(tax)}</span>
+                </div>
                   <Separator className="my-2" />
                   <div className="flex justify-between text-base font-bold">
                     <span>Total</span>
@@ -964,12 +1002,10 @@ export const CartPage: React.FC<CartPageProps> = ({ config }) => {
           total,
           promoApplied,
           discountPercentage: config.bulkDiscountPercentage,
-          vatPercentage: config.vatPercentage,
         }}
         config={{
           role: config.role,
           ordersPath: config.ordersPath,
-          vatPercentage: config.vatPercentage,
           bulkDiscountPercentage: config.bulkDiscountPercentage,
         }}
         showPostOrderDialog={false}

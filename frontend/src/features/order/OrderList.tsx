@@ -331,7 +331,15 @@ export const OrderList: React.FC<OrderListProps> = ({
     }, 0);
     const shipping = 0;
     const discount = 0;
-    const vatPercentage = config.paymentConfig?.vatPercentage ?? 0.15;
+    const supplier = items[0]?.product?.supplier as
+      | { is_vat_registered?: boolean; vat_rate?: number }
+      | undefined;
+    const vatPercentage =
+      supplier?.is_vat_registered === true
+        ? Number.isFinite(Number(supplier?.vat_rate))
+          ? Number(supplier?.vat_rate)
+          : 0.15
+        : 0;
     const tax = subtotal * vatPercentage;
     const total = subtotal + shipping + tax - discount;
     return { subtotal, shipping, discount, tax, total, vatPercentage };

@@ -64,6 +64,7 @@ const DistributorMarketplacePage: React.FC = () => {
         supplier_id: p.supplier_id,
         supplier_name:
           p.supplier_name || p.supplier?.business_name || "Factory",
+        supplier: p.supplier,
         category: p.category,
         subcategory: p.subcategory,
         price: Number(p.price) || 0,

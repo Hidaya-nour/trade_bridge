@@ -16,6 +16,8 @@ export interface RegisterDTO {
   phone?: string;
   business_name?: string;
   tin_number?: string;
+  is_vat_registered?: boolean;
+  vat_rate?: number;
 }
 
 export interface LoginDTO {
@@ -30,6 +32,8 @@ export interface UpdateProfileDTO {
   phone?: string;
   business_name?: string;
   tin_number?: string;
+  is_vat_registered?: boolean;
+  vat_rate?: number;
   profile_image?: string;
 }
 
@@ -108,6 +112,11 @@ async register(data: RegisterDTO): Promise<{ user: SafeUser }> {
     password_hash,
     business_name: data.business_name,
     tin_number: data.tin_number,
+    is_vat_registered: data.is_vat_registered === true,
+    vat_rate:
+      data.vat_rate !== undefined && data.vat_rate !== null
+        ? Number(data.vat_rate)
+        : 0.15,
     status
   });
 
@@ -197,6 +206,15 @@ async register(data: RegisterDTO): Promise<{ user: SafeUser }> {
     if (typeof data.phone === 'string') updates.phone = data.phone.trim();
     if (typeof data.business_name === 'string') updates.business_name = data.business_name.trim();
     if (typeof data.tin_number === 'string') updates.tin_number = data.tin_number.trim();
+    if (typeof data.is_vat_registered === 'boolean') {
+      updates.is_vat_registered = data.is_vat_registered;
+    }
+    if (data.vat_rate !== undefined && data.vat_rate !== null) {
+      const parsedVatRate = Number(data.vat_rate);
+      if (!Number.isNaN(parsedVatRate)) {
+        updates.vat_rate = parsedVatRate;
+      }
+    }
     if (typeof data.profile_image === 'string') updates.profile_image = data.profile_image.trim();
 
     await this.userRepo.update(userId, updates as any);

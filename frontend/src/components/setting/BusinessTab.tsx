@@ -1,6 +1,12 @@
 import React, { useEffect } from "react";
 import L from "leaflet";
-import { MapContainer, Marker, TileLayer, useMap, useMapEvents } from "react-leaflet";
+import {
+  MapContainer,
+  Marker,
+  TileLayer,
+  useMap,
+  useMapEvents,
+} from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import { Check, Shield } from "lucide-react";
 import LandingInput from "@/components/landing/shared/LandingInput";
@@ -17,7 +23,13 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { TabsContent } from "@/components/ui/tabs";
 
@@ -48,6 +60,12 @@ type ExtraDoc = {
   file: File | null;
   issued_date: string;
   expiry_date: string;
+};
+
+type BusinessFieldErrors = {
+  business_name?: string | null;
+  tin_number?: string | null;
+  vatRegistered?: string | null;
 };
 
 type BusinessTabProps = {
@@ -83,6 +101,10 @@ type BusinessTabProps = {
   setLicenseExpiryDate: React.Dispatch<React.SetStateAction<string>>;
   businessMessage: string | null;
   setBusinessMessage: React.Dispatch<React.SetStateAction<string | null>>;
+  businessFieldErrors: BusinessFieldErrors;
+  setBusinessFieldErrors: React.Dispatch<
+    React.SetStateAction<BusinessFieldErrors>
+  >;
   handleBusinessSave: () => Promise<void> | void;
   isLoading: boolean;
 };
@@ -94,9 +116,18 @@ const docStatusStyles: Record<"pending" | "verified" | "rejected", string> = {
 };
 
 const mapMarkerIcon = new L.Icon({
-  iconUrl: new URL("leaflet/dist/images/marker-icon.png", import.meta.url).toString(),
-  iconRetinaUrl: new URL("leaflet/dist/images/marker-icon-2x.png", import.meta.url).toString(),
-  shadowUrl: new URL("leaflet/dist/images/marker-shadow.png", import.meta.url).toString(),
+  iconUrl: new URL(
+    "leaflet/dist/images/marker-icon.png",
+    import.meta.url,
+  ).toString(),
+  iconRetinaUrl: new URL(
+    "leaflet/dist/images/marker-icon-2x.png",
+    import.meta.url,
+  ).toString(),
+  shadowUrl: new URL(
+    "leaflet/dist/images/marker-shadow.png",
+    import.meta.url,
+  ).toString(),
   iconSize: [25, 41],
   iconAnchor: [12, 41],
   popupAnchor: [1, -34],
@@ -115,9 +146,9 @@ const MapCenterUpdater: React.FC<{ center: { lat: number; lng: number } }> = ({
   return null;
 };
 
-const MapClickHandler: React.FC<{ onPick: (lat: number, lng: number) => void }> = ({
-  onPick,
-}) => {
+const MapClickHandler: React.FC<{
+  onPick: (lat: number, lng: number) => void;
+}> = ({ onPick }) => {
   useMapEvents({
     click(event) {
       onPick(event.latlng.lat, event.latlng.lng);
@@ -168,6 +199,8 @@ const BusinessTab: React.FC<BusinessTabProps> = ({
   setLicenseExpiryDate,
   businessMessage,
   setBusinessMessage,
+  businessFieldErrors,
+  setBusinessFieldErrors,
   handleBusinessSave,
   isLoading,
 }) => {
@@ -183,18 +216,33 @@ const BusinessTab: React.FC<BusinessTabProps> = ({
         <CardContent className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
-              <Label htmlFor="businessName">Business Name</Label>
+              <Label htmlFor="businessName">
+                Business Name {isSupplier ? "*" : ""}
+              </Label>
               <Input
                 id="businessName"
                 label="Business Name"
                 value={profileForm.business_name}
-                onChange={(e) =>
+                onChange={(e) => {
                   setProfileForm((prev) => ({
                     ...prev,
                     business_name: e.target.value,
-                  }))
+                  }));
+                  setBusinessFieldErrors((prev) => ({
+                    ...prev,
+                    business_name: null,
+                  }));
+                }}
+                className={
+                  businessFieldErrors.business_name ? "border-red-500" : ""
                 }
+                required={isSupplier}
               />
+              {businessFieldErrors.business_name && (
+                <p className="text-xs text-red-600">
+                  {businessFieldErrors.business_name}
+                </p>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="businessType">Business Type</Label>
@@ -210,26 +258,52 @@ const BusinessTab: React.FC<BusinessTabProps> = ({
                 </SelectContent>
               </Select>
             </div>
-            <LandingInput
-              label="TIN Number"
-              name="tin_number"
-              value={profileForm.tin_number}
-              onChange={(e) =>
-                setProfileForm((prev) => ({
-                  ...prev,
-                  tin_number: e.target.value,
-                }))
-              }
-            placeholder="Enter TIN number"
-          />
+            <div className="space-y-2">
+              <LandingInput
+                label={`TIN Number${isSupplier ? " *" : ""}`}
+                name="tin_number"
+                value={profileForm.tin_number}
+                onChange={(e) => {
+                  setProfileForm((prev) => ({
+                    ...prev,
+                    tin_number: e.target.value,
+                  }));
+                  setBusinessFieldErrors((prev) => ({
+                    ...prev,
+                    tin_number: null,
+                  }));
+                }}
+                placeholder="Enter TIN number"
+                required={isSupplier}
+                error={businessFieldErrors.tin_number || undefined}
+              />
+            </div>
             <div className="space-y-2">
               <Label htmlFor="vatRegistered">VAT Registered</Label>
               <div className="flex items-center h-10">
-                <Switch id="vatRegistered" defaultChecked />
+                <Switch
+                  id="vatRegistered"
+                  checked={profileForm.vatRegistered}
+                  onCheckedChange={(checked) => {
+                    setProfileForm((prev) => ({
+                      ...prev,
+                      vatRegistered: Boolean(checked),
+                    }));
+                    setBusinessFieldErrors((prev) => ({
+                      ...prev,
+                      vatRegistered: null,
+                    }));
+                  }}
+                />
                 <span className="ml-2 text-sm text-muted-foreground">
                   Yes, I am VAT registered
                 </span>
               </div>
+              {businessFieldErrors.vatRegistered && (
+                <p className="text-xs text-red-600">
+                  {businessFieldErrors.vatRegistered}
+                </p>
+              )}
             </div>
           </div>
 
@@ -290,32 +364,13 @@ const BusinessTab: React.FC<BusinessTabProps> = ({
                     </div>
                     {businessLicenseDoc?.reviewed_at && (
                       <p className="text-xs mt-1">
-                        Approved on {new Date(businessLicenseDoc.reviewed_at).toLocaleDateString()}.
+                        Approved on{" "}
+                        {new Date(
+                          businessLicenseDoc.reviewed_at,
+                        ).toLocaleDateString()}
+                        .
                       </p>
                     )}
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="rounded-md border bg-white p-3 text-sm">
-                      <p className="text-xs text-muted-foreground">
-                        Business Name
-                      </p>
-                      <p className="font-medium">
-                        {profileForm.business_name || "—"}
-                      </p>
-                    </div>
-                    <div className="rounded-md border bg-white p-3 text-sm">
-                      <p className="text-xs text-muted-foreground">TIN Number</p>
-                      <p className="font-medium">
-                        {profileForm.tin_number || "—"}
-                      </p>
-                    </div>
-                    <div className="rounded-md border bg-white p-3 text-sm">
-                      <p className="text-xs text-muted-foreground">
-                        Verification Status
-                      </p>
-                      <p className="font-medium">Verified</p>
-                    </div>
                   </div>
 
                   {sortedDocuments.length > 0 && (
@@ -336,7 +391,9 @@ const BusinessTab: React.FC<BusinessTabProps> = ({
                         >
                           Uploaded documents
                         </span>
-                        <Badge variant="outline">{sortedDocuments.length}</Badge>
+                        <Badge variant="outline">
+                          {sortedDocuments.length}
+                        </Badge>
                       </div>
                       <div className="mt-3 space-y-2">
                         {sortedDocuments.map((doc: any) => (
@@ -349,13 +406,21 @@ const BusinessTab: React.FC<BusinessTabProps> = ({
                                 {getDocumentLabel(doc)}
                               </p>
                               <p className="text-[11px] text-amber-800">
-                                {doc.document_type?.replaceAll("_", " ") || "document"}
+                                {doc.document_type?.replaceAll("_", " ") ||
+                                  "document"}
                               </p>
                             </div>
                             <div className="flex items-center gap-2">
                               <Badge
                                 variant="outline"
-                                className={docStatusStyles[(doc.verification_status as "pending" | "verified" | "rejected") || "pending"]}
+                                className={
+                                  docStatusStyles[
+                                    (doc.verification_status as
+                                      | "pending"
+                                      | "verified"
+                                      | "rejected") || "pending"
+                                  ]
+                                }
                               >
                                 {doc.verification_status || "pending"}
                               </Badge>
@@ -372,7 +437,8 @@ const BusinessTab: React.FC<BusinessTabProps> = ({
                   )}
 
                   <p className="text-xs text-muted-foreground">
-                    Need to update verified business details? Please contact support.
+                    Need to update verified business details? Please contact
+                    support.
                   </p>
                 </div>
               ) : (
@@ -386,9 +452,11 @@ const BusinessTab: React.FC<BusinessTabProps> = ({
                         <Badge
                           variant="outline"
                           className={
-                            businessLicenseDoc.verification_status === "verified"
+                            businessLicenseDoc.verification_status ===
+                            "verified"
                               ? "bg-green-100 text-green-700 border-green-200"
-                              : businessLicenseDoc.verification_status === "rejected"
+                              : businessLicenseDoc.verification_status ===
+                                  "rejected"
                                 ? "bg-red-100 text-red-700 border-red-200"
                                 : "bg-amber-100 text-amber-800 border-amber-200"
                           }
@@ -398,7 +466,8 @@ const BusinessTab: React.FC<BusinessTabProps> = ({
                       </div>
                       {businessLicenseDoc.rejection_reason && (
                         <p className="mt-2 text-red-700">
-                          Rejection reason: {businessLicenseDoc.rejection_reason}
+                          Rejection reason:{" "}
+                          {businessLicenseDoc.rejection_reason}
                         </p>
                       )}
                     </div>
@@ -411,11 +480,16 @@ const BusinessTab: React.FC<BusinessTabProps> = ({
                       </div>
 
                       {businessLicenseDoc.verification_status === "pending" && (
-                        <p className="text-xs mt-1">It is currently under admin review.</p>
+                        <p className="text-xs mt-1">
+                          It is currently under admin review.
+                        </p>
                       )}
 
-                      {businessLicenseDoc.verification_status === "verified" && (
-                        <p className="text-xs mt-1">Your business has been verified.</p>
+                      {businessLicenseDoc.verification_status ===
+                        "verified" && (
+                        <p className="text-xs mt-1">
+                          Your business has been verified.
+                        </p>
                       )}
                     </div>
                   )}
@@ -425,7 +499,9 @@ const BusinessTab: React.FC<BusinessTabProps> = ({
                         <span className="text-amber-900 font-medium">
                           Uploaded documents
                         </span>
-                        <Badge variant="outline">{sortedDocuments.length}</Badge>
+                        <Badge variant="outline">
+                          {sortedDocuments.length}
+                        </Badge>
                       </div>
                       <div className="mt-3 space-y-2">
                         {sortedDocuments.map((doc: any) => (
@@ -438,13 +514,21 @@ const BusinessTab: React.FC<BusinessTabProps> = ({
                                 {getDocumentLabel(doc)}
                               </p>
                               <p className="text-[11px] text-amber-800">
-                                {doc.document_type?.replaceAll("_", " ") || "document"}
+                                {doc.document_type?.replaceAll("_", " ") ||
+                                  "document"}
                               </p>
                             </div>
                             <div className="flex items-center gap-2">
                               <Badge
                                 variant="outline"
-                                className={docStatusStyles[(doc.verification_status as "pending" | "verified" | "rejected") || "pending"]}
+                                className={
+                                  docStatusStyles[
+                                    (doc.verification_status as
+                                      | "pending"
+                                      | "verified"
+                                      | "rejected") || "pending"
+                                  ]
+                                }
                               >
                                 {doc.verification_status || "pending"}
                               </Badge>
@@ -467,7 +551,8 @@ const BusinessTab: React.FC<BusinessTabProps> = ({
                             Additional verification documents
                           </p>
                           <p className="text-xs text-amber-800">
-                            Add TIN, ID card, or other supporting documents for admin review.
+                            Add TIN, ID card, or other supporting documents for
+                            admin review.
                           </p>
                         </div>
                         <Button
@@ -491,7 +576,9 @@ const BusinessTab: React.FC<BusinessTabProps> = ({
                       </div>
 
                       {extraDocs.length === 0 ? (
-                        <p className="text-xs text-amber-800">No additional documents added.</p>
+                        <p className="text-xs text-amber-800">
+                          No additional documents added.
+                        </p>
                       ) : (
                         extraDocs.map((doc) => (
                           <div
@@ -499,7 +586,9 @@ const BusinessTab: React.FC<BusinessTabProps> = ({
                             className="grid grid-cols-1 md:grid-cols-2 gap-3 border rounded-md p-3 bg-white"
                           >
                             <div className="space-y-2">
-                              <Label htmlFor={`docType-${doc.id}`}>Document Type</Label>
+                              <Label htmlFor={`docType-${doc.id}`}>
+                                Document Type
+                              </Label>
                               <Select
                                 value={doc.document_type}
                                 onValueChange={(value) =>
@@ -525,13 +614,19 @@ const BusinessTab: React.FC<BusinessTabProps> = ({
                                   <SelectItem value="tax_certificate">
                                     TIN / Tax Certificate
                                   </SelectItem>
-                                  <SelectItem value="id_card">ID Card</SelectItem>
-                                  <SelectItem value="other">Other Document</SelectItem>
+                                  <SelectItem value="id_card">
+                                    ID Card
+                                  </SelectItem>
+                                  <SelectItem value="other">
+                                    Other Document
+                                  </SelectItem>
                                 </SelectContent>
                               </Select>
                             </div>
                             <div className="space-y-2">
-                              <Label htmlFor={`docFile-${doc.id}`}>Document File</Label>
+                              <Label htmlFor={`docFile-${doc.id}`}>
+                                Document File
+                              </Label>
                               <Input
                                 id={`docFile-${doc.id}`}
                                 label="Document File"
@@ -603,7 +698,9 @@ const BusinessTab: React.FC<BusinessTabProps> = ({
                                 size="sm"
                                 className="text-destructive"
                                 onClick={() =>
-                                  setExtraDocs((prev) => prev.filter((item) => item.id !== doc.id))
+                                  setExtraDocs((prev) =>
+                                    prev.filter((item) => item.id !== doc.id),
+                                  )
                                 }
                               >
                                 Remove
@@ -626,7 +723,9 @@ const BusinessTab: React.FC<BusinessTabProps> = ({
                     <Button
                       variant="outline"
                       onClick={() => void handleUploadDocuments()}
-                      disabled={licenseUploading || docsLoading || addressesLoading}
+                      disabled={
+                        licenseUploading || docsLoading || addressesLoading
+                      }
                     >
                       {licenseUploading ? "Uploading..." : "Upload Documents"}
                     </Button>
@@ -642,7 +741,9 @@ const BusinessTab: React.FC<BusinessTabProps> = ({
           {isSupplier && (
             <div className="rounded-lg border border-slate-200 bg-white p-5 space-y-4">
               <div>
-                <h4 className="text-sm font-semibold text-slate-900">Business Address</h4>
+                <h4 className="text-sm font-semibold text-slate-900">
+                  Business Address
+                </h4>
                 <p className="text-xs text-slate-500 mt-1">
                   Keep your address and location details up to date.
                 </p>
@@ -695,7 +796,9 @@ const BusinessTab: React.FC<BusinessTabProps> = ({
                 </div>
                 <div className="space-y-2 md:col-span-2">
                   <div className="flex items-center justify-between gap-3">
-                    <Label htmlFor="businessMap">Business location (optional)</Label>
+                    <Label htmlFor="businessMap">
+                      Business location (optional)
+                    </Label>
                     <div className="flex items-center gap-2">
                       <Button
                         type="button"
@@ -752,17 +855,24 @@ const BusinessTab: React.FC<BusinessTabProps> = ({
                     </MapContainer>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Click the map to drop a pin. We will use this to help locate your business.
+                    Click the map to drop a pin. We will use this to help locate
+                    your business.
                   </p>
                   {locationMessage && (
-                    <p className="text-xs text-muted-foreground">{locationMessage}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {locationMessage}
+                    </p>
                   )}
                   {hasCoordinates && !locationMessage && (
-                    <p className="text-xs text-muted-foreground">Location selected.</p>
+                    <p className="text-xs text-muted-foreground">
+                      Location selected.
+                    </p>
                   )}
                   <div className="flex items-center justify-between gap-2">
                     {addressMessage && (
-                      <p className="text-xs text-muted-foreground">{addressMessage}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {addressMessage}
+                      </p>
                     )}
                     <Button
                       type="button"
@@ -781,18 +891,22 @@ const BusinessTab: React.FC<BusinessTabProps> = ({
               </div>
             </div>
           )}
-
         </CardContent>
         <CardFooter className="flex justify-end gap-2 border-t pt-6">
           <Button variant="outline" onClick={() => setBusinessMessage(null)}>
             Cancel
           </Button>
-          <Button onClick={() => void handleBusinessSave()} disabled={isLoading}>
+          <Button
+            onClick={() => void handleBusinessSave()}
+            disabled={isLoading}
+          >
             {isLoading ? "Saving..." : "Save Changes"}
           </Button>
         </CardFooter>
         {businessMessage && (
-          <p className="px-6 pb-6 text-sm text-muted-foreground">{businessMessage}</p>
+          <p className="px-6 pb-6 text-sm text-muted-foreground">
+            {businessMessage}
+          </p>
         )}
       </Card>
     </TabsContent>

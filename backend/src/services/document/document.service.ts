@@ -18,6 +18,23 @@ export class DocumentService {
       throw new AppError('Document file is required', 400);
     }
 
+    const user = await this.userRepo.findById(String(data.user_id));
+    if (!user) {
+      throw new AppError('User not found', 404);
+    }
+
+    const isSupplierRole = user.role === 'factory' || user.role === 'distributor';
+    const isVerificationDoc =
+      data.document_type === 'business_license' || data.document_type === 'tax_certificate';
+    if (isSupplierRole && isVerificationDoc) {
+      if (!user.business_name || user.business_name.trim().length === 0) {
+        throw new AppError('Business name is required before uploading verification documents', 400);
+      }
+      if (!user.tin_number || user.tin_number.trim().length === 0) {
+        throw new AppError('TIN number is required before uploading verification documents', 400);
+      }
+    }
+
     if (!isCloudinaryConfigured()) {
       throw new AppError(
         'Cloudinary is not configured. Please set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET.',

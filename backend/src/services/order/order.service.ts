@@ -13,6 +13,8 @@ import logger from '../../utils/logger';
 import notificationService from '../../services/notification/notification.service';
 import Payment from '../../models/payment.model';
 
+const DEFAULT_VAT_RATE = 0.15;
+
 export class OrderService {
   private orderRepo = new OrderRepository();
   private productRepo = new ProductRepository();
@@ -109,8 +111,8 @@ export class OrderService {
       throw new AppError('Supplier not found', 404);
     }
 
-    // Validate products and calculate total
-    let total_price = 0;
+    // Validate products and calculate subtotal
+    let subtotal = 0;
     const orderItems = [];
 
     for (const item of items) {
@@ -137,7 +139,7 @@ export class OrderService {
       }
 
       const itemTotal = product.price * item.quantity;
-      total_price += itemTotal;
+      subtotal += itemTotal;
 
       orderItems.push({
         product_id: product.id,
@@ -148,6 +150,16 @@ export class OrderService {
       // Reserve stock
       await this.productRepo.decrementStock(product.id, item.quantity);
     }
+
+    const supplierVatRegistered = supplier.is_vat_registered === true;
+    const supplierVatRate =
+      supplierVatRegistered && supplier.vat_rate !== undefined && supplier.vat_rate !== null
+        ? Number(supplier.vat_rate)
+        : supplierVatRegistered
+          ? DEFAULT_VAT_RATE
+          : 0;
+    const taxAmount = Number((subtotal * supplierVatRate).toFixed(2));
+    const total_price = Number((subtotal + taxAmount).toFixed(2));
 
     // Create order with items in a transaction
     const order = await this.orderRepo.createOrderWithItems(

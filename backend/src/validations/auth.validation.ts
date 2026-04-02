@@ -22,7 +22,9 @@ export const registerSchema = Joi.object({
     'string.pattern.base': 'Please provide a valid phone number'
   }),
   business_name: Joi.string().optional(),
-  tin_number: Joi.string().optional()
+  tin_number: Joi.string().optional(),
+  is_vat_registered: Joi.boolean().optional(),
+  vat_rate: Joi.number().min(0).max(1).optional()
 });
 
 export const loginSchema = Joi.object({
@@ -63,6 +65,8 @@ export const updateProfileSchema = Joi.object({
   phone: Joi.string().allow('', null).optional(),
   business_name: Joi.string().allow('', null).optional(),
   tin_number: Joi.string().allow('', null).optional(),
+  is_vat_registered: Joi.boolean().optional(),
+  vat_rate: Joi.number().min(0).max(1).optional(),
   profile_image: Joi.string().uri().allow('', null).optional()
 }).min(1).messages({
   'object.min': 'At least one field is required'

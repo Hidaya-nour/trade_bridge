@@ -19,7 +19,6 @@ const RetailerCartPage: React.FC = () => {
       "Looks like you haven't added any products to your cart yet. Start browsing products from verified suppliers.",
     bulkDiscountThreshold: 50000,
     bulkDiscountPercentage: 0.1,
-    vatPercentage: 0.15,
     shippingCostPerSupplier: 250,
   };
 

@@ -19,6 +19,8 @@ export interface UpdateProfileData {
   phone?: string;
   business_name?: string;
   tin_number?: string;
+  is_vat_registered?: boolean;
+  vat_rate?: number;
   profile_image?: string;
 }
 

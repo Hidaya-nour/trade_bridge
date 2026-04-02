@@ -212,6 +212,15 @@ const SettingsPage: React.FC = () => {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [businessMessage, setBusinessMessage] = useState<string | null>(null);
+  const [businessFieldErrors, setBusinessFieldErrors] = useState<{
+    business_name: string | null;
+    tin_number: string | null;
+    vatRegistered: string | null;
+  }>({
+    business_name: null,
+    tin_number: null,
+    vatRegistered: null,
+  });
   const [securityMessage, setSecurityMessage] = useState<string | null>(null);
   const [passwordForm, setPasswordForm] = useState({
     currentPassword: "",
@@ -268,7 +277,7 @@ const SettingsPage: React.FC = () => {
     business_name: "",
     businessType: "",
     tin_number: "",
-    vatRegistered: true,
+    vatRegistered: false,
     bio: "",
     avatar: "",
   });
@@ -317,6 +326,7 @@ const SettingsPage: React.FC = () => {
       business_name: user.business_name || "",
       businessType: user.role || "",
       tin_number: user.tin_number || "",
+      vatRegistered: user.is_vat_registered === true,
       avatar: user.profile_image || "",
     }));
   }, [user, fetchUser]);
@@ -384,13 +394,46 @@ const SettingsPage: React.FC = () => {
     }
   };
 
+  const validateBusinessVerificationFields = () => {
+    if (!isSupplier) return true;
+
+    const errors = {
+      business_name: profileForm.business_name.trim()
+        ? null
+        : "Business name is required.",
+      tin_number: profileForm.tin_number.trim()
+        ? null
+        : "TIN number is required.",
+      vatRegistered:
+        typeof profileForm.vatRegistered === "boolean"
+          ? null
+          : "Please set your VAT registration status.",
+    };
+
+    setBusinessFieldErrors(errors);
+    return !errors.business_name && !errors.tin_number && !errors.vatRegistered;
+  };
+
   const handleBusinessSave = async () => {
+    if (!validateBusinessVerificationFields()) {
+      setBusinessMessage(
+        "Please fill all required business verification fields.",
+      );
+      return;
+    }
+
     try {
       await updateProfile({
         business_name: profileForm.business_name,
         tin_number: profileForm.tin_number,
+        is_vat_registered: profileForm.vatRegistered,
       });
       setBusinessMessage("Business info updated successfully");
+      setBusinessFieldErrors({
+        business_name: null,
+        tin_number: null,
+        vatRegistered: null,
+      });
     } catch {
       setBusinessMessage("Failed to update business info");
     }
@@ -506,6 +549,13 @@ const SettingsPage: React.FC = () => {
   };
 
   const handleUploadDocuments = async () => {
+    if (!validateBusinessVerificationFields()) {
+      setLicenseMessage(
+        "Business name, TIN number, and VAT status are required before document upload.",
+      );
+      return;
+    }
+
     const uploads: {
       file: File;
       document_type:
@@ -886,6 +936,8 @@ const SettingsPage: React.FC = () => {
               setLicenseExpiryDate={setLicenseExpiryDate}
               businessMessage={businessMessage}
               setBusinessMessage={setBusinessMessage}
+              businessFieldErrors={businessFieldErrors}
+              setBusinessFieldErrors={setBusinessFieldErrors}
               handleBusinessSave={handleBusinessSave}
               isLoading={isLoading}
             />

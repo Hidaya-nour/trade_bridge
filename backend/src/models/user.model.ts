@@ -14,6 +14,8 @@ export class User extends Model<IUser, UserCreationAttributes> implements IUser 
   public password_hash!: string;
   public business_name?: string;
   public tin_number?: string;
+  public is_vat_registered?: boolean;
+  public vat_rate?: number;
   public profile_image?: string;
   public verified!: boolean;
   public created_at!: Date;
@@ -67,6 +69,20 @@ User.init(
     tin_number: {
       type: DataTypes.STRING(50),
       allowNull: true,
+    },
+    is_vat_registered: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+    },
+    vat_rate: {
+      type: DataTypes.DECIMAL(5, 4),
+      allowNull: false,
+      defaultValue: 0.15,
+      validate: {
+        min: 0,
+        max: 1,
+      },
     },
     profile_image: {
       type: DataTypes.STRING(500),

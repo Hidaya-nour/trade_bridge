@@ -94,7 +94,17 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
   getTotalCartItems,
   getTotalCartValue,
 }) => {
+  const DEFAULT_VAT_RATE = 0.15;
   const CHECKOUT_DISTANCE_KM = 1;
+  const resolveProductVatRate = (product?: Partial<CatalogProduct> | null) => {
+    const supplier = product?.supplier;
+    if (!supplier || supplier.is_vat_registered !== true) return 0;
+    const parsedRate = Number(supplier.vat_rate);
+    if (Number.isFinite(parsedRate) && parsedRate >= 0 && parsedRate <= 1) {
+      return parsedRate;
+    }
+    return DEFAULT_VAT_RATE;
+  };
   const resolveProductShipping = (product?: Partial<CatalogProduct> | null) => {
     if (!product) return { shipping: 0, blocked: false };
     const deliveryAvailable = product.delivery_available !== false;
@@ -299,7 +309,8 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
         toast.error("This product is marked as no-delivery by supplier.");
         return;
       }
-      const tax = itemTotal * (config.vatPercentage || 0.15);
+      const vatRate = resolveProductVatRate(selectedProduct);
+      const tax = itemTotal * vatRate;
       const discount = 0; // No discount for single product orders
 
       const orderPayload = {
@@ -341,6 +352,9 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
 
   const directOrderShipping = selectedProduct
     ? resolveProductShipping(selectedProduct).shipping
+    : 0;
+  const directOrderVatRate = selectedProduct
+    ? resolveProductVatRate(selectedProduct)
     : 0;
 
   const handleProcessPayment = async (
@@ -1221,9 +1235,14 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
                 ...selectedProduct,
                 unit_type: selectedProduct.unit,
                 supplier: {
+                  ...(selectedProduct.supplier || {}),
                   id: selectedProduct.supplier_id,
-                  full_name: selectedProduct.supplier_name,
-                  business_name: selectedProduct.supplier_name,
+                  full_name:
+                    selectedProduct.supplier?.full_name ||
+                    selectedProduct.supplier_name,
+                  business_name:
+                    selectedProduct.supplier?.business_name ||
+                    selectedProduct.supplier_name,
                 },
               } as any,
             },
@@ -1232,24 +1251,18 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
             subtotal: selectedProduct.price * orderQuantity,
             shipping: directOrderShipping,
             discount: 0,
-            tax:
-              selectedProduct.price *
-              orderQuantity *
-              (config.vatPercentage || 0.15),
+            tax: selectedProduct.price * orderQuantity * directOrderVatRate,
             total:
               selectedProduct.price * orderQuantity +
               directOrderShipping +
-              selectedProduct.price *
-                orderQuantity *
-                (config.vatPercentage || 0.15),
+              selectedProduct.price * orderQuantity * directOrderVatRate,
             promoApplied: false,
             discountPercentage: config.bulkDiscountPercentage,
-            vatPercentage: config.vatPercentage,
+            vatPercentage: directOrderVatRate,
           }}
           config={{
             role: config.role,
             ordersPath: config.ordersPath,
-            vatPercentage: config.vatPercentage,
             bulkDiscountPercentage: config.bulkDiscountPercentage,
           }}
           onPlaceOrder={handlePlaceOrder}

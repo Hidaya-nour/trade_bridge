@@ -8,6 +8,8 @@ export interface PublicSupplier {
   business_name: string;
   full_name?: string;
   role: 'factory' | 'distributor';
+  is_vat_registered?: boolean;
+  vat_rate?: number;
   country?: string;
   profile_image?: string;
   is_verified: boolean;

@@ -29,6 +29,8 @@ export class SupplierService {
           'email', 
           'phone', 
           'verified', 
+          'is_vat_registered',
+          'vat_rate',
           'profile_image',
           'created_at'
         ]
@@ -57,6 +59,8 @@ export class SupplierService {
         'email', 
         'phone', 
         'verified', 
+        'is_vat_registered',
+        'vat_rate',
         'profile_image',
         'created_at'
       ],

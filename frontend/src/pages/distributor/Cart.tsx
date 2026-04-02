@@ -19,7 +19,6 @@ const DistributorCartPage: React.FC = () => {
       "Your factory cart is empty. Start sourcing products from Ethiopian manufacturers.",
     bulkDiscountThreshold: 100000,
     bulkDiscountPercentage: 0.15,
-    vatPercentage: 0.15,
     shippingCostPerSupplier: 500,
   };
 
