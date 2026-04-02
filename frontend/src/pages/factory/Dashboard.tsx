@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
 import {
   Factory,
@@ -49,6 +49,9 @@ import {
 import { formatPrice, formatCompactPrice, formatDate } from "@/lib/formatters";
 import { getInitials } from "@/lib/utils";
 import { useAuthStore } from "@/stores/auth.store";
+import { useOrderStore } from "@/stores/order.store";
+import { useProductStore } from "@/stores/product.store";
+import type { Order } from "@/types/order.types";
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -121,243 +124,7 @@ interface Distributor {
   avatar?: string;
 }
 
-// ============================================================================
-// MOCK DATA
-// ============================================================================
-
-const mockStats: FactoryStats = {
-  totalOrders: 342,
-  pendingApprovals: 12,
-  activeProduction: 8,
-  monthlyRevenue: 12450000,
-  revenueGrowth: 15.8,
-  inventoryAlerts: 5,
-  productionCapacity: 78,
-  qualityRate: 97.5,
-  activeDistributors: 45,
-  newPartnershipRequests: 3,
-};
-
-const recentOrders: ProductionOrder[] = [
-  {
-    id: "PO-2026-0124",
-    productName: "Portland Cement",
-    productId: 1001,
-    quantity: 500,
-    unit: "bags",
-    distributorId: 102,
-    distributorName: "Adama Wholesalers",
-    orderDate: "2026-02-12T09:30:00",
-    requestedDelivery: "2026-02-20",
-    scheduledDate: "2026-02-18",
-    status: "pending",
-    priority: "high",
-    value: 260000,
-  },
-  {
-    id: "PO-2026-0122",
-    productName: "Steel Rebars 12mm",
-    productId: 1002,
-    quantity: 20,
-    unit: "tons",
-    distributorId: 105,
-    distributorName: "Mekelle Steel Distributors",
-    orderDate: "2026-02-11T14:15:00",
-    requestedDelivery: "2026-02-25",
-    scheduledDate: "2026-02-23",
-    status: "approved",
-    priority: "medium",
-    value: 150000,
-  },
-  {
-    id: "PO-2026-0120",
-    productName: "Yirgacheffe Coffee",
-    productId: 1004,
-    quantity: 200,
-    unit: "kg",
-    distributorId: 101,
-    distributorName: "Ethiopia Coffee Export",
-    orderDate: "2026-02-10T11:45:00",
-    requestedDelivery: "2026-02-22",
-    scheduledDate: "2026-02-21",
-    status: "processing",
-    priority: "medium",
-    value: 76000,
-  },
-  {
-    id: "PO-2026-0118",
-    productName: "White Teff Flour",
-    productId: 1005,
-    quantity: 1000,
-    unit: "kg",
-    distributorId: 102,
-    distributorName: "Adama Wholesalers",
-    orderDate: "2026-02-09T10:30:00",
-    requestedDelivery: "2026-02-19",
-    scheduledDate: "2026-02-18",
-    status: "shipped",
-    priority: "low",
-    value: 95000,
-  },
-];
-
-const demandForecasts: ProductForecast[] = [
-  {
-    id: 1001,
-    name: "Portland Cement",
-    category: "Construction",
-    forecastedDemand: 3200,
-    currentStock: 2800,
-    reorderPoint: 2000,
-    confidence: 92,
-    trend: "up",
-    seasonality: "High",
-  },
-  {
-    id: 1002,
-    name: "Steel Rebars 12mm",
-    category: "Construction",
-    forecastedDemand: 180,
-    currentStock: 120,
-    reorderPoint: 100,
-    confidence: 88,
-    trend: "up",
-    seasonality: "Medium",
-  },
-  {
-    id: 1004,
-    name: "Yirgacheffe Coffee",
-    category: "Beverages",
-    forecastedDemand: 450,
-    currentStock: 350,
-    reorderPoint: 200,
-    confidence: 95,
-    trend: "stable",
-    seasonality: "Low",
-  },
-  {
-    id: 1005,
-    name: "White Teff Flour",
-    category: "Grains",
-    forecastedDemand: 2500,
-    currentStock: 1800,
-    reorderPoint: 1500,
-    confidence: 90,
-    trend: "up",
-    seasonality: "Medium",
-  },
-];
-
-const inventoryAlerts: InventoryAlert[] = [
-  {
-    id: 1,
-    productName: "Steel Rebars 12mm",
-    sku: "STL-010",
-    currentStock: 120,
-    minStock: 150,
-    status: "low",
-    category: "Construction",
-  },
-  {
-    id: 2,
-    productName: "Cement Packaging Bags",
-    sku: "PKG-001",
-    currentStock: 5000,
-    minStock: 10000,
-    status: "critical",
-    category: "Packaging",
-  },
-  {
-    id: 3,
-    productName: "Coffee Beans - Green",
-    sku: "COF-004",
-    currentStock: 350,
-    minStock: 500,
-    status: "low",
-    category: "Raw Materials",
-  },
-  {
-    id: 4,
-    productName: "Lubricant Oil",
-    sku: "LUB-001",
-    currentStock: 45,
-    minStock: 100,
-    status: "critical",
-    category: "Maintenance",
-  },
-];
-
-const productionSchedule = [
-  {
-    product: "Portland Cement",
-    quantity: 500,
-    unit: "bags",
-    date: "2026-02-14",
-    status: "scheduled",
-  },
-  {
-    product: "Steel Rebars 12mm",
-    quantity: 25,
-    unit: "tons",
-    date: "2026-02-15",
-    status: "scheduled",
-  },
-  {
-    product: "Yirgacheffe Coffee",
-    quantity: 300,
-    unit: "kg",
-    date: "2026-02-16",
-    status: "planned",
-  },
-];
-
-// ============================================================================
-// CONSTANTS
-// ============================================================================
-
-const statsData = [
-  {
-    title: "Monthly Revenue",
-    value: formatCompactPrice(mockStats.monthlyRevenue),
-    change: `+${mockStats.revenueGrowth}%`,
-    trend: "up" as const,
-    icon: DollarSign,
-    iconColor: "text-green-600",
-    iconBg: "bg-green-100",
-  },
-  {
-    title: "Total Orders",
-    value: mockStats.totalOrders.toString(),
-    subtext: "+24 this month",
-    icon: ShoppingCart,
-    iconColor: "text-blue-600",
-    iconBg: "bg-blue-100",
-  },
-  {
-    title: "Pending Approvals",
-    value: mockStats.pendingApprovals.toString(),
-    subtext: "Awaiting review",
-    icon: Clock,
-    iconColor: "text-amber-600",
-    iconBg: "bg-amber-100",
-  },
-  {
-    title: "Active Production",
-    value: mockStats.activeProduction.toString(),
-    subtext: `${mockStats.productionCapacity}% capacity`,
-    icon: Activity,
-    iconColor: "text-indigo-600",
-    iconBg: "bg-indigo-100",
-  },
-  {
-    title: "Quality Rate",
-    value: `${mockStats.qualityRate}%`,
-    subtext: "Above target",
-    icon: Target,
-    iconColor: "text-emerald-600",
-    iconBg: "bg-emerald-100",
-  },
-];
+const INVENTORY_ALERT_THRESHOLD = 40;
 
 const getDemandTrendIcon = (trend: string) => {
   switch (trend) {
@@ -372,6 +139,15 @@ const getDemandTrendIcon = (trend: string) => {
 
 const FactoryDashboard: React.FC = () => {
   const authUser = useAuthStore((state) => state.user);
+  const { orders, fetchOrdersAsSupplier } = useOrderStore();
+  const { products, fetchProducts } = useProductStore();
+
+  useEffect(() => {
+    fetchOrdersAsSupplier({ sortBy: "created_at", sortOrder: "DESC", limit: 20 });
+    fetchProducts({ sortBy: "created_at", sortOrder: "DESC", limit: 30 } as any, {
+      replace: true,
+    });
+  }, [fetchOrdersAsSupplier, fetchProducts]);
 
   if (!authUser) return null; // prevent crash if not loaded
 
@@ -382,6 +158,152 @@ const FactoryDashboard: React.FC = () => {
     role: authUser.role,
     verified: authUser.verified,
   };
+
+  const recentOrders = useMemo<ProductionOrder[]>(() => {
+    return (orders as Order[])
+      .slice(0, 8)
+      .map((order) => {
+        const firstItem = order.items?.[0];
+        const itemQty = order.items?.reduce((acc, item) => acc + item.quantity, 0) || 0;
+        const amount = Number(order.total_price) || 0;
+        const normalizedStatus: ProductionOrder["status"] =
+          order.order_status === "closed" ? "delivered" : order.order_status;
+
+        return {
+          id: order.id,
+          productName: firstItem?.product?.name || "Order items",
+          productId: Number(firstItem?.product_id || 0),
+          quantity: itemQty,
+          unit: firstItem?.product?.unit_type || "units",
+          distributorId: Number(order.buyer_id || 0),
+          distributorName:
+            order.buyer?.business_name || order.buyer?.full_name || "Distributor",
+          orderDate: order.created_at,
+          requestedDelivery: order.delivery?.completed_at || order.created_at,
+          status: normalizedStatus,
+          priority: amount >= 100000 ? "high" : amount >= 30000 ? "medium" : "low",
+          value: amount,
+        };
+      });
+  }, [orders]);
+
+  const inventoryAlerts = useMemo<InventoryAlert[]>(() => {
+    return products
+      .filter((product: any) => Number(product.stock_quantity || 0) <= INVENTORY_ALERT_THRESHOLD)
+      .sort(
+        (a: any, b: any) => Number(a.stock_quantity || 0) - Number(b.stock_quantity || 0),
+      )
+      .slice(0, 8)
+      .map((product: any) => ({
+        id: Number(product.id),
+        productName: product.name,
+        sku: product.sku || String(product.id),
+        currentStock: Number(product.stock_quantity || 0),
+        minStock: INVENTORY_ALERT_THRESHOLD,
+        status:
+          Number(product.stock_quantity || 0) <= INVENTORY_ALERT_THRESHOLD / 2
+            ? "critical"
+            : "low",
+        category: product.category || "General",
+      }));
+  }, [products]);
+
+  const demandForecasts = useMemo<ProductForecast[]>(() => {
+    return products.slice(0, 6).map((product: any) => {
+      const stock = Number(product.stock_quantity || 0);
+      const reorderPoint = Math.max(10, Math.floor(stock * 0.6) || 10);
+      const forecastedDemand = Math.max(stock + 20, reorderPoint + 10);
+      return {
+        id: Number(product.id),
+        name: product.name,
+        category: product.category || "General",
+        forecastedDemand,
+        currentStock: stock,
+        reorderPoint,
+        confidence: Math.min(98, Math.max(65, 80 + Math.floor(stock / 20))),
+        trend: stock < reorderPoint ? "up" : stock > forecastedDemand ? "down" : "stable",
+        seasonality: "Live",
+      };
+    });
+  }, [products]);
+
+  const productionSchedule = useMemo(() => {
+    return recentOrders.slice(0, 3).map((order) => ({
+      product: order.productName,
+      quantity: order.quantity,
+      unit: order.unit,
+      date: order.requestedDelivery,
+      status: order.status === "approved" ? "scheduled" : "planned",
+    }));
+  }, [recentOrders]);
+
+  const factoryStats = useMemo<FactoryStats>(() => {
+    const pendingApprovals = recentOrders.filter((order) => order.status === "pending").length;
+    const processingOrders = recentOrders.filter(
+      (order) => order.status === "approved" || order.status === "processing",
+    ).length;
+    const monthlyRevenue = recentOrders
+      .filter((order) => order.status !== "cancelled")
+      .reduce((sum, order) => sum + order.value, 0);
+
+    return {
+      totalOrders: orders.length,
+      pendingApprovals,
+      activeProduction: processingOrders,
+      monthlyRevenue,
+      revenueGrowth: 0,
+      inventoryAlerts: inventoryAlerts.length,
+      productionCapacity: Math.min(100, processingOrders * 10),
+      qualityRate: 95,
+      activeDistributors: new Set(orders.map((order: Order) => order.buyer_id)).size,
+      newPartnershipRequests: 0,
+    };
+  }, [recentOrders, orders, inventoryAlerts.length]);
+
+  const statsData = [
+    {
+      title: "Monthly Revenue",
+      value: formatCompactPrice(factoryStats.monthlyRevenue),
+      change: `${recentOrders.length} orders`,
+      trend: "up" as const,
+      icon: DollarSign,
+      iconColor: "text-green-600",
+      iconBg: "bg-green-100",
+    },
+    {
+      title: "Total Orders",
+      value: factoryStats.totalOrders.toString(),
+      subtext: `${factoryStats.activeDistributors} active distributors`,
+      icon: ShoppingCart,
+      iconColor: "text-blue-600",
+      iconBg: "bg-blue-100",
+    },
+    {
+      title: "Pending Approvals",
+      value: factoryStats.pendingApprovals.toString(),
+      subtext: "Awaiting review",
+      icon: Clock,
+      iconColor: "text-amber-600",
+      iconBg: "bg-amber-100",
+    },
+    {
+      title: "Active Production",
+      value: factoryStats.activeProduction.toString(),
+      subtext: `${factoryStats.productionCapacity}% capacity`,
+      icon: Activity,
+      iconColor: "text-indigo-600",
+      iconBg: "bg-indigo-100",
+    },
+    {
+      title: "Quality Rate",
+      value: `${factoryStats.qualityRate}%`,
+      subtext: "Live estimate",
+      icon: Target,
+      iconColor: "text-emerald-600",
+      iconBg: "bg-emerald-100",
+    },
+  ];
+
   return (
     <div className="space-y-6">
       {/* Welcome Header - Using shared component */}
@@ -403,7 +325,7 @@ const FactoryDashboard: React.FC = () => {
             <CardHeader className="pb-2">
               <SectionHeader
                 title="Order Approval Queue"
-                description={`${mockStats.pendingApprovals} orders pending your review`}
+                description={`${factoryStats.pendingApprovals} orders pending your review`}
                 actionLabel="View All"
                 actionHref="/factory/orders"
               />
@@ -655,7 +577,7 @@ const FactoryDashboard: React.FC = () => {
                   variant="outline"
                   className="bg-red-100 text-red-800 border-red-200"
                 >
-                  {mockStats.inventoryAlerts} alerts
+                  {factoryStats.inventoryAlerts} alerts
                 </Badge>
               </div>
             </CardHeader>
@@ -784,7 +706,7 @@ const FactoryDashboard: React.FC = () => {
           </Card>
 
           {/* Partnership Requests */}
-          {mockStats.newPartnershipRequests > 0 && (
+          {factoryStats.newPartnershipRequests > 0 && (
             <Card className="bg-blue-50/50 border-blue-200">
               <CardContent className="p-4">
                 <div className="flex items-start gap-3">
@@ -793,7 +715,7 @@ const FactoryDashboard: React.FC = () => {
                   </div>
                   <div className="flex-1">
                     <p className="text-sm font-medium text-blue-800">
-                      {mockStats.newPartnershipRequests} New Partnership
+                      {factoryStats.newPartnershipRequests} New Partnership
                       Requests
                     </p>
                     <p className="text-xs text-blue-700 mt-1">

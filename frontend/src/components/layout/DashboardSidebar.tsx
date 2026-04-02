@@ -150,7 +150,6 @@ const roleNavigation = {
       href: "/factory/agents",
       icon: Warehouse,
     },
-    { name: "Demand Forecast", href: "/factory/forecast", icon: TrendingUp },
     { name: "Sales Reports", href: "/factory/sales", icon: BarChart3 },
     { name: "Inventory", href: "/factory/inventory", icon: FileText },
     {
@@ -169,11 +168,7 @@ const roleNavigation = {
     },
     { name: "Delivery History", href: "/driver/history", icon: Package },
     { name: "Live Tracking", href: "/driver/tracking", icon: TrendingUp },
-    {
-      name: "Route Management",
-      href: "/driver/routes",
-      icon: TrendingUp,
-    },
+
     {
       name: "Report Issues",
       href: "/driver/issues",

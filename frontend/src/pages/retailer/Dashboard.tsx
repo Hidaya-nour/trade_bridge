@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   Package,
@@ -42,109 +42,49 @@ import { formatPrice, formatDate } from "@/lib/formatters";
 import { getInitials } from "@/lib/utils";
 import { useAuthStore } from "@/stores/auth.store";
 import { useOrderStore } from "@/stores/order.store";
+import { useSupplierStore } from "@/stores/supplier.store";
+import { useProductStore } from "@/stores/product.store";
 import orderService from "@/services/order.service";
-
-// Mock recommended suppliers
-const recommendedSuppliers = [
-  {
-    id: 101,
-    name: "Ethiopia Coffee Export",
-    category: "Beverages",
-    rating: 4.9,
-    reviews: 128,
-    deliveryTime: "2-3 days",
-    price: "$$",
-    match: "98%",
-    avatar: "EC",
-    verified: true,
-  },
-  {
-    id: 102,
-    name: "Adama Wholesalers",
-    category: "Groceries",
-    rating: 4.7,
-    reviews: 95,
-    deliveryTime: "1-2 days",
-    price: "$$",
-    match: "95%",
-    avatar: "AW",
-    verified: true,
-  },
-  {
-    id: 103,
-    name: "Ethiopian Textile",
-    category: "Fabrics",
-    rating: 4.5,
-    reviews: 67,
-    deliveryTime: "3-5 days",
-    price: "$$$",
-    match: "89%",
-    avatar: "ET",
-    verified: false,
-  },
-  {
-    id: 104,
-    name: "Bahir Dar Honey",
-    category: "Food",
-    rating: 4.8,
-    reviews: 42,
-    deliveryTime: "2-4 days",
-    price: "$$",
-    match: "87%",
-    avatar: "BH",
-    verified: true,
-  },
-];
-
-// Mock frequently ordered products
-const frequentProducts = [
-  {
-    id: 1,
-    name: "Yirgacheffe Coffee",
-    supplier: "Ethiopia Coffee Export",
-    supplierId: 101,
-    price: 450,
-    unit: "kg",
-    orders: 24,
-  },
-  {
-    id: 2,
-    name: "White Teff Flour",
-    supplier: "Adama Wholesalers",
-    supplierId: 102,
-    price: 120,
-    unit: "kg",
-    orders: 18,
-  },
-  {
-    id: 3,
-    name: "Cotton Fabric",
-    supplier: "Ethiopian Textile",
-    supplierId: 103,
-    price: 320,
-    unit: "meter",
-    orders: 15,
-  },
-  {
-    id: 4,
-    name: "Pure Honey",
-    supplier: "Bahir Dar Honey",
-    supplierId: 104,
-    price: 280,
-    unit: "jar",
-    orders: 12,
-  },
-];
 
 const RetailerDashboard: React.FC = () => {
   const authUser = useAuthStore((state) => state.user);
-  const { stats: orderStats, fetchOrderStats, isLoading } = useOrderStore();
+  const { stats: orderStats, fetchOrderStats } = useOrderStore();
+  const { getTopSuppliers } = useSupplierStore();
+  const { products, fetchProducts } = useProductStore();
   const [recentOrders, setRecentOrders] = useState<any[]>([]);
+  const [recommendedSuppliers, setRecommendedSuppliers] = useState<any[]>([]);
 
   // Fetch stats on component mount
   useEffect(() => {
     fetchOrderStats();
   }, [fetchOrderStats]);
+
+  useEffect(() => {
+    fetchProducts({ limit: 8, sortBy: "created_at", sortOrder: "DESC" } as any, {
+      replace: true,
+    });
+  }, [fetchProducts]);
+
+  useEffect(() => {
+    const loadTopSuppliers = async () => {
+      const suppliers = await getTopSuppliers(6);
+      const normalized = (suppliers || []).map((supplier) => ({
+        id: supplier.id,
+        name: supplier.business_name || supplier.full_name || "Supplier",
+        category: supplier.role,
+        rating: 4.5,
+        reviews: supplier.total_orders || 0,
+        deliveryTime: "2-5 days",
+        price: "$$",
+        match: `${Math.min(99, 80 + (supplier.total_products || 0))}%`,
+        avatar: getInitials(supplier.business_name || supplier.full_name || "SP"),
+        verified: supplier.is_verified,
+      }));
+      setRecommendedSuppliers(normalized);
+    };
+
+    loadTopSuppliers();
+  }, [getTopSuppliers]);
 
   useEffect(() => {
     const fetchOrders = async () => {
@@ -181,8 +121,6 @@ const RetailerDashboard: React.FC = () => {
         setRecentOrders(normalizedOrders);
       } catch (error) {
         console.error("Failed to fetch orders:", error);
-      } finally {
-        isLoading;
       }
     };
 
@@ -237,14 +175,32 @@ const RetailerDashboard: React.FC = () => {
     verified: authUser.verified,
   };
 
+  const frequentProducts = useMemo(() => {
+    return products.slice(0, 4).map((product: any) => ({
+      id: product.id,
+      name: product.name,
+      supplier:
+        product.supplier?.business_name ||
+        product.supplier?.full_name ||
+        "Supplier",
+      supplierId: product.supplier_id || product.supplier?.id,
+      price: Number(product.price || 0),
+      unit: product.unit_type || "unit",
+      orders: Number(product.order_count || 0),
+    }));
+  }, [products]);
+
   // Order summary data
-  const orderSummary = {
-    delivered: 45,
-    shipped: 12,
-    processing: 8,
-    pending: 5,
-    total: 156,
-  };
+  const orderSummary = useMemo(
+    () => ({
+      delivered: orderStats?.delivered_count || 0,
+      shipped: orderStats?.shipped_count || 0,
+      processing: orderStats?.processing_count || 0,
+      pending: orderStats?.pending_count || 0,
+      total: orderStats?.total_orders || 0,
+    }),
+    [orderStats],
+  );
 
   return (
     <div className="space-y-6">
@@ -526,7 +482,6 @@ const RetailerDashboard: React.FC = () => {
                 <Link to="/retailer/cart">
                   <ShoppingCart className="mr-2 h-4 w-4" />
                   View Cart
-                  <Badge className="ml-auto">3</Badge>
                 </Link>
               </Button>
               <Button

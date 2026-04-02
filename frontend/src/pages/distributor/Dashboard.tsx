@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   Package,
@@ -45,165 +45,23 @@ import {
 import { formatPrice, formatCompactPrice, formatDate } from "@/lib/formatters";
 import { getInitials } from "@/lib/utils";
 import { useAuthStore } from "@/stores/auth.store";
+import { useOrderStore } from "@/stores/order.store";
+import { useProductStore } from "@/stores/product.store";
+import deliveryService from "@/services/delivery.service";
+import type { Order } from "@/types/order.types";
 
-// Mock distributor stats
-const stats = [
-  {
-    title: "Total Orders",
-    value: "156",
-    change: "+12",
-    trend: "up" as const,
-    icon: ShoppingCart,
-    color: "text-blue-600",
-    bg: "bg-blue-100",
-  },
-  {
-    title: "Pending Orders",
-    value: "24",
-    change: "-5",
-    trend: "down" as const,
-    icon: Clock,
-    color: "text-amber-600",
-    bg: "bg-amber-100",
-  },
-  {
-    title: "Low Stock Items",
-    value: "12",
-    change: "+3",
-    trend: "up" as const,
-    icon: AlertCircle,
-    color: "text-red-600",
-    bg: "bg-red-100",
-  },
-];
+const LOW_STOCK_THRESHOLD = 30;
 
-// Mock incoming orders
-const incomingOrders = [
-  {
-    id: "ORD-2026-0245",
-    retailer: "ABC Retail Shop",
-    retailerId: 201,
-    items: 5,
-    total: 12500,
-    status: "pending" as const,
-    date: "2026-02-12T09:30:00",
-    priority: "high" as const,
-  },
-  {
-    id: "ORD-2026-0244",
-    retailer: "Mega Mart",
-    retailerId: 202,
-    items: 12,
-    total: 45800,
-    status: "pending" as const,
-    date: "2026-02-12T08:15:00",
-    priority: "high" as const,
-  },
-  {
-    id: "ORD-2026-0243",
-    retailer: "City Supermarket",
-    retailerId: 203,
-    items: 3,
-    total: 8900,
-    status: "processing" as const,
-    date: "2026-02-11T15:45:00",
-    priority: "medium" as const,
-  },
-  {
-    id: "ORD-2026-0242",
-    retailer: "Addis Mart",
-    retailerId: 204,
-    items: 8,
-    total: 23400,
-    status: "approved" as const,
-    date: "2026-02-11T11:20:00",
-    priority: "low" as const,
-  },
-];
-
-// Mock low stock products
-const lowStockProducts = [
-  {
-    id: 1,
-    name: "White Teff Flour",
-    sku: "TFF-001",
-    stock: 25,
-    minStock: 50,
-    supplier: "Ethiopia Agri",
-    status: "critical" as const,
-  },
-  {
-    id: 2,
-    name: "Soybean Oil",
-    sku: "OIL-002",
-    stock: 120,
-    minStock: 200,
-    supplier: "Adama Wholesalers",
-    status: "low" as const,
-  },
-  {
-    id: 3,
-    name: "Tomato Paste",
-    sku: "TOM-003",
-    stock: 45,
-    minStock: 100,
-    supplier: "Ethiopia Agri",
-    status: "critical" as const,
-  },
-  {
-    id: 4,
-    name: "Yirgacheffe Coffee",
-    sku: "COF-004",
-    stock: 80,
-    minStock: 150,
-    supplier: "Ethiopia Coffee Export",
-    status: "low" as const,
-  },
-];
-
-// Mock recent shipments
-const recentShipments = [
-  {
-    id: "SHP-2026-0892",
-    orderId: "ORD-2026-0238",
-    retailer: "ABC Retail Shop",
-    driver: "Tsegaye Mulugeta",
-    status: "delivered" as const,
-    date: "2026-02-11",
-  },
-  {
-    id: "SHP-2026-0891",
-    orderId: "ORD-2026-0235",
-    retailer: "City Supermarket",
-    driver: "Abebe Kebede",
-    status: "in-transit" as const,
-    date: "2026-02-11",
-  },
-  {
-    id: "SHP-2026-0890",
-    orderId: "ORD-2026-0232",
-    retailer: "Mega Mart",
-    driver: "Almaz Worku",
-    status: "pending" as const,
-    date: "2026-02-10",
-  },
-];
-
-// Mock sales data for chart
-const salesData = [
-  { month: "Jan", sales: 42000 },
-  { month: "Feb", sales: 48000 },
-  { month: "Mar", sales: 51000 },
-  { month: "Apr", sales: 54000 },
-  { month: "May", sales: 59000 },
-  { month: "Jun", sales: 62000 },
-  { month: "Jul", sales: 68000 },
-  { month: "Aug", sales: 72000 },
-  { month: "Sep", sales: 78000 },
-  { month: "Oct", sales: 82000 },
-  { month: "Nov", sales: 84000 },
-  { month: "Dec", sales: 84500 },
-];
+type DashboardIncomingOrder = {
+  id: string;
+  retailer: string;
+  retailerId?: string;
+  items: number;
+  total: number;
+  status: "pending" | "processing" | "approved" | "shipped" | "delivered";
+  date: string;
+  priority: "high" | "medium" | "low";
+};
 
 const getPriorityBadge = (priority: string) => {
   switch (priority) {
@@ -236,9 +94,32 @@ const getStockStatus = (stock: number, minStock: number) => {
 };
 
 const DistributorDashboard: React.FC = () => {
-  const [timeRange, setTimeRange] = useState("month");
-
+  const [recentShipments, setRecentShipments] = useState<any[]>([]);
   const authUser = useAuthStore((state) => state.user);
+  const { orders, fetchOrdersAsSupplier } = useOrderStore();
+  const { products, fetchProducts } = useProductStore();
+
+  useEffect(() => {
+    fetchOrdersAsSupplier({ sortBy: "created_at", sortOrder: "DESC", limit: 20 });
+    fetchProducts({ sortBy: "created_at", sortOrder: "DESC", limit: 30 } as any, {
+      replace: true,
+    });
+  }, [fetchOrdersAsSupplier, fetchProducts]);
+
+  useEffect(() => {
+    const loadShipments = async () => {
+      try {
+        const response = await deliveryService.getAll({ limit: 10 });
+        const rows = response?.data?.deliveries || response?.data || response || [];
+        const normalized = Array.isArray(rows) ? rows : [];
+        setRecentShipments(normalized);
+      } catch {
+        setRecentShipments([]);
+      }
+    };
+
+    loadShipments();
+  }, []);
 
   if (!authUser) return null; // prevent crash if not loaded
 
@@ -249,6 +130,123 @@ const DistributorDashboard: React.FC = () => {
     role: authUser.role,
     verified: authUser.verified,
   };
+
+  const incomingOrders = useMemo<DashboardIncomingOrder[]>(() => {
+    return (orders as Order[])
+      .slice(0, 4)
+      .map((order) => {
+        const buyer = order.buyer?.business_name || order.buyer?.full_name || "Retailer";
+        const totalItems = order.items?.reduce((acc, item) => acc + item.quantity, 0) || 0;
+        const amount = Number(order.total_price) || 0;
+        const status = order.order_status as DashboardIncomingOrder["status"];
+        return {
+          id: order.id,
+          retailer: buyer,
+          retailerId: order.buyer?.id,
+          items: totalItems,
+          total: amount,
+          status,
+          date: order.created_at,
+          priority: amount >= 100000 ? "high" : amount >= 30000 ? "medium" : "low",
+        };
+      });
+  }, [orders]);
+
+  const lowStockProducts = useMemo(() => {
+    return products
+      .filter((product: any) => Number(product.stock_quantity || 0) <= LOW_STOCK_THRESHOLD)
+      .sort(
+        (a: any, b: any) => Number(a.stock_quantity || 0) - Number(b.stock_quantity || 0),
+      )
+      .slice(0, 10)
+      .map((product: any) => ({
+        id: product.id,
+        name: product.name,
+        sku: product.sku || String(product.id),
+        stock: Number(product.stock_quantity || 0),
+        minStock: LOW_STOCK_THRESHOLD,
+        supplier:
+          product.supplier?.business_name ||
+          product.supplier?.full_name ||
+          authUser.business_name ||
+          "Current supplier",
+      }));
+  }, [products, authUser.business_name]);
+
+  const stats = useMemo(
+    () => [
+      {
+        title: "Total Orders",
+        value: orders.length.toString(),
+        change: `${orders.filter((o: Order) => o.order_status === "approved").length} approved`,
+        trend: "up" as const,
+        icon: ShoppingCart,
+        iconColor: "text-blue-600",
+        iconBg: "bg-blue-100",
+      },
+      {
+        title: "Pending Orders",
+        value: orders.filter((o: Order) => o.order_status === "pending").length.toString(),
+        change: `${orders.filter((o: Order) => o.order_status === "processing").length} processing`,
+        trend: "neutral" as const,
+        icon: Clock,
+        iconColor: "text-amber-600",
+        iconBg: "bg-amber-100",
+      },
+      {
+        title: "Low Stock Items",
+        value: lowStockProducts.length.toString(),
+        change: `${products.length} total products`,
+        trend: lowStockProducts.length > 0 ? ("up" as const) : ("neutral" as const),
+        icon: AlertCircle,
+        iconColor: "text-red-600",
+        iconBg: "bg-red-100",
+      },
+    ],
+    [orders, lowStockProducts.length, products.length],
+  );
+
+  const shipmentRows = useMemo(() => {
+    return recentShipments.slice(0, 4).map((shipment: any) => {
+      const shipmentStatus = String(shipment.status || "pending");
+      return {
+        id: shipment.id || shipment.delivery_number || shipment.order_id,
+        orderId: shipment.order_id || shipment.orderId || "N/A",
+        retailer:
+          shipment?.order?.buyer?.business_name ||
+          shipment?.order?.buyer?.full_name ||
+          shipment.dropoff_location ||
+          "Retailer",
+        driver:
+          shipment?.driver?.full_name ||
+          shipment?.driver?.driverUser?.full_name ||
+          "Unassigned",
+        status:
+          shipmentStatus === "in_transit"
+            ? "in-transit"
+            : shipmentStatus === "picked_up"
+              ? "in-transit"
+              : shipmentStatus,
+        date: shipment.updated_at || shipment.created_at || new Date().toISOString(),
+      };
+    });
+  }, [recentShipments]);
+
+  const todaySchedule = useMemo(() => {
+    const today = new Date().toDateString();
+    const deliveriesToday = shipmentRows.filter(
+      (shipment) => new Date(shipment.date).toDateString() === today,
+    );
+    const pendingPickupCount = incomingOrders.filter(
+      (order) => order.status === "pending" || order.status === "approved",
+    ).length;
+
+    return {
+      scheduled: deliveriesToday.length,
+      remaining: deliveriesToday.filter((delivery) => delivery.status !== "delivered").length,
+      pendingPickups: pendingPickupCount,
+    };
+  }, [shipmentRows, incomingOrders]);
 
   return (
     <div className="space-y-6">
@@ -362,7 +360,7 @@ const DistributorDashboard: React.FC = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {recentShipments.map((shipment) => (
+                {shipmentRows.map((shipment) => (
                   <div
                     key={shipment.id}
                     className="flex items-center justify-between p-3 hover:bg-accent/50 rounded-lg transition-colors"
@@ -569,9 +567,11 @@ const DistributorDashboard: React.FC = () => {
                   </div>
                   <div className="flex-1">
                     <p className="text-xs font-medium">
-                      12 deliveries scheduled
+                      {todaySchedule.scheduled} deliveries scheduled
                     </p>
-                    <p className="text-xs text-muted-foreground">8 remaining</p>
+                    <p className="text-xs text-muted-foreground">
+                      {todaySchedule.remaining} remaining
+                    </p>
                   </div>
                   <Badge>Today</Badge>
                 </div>
@@ -580,7 +580,9 @@ const DistributorDashboard: React.FC = () => {
                     <Clock className="h-4 w-4 text-amber-600" />
                   </div>
                   <div className="flex-1">
-                    <p className="text-xs font-medium">3 pending pickups</p>
+                    <p className="text-xs font-medium">
+                      {todaySchedule.pendingPickups} pending pickups
+                    </p>
                     <p className="text-xs text-muted-foreground">
                       Awaiting driver assignment
                     </p>

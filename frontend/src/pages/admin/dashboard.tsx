@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   Users,
@@ -83,6 +83,9 @@ import {
 import { formatPrice, formatCompactPrice, formatDate } from "@/lib/formatters";
 import { getInitials, cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/auth.store";
+import { useOrderStore } from "@/stores/order.store";
+import { useSupplierStore } from "@/stores/supplier.store";
+import { useDisputeStore } from "@/stores/dispute.store";
 
 // ============================================================================
 // TYPES
@@ -137,205 +140,81 @@ interface Dispute {
   priority: "high" | "medium" | "low";
 }
 
-// ============================================================================
-// MOCK DATA
-// ============================================================================
-
-const platformStats: PlatformStats = {
-  totalUsers: 1250,
-  totalOrders: 15680,
-  pendingApprovals: 24,
-  activeDisputes: 8,
-  platformGrowth: 18.5,
-  userGrowth: 12.3,
-  orderGrowth: 22.7,
-  totalSuppliers: 245,
-};
-
-const recentUsers: RecentUser[] = [
-  {
-    id: 1,
-    name: "Hidaya Nurmeika",
-    email: "hidaya@abcretail.com",
-    role: "retailer",
-    business: "ABC Retail Shop",
-    status: "active",
-    joinedDate: "2026-02-10",
-    verified: true,
-  },
-  {
-    id: 2,
-    name: "Abebe Kebede",
-    email: "abebe@adama-wholesalers.com",
-    role: "distributor",
-    business: "Adama Wholesalers",
-    status: "active",
-    joinedDate: "2026-02-09",
-    verified: true,
-  },
-  {
-    id: 3,
-    name: "Tadesse Haile",
-    email: "tadesse@mugher.com",
-    role: "factory",
-    business: "Mugher Cement",
-    status: "active",
-    joinedDate: "2026-02-08",
-    verified: true,
-  },
-  {
-    id: 4,
-    name: "Almaz Worku",
-    email: "almaz@citymarket.com",
-    role: "retailer",
-    business: "City Supermarket",
-    status: "pending",
-    joinedDate: "2026-02-07",
-    verified: false,
-  },
-  {
-    id: 5,
-    name: "Meron Assefa",
-    email: "meron@bolesuper.com",
-    role: "retailer",
-    business: "Bole Superstore",
-    status: "active",
-    joinedDate: "2026-02-06",
-    verified: true,
-  },
-  {
-    id: 6,
-    name: "Dawit Mekonnen",
-    email: "dawit@driver.com",
-    role: "driver",
-    business: "Independent Driver",
-    status: "active",
-    joinedDate: "2026-02-05",
-    verified: true,
-  },
-];
-
-const pendingApprovals: PendingApproval[] = [
-  {
-    id: 101,
-    type: "factory",
-    name: "Bahir Dar Honey",
-    business: "Bahir Dar Honey Processing",
-    email: "info@bahirdarhoney.com",
-    phone: "+251 58 234 5678",
-    submittedDate: "2026-02-12",
-    documents: ["license.pdf", "tin_certificate.pdf"],
-    priority: "high",
-  },
-  {
-    id: 102,
-    type: "distributor",
-    name: "Hawassa Wholesale",
-    business: "Hawassa Wholesale Trading",
-    email: "info@hawassawholesale.com",
-    phone: "+251 46 123 4567",
-    submittedDate: "2026-02-11",
-    documents: ["license.pdf", "tax_clearance.pdf"],
-    priority: "medium",
-  },
-  {
-    id: 103,
-    type: "driver",
-    name: "Tsegaye Mulugeta",
-    business: "Independent Driver",
-    email: "tsegaye.m@driver.com",
-    phone: "+251 91 234 5678",
-    submittedDate: "2026-02-10",
-    documents: ["license.pdf", "vehicle_reg.pdf"],
-    priority: "low",
-  },
-  {
-    id: 104,
-    type: "factory",
-    name: "Adama Plastics",
-    business: "Adama Plastics Manufacturing",
-    email: "info@adamaplastics.com",
-    phone: "+251 22 678 9012",
-    submittedDate: "2026-02-09",
-    documents: ["license.pdf", "certificate.pdf"],
-    priority: "high",
-  },
-];
-
-const disputes: Dispute[] = [
-  {
-    id: "DSP-001",
-    orderId: "ORD-2026-0245",
-    raisedBy: "ABC Retail Shop",
-    raisedByRole: "retailer",
-    against: "Adama Wholesalers",
-    againstRole: "distributor",
-    reason: "Damaged goods on delivery",
-    status: "open",
-    amount: 12500,
-    date: "2026-02-12",
-    priority: "high",
-  },
-  {
-    id: "DSP-002",
-    orderId: "ORD-2026-0238",
-    raisedBy: "Mekelle Steel Distributors",
-    raisedByRole: "distributor",
-    against: "Mekelle Steel",
-    againstRole: "factory",
-    reason: "Late delivery by 5 days",
-    status: "investigating",
-    amount: 150000,
-    date: "2026-02-10",
-    priority: "medium",
-  },
-  {
-    id: "DSP-003",
-    orderId: "ORD-2026-0232",
-    raisedBy: "Addis Mart",
-    raisedByRole: "retailer",
-    against: "Adama Wholesalers",
-    againstRole: "distributor",
-    reason: "Wrong items delivered",
-    status: "open",
-    amount: 23400,
-    date: "2026-02-09",
-    priority: "high",
-  },
-];
-
-// ============================================================================
-// CONSTANTS
-// ============================================================================
-
-const userStatusColors = {
-  active: "bg-green-100 text-green-800 border-green-200",
-  pending: "bg-yellow-100 text-yellow-800 border-yellow-200",
-  suspended: "bg-red-100 text-red-800 border-red-200",
-};
-
-const disputeStatusColors = {
-  open: "bg-yellow-100 text-yellow-800 border-yellow-200",
-  investigating: "bg-blue-100 text-blue-800 border-blue-200",
-  resolved: "bg-green-100 text-green-800 border-green-200",
-  escalated: "bg-red-100 text-red-800 border-red-200",
-};
-
-const activityStatusColors = {
-  success: "bg-green-100 text-green-800",
-  warning: "bg-yellow-100 text-yellow-800",
-  error: "bg-red-100 text-red-800",
-};
-
-// ============================================================================
-// COMPONENT
-// ============================================================================
-
 const AdminDashboard: React.FC = () => {
-  const [timeRange, setTimeRange] = useState("week");
   const [activeTab, setActiveTab] = useState("overview");
+  const [pendingApprovalsData, setPendingApprovalsData] = useState<
+    PendingApproval[]
+  >([]);
+  const [disputesData, setDisputesData] = useState<Dispute[]>([]);
 
   const authUser = useAuthStore((state) => state.user);
+  const { stats: orderStats, fetchOrderStats } = useOrderStore();
+  const { getTopSuppliers } = useSupplierStore();
+  const { fetchAll: fetchDisputes, items: disputeItems } = useDisputeStore();
+
+  useEffect(() => {
+    fetchOrderStats();
+    fetchDisputes({ limit: 20 });
+  }, [fetchOrderStats, fetchDisputes]);
+
+  useEffect(() => {
+    const loadApprovals = async () => {
+      const suppliers = await getTopSuppliers(12);
+      const approvals = (suppliers || [])
+        .filter((supplier) => !supplier.is_verified)
+        .map((supplier, index) => ({
+          id: Number(supplier.id) || index + 1,
+          type: supplier.role,
+          name: supplier.full_name || supplier.business_name || "Supplier",
+          business: supplier.business_name || supplier.full_name || "Business",
+          email: "N/A",
+          phone: "N/A",
+          submittedDate: supplier.joined_date || new Date().toISOString(),
+          documents: [],
+          priority: "medium" as const,
+        }));
+      setPendingApprovalsData(approvals);
+    };
+
+    loadApprovals();
+  }, [getTopSuppliers]);
+
+  useEffect(() => {
+    const normalizedDisputes = (disputeItems || [])
+      .slice(0, 10)
+      .map((dispute: any) => ({
+        id: String(dispute.id),
+        orderId: String(dispute.order_id || dispute.orderId || "N/A"),
+        raisedBy:
+          dispute.raised_by?.business_name ||
+          dispute.raised_by?.full_name ||
+          dispute.raisedBy ||
+          "User",
+        raisedByRole: (dispute.raised_by?.role || "retailer") as
+          | "retailer"
+          | "distributor"
+          | "factory",
+        against:
+          dispute.against?.business_name ||
+          dispute.against?.full_name ||
+          dispute.againstName ||
+          "User",
+        againstRole: (dispute.against?.role || "distributor") as
+          | "retailer"
+          | "distributor"
+          | "factory",
+        reason: dispute.reason || "No reason provided",
+        status: (dispute.status || "open") as
+          | "open"
+          | "investigating"
+          | "resolved"
+          | "escalated",
+        amount: Number(dispute.amount || dispute.order_total || 0),
+        date: dispute.created_at || new Date().toISOString(),
+        priority: (dispute.priority || "medium") as "high" | "medium" | "low",
+      }));
+    setDisputesData(normalizedDisputes);
+  }, [disputeItems]);
 
   if (!authUser) return null; // prevent crash if not loaded
 
@@ -347,12 +226,92 @@ const AdminDashboard: React.FC = () => {
     verified: authUser.verified,
   };
 
+  const livePlatformStats = useMemo<PlatformStats>(
+    () => ({
+      totalUsers: Number(orderStats?.active_users || 0),
+      totalOrders: Number(orderStats?.total_orders || 0),
+      pendingApprovals: pendingApprovalsData.length,
+      activeDisputes: disputesData.filter(
+        (dispute) => dispute.status !== "resolved",
+      ).length,
+      platformGrowth: Number(orderStats?.platform_growth || 0),
+      userGrowth: Number(orderStats?.user_growth || 0),
+      orderGrowth: Number(orderStats?.order_growth || 0),
+      totalSuppliers: Number(orderStats?.total_suppliers || 0),
+    }),
+    [orderStats, pendingApprovalsData.length, disputesData],
+  );
+
+  const recentUsersData = useMemo<RecentUser[]>(() => {
+    const fromApprovals = pendingApprovalsData.map((approval) => ({
+      id: approval.id,
+      name: approval.name,
+      email: approval.email,
+      role: approval.type === "driver" ? "driver" : approval.type,
+      business: approval.business,
+      status: "pending" as const,
+      joinedDate: approval.submittedDate,
+      verified: false,
+    }));
+
+    const fromDisputes = disputesData.flatMap((dispute, index) => [
+      {
+        id: 100000 + index * 2,
+        name: dispute.raisedBy,
+        email: "N/A",
+        role: dispute.raisedByRole,
+        business: dispute.raisedBy,
+        status: "active" as const,
+        joinedDate: dispute.date,
+        verified: true,
+      },
+      {
+        id: 100001 + index * 2,
+        name: dispute.against,
+        email: "N/A",
+        role: dispute.againstRole,
+        business: dispute.against,
+        status: "active" as const,
+        joinedDate: dispute.date,
+        verified: true,
+      },
+    ]);
+
+    const deduped = new Map<string, RecentUser>();
+    [...fromApprovals, ...fromDisputes].forEach((userRow) => {
+      if (!deduped.has(userRow.name)) {
+        deduped.set(userRow.name, userRow);
+      }
+    });
+
+    return Array.from(deduped.values()).slice(0, 8);
+  }, [pendingApprovalsData, disputesData]);
+
+  const platformHealth = useMemo(() => {
+    const totalOrders = livePlatformStats.totalOrders || 0;
+    const totalRevenue =
+      Number(orderStats?.total_revenue || 0) ||
+      Number(orderStats?.total_spent || 0);
+    const avgOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+
+    return {
+      activeUsers: livePlatformStats.totalUsers,
+      ordersToday: Number(
+        orderStats?.orders_today || orderStats?.today_orders || 0,
+      ),
+      revenueToday: Number(
+        orderStats?.revenue_today || orderStats?.today_revenue || 0,
+      ),
+      avgOrderValue,
+    };
+  }, [livePlatformStats.totalOrders, livePlatformStats.totalUsers, orderStats]);
+
   // Calculate stats for cards
   const statsData = [
     {
       title: "Total Users",
-      value: platformStats.totalUsers.toLocaleString(),
-      change: `+${platformStats.userGrowth}%`,
+      value: livePlatformStats.totalUsers.toLocaleString(),
+      change: `+${livePlatformStats.userGrowth}%`,
       trend: "up" as const,
       icon: Users,
       iconBg: "bg-blue-100",
@@ -360,8 +319,8 @@ const AdminDashboard: React.FC = () => {
     },
     {
       title: "Total Orders",
-      value: platformStats.totalOrders.toLocaleString(),
-      change: `+${platformStats.orderGrowth}%`,
+      value: livePlatformStats.totalOrders.toLocaleString(),
+      change: `+${livePlatformStats.orderGrowth}%`,
       trend: "up" as const,
       icon: ShoppingCart,
       iconBg: "bg-green-100",
@@ -370,17 +329,20 @@ const AdminDashboard: React.FC = () => {
 
     {
       title: "Pending Approvals",
-      value: platformStats.pendingApprovals,
-      change: "+8",
-      trend: "up" as const,
+      value: livePlatformStats.pendingApprovals,
+      change: `${pendingApprovalsData.length} awaiting review`,
+      trend:
+        pendingApprovalsData.length > 0
+          ? ("up" as const)
+          : ("neutral" as const),
       icon: Clock,
       iconBg: "bg-amber-100",
       iconColor: "text-amber-600",
     },
     {
       title: "Suppliers",
-      value: platformStats.totalSuppliers,
-      change: "+8",
+      value: livePlatformStats.totalSuppliers,
+      change: `${livePlatformStats.activeDisputes} active disputes`,
       trend: "up" as const,
       icon: Clock,
       iconBg: "bg-amber-100",
@@ -410,20 +372,20 @@ const AdminDashboard: React.FC = () => {
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="approvals">
             Pending Approvals
-            {platformStats.pendingApprovals > 0 && (
+            {livePlatformStats.pendingApprovals > 0 && (
               <Badge variant="secondary" className="ml-2">
-                {platformStats.pendingApprovals}
+                {livePlatformStats.pendingApprovals}
               </Badge>
             )}
           </TabsTrigger>
           <TabsTrigger value="disputes">
             Active Disputes
-            {platformStats.activeDisputes > 0 && (
+            {livePlatformStats.activeDisputes > 0 && (
               <Badge
                 variant="secondary"
                 className="ml-2 bg-red-100 text-red-800"
               >
-                {platformStats.activeDisputes}
+                {livePlatformStats.activeDisputes}
               </Badge>
             )}
           </TabsTrigger>
@@ -444,7 +406,7 @@ const AdminDashboard: React.FC = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {recentUsers.slice(0, 5).map((user) => (
+                  {recentUsersData.slice(0, 5).map((user) => (
                     <div
                       key={user.id}
                       className="flex items-center justify-between p-2 hover:bg-accent/50 rounded-lg transition-colors"
@@ -524,22 +486,22 @@ const AdminDashboard: React.FC = () => {
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">User Growth</span>
                     <span className="font-medium text-green-600">
-                      +{platformStats.userGrowth}%
+                      +{livePlatformStats.userGrowth}%
                     </span>
                   </div>
                   <Progress
-                    value={platformStats.userGrowth * 5}
+                    value={livePlatformStats.userGrowth * 5}
                     className="h-1.5"
                   />
 
                   <div className="flex justify-between text-sm mt-3">
                     <span className="text-muted-foreground">Order Growth</span>
                     <span className="font-medium text-green-600">
-                      +{platformStats.orderGrowth}%
+                      +{livePlatformStats.orderGrowth}%
                     </span>
                   </div>
                   <Progress
-                    value={platformStats.orderGrowth * 4}
+                    value={livePlatformStats.orderGrowth * 4}
                     className="h-1.5"
                   />
 
@@ -548,11 +510,11 @@ const AdminDashboard: React.FC = () => {
                       Platform Growth
                     </span>
                     <span className="font-medium text-green-600">
-                      +{platformStats.platformGrowth}%
+                      +{livePlatformStats.platformGrowth}%
                     </span>
                   </div>
                   <Progress
-                    value={platformStats.platformGrowth * 5}
+                    value={livePlatformStats.platformGrowth * 5}
                     className="h-1.5"
                   />
                 </div>
@@ -564,20 +526,24 @@ const AdminDashboard: React.FC = () => {
                     <span className="text-sm text-muted-foreground">
                       Active Users
                     </span>
-                    <span className="text-sm font-medium">1,024</span>
+                    <span className="text-sm font-medium">
+                      {platformHealth.activeUsers.toLocaleString()}
+                    </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-sm text-muted-foreground">
                       Orders Today
                     </span>
-                    <span className="text-sm font-medium">156</span>
+                    <span className="text-sm font-medium">
+                      {platformHealth.ordersToday.toLocaleString()}
+                    </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-sm text-muted-foreground">
                       Revenue Today
                     </span>
                     <span className="text-sm font-medium">
-                      {formatCompactPrice(450000)}
+                      {formatCompactPrice(platformHealth.revenueToday)}
                     </span>
                   </div>
                   <div className="flex justify-between">
@@ -585,7 +551,7 @@ const AdminDashboard: React.FC = () => {
                       Avg. Order Value
                     </span>
                     <span className="text-sm font-medium">
-                      {formatPrice(2885)}
+                      {formatPrice(platformHealth.avgOrderValue)}
                     </span>
                   </div>
                 </div>
@@ -618,9 +584,9 @@ const AdminDashboard: React.FC = () => {
                   <Link to="/admin/approvals">
                     <Shield className="h-5 w-5" />
                     <span className="text-xs">Review Approvals</span>
-                    {platformStats.pendingApprovals > 0 && (
+                    {livePlatformStats.pendingApprovals > 0 && (
                       <Badge className="ml-auto bg-red-100 text-red-800">
-                        {platformStats.pendingApprovals}
+                        {livePlatformStats.pendingApprovals}
                       </Badge>
                     )}
                   </Link>
@@ -643,9 +609,9 @@ const AdminDashboard: React.FC = () => {
                   <Link to="/admin/disputes">
                     <ShieldAlert className="h-5 w-5" />
                     <span className="text-xs">Disputes</span>
-                    {platformStats.activeDisputes > 0 && (
+                    {livePlatformStats.activeDisputes > 0 && (
                       <Badge className="ml-auto bg-red-100 text-red-800">
-                        {platformStats.activeDisputes}
+                        {livePlatformStats.activeDisputes}
                       </Badge>
                     )}
                   </Link>
@@ -657,7 +623,7 @@ const AdminDashboard: React.FC = () => {
 
         {/* ===== APPROVALS TAB ===== */}
         <TabsContent value="approvals" className="space-y-4">
-          {pendingApprovals.length === 0 ? (
+          {pendingApprovalsData.length === 0 ? (
             <EmptyState
               icon={Shield}
               title="No pending approvals"
@@ -665,7 +631,7 @@ const AdminDashboard: React.FC = () => {
             />
           ) : (
             <div className="space-y-4">
-              {pendingApprovals.map((approval) => (
+              {pendingApprovalsData.map((approval) => (
                 <Card key={approval.id} className="overflow-hidden">
                   <CardContent className="p-6">
                     <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
@@ -755,7 +721,7 @@ const AdminDashboard: React.FC = () => {
 
         {/* ===== DISPUTES TAB ===== */}
         <TabsContent value="disputes" className="space-y-4">
-          {disputes.length === 0 ? (
+          {disputesData.length === 0 ? (
             <EmptyState
               icon={ShieldAlert}
               title="No active disputes"
@@ -763,7 +729,7 @@ const AdminDashboard: React.FC = () => {
             />
           ) : (
             <div className="space-y-4">
-              {disputes.map((dispute) => (
+              {disputesData.map((dispute) => (
                 <Card key={dispute.id} className="overflow-hidden">
                   <CardContent className="p-6">
                     <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">

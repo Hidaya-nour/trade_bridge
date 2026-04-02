@@ -42,6 +42,32 @@ export class ProductService {
       throw new AppError('Missing required fields: name, category, price, unit_type', 400);
     }
 
+    const deliveryAvailable = productData.delivery_available !== false;
+    const deliveryPricing =
+      productData.delivery_pricing === 'paid' ? 'paid' : 'free';
+    const deliveryFeePerKm =
+      deliveryAvailable && deliveryPricing === 'paid'
+        ? Number(productData.delivery_fee_per_km || 0)
+        : 0;
+    const freeDeliveryMaxDistanceKm =
+      deliveryAvailable && productData.free_delivery_max_distance_km !== undefined
+        ? Number(productData.free_delivery_max_distance_km)
+        : null;
+
+    if (deliveryFeePerKm < 0) {
+      throw new AppError('delivery_fee_per_km cannot be negative', 400);
+    }
+    if (deliveryAvailable && deliveryPricing === 'paid' && deliveryFeePerKm <= 0) {
+      throw new AppError('delivery_fee_per_km must be greater than 0 for paid delivery', 400);
+    }
+    if (
+      freeDeliveryMaxDistanceKm !== null &&
+      !Number.isNaN(freeDeliveryMaxDistanceKm) &&
+      freeDeliveryMaxDistanceKm < 0
+    ) {
+      throw new AppError('free_delivery_max_distance_km cannot be negative', 400);
+    }
+
     const product = await this.productRepo.createProduct({
       supplier_id: userId,
       name: productData.name,
@@ -53,6 +79,13 @@ export class ProductService {
       unit_type: productData.unit_type,
       images: productData.images || [],
       is_available: productData.is_available !== undefined ? productData.is_available : 1,
+      delivery_available: deliveryAvailable,
+      delivery_pricing: deliveryPricing,
+      delivery_fee_per_km: deliveryFeePerKm,
+      free_delivery_max_distance_km:
+        freeDeliveryMaxDistanceKm === null || Number.isNaN(freeDeliveryMaxDistanceKm)
+          ? null
+          : freeDeliveryMaxDistanceKm,
     });
 
     logger.info(`Product created: ${product.id} by user: ${userId}`);
@@ -67,6 +100,35 @@ export class ProductService {
   if (product.supplier_id !== userId) {
     const user = await this.userRepo.findById(userId);
     if (user?.role !== 'admin') throw new AppError('You can only update your own products', 403);
+  }
+
+  if (updateData.delivery_fee_per_km !== undefined && Number(updateData.delivery_fee_per_km) < 0) {
+    throw new AppError('delivery_fee_per_km cannot be negative', 400);
+  }
+  if (
+    updateData.free_delivery_max_distance_km !== undefined &&
+    updateData.free_delivery_max_distance_km !== null &&
+    Number(updateData.free_delivery_max_distance_km) < 0
+  ) {
+    throw new AppError('free_delivery_max_distance_km cannot be negative', 400);
+  }
+
+  if (updateData.delivery_available === false) {
+    updateData.delivery_pricing = 'free';
+    updateData.delivery_fee_per_km = 0;
+    updateData.free_delivery_max_distance_km = null;
+  }
+
+  if (updateData.delivery_pricing === 'free') {
+    updateData.delivery_fee_per_km = 0;
+  }
+  if (
+    updateData.delivery_available !== false &&
+    updateData.delivery_pricing === 'paid' &&
+    updateData.delivery_fee_per_km !== undefined &&
+    Number(updateData.delivery_fee_per_km) <= 0
+  ) {
+    throw new AppError('delivery_fee_per_km must be greater than 0 for paid delivery', 400);
   }
 
   delete updateData.id;

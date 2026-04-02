@@ -94,6 +94,34 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
   getTotalCartItems,
   getTotalCartValue,
 }) => {
+  const CHECKOUT_DISTANCE_KM = 1;
+  const resolveProductShipping = (product?: Partial<CatalogProduct> | null) => {
+    if (!product) return { shipping: 0, blocked: false };
+    const deliveryAvailable = product.delivery_available !== false;
+    if (!deliveryAvailable) return { shipping: 0, blocked: true };
+
+    const feePerKm = Number(product.delivery_fee_per_km || 0);
+    const pricing = String(product.delivery_pricing || "").toLowerCase();
+    const freeMaxKm =
+      product.free_delivery_max_distance_km !== null &&
+      product.free_delivery_max_distance_km !== undefined
+        ? Number(product.free_delivery_max_distance_km)
+        : null;
+
+    if (freeMaxKm !== null && CHECKOUT_DISTANCE_KM <= freeMaxKm) {
+      return { shipping: 0, blocked: false };
+    }
+
+    if (pricing === "paid" || feePerKm > 0) {
+      return {
+        shipping: Number((feePerKm * CHECKOUT_DISTANCE_KM).toFixed(2)),
+        blocked: false,
+      };
+    }
+
+    return { shipping: 0, blocked: false };
+  };
+
   const getMapUrl = (product: CatalogProduct) => {
     const lat = product.latitude;
     const lng = product.longitude;
@@ -262,11 +290,15 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
     deliveryOption?: string,
   ) => {
     if (!selectedProduct) return;
-    const selectedDeliveryOption = deliveryOption || "standard";
+    const selectedDeliveryOption = deliveryOption || "supplier_policy";
 
     try {
       const itemTotal = selectedProduct.price * orderQuantity;
-      const shipping = config.shippingCostPerSupplier || 250;
+      const { shipping, blocked } = resolveProductShipping(selectedProduct);
+      if (blocked) {
+        toast.error("This product is marked as no-delivery by supplier.");
+        return;
+      }
       const tax = itemTotal * (config.vatPercentage || 0.15);
       const discount = 0; // No discount for single product orders
 
@@ -306,6 +338,10 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
       return;
     }
   };
+
+  const directOrderShipping = selectedProduct
+    ? resolveProductShipping(selectedProduct).shipping
+    : 0;
 
   const handleProcessPayment = async (
     orderId: string,
@@ -1194,7 +1230,7 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
           ]}
           summary={{
             subtotal: selectedProduct.price * orderQuantity,
-            shipping: config.shippingCostPerSupplier || 250,
+            shipping: directOrderShipping,
             discount: 0,
             tax:
               selectedProduct.price *
@@ -1202,7 +1238,7 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
               (config.vatPercentage || 0.15),
             total:
               selectedProduct.price * orderQuantity +
-              (config.shippingCostPerSupplier || 250) +
+              directOrderShipping +
               selectedProduct.price *
                 orderQuantity *
                 (config.vatPercentage || 0.15),

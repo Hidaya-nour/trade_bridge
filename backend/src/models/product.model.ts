@@ -4,7 +4,19 @@ import { IProduct } from '../types/product.types';
 import User from './user.model';
 
 interface ProductCreationAttributes
-  extends Optional<IProduct, 'id' | 'created_at' | 'updated_at' | 'images' | 'rating' | 'review_count'> {}
+  extends Optional<
+    IProduct,
+    | 'id'
+    | 'created_at'
+    | 'updated_at'
+    | 'images'
+    | 'rating'
+    | 'review_count'
+    | 'delivery_available'
+    | 'delivery_pricing'
+    | 'delivery_fee_per_km'
+    | 'free_delivery_max_distance_km'
+  > {}
 
 export class Product extends Model<IProduct, ProductCreationAttributes> implements IProduct {
   public id!: string;
@@ -21,6 +33,10 @@ export class Product extends Model<IProduct, ProductCreationAttributes> implemen
   public images!: any;
   public rating!: number;
   public review_count?: number;
+  public delivery_available?: boolean;
+  public delivery_pricing?: 'free' | 'paid';
+  public delivery_fee_per_km?: number | null;
+  public free_delivery_max_distance_km?: number | null;
   public is_available!: boolean;
   public created_at!: Date;
   public updated_at!: Date;
@@ -127,6 +143,31 @@ Product.init(
     min: 0,
   },
 },
+    delivery_available: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: true,
+    },
+    delivery_pricing: {
+      type: DataTypes.ENUM('free', 'paid'),
+      allowNull: false,
+      defaultValue: 'free',
+    },
+    delivery_fee_per_km: {
+      type: DataTypes.DECIMAL(10, 2),
+      allowNull: true,
+      defaultValue: 0,
+      validate: {
+        min: 0,
+      },
+    },
+    free_delivery_max_distance_km: {
+      type: DataTypes.DECIMAL(10, 2),
+      allowNull: true,
+      validate: {
+        min: 0,
+      },
+    },
     created_at: {
       type: DataTypes.DATE,
       defaultValue: DataTypes.NOW,

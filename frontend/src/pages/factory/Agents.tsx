@@ -184,7 +184,7 @@ const AgentsPage: React.FC = () => {
   }
 
   return (
-    <div className="p-6">
+    <div className="p-2">
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
         <div>

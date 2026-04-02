@@ -20,6 +20,10 @@ export interface Product {
   is_available: boolean; 
   rating: number;
   review_count:number;
+  delivery_available?: boolean;
+  delivery_pricing?: "free" | "paid";
+  delivery_fee_per_km?: number | null;
+  free_delivery_max_distance_km?: number | null;
   reviews?: ReviewItem[];  created_at: string;
   updated_at: string;
   deleted_at?: string | null;
@@ -87,6 +91,10 @@ export interface CatalogProduct {
   volume_discount?: string;
   lead_time?: string;
   payment_terms?: string[];
+  delivery_available?: boolean;
+  delivery_pricing?: "free" | "paid";
+  delivery_fee_per_km?: number | null;
+  free_delivery_max_distance_km?: number | null;
 }
 
 export interface CatalogConfig {
@@ -175,6 +183,10 @@ export interface CreateProductData {
   unit_type: string;
   images?: string[];
   is_available?: boolean;
+  delivery_available?: boolean;
+  delivery_pricing?: "free" | "paid";
+  delivery_fee_per_km?: number | null;
+  free_delivery_max_distance_km?: number | null;
 }
 
 export interface UpdateProductData extends Partial<CreateProductData> {
@@ -223,6 +235,10 @@ export interface ProductFormData {
   unit_type: string;
   images?: string[];
   is_available: boolean;
+  delivery_available: boolean;
+  delivery_pricing: "free" | "paid";
+  delivery_fee_per_km?: number | null;
+  free_delivery_max_distance_km?: number | null;
 }
 
 // ============================================================================

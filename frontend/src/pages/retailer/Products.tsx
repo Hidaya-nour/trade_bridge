@@ -197,6 +197,10 @@ const RetailerProductsPage: React.FC = () => {
         unit: product.unit_type,
         description: product.description || "",
         stock_quantity: product.stock_quantity,
+        delivery_available: product.delivery_available,
+        delivery_pricing: product.delivery_pricing,
+        delivery_fee_per_km: product.delivery_fee_per_km,
+        free_delivery_max_distance_km: product.free_delivery_max_distance_km,
         delivery_time: "2-3 days",
         tags: [product.category].filter((tag): tag is string => Boolean(tag)),
       };

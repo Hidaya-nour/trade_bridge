@@ -394,7 +394,7 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ onMenuClick }) => {
               </SheetHeader>
               <Tabs defaultValue="all" className="flex-1">
                 <div className="px-6 pt-4">
-                  <TabsList className="grid w-full grid-cols-3 h-9 p-1 bg-muted/50">
+                  <TabsList className="grid w-full grid-cols-2 h-9 p-1 bg-muted/50">
                     <TabsTrigger
                       value="all"
                       className="text-xs data-[state=active]:bg-background data-[state=active]:shadow-sm"
@@ -414,12 +414,6 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ onMenuClick }) => {
                           {counts.unread}
                         </Badge>
                       )}
-                    </TabsTrigger>
-                    <TabsTrigger
-                      value="mentions"
-                      className="text-xs data-[state=active]:bg-background data-[state=active]:shadow-sm"
-                    >
-                      Mentions
                     </TabsTrigger>
                   </TabsList>
                 </div>
@@ -542,17 +536,6 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ onMenuClick }) => {
                       )}
                     </div>
                   </ScrollArea>
-                </TabsContent>
-                <TabsContent value="mentions" className="mt-0">
-                  <div className="flex h-[400px] flex-col items-center justify-center gap-2 text-center px-6">
-                    <div className="rounded-full bg-muted p-3">
-                      <MessageSquare className="h-6 w-6 text-muted-foreground/50" />
-                    </div>
-                    <p className="text-sm font-medium">No mentions</p>
-                    <p className="text-xs text-muted-foreground">
-                      When someone mentions you, it'll appear here
-                    </p>
-                  </div>
                 </TabsContent>
               </Tabs>
             </SheetContent>

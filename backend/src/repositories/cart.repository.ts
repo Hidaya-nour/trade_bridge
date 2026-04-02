@@ -24,7 +24,21 @@ export class CartRepository extends BaseRepository<Cart> {
             {
               model: Product,
               as: 'product',
-              attributes: ['id', 'name', 'price', 'unit_type', 'images', 'supplier_id', 'is_available', 'stock_quantity', 'min_order_amount']
+              attributes: [
+                'id',
+                'name',
+                'price',
+                'unit_type',
+                'images',
+                'supplier_id',
+                'is_available',
+                'stock_quantity',
+                'min_order_amount',
+                'delivery_available',
+                'delivery_pricing',
+                'delivery_fee_per_km',
+                'free_delivery_max_distance_km',
+              ]
             }
           ]
         }

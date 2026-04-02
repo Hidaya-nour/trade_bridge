@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   Truck,
@@ -45,6 +45,8 @@ import {
   formatDateTime,
 } from "@/lib/formatters";
 import { cn, getInitials } from "@/lib/utils";
+import { useAuthStore } from "@/stores/auth.store";
+import deliveryService from "@/services/delivery.service";
 
 // ============================================================================
 // TYPES
@@ -94,141 +96,56 @@ interface DriverStats {
   totalDeliveries: number;
   completedToday: number;
   pendingDeliveries: number;
-  onTimeRate: number;
+
   totalDistance: number;
   rating: number;
 }
 
-// ============================================================================
-// MOCK DATA
-// ============================================================================
+const mapApiDelivery = (delivery: any): Delivery => {
+  const status = (delivery?.status || "assigned") as DeliveryStatus;
+  const items = Array.isArray(delivery?.order?.items)
+    ? delivery.order.items.map((item: any) => ({
+        name: item?.product?.name || "Item",
+        quantity: Number(item?.quantity || 0),
+        unit: item?.product?.unit_type || "unit",
+      }))
+    : [];
 
-// ============================================================================
-// MOCK DATA - UPDATED to match WelcomeHeader props
-// ============================================================================
+  const orderId = String(delivery?.order_id || delivery?.order?.id || delivery?.id || "");
+  const buyer = delivery?.order?.buyer;
+  const supplier = delivery?.order?.supplier;
+  const driver = delivery?.driver?.driverUser || delivery?.driver;
 
-const mockDriver = {
-  id: "6", // Changed to string
-  name: "Dawit Mekonnen",
-  business: "Independent Driver", // Added business field
-  role: "driver" as const, // Added role field
-  verified: true, // Added verified field
-  email: "dawit@driver.com",
-  phone: "+251 91 234 5678",
-  vehicleType: "Truck",
-  vehiclePlate: "AA-1234-AB",
-  joinedDate: "2026-01-15",
-  rating: 4.8,
-  totalDeliveries: 342,
-  completedToday: 4,
+  return {
+    id: String(delivery?.id || orderId),
+    deliveryNumber: String(delivery?.delivery_number || delivery?.id || orderId),
+    orderId,
+    orderNumber: String(delivery?.order_number || orderId),
+    pickupLocation: delivery?.pickup_location || "Pickup not set",
+    pickupAddress: delivery?.pickup_address || delivery?.pickup_location || "Not provided",
+    pickupContact:
+      supplier?.business_name || supplier?.full_name || supplier?.user?.full_name || "Supplier",
+    pickupPhone: supplier?.phone || supplier?.user?.phone || "N/A",
+    dropoffLocation: delivery?.dropoff_location || "Dropoff not set",
+    dropoffAddress: delivery?.dropoff_address || delivery?.dropoff_location || "Not provided",
+    dropoffContact: buyer?.business_name || buyer?.full_name || "Customer",
+    dropoffPhone: buyer?.phone || "N/A",
+    items,
+    status,
+    assignedAt: delivery?.created_at || new Date().toISOString(),
+    pickedUpAt: delivery?.picked_up_at,
+    deliveredAt: delivery?.completed_at,
+    estimatedDelivery: delivery?.estimated_delivery || delivery?.updated_at || new Date().toISOString(),
+    distance: Number(delivery?.distance_km || 0),
+    priority: items.length > 8 ? "high" : items.length > 3 ? "medium" : "low",
+    notes: delivery?.notes,
+    supplierName:
+      supplier?.business_name || supplier?.full_name || supplier?.user?.full_name || "Supplier",
+    supplierPhone: supplier?.phone || supplier?.user?.phone || "N/A",
+    customerName: buyer?.business_name || buyer?.full_name || "Customer",
+    customerPhone: buyer?.phone || "N/A",
+  };
 };
-
-const mockDeliveries: Delivery[] = [
-  {
-    id: "DEL-001",
-    deliveryNumber: "DEL-2026-001",
-    orderId: "ORD-001",
-    orderNumber: "ORD-2026-0245",
-    pickupLocation: "Adama Wholesalers",
-    pickupAddress: "Adama Industrial Zone, Adama",
-    pickupContact: "Abebe Kebede",
-    pickupPhone: "+251 92 345 6789",
-    dropoffLocation: "ABC Retail Shop",
-    dropoffAddress: "Bole Road, Addis Ababa",
-    dropoffContact: "Hidaya Nurmeika",
-    dropoffPhone: "+251 91 234 5678",
-    items: [
-      { name: "Premium Wheat Flour", quantity: 50, unit: "kg" },
-      { name: "Cooking Oil", quantity: 20, unit: "liters" },
-    ],
-    status: "assigned",
-    assignedAt: "2026-02-14T08:30:00",
-    estimatedDelivery: "2026-02-14T14:00:00",
-    distance: 85,
-    priority: "high",
-    supplierName: "Adama Wholesalers",
-    supplierPhone: "+251 92 345 6789",
-    customerName: "ABC Retail Shop",
-    customerPhone: "+251 91 234 5678",
-  },
-  {
-    id: "DEL-002",
-    deliveryNumber: "DEL-2026-002",
-    orderId: "ORD-002",
-    orderNumber: "ORD-2026-0250",
-    pickupLocation: "Mugher Cement",
-    pickupAddress: "Mugher Factory, Addis Ababa",
-    pickupContact: "Tadesse Haile",
-    pickupPhone: "+251 93 456 7890",
-    dropoffLocation: "Adama Wholesalers",
-    dropoffAddress: "Adama Industrial Zone, Adama",
-    dropoffContact: "Abebe Kebede",
-    dropoffPhone: "+251 92 345 6789",
-    items: [{ name: "Industrial Grade Cement", quantity: 500, unit: "bags" }],
-    status: "in_transit",
-    assignedAt: "2026-02-14T09:00:00",
-    pickedUpAt: "2026-02-14T10:15:00",
-    estimatedDelivery: "2026-02-14T16:00:00",
-    distance: 95,
-    priority: "medium",
-    supplierName: "Mugher Cement",
-    supplierPhone: "+251 93 456 7890",
-    customerName: "Adama Wholesalers",
-    customerPhone: "+251 92 345 6789",
-  },
-  {
-    id: "DEL-003",
-    deliveryNumber: "DEL-2026-003",
-    orderId: "ORD-003",
-    orderNumber: "ORD-2026-0255",
-    pickupLocation: "Bahir Dar Honey",
-    pickupAddress: "Bahir Dar City Center, Bahir Dar",
-    pickupContact: "Mulugeta Dessie",
-    pickupPhone: "+251 99 012 3456",
-    dropoffLocation: "City Supermarket",
-    dropoffAddress: "Piazza, Bahir Dar",
-    dropoffContact: "Almaz Worku",
-    dropoffPhone: "+251 94 567 8901",
-    items: [{ name: "Pure White Honey", quantity: 30, unit: "kg" }],
-    status: "delivered",
-    assignedAt: "2026-02-13T10:00:00",
-    pickedUpAt: "2026-02-13T11:30:00",
-    deliveredAt: "2026-02-13T14:45:00",
-    estimatedDelivery: "2026-02-13T15:00:00",
-    distance: 15,
-    priority: "low",
-    supplierName: "Bahir Dar Honey",
-    supplierPhone: "+251 99 012 3456",
-    customerName: "City Supermarket",
-    customerPhone: "+251 94 567 8901",
-  },
-  {
-    id: "DEL-004",
-    deliveryNumber: "DEL-2026-004",
-    orderId: "ORD-004",
-    orderNumber: "ORD-2026-0238",
-    pickupLocation: "Tigray Construction",
-    pickupAddress: "Industrial Area, Mekelle",
-    pickupContact: "Berhanu Tekle",
-    pickupPhone: "+251 34 567 8901",
-    dropoffLocation: "Mekelle Steel Distributors",
-    dropoffAddress: "Main Market, Mekelle",
-    dropoffContact: "Tekle Berhan",
-    dropoffPhone: "+251 34 678 9012",
-    items: [{ name: "Construction Steel", quantity: 100, unit: "pieces" }],
-    status: "failed",
-    assignedAt: "2026-02-13T13:00:00",
-    pickedUpAt: "2026-02-13T14:30:00",
-    estimatedDelivery: "2026-02-13T17:00:00",
-    distance: 12,
-    priority: "high",
-    notes: "Customer unavailable at delivery location",
-    supplierName: "Tigray Construction",
-    supplierPhone: "+251 34 567 8901",
-    customerName: "Mekelle Steel Distributors",
-    customerPhone: "+251 34 678 9012",
-  },
-];
 
 // ============================================================================
 // CONSTANTS
@@ -266,7 +183,9 @@ const statusLabels: Record<DeliveryStatus, string> = {
 // ============================================================================
 
 export const DriverDashboard: React.FC = () => {
+  const authUser = useAuthStore((state) => state.user);
   const [activeTab, setActiveTab] = useState("active");
+  const [deliveries, setDeliveries] = useState<Delivery[]>([]);
   const [selectedDelivery, setSelectedDelivery] = useState<Delivery | null>(
     null,
   );
@@ -276,37 +195,86 @@ export const DriverDashboard: React.FC = () => {
   const [issueReport, setIssueReport] = useState("");
   const [showIssueDialog, setShowIssueDialog] = useState(false);
 
+  useEffect(() => {
+    const loadDeliveries = async () => {
+      try {
+        const response = await deliveryService.getMyDeliveries();
+        const rows = response?.data?.deliveries || [];
+        setDeliveries(Array.isArray(rows) ? rows.map(mapApiDelivery) : []);
+      } catch {
+        setDeliveries([]);
+      }
+    };
+
+    loadDeliveries();
+  }, []);
+
+  if (!authUser) return null;
+
+  const driverUser = {
+    id: authUser.id,
+    name: authUser.full_name,
+    business: authUser.business_name ?? "Independent Driver",
+    role: authUser.role,
+    verified: authUser.verified,
+  };
+
   // Filter deliveries
-  const activeDeliveries = mockDeliveries.filter(
-    (d) =>
-      d.status !== "delivered" &&
-      d.status !== "failed" &&
-      d.status !== "cancelled",
+  const activeDeliveries = useMemo(
+    () =>
+      deliveries.filter(
+        (d) =>
+          d.status !== "delivered" &&
+          d.status !== "failed" &&
+          d.status !== "cancelled",
+      ),
+    [deliveries],
   );
-  const completedDeliveries = mockDeliveries.filter(
-    (d) =>
-      d.status === "delivered" ||
-      d.status === "failed" ||
-      d.status === "cancelled",
+  const completedDeliveries = useMemo(
+    () =>
+      deliveries.filter(
+        (d) =>
+          d.status === "delivered" ||
+          d.status === "failed" ||
+          d.status === "cancelled",
+      ),
+    [deliveries],
   );
 
   // Calculate stats
   const stats: DriverStats = {
-    totalDeliveries: mockDriver.totalDeliveries,
-    completedToday: mockDriver.completedToday,
+    totalDeliveries: deliveries.length,
+    completedToday: completedDeliveries.filter((delivery) => {
+      const deliveryDate = delivery.deliveredAt || delivery.assignedAt;
+      return new Date(deliveryDate).toDateString() === new Date().toDateString();
+    }).length,
     pendingDeliveries: activeDeliveries.length,
-    onTimeRate: 96,
-    totalDistance: 187,
-    rating: mockDriver.rating,
+    totalDistance: deliveries.reduce((sum, delivery) => sum + delivery.distance, 0),
+    rating: 4.8,
   };
 
   // Handle status update
-  const handleUpdateStatus = () => {
-    if (selectedDelivery) {
-      console.log("Updating delivery:", selectedDelivery.id, "to:", newStatus);
+  const handleUpdateStatus = async () => {
+    if (!selectedDelivery) return;
+    try {
+      await deliveryService.updateStatus(selectedDelivery.id, newStatus);
+      setDeliveries((current) =>
+        current.map((delivery) =>
+          delivery.id === selectedDelivery.id
+            ? {
+                ...delivery,
+                status: newStatus,
+                deliveredAt:
+                  newStatus === "delivered"
+                    ? new Date().toISOString()
+                    : delivery.deliveredAt,
+              }
+            : delivery,
+        ),
+      );
+    } finally {
       setShowStatusDialog(false);
       setSelectedDelivery(null);
-      // In real app, call API
     }
   };
 
@@ -329,10 +297,10 @@ export const DriverDashboard: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Welcome Header */}
-      <WelcomeHeader user={mockDriver} />
+      <WelcomeHeader user={driverUser} />
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
         <StatsCard
           title="Total Deliveries"
           value={stats.totalDeliveries}
@@ -355,20 +323,6 @@ export const DriverDashboard: React.FC = () => {
           iconColor="text-yellow-600"
         />
         <StatsCard
-          title="On-Time Rate"
-          value={`${stats.onTimeRate}%`}
-          icon={TrendingUp}
-          iconBg="bg-purple-100"
-          iconColor="text-purple-600"
-        />
-        <StatsCard
-          title="Distance"
-          value={`${stats.totalDistance}km`}
-          icon={Navigation}
-          iconBg="bg-indigo-100"
-          iconColor="text-indigo-600"
-        />
-        <StatsCard
           title="Rating"
           value={stats.rating.toFixed(1)}
           icon={Star}
@@ -387,11 +341,11 @@ export const DriverDashboard: React.FC = () => {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Vehicle</p>
-                <p className="font-medium">{mockDriver.vehicleType}</p>
+                <p className="font-medium">{authUser.business_name || "Truck"}</p>
               </div>
               <div className="border-l pl-4">
                 <p className="text-sm text-muted-foreground">License Plate</p>
-                <p className="font-medium">{mockDriver.vehiclePlate}</p>
+                <p className="font-medium">{authUser.phone || "Not available"}</p>
               </div>
             </div>
             <Badge variant="outline" className="bg-green-100 text-green-800">

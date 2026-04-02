@@ -1,4 +1,4 @@
-// components/shared/CartPage.tsx
+﻿// components/shared/CartPage.tsx
 import React, { useState, useEffect, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
@@ -59,7 +59,6 @@ export type { CartConfig };
 export const CartPage: React.FC<CartPageProps> = ({ config }) => {
   const navigate = useNavigate();
   const [selectAll, setSelectAll] = useState(false);
-  const [deliveryOption, setDeliveryOption] = useState("standard");
   const [promoCode, setPromoCode] = useState("");
   const [promoApplied, setPromoApplied] = useState(false);
   const [checkoutDialogOpen, setCheckoutDialogOpen] = useState(false);
@@ -86,11 +85,38 @@ export const CartPage: React.FC<CartPageProps> = ({ config }) => {
 
   const { createOrder, isLoading: orderLoading } = useOrderStore();
 
+  const CHECKOUT_DISTANCE_KM = 1;
+  const resolveProductShipping = (product?: any) => {
+    const deliveryAvailable = product?.delivery_available !== false;
+    if (!deliveryAvailable) return { shipping: 0, blocked: true };
+
+    const feePerKm = Number(product?.delivery_fee_per_km || 0);
+    const pricing = String(product?.delivery_pricing || "").toLowerCase();
+    const freeMaxKm =
+      product?.free_delivery_max_distance_km !== null &&
+      product?.free_delivery_max_distance_km !== undefined
+        ? Number(product?.free_delivery_max_distance_km)
+        : null;
+
+    if (freeMaxKm !== null && CHECKOUT_DISTANCE_KM <= freeMaxKm) {
+      return { shipping: 0, blocked: false };
+    }
+
+    if (pricing === "paid" || feePerKm > 0) {
+      return {
+        shipping: Number((feePerKm * CHECKOUT_DISTANCE_KM).toFixed(2)),
+        blocked: false,
+      };
+    }
+
+    return { shipping: 0, blocked: false };
+  };
+
   const handlePlaceOrder = async (
     paymentMethod?: string,
     deliveryOption?: string,
   ) => {
-    const selectedDeliveryOption = deliveryOption || "standard";
+    const selectedDeliveryOption = deliveryOption || "supplier_policy";
     try {
       const supplierIds = selectedItems
         .map((item) => item.product?.supplier_id)
@@ -120,8 +146,21 @@ export const CartPage: React.FC<CartPageProps> = ({ config }) => {
                 `Supplier ${supplier_id.slice(0, 8)}`,
               items: [],
               subtotal: 0,
+              shipping: 0,
+              hasNoDeliveryItem: false,
             };
           }
+
+          const { shipping: itemShipping, blocked } = resolveProductShipping(
+            item.product,
+          );
+          if (blocked) {
+            acc[supplier_id].hasNoDeliveryItem = true;
+          }
+          acc[supplier_id].shipping = Math.max(
+            acc[supplier_id].shipping,
+            itemShipping,
+          );
 
           acc[supplier_id].items.push({
             product_id: item.product_id,
@@ -148,12 +187,22 @@ export const CartPage: React.FC<CartPageProps> = ({ config }) => {
         return;
       }
 
+      const blockedSuppliers = Object.values(ordersBySupplier)
+        .filter((supplierOrder: any) => supplierOrder.hasNoDeliveryItem)
+        .map((supplierOrder: any) => supplierOrder.supplier_name);
+      if (blockedSuppliers.length > 0) {
+        toast.error(
+          `Cannot place order. No-delivery items found for: ${blockedSuppliers.join(", ")}`,
+        );
+        return;
+      }
+
       // Create separate orders for each supplier
       const orders = [];
       for (const [supplierId, orderData] of Object.entries(ordersBySupplier)) {
         // Calculate per-supplier totals
         const supplierSubtotal = orderData.subtotal;
-        const supplierShipping = config.shippingCostPerSupplier || 250;
+        const supplierShipping = Number(orderData.shipping || 0);
         const supplierTax = supplierSubtotal * (config.vatPercentage || 0.15);
         const supplierDiscount = promoApplied
           ? supplierSubtotal * (config.bulkDiscountPercentage || 0.1)
@@ -312,11 +361,20 @@ export const CartPage: React.FC<CartPageProps> = ({ config }) => {
 
   // Calculate shipping
   const shipping = useMemo(() => {
-    const uniqueSuppliers = new Set(
-      selectedItems.map((item) => item.product?.supplier_id).filter(Boolean),
-    );
-    return uniqueSuppliers.size * (config.shippingCostPerSupplier || 250);
-  }, [selectedItems, config.shippingCostPerSupplier]);
+    const supplierShippingMap: Record<string, number> = {};
+
+    selectedItems.forEach((item) => {
+      const supplierId = item.product?.supplier_id;
+      if (!supplierId) return;
+      const { shipping: itemShipping } = resolveProductShipping(item.product);
+      supplierShippingMap[supplierId] = Math.max(
+        supplierShippingMap[supplierId] || 0,
+        itemShipping,
+      );
+    });
+
+    return Object.values(supplierShippingMap).reduce((sum, fee) => sum + fee, 0);
+  }, [selectedItems]);
 
   // Calculate discount
   const discount = promoApplied
@@ -438,28 +496,33 @@ export const CartPage: React.FC<CartPageProps> = ({ config }) => {
 
     selectedItems.forEach((item) => {
       const supplier = item.product?.supplier;
-      const supplierId = supplier?.id || "unknown";
+      const supplierId = item.product?.supplier_id || supplier?.id || "unknown";
+      const { shipping: itemShipping, blocked } = resolveProductShipping(item.product);
 
       if (!groups[supplierId]) {
         groups[supplierId] = {
           supplierId,
           supplierName:
             supplier?.business_name ||
-            supplier?.full_name ||
+          supplier?.full_name ||
             "Unknown Supplier",
           supplierVerified: supplier?.is_verified || false,
           items: [],
           subtotal: 0,
-          shipping: config.shippingCostPerSupplier || 250,
+          shipping: 0,
+          hasNoDeliveryItem: false,
         };
       }
 
       groups[supplierId].items.push(item);
       groups[supplierId].subtotal += (item.product?.price || 0) * item.quantity;
+      groups[supplierId].shipping = Math.max(groups[supplierId].shipping, itemShipping);
+      groups[supplierId].hasNoDeliveryItem =
+        groups[supplierId].hasNoDeliveryItem || blocked;
     });
 
     return Object.values(groups);
-  }, [selectedItems, config.shippingCostPerSupplier]);
+  }, [selectedItems]);
 
   // Get role-specific icon
   const RoleIcon = config.supplierIcon;
@@ -578,8 +641,10 @@ export const CartPage: React.FC<CartPageProps> = ({ config }) => {
                           </Link>
                         </CardTitle>
                         <CardDescription>
-                          {group.items.length} items • Shipping:{" "}
-                          {formatPrice(group.shipping)}
+                          {group.items.length} items •{" "}
+                          {group.hasNoDeliveryItem
+                            ? "Contains no-delivery items"
+                            : `Shipping: ${formatPrice(group.shipping)}`}
                         </CardDescription>
                       </div>
                     </div>
@@ -699,7 +764,9 @@ export const CartPage: React.FC<CartPageProps> = ({ config }) => {
                                   )}
                                 </div>
                                 <div className="text-xs text-muted-foreground">
-                                  +{formatPrice(group.shipping)} shipping
+                                  {group.hasNoDeliveryItem
+                                    ? "No delivery available"
+                                    : `+${formatPrice(group.shipping)} shipping`}
                                 </div>
                               </div>
 
@@ -865,9 +932,7 @@ export const CartPage: React.FC<CartPageProps> = ({ config }) => {
                   <div>
                     <p className="text-xs font-medium">Estimated Delivery</p>
                     <p className="text-xs text-muted-foreground">
-                      {deliveryOption === "standard"
-                        ? "3-5 business days"
-                        : "1-2 business days"}
+                      Timeline depends on each supplier delivery policy.
                     </p>
                   </div>
                 </div>
@@ -923,3 +988,9 @@ const toOrderItem = (item: CartItem): OrderItem => ({
   unit_price: item.product?.price || 0,
   product: item.product,
 });
+
+
+
+
+
+

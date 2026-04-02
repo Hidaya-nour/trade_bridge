@@ -22,8 +22,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
@@ -107,21 +105,6 @@ export const PAYMENT_METHODS = [
   },
 ];
 
-export const DELIVERY_OPTIONS = [
-  {
-    id: "standard",
-    name: "Standard Delivery",
-    days: "3-5 business days",
-    cost: "Included",
-  },
-  {
-    id: "express",
-    name: "Express Delivery",
-    days: "1-2 business days",
-    cost: "ETB 500",
-  },
-];
-
 export const PlaceOrderDialog: React.FC<PlaceOrderDialogProps> = ({
   open,
   onOpenChange,
@@ -134,7 +117,7 @@ export const PlaceOrderDialog: React.FC<PlaceOrderDialogProps> = ({
   isPlacing: externalIsPlacing,
 }) => {
   const navigate = useNavigate();
-  const [deliveryOption, setDeliveryOption] = React.useState("standard");
+  const [deliveryOption] = React.useState("supplier_policy");
   const [internalIsPlacing, setInternalIsPlacing] = React.useState(false);
   const [openPaymentDialog, setOpenPaymentDialog] = React.useState(false);
   const [openPostOrderChoice, setOpenPostOrderChoice] = React.useState(false);
@@ -145,6 +128,54 @@ export const PlaceOrderDialog: React.FC<PlaceOrderDialogProps> = ({
     summary.total,
   );
   const [paymentProcessing, setPaymentProcessing] = React.useState(false);
+
+  const deliveryPolicyRows = React.useMemo(() => {
+    return items
+      .map((item) => {
+        const product = item.product as any;
+        if (!product) return null;
+
+        const deliveryAvailable = product.delivery_available !== false;
+        const rawDeliveryPricing = String(
+          product.delivery_pricing || "",
+        ).toLowerCase();
+        const feePerKm = Number(product.delivery_fee_per_km || 0);
+        const deliveryPricing: "free" | "paid" =
+          rawDeliveryPricing === "paid" || feePerKm > 0 ? "paid" : "free";
+        const freeMaxKm =
+          product.free_delivery_max_distance_km !== null &&
+          product.free_delivery_max_distance_km !== undefined
+            ? Number(product.free_delivery_max_distance_km)
+            : null;
+
+        return {
+          id: product.id || item.id,
+          name: product.name || "Product",
+          deliveryAvailable,
+          deliveryPricing,
+          feePerKm,
+          freeMaxKm,
+        };
+      })
+      .filter(Boolean) as Array<{
+      id: string;
+      name: string;
+      deliveryAvailable: boolean;
+      deliveryPricing: "free" | "paid";
+      feePerKm: number;
+      freeMaxKm: number | null;
+    }>;
+  }, [items]);
+
+  const hasAnyNoDelivery = deliveryPolicyRows.some(
+    (row) => !row.deliveryAvailable,
+  );
+  const paidPolicyCount = deliveryPolicyRows.filter(
+    (row) => row.deliveryAvailable && row.deliveryPricing === "paid",
+  ).length;
+  const freePolicyCount = deliveryPolicyRows.filter(
+    (row) => row.deliveryAvailable && row.deliveryPricing === "free",
+  ).length;
 
   const isPlacing =
     externalIsPlacing !== undefined ? externalIsPlacing : internalIsPlacing;
@@ -255,30 +286,62 @@ export const PlaceOrderDialog: React.FC<PlaceOrderDialogProps> = ({
 
             {/* Delivery Options */}
             <div className="space-y-3">
-              <h4 className="text-sm font-medium">Delivery Option</h4>
-              <RadioGroup
-                value={deliveryOption}
-                onValueChange={setDeliveryOption}
-              >
-                {DELIVERY_OPTIONS.map((option) => (
-                  <div key={option.id} className="flex items-center space-x-2">
-                    <RadioGroupItem value={option.id} id={option.id} />
-                    <Label htmlFor={option.id} className="flex-1">
-                      <div className="flex justify-between">
-                        <span className="text-sm font-medium">
-                          {option.name}
-                        </span>
-                        <span className="text-sm text-muted-foreground">
-                          {option.cost}
-                        </span>
+              <h4 className="text-sm font-medium">Delivery Policy</h4>
+              <div className="rounded-md border bg-muted/40 p-3 text-sm">
+                Shipping is applied using each supplier's configured policy.
+              </div>
+              {deliveryPolicyRows.length > 0 && (
+                <div className="rounded-md border bg-muted/40 p-3 space-y-2">
+                  <p className="text-xs font-medium text-muted-foreground">
+                    Supplier delivery policy for selected items
+                  </p>
+                  <div className="space-y-1">
+                    {deliveryPolicyRows.slice(0, 6).map((row) => (
+                      <div
+                        key={row.id}
+                        className="flex items-center justify-between text-xs"
+                      >
+                        <span className="truncate pr-3">{row.name}</span>
+                        {!row.deliveryAvailable ? (
+                          <Badge variant="outline" className="text-red-600">
+                            No delivery
+                          </Badge>
+                        ) : row.deliveryPricing === "free" ? (
+                          <Badge variant="outline" className="text-green-700">
+                            Free
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-amber-700">
+                            {formatPrice(row.feePerKm)}/km
+                            {row.freeMaxKm !== null
+                              ? `, free <= ${row.freeMaxKm} km`
+                              : ""}
+                          </Badge>
+                        )}
                       </div>
-                      <p className="text-xs text-muted-foreground">
-                        {option.days}
-                      </p>
-                    </Label>
+                    ))}
                   </div>
-                ))}
-              </RadioGroup>
+                  {hasAnyNoDelivery && (
+                    <p className="text-xs text-red-600">
+                      Some items are marked as no-delivery by supplier.
+                    </p>
+                  )}
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    <Badge variant="outline" className="text-green-700">
+                      Free items: {freePolicyCount}
+                    </Badge>
+                    <Badge variant="outline" className="text-amber-700">
+                      Paid-per-km items: {paidPolicyCount}
+                    </Badge>
+                    <Badge variant="outline" className="text-red-600">
+                      No-delivery items:{" "}
+                      {deliveryPolicyRows.length -
+                        freePolicyCount -
+                        paidPolicyCount}
+                    </Badge>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Order Total */}
@@ -316,8 +379,7 @@ export const PlaceOrderDialog: React.FC<PlaceOrderDialogProps> = ({
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <Truck className="h-3 w-3" />
               <span>
-                Estimated delivery:{" "}
-                {deliveryOption === "standard" ? "3-5" : "1-2"} business days
+                Estimated delivery timeline depends on supplier delivery policy.
               </span>
             </div>
           </div>

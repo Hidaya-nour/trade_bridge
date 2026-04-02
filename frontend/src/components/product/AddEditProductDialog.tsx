@@ -75,6 +75,10 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
     stock_quantity: "",
     description: "",
     is_available: true,
+    delivery_available: true,
+    delivery_pricing: "free" as "free" | "paid",
+    delivery_fee_per_km: "",
+    free_delivery_max_distance_km: "",
   };
 
   const [formData, setFormData] = useState(initialFormData);
@@ -99,6 +103,18 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
         stock_quantity: product.stock_quantity?.toString() || "",
         description: product.description || "",
         is_available: product.is_available ?? true,
+        delivery_available: product.delivery_available ?? true,
+        delivery_pricing: product.delivery_pricing || "free",
+        delivery_fee_per_km:
+          product.delivery_fee_per_km !== null &&
+          product.delivery_fee_per_km !== undefined
+            ? String(product.delivery_fee_per_km)
+            : "",
+        free_delivery_max_distance_km:
+          product.free_delivery_max_distance_km !== null &&
+          product.free_delivery_max_distance_km !== undefined
+            ? String(product.free_delivery_max_distance_km)
+            : "",
       });
 
       if (product.specifications) {
@@ -186,6 +202,24 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
   };
 
   const handleSave = async () => {
+    if (
+      formData.delivery_available &&
+      formData.delivery_pricing === "paid" &&
+      (formData.delivery_fee_per_km === "" ||
+        Number(formData.delivery_fee_per_km) <= 0)
+    ) {
+      toast.error("Set delivery fee per KM greater than 0 for paid delivery.");
+      return;
+    }
+
+    if (
+      formData.free_delivery_max_distance_km !== "" &&
+      Number(formData.free_delivery_max_distance_km) < 0
+    ) {
+      toast.error("Max free delivery distance cannot be negative.");
+      return;
+    }
+
     const specificationsObject: Record<string, string> = {};
 
     specifications.forEach((spec) => {
@@ -210,6 +244,15 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
         price: parseFloat(formData.price),
         stock_quantity: parseInt(formData.stock_quantity),
         min_order_amount: parseInt(formData.min_order_amount),
+        delivery_fee_per_km:
+          formData.delivery_available && formData.delivery_pricing === "paid"
+            ? parseFloat(formData.delivery_fee_per_km || "0")
+            : 0,
+        free_delivery_max_distance_km:
+          formData.delivery_available &&
+          formData.free_delivery_max_distance_km !== ""
+            ? parseFloat(formData.free_delivery_max_distance_km)
+            : null,
         specifications:
           Object.keys(specificationsObject).length > 0
             ? specificationsObject
@@ -504,6 +547,90 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
               <Label htmlFor="is_available">
                 Active (visible to customers)
               </Label>
+            </div>
+
+            {/* Delivery Settings */}
+            <div className="space-y-3 border rounded-md p-3">
+              <h4 className="text-sm font-semibold">Delivery Policy</h4>
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="delivery_available"
+                  checked={formData.delivery_available}
+                  onCheckedChange={(checked) =>
+                    setFormData({ ...formData, delivery_available: checked })
+                  }
+                />
+                <Label htmlFor="delivery_available">
+                  Supplier provides delivery for this product
+                </Label>
+              </div>
+
+              {formData.delivery_available && (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="delivery_pricing">Delivery Pricing</Label>
+                    <Select
+                      value={formData.delivery_pricing}
+                      onValueChange={(value: "free" | "paid") =>
+                        setFormData({ ...formData, delivery_pricing: value })
+                      }
+                    >
+                      <SelectTrigger id="delivery_pricing">
+                        <SelectValue placeholder="Select delivery pricing" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="free">Free delivery</SelectItem>
+                        <SelectItem value="paid">Paid per KM</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {formData.delivery_pricing === "paid" && (
+                    <div className="space-y-2">
+                      <Label htmlFor="delivery_fee_per_km">
+                        Delivery Fee Per KM (ETB)
+                      </Label>
+                      <Input
+                        id="delivery_fee_per_km"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        placeholder="0.00"
+                        value={formData.delivery_fee_per_km}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            delivery_fee_per_km: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+                  )}
+
+                  <div className="space-y-2">
+                    <Label htmlFor="free_delivery_max_distance_km">
+                      Max Distance For Free Delivery (KM) (Optional)
+                    </Label>
+                    <Input
+                      id="free_delivery_max_distance_km"
+                      type="number"
+                      min="0"
+                      step="0.1"
+                      placeholder="Leave empty for no free distance"
+                      value={formData.free_delivery_max_distance_km}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          free_delivery_max_distance_km: e.target.value,
+                        })
+                      }
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      If buyer is within this distance, delivery becomes free.
+                    </p>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </ScrollArea>
