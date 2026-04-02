@@ -10,7 +10,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Select,
   SelectContent,
@@ -24,10 +23,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   CreditCard,
   Wallet,
-  Building,
   Smartphone,
-  FileText,
-  Upload,
   CheckCircle2,
   AlertCircle,
   Landmark,
@@ -38,12 +34,89 @@ import { formatPrice } from "@/lib/formatters";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import toast from "react-hot-toast";
-import type {
-  PaymentDetails,
-  PaymentDialogProps,
-  PaymentMethod,
-  PaymentMethodConfig,
-} from "@/types/payment.types";
+
+// ============================================================================
+// TYPES
+// ============================================================================
+
+export type PaymentMethod =
+  | "cash"
+  | "credit"
+  | "cheque"
+  | "mobile_banking"
+  | "chapa";
+
+export interface PaymentMethodConfig {
+  id: PaymentMethod;
+  name: string;
+  icon: React.ElementType;
+  description: string;
+  requiresDocument?: boolean;
+  requiresApproval?: boolean;
+  enabled: boolean;
+}
+
+export interface PaymentDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  orderId?: string;
+  orderNumber?: string;
+  amount: number;
+  onPaymentSubmit: (
+    method: PaymentMethod,
+    details: PaymentDetails,
+    documents?: File[],
+  ) => Promise<boolean>;
+  isProcessing?: boolean;
+  config?: {
+    allowedMethods?: PaymentMethod[];
+    creditTerms?: {
+      enabled: boolean;
+      maxCreditAmount?: number;
+      dueDays?: number;
+      interestRate?: number;
+    };
+    bankAccounts?: {
+      bankName: string;
+      accountNumber: string;
+      accountName: string;
+      branch?: string;
+    }[];
+    chapaEnabled?: boolean;
+    requireApprovalFor?: PaymentMethod[];
+    maxDocumentSize?: number; // in MB
+    allowedDocumentTypes?: string[];
+  };
+}
+
+export interface PaymentDetails {
+  // Common fields
+  notes?: string;
+
+  // Credit fields
+  creditCustomerName?: string;
+  creditDueDate?: string;
+  creditTerms?: string;
+
+  // Cheque fields
+  chequeNumber?: string;
+  bankName?: string;
+  branch?: string;
+  chequeDate?: string;
+  drawerName?: string;
+
+  // Mobile banking fields
+  transactionId?: string;
+  mobileProvider?: string;
+  phoneNumber?: string;
+  transferDate?: string;
+
+  // Chapa fields
+  chapaEmail?: string;
+  chapaFirstName?: string;
+  chapaLastName?: string;
+  chapaTxRef?: string;
+}
 
 // ============================================================================
 // CONSTANTS
