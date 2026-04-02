@@ -161,19 +161,13 @@ const roleNavigation = {
 
   driver: [
     { name: "Dashboard", href: "/driver/dashboard", icon: LayoutDashboard },
-    {
-      name: "Active Deliveries",
-      href: "/driver/active",
-      icon: Truck,
-    },
-    { name: "Delivery History", href: "/driver/history", icon: Package },
+    { name: "Notifications", href: "/driver/notifications", icon: Bell },
+    { name: "Active Deliveries", href: "/driver/active", icon: Truck },
     { name: "Live Tracking", href: "/driver/tracking", icon: TrendingUp },
-
-    {
-      name: "Report Issues",
-      href: "/driver/issues",
-      icon: AlertCircle,
-    },
+    { name: "Delivery History", href: "/driver/history", icon: Package },
+    { name: "Report Issues", href: "/driver/issues", icon: AlertCircle },
+    { name: "Driver Profile", href: "/driver/profile", icon: Users },
+    { name: "Help & Support", href: "/support", icon: HelpCircle },
   ],
 
   admin: [
