@@ -50,6 +50,11 @@ import { LoginPage } from "./pages/auth/Login";
 import { RegisterPage } from "./pages/auth/Register";
 import OrderTrackingPage from "./pages/shared/OrderTracking";
 import DriverLiveTrackingPage from "./pages/driver/LiveTrackingPage";
+import DriverNotificationsPage from "./pages/driver/DriverNotificationsPage";
+import DriverProfilePage from "./pages/driver/DriverProfilePage";
+import DriverIssuesPage from "./pages/driver/DriverIssuesPage";
+import DriverHistoryPage from "./pages/driver/DriverHistoryPage";
+import ActiveDeliveriesPage from "./pages/driver/ActiveDeliveriesPage";
 import OrderReceiptPage from "./pages/shared/OrderReceipt";
 import VerifyReceiptPage from "./pages/shared/VerifyReceipt";
 
@@ -499,6 +504,54 @@ function App() {
             element={
               <DashboardLayout>
                 <DriverLiveTrackingPage />
+              </DashboardLayout>
+            }
+          />
+          <Route
+            path="/driver/notifications"
+            element={
+              <DashboardLayout>
+                <DriverNotificationsPage />
+              </DashboardLayout>
+            }
+          />
+          <Route
+            path="/driver/active"
+            element={
+              <DashboardLayout>
+                <ActiveDeliveriesPage />
+              </DashboardLayout>
+            }
+          />
+          <Route
+            path="/driver/history"
+            element={
+              <DashboardLayout>
+                <DriverHistoryPage />
+              </DashboardLayout>
+            }
+          />
+          <Route
+            path="/driver/issues"
+            element={
+              <DashboardLayout>
+                <DriverIssuesPage />
+              </DashboardLayout>
+            }
+          />
+          <Route
+            path="/driver/profile"
+            element={
+              <DashboardLayout>
+                <DriverProfilePage />
+              </DashboardLayout>
+            }
+          />
+          <Route
+            path="/support"
+            element={
+              <DashboardLayout>
+                <ContactSupportPage />
               </DashboardLayout>
             }
           />

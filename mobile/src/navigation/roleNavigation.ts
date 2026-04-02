@@ -56,7 +56,17 @@ export const roleSidebarNavigation: Record<UserRole, SidebarNavItem[]> = {
     { label: "Dashboard", href: "/factory/dashboard", icon: "grid-outline" },
   ],
   driver: [
-    { label: "Dashboard", href: "/driver/dashboard", icon: "grid-outline" },
+    { section: "Main Menu", label: "Dashboard", href: "/driver/dashboard", icon: "grid-outline" },
+    { section: "Delivery", label: "Active Deliveries", href: "/driver/active", icon: "car-outline" },
+    { section: "Delivery", label: "Live Tracking", href: "/driver/tracking", icon: "navigate-outline" },
+    { section: "Delivery", label: "Delivery History", href: "/driver/history", icon: "time-outline" },
+    { section: "Delivery", label: "Report Issue", href: "/driver/issues", icon: "alert-circle-outline" },
+    { section: "Delivery", label: "Notifications", href: "/driver/notifications", icon: "notifications-outline" },
+    { section: "Account", label: "Driver Profile", href: "/driver/profile", icon: "person-outline" },
+    { section: "Support", label: "Help & Support", href: "/support", icon: "help-circle-outline" },
+    { section: "Support", label: "Settings", href: "/driver/settings", icon: "settings-outline" },
+    { section: "Support", label: "Notifications", href: "/driver/notifications", icon: "notifications-outline" },
+    { section: "Support", label: "Messages", href: "/driver/messages", icon: "chatbubble-ellipses-outline" },
   ],
 };
 
