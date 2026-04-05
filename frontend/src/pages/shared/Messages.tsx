@@ -97,7 +97,7 @@ const MessagesPage: React.FC = () => {
       if (currentConversationUserId) {
         void fetchConversation(currentConversationUserId);
       }
-    }, 1000);
+    }, 10000);
 
     return () => window.clearInterval(intervalId);
   }, [currentConversationUserId, fetchConversation, fetchUserMessages]);

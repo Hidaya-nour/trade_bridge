@@ -1,11 +1,13 @@
 import React, { useEffect, useMemo } from "react";
-import {
-  IncomingOrders,
-} from "@/features/order/IncomingOrders";
+import { IncomingOrders } from "@/features/order/IncomingOrders";
 import { Factory } from "lucide-react";
 
 import { useOrderStore } from "@/stores/order.store";
-import type { Order, IncomingOrdersConfig, IncomingOrder } from "@/types/order.types";
+import type {
+  Order,
+  IncomingOrdersConfig,
+  IncomingOrder,
+} from "@/types/order.types";
 import { WithAsync } from "@/components/shared/WithAsync";
 
 const mapPaymentStatus = (status?: string) => {
@@ -47,7 +49,7 @@ const mapOrderToIncoming = (order: Order): IncomingOrder => {
     deliveryId: order.delivery?.id,
     customerId: Number(order.buyer_id) || 0,
     customerName,
-    buyer?.full_name ct: order.buyer?.full_name || customerName,
+    customerContact: order.buyer?.full_name || customerName,
     customerPhone: "N/A",
     customerLocation:
       order.delivery?.dropoff_location ||
