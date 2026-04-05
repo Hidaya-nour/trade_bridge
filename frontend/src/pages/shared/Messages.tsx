@@ -160,7 +160,7 @@ const MessagesPage: React.FC = () => {
   };
 
   return (
-    <div className="h-[calc(100vh-8rem)] min-h-0 space-y-4">
+    <div className="h-[calc(100vh-8rem)] min-h-0 space-y-2">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Messages</h1>
@@ -336,7 +336,7 @@ const MessagesPage: React.FC = () => {
             <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
               <div className="flex items-center justify-between p-4 border-b">
                 <div className="flex items-center gap-3">
-                  <Avatar className="h-10 w-10">
+                  <Avatar className="h-5 w-10">
                     <AvatarFallback>
                       {getInitials(activeConversation.participant_name)}
                     </AvatarFallback>
@@ -363,7 +363,7 @@ const MessagesPage: React.FC = () => {
                       >
                         <div
                           className={cn(
-                            "max-w-[75%] rounded-lg p-3",
+                            "max-w-[75%] rounded-lg p-2",
                             mine
                               ? "bg-primary text-primary-foreground"
                               : "bg-muted",
@@ -374,7 +374,7 @@ const MessagesPage: React.FC = () => {
                           </p>
                           <div
                             className={cn(
-                              "text-[11px] mt-1 flex items-center justify-end gap-1",
+                              "text-[9px] mt-1 flex items-center justify-end gap-1",
                               mine
                                 ? "text-primary-foreground/70"
                                 : "text-muted-foreground",
