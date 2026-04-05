@@ -1,6 +1,7 @@
 import { OrderRepository } from '../../repositories/order.repository';
 import { ProductRepository } from '../../repositories/product.repository';
 import { UserRepository } from '../../repositories/user.repository';
+import { SupplierPaymentMethodService } from '../supplier-payment-method/supplier-payment-method.service';
 import { AppError } from '../../utils/errors';
 import { 
   CreateOrderDTO, 
@@ -17,10 +18,19 @@ import Payment from '../../models/payment.model';
 
 const DEFAULT_VAT_RATE = 0.15;
 
+const supplierPaymentToOrderMethodMap: Record<string, 'cash' | 'mobile_banking' | 'cheque' | 'chapa' | 'credit' | null> = {
+  bank_transfer: 'cheque',
+  mobile_money: 'mobile_banking',
+  cash_on_delivery: 'cash',
+  credit_card: 'chapa',
+  other: 'credit',
+};
+
 export class OrderService {
   private orderRepo = new OrderRepository();
   private productRepo = new ProductRepository();
   private userRepo = new UserRepository();
+  private supplierPaymentMethodService = new SupplierPaymentMethodService();
 
   // ========================================================================
   // GET ORDERS
@@ -162,6 +172,30 @@ export class OrderService {
           : 0;
     const taxAmount = Number((subtotal * supplierVatRate).toFixed(2));
     const total_price = Number((subtotal + taxAmount).toFixed(2));
+
+    // Validate supplier payment methods
+    const activeMethods = await this.supplierPaymentMethodService.getActiveSupplierPaymentMethods(supplier_id);
+    const mappedMethods = activeMethods
+      .map((m: any) => supplierPaymentToOrderMethodMap[m.method_type])
+      .filter(Boolean) as Array<'cash' | 'mobile_banking' | 'cheque' | 'chapa' | 'credit'>;
+    const availablePaymentMethods = Array.from(new Set(mappedMethods));
+
+    if (availablePaymentMethods.length === 0) {
+      throw new AppError(
+        'Supplier has no active payment methods. Please ask supplier to add one before placing orders.',
+        400,
+      );
+    }
+
+
+    if (payment_method && payment_method.trim().length > 0) {
+      if (!availablePaymentMethods.includes(payment_method as any)) {
+        throw new AppError(
+          `Payment method '${payment_method}' is not available for this supplier`,
+          400,
+        );
+      }
+    }
 
     // Create order with items in a transaction
     const order = await this.orderRepo.createOrderWithItems(

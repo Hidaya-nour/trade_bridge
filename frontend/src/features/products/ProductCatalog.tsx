@@ -63,7 +63,10 @@ import toast from "react-hot-toast";
 import { PlaceOrderDialog } from "@/components/order/PlaceOrderDialog";
 import paymentService from "@/services/payment.service";
 import documentService from "@/services/document.service";
+import supplierPaymentMethodService from "@/services/supplier-payment-method.service";
+import { supplierMethodsToPaymentMethods } from "@/lib/payment-method-utils";
 import type { CatalogConfig, CatalogProduct } from "@/types/product.types";
+import type { PaymentMethod } from "@/types/payment.types";
 
 // ============================================================================
 // PROPS
@@ -167,8 +170,39 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
     null,
   );
   const [orderQuantity, setOrderQuantity] = useState<number>(0);
+  const [supplierAllowedMethods, setSupplierAllowedMethods] = useState<
+    PaymentMethod[]
+  >([]);
+  const [supplierPaymentMethods, setSupplierPaymentMethods] = useState<any[]>(
+    [],
+  );
 
   const { createOrder, isLoading: orderLoading } = useOrderStore();
+
+  React.useEffect(() => {
+    const loadSupplierPaymentMethods = async () => {
+      if (!selectedProduct?.supplier_id) {
+        setSupplierAllowedMethods([]);
+        return;
+      }
+
+      try {
+        const response =
+          await supplierPaymentMethodService.getActiveBySupplierId(
+            selectedProduct.supplier_id,
+          );
+        const activeMethods = response.data || response;
+        setSupplierAllowedMethods(
+          supplierMethodsToPaymentMethods(activeMethods),
+        );
+      } catch (error) {
+        console.error("Unable to load supplier payment methods", error);
+        setSupplierAllowedMethods([]);
+      }
+    };
+
+    void loadSupplierPaymentMethods();
+  }, [selectedProduct]);
 
   const itemsPerPage = 9;
 
@@ -1265,6 +1299,8 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
             ordersPath: config.ordersPath,
             bulkDiscountPercentage: config.bulkDiscountPercentage,
           }}
+          supplierAllowedMethods={supplierAllowedMethods}
+          supplierPaymentMethods={supplierPaymentMethods}
           onPlaceOrder={handlePlaceOrder}
           onProcessPayment={handleProcessPayment as any}
           isPlacing={orderLoading}

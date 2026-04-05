@@ -60,6 +60,7 @@ export interface PaymentDetails {
 
 export interface PaymentDialogConfig {
   allowedMethods?: PaymentMethod[];
+  supplierAllowedMethods?: PaymentMethod[];
   creditTerms?: {
     enabled: boolean;
     maxCreditAmount?: number;

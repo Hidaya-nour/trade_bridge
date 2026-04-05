@@ -666,14 +666,18 @@ const SettingsPage: React.FC = () => {
     if (
       !newPaymentMethod.provider_name ||
       !newPaymentMethod.account_holder_name ||
-      !newPaymentMethod.account_identifier ||
-      !newPaymentMethod.account_display
+      !newPaymentMethod.account_identifier
     ) {
       setPaymentMessage("Please fill all payment method fields");
       return;
     }
 
-    const created = await createSupplierPaymentMethod(newPaymentMethod);
+    const created = await createSupplierPaymentMethod({
+      ...newPaymentMethod,
+      account_display:
+        newPaymentMethod.account_display ||
+        `${newPaymentMethod.provider_name} - ${newPaymentMethod.account_identifier}`,
+    });
     if (created) {
       setPaymentMessage("Payment method added");
       setNewPaymentMethod({

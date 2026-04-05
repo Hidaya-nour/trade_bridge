@@ -8,8 +8,12 @@ export class SupplierPaymentMethodService {
 
   async createPaymentMethod(data: CreateSupplierPaymentMethodDTO): Promise<ISupplierPaymentMethod> {
     if (!data.supplier_id || !data.method_type || !data.provider_name ||
-        !data.account_holder_name || !data.account_identifier || !data.account_display) {
+        !data.account_holder_name || !data.account_identifier) {
       throw new AppError('Missing required fields', 400);
+    }
+
+    if (!data.account_display) {
+      data.account_display = `${data.provider_name} - ${data.account_identifier}`;
     }
 
     // If this is set as primary, unset other primary methods for this supplier

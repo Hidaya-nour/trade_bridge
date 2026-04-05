@@ -221,7 +221,6 @@ const BusinessTab: React.FC<BusinessTabProps> = ({
               </Label>
               <Input
                 id="businessName"
-                label="Business Name"
                 value={profileForm.business_name}
                 onChange={(e) => {
                   setProfileForm((prev) => ({
@@ -629,7 +628,6 @@ const BusinessTab: React.FC<BusinessTabProps> = ({
                               </Label>
                               <Input
                                 id={`docFile-${doc.id}`}
-                                label="Document File"
                                 type="file"
                                 accept=".pdf,image/*"
                                 onChange={(e) =>
@@ -652,7 +650,6 @@ const BusinessTab: React.FC<BusinessTabProps> = ({
                               </Label>
                               <Input
                                 id={`docIssued-${doc.id}`}
-                                label="Issued Date (optional)"
                                 type="date"
                                 value={doc.issued_date}
                                 onChange={(e) =>
@@ -675,7 +672,6 @@ const BusinessTab: React.FC<BusinessTabProps> = ({
                               </Label>
                               <Input
                                 id={`docExpiry-${doc.id}`}
-                                label="Expiry Date (optional)"
                                 type="date"
                                 value={doc.expiry_date}
                                 onChange={(e) =>

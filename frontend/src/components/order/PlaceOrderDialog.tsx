@@ -55,6 +55,8 @@ export interface PlaceOrderDialogProps {
     bulkDiscountPercentage?: number;
   };
   showPostOrderDialog?: boolean;
+  supplierAllowedMethods?: PaymentMethod[];
+  supplierPaymentMethods?: any[];
   onPlaceOrder?: (
     paymentMethod?: string,
     deliveryOption?: string,
@@ -112,6 +114,7 @@ export const PlaceOrderDialog: React.FC<PlaceOrderDialogProps> = ({
   summary,
   config,
   showPostOrderDialog = true,
+  supplierAllowedMethods,
   onPlaceOrder,
   onProcessPayment,
   isPlacing: externalIsPlacing,
@@ -452,6 +455,8 @@ export const PlaceOrderDialog: React.FC<PlaceOrderDialogProps> = ({
               "mobile_banking",
               "chapa",
             ] as PaymentMethod[],
+            supplierAllowedMethods,
+            supplierPaymentMethods,
           }}
         />
       )}

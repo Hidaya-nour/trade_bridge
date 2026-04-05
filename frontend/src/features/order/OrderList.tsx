@@ -47,9 +47,15 @@ import {
 import { formatPrice, formatDate } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 import type { Order } from "@/types/order.types";
-import type { PaymentMethod, PaymentDetails } from "@/types/payment.types";
+import type {
+  PaymentMethod,
+  PaymentDetails,
+  SupplierPaymentMethodInfo,
+} from "@/types/payment.types";
 import OrderTrackingDialog from "@/components/order/OrderTrackingDialog";
 import { PlaceOrderDialog } from "@/components/order/PlaceOrderDialog";
+import supplierPaymentMethodService from "@/services/supplier-payment-method.service";
+import { supplierMethodsToPaymentMethods } from "@/lib/payment-method-utils";
 import { RateReviewDialog } from "@/components/product/RateReviewDialog";
 import toast from "react-hot-toast";
 
@@ -148,6 +154,12 @@ export const OrderList: React.FC<OrderListProps> = ({
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [showRateDialog, setShowRateDialog] = useState(false);
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+  const [supplierAllowedMethods, setSupplierAllowedMethods] = useState<
+    PaymentMethod[]
+  >([]);
+  const [supplierPaymentMethods, setSupplierPaymentMethods] = useState<
+    SupplierPaymentMethodInfo[]
+  >([]);
   const [showReorderDialog, setShowReorderDialog] = useState(false);
   const [cancellationReason, setCancellationReason] = useState("");
   const [rating, setRating] = useState(5);
@@ -374,6 +386,33 @@ export const OrderList: React.FC<OrderListProps> = ({
     const parsed = Number(value);
     return Number.isFinite(parsed) ? parsed : 0;
   };
+
+  useEffect(() => {
+    const loadSupplierMethods = async () => {
+      if (!selectedOrder?.supplier_id) {
+        setSupplierAllowedMethods([]);
+        return;
+      }
+
+      try {
+        const response =
+          await supplierPaymentMethodService.getActiveBySupplierId(
+            selectedOrder.supplier_id,
+          );
+
+        const activeMethods = response.data || response;
+        setSupplierAllowedMethods(
+          supplierMethodsToPaymentMethods(activeMethods),
+        );
+        setSupplierPaymentMethods(activeMethods);
+      } catch (err) {
+        console.error("Failed to load supplier active payment methods", err);
+        setSupplierAllowedMethods([]);
+      }
+    };
+
+    loadSupplierMethods();
+  }, [selectedOrder]);
 
   const getOrderDisplayTotal = (order: Order): number => {
     if (order.payment?.total_amount !== undefined) {
@@ -951,11 +990,7 @@ export const OrderList: React.FC<OrderListProps> = ({
                         </Button>
                       )}
 
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      asChild
-                    >
+                    <Button size="sm" variant="outline" asChild>
                       <Link
                         to={`/${config.role}/${config.type === "purchases" ? "purchase-orders" : "orders"}/${order.id}/receipt`}
                       >
@@ -1009,6 +1044,8 @@ export const OrderList: React.FC<OrderListProps> = ({
               "mobile_banking",
               "chapa",
             ],
+            supplierAllowedMethods: supplierAllowedMethods,
+            supplierPaymentMethods,
             creditTerms: config.paymentConfig?.creditTerms || {
               enabled: true,
               maxCreditAmount: 50000,

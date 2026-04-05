@@ -1,9 +1,10 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { ProductManagement } from "@/features/products/ProductManagement";
 import { useProductStore } from "@/stores/product.store";
+import supplierPaymentMethodService from "@/services/supplier-payment-method.service";
 // import { suppliers } from "./data";
 import toast from "react-hot-toast";
-import { authService } from "@/services/auth.service";
 import { useAuthStore } from "@/stores/auth.store";
 import type { Product } from "@/types/product.types";
 
@@ -33,6 +34,7 @@ const DistributorManageProductsPage: React.FC = () => {
     toggleAvailability,
     clearError,
   } = useProductStore();
+  const navigate = useNavigate();
 
   // Fetch data on component mount
   useEffect(() => {
@@ -84,6 +86,36 @@ const DistributorManageProductsPage: React.FC = () => {
           id: loadingToast,
         });
         await fetchProducts({ supplier_id: user?.id });
+
+        try {
+          const response =
+            await supplierPaymentMethodService.getActiveBySupplierId(
+              user?.id || "",
+            );
+          const activeMethods = response.data || response;
+          if (!Array.isArray(activeMethods) || activeMethods.length === 0) {
+            toast.custom((t) => (
+              <div className="rounded-xl border border-yellow-200 bg-yellow-50 p-4 text-sm text-yellow-900">
+                <div className="font-semibold">No active payment methods</div>
+                <p className="mt-1">
+                  Buyers cannot place orders until you add one in Settings.
+                </p>
+                <button
+                  type="button"
+                  className="mt-3 inline-flex rounded-md bg-yellow-600 px-3 py-1 text-white hover:bg-yellow-700"
+                  onClick={() => {
+                    navigate("/settings?tab=payment");
+                    toast.dismiss(t.id);
+                  }}
+                >
+                  Add Payment Method
+                </button>
+              </div>
+            ));
+          }
+        } catch (error) {
+          console.error("Unable to check supplier payment methods", error);
+        }
       }
     } catch (error: any) {
       toast.error(error.message || "Failed to add product", {
