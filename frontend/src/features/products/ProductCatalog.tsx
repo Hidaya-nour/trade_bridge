@@ -9,15 +9,10 @@ import {
   ShoppingCart,
   Eye,
   Package,
-  Truck,
-  Clock,
-  CheckCircle2,
   X,
   Plus,
   Minus,
   MapPin,
-  Factory,
-  Store,
   ChevronRight,
   CreditCard,
   XCircle,
@@ -26,7 +21,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -45,18 +39,9 @@ import {
   SheetFooter,
   SheetClose,
 } from "@/components/ui/sheet";
-import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Slider } from "@/components/ui/slider";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
-
-import {
-  StatusBadge,
-  EmptyState,
-  PaginationBar,
-  SearchFilter,
-} from "@/components";
+import { EmptyState, PaginationBar } from "@/components";
 import { formatPrice } from "@/lib/formatters";
 import { useOrderStore } from "@/stores/order.store";
 import toast from "react-hot-toast";
@@ -173,9 +158,7 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
   const [supplierAllowedMethods, setSupplierAllowedMethods] = useState<
     PaymentMethod[]
   >([]);
-  const [supplierPaymentMethods, setSupplierPaymentMethods] = useState<any[]>(
-    [],
-  );
+  const [supplierPaymentMethods] = useState<any[]>([]);
 
   const { createOrder, isLoading: orderLoading } = useOrderStore();
 
@@ -1099,15 +1082,6 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
                             ({product.review_count} reviews)
                           </span>
                         </div>
-                        <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                          <Truck className="h-4 w-4" />
-                          {product.delivery_time}
-                        </div>
-                        {product.stock_quantity !== undefined && (
-                          <div className="text-sm text-muted-foreground">
-                            Stock: {product.stock_quantity.toLocaleString()}
-                          </div>
-                        )}
                       </div>
 
                       {config.showVolumeDiscount && product.volume_discount && (

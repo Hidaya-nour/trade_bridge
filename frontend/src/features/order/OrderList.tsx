@@ -227,15 +227,12 @@ export const OrderList: React.FC<OrderListProps> = ({
       return false;
     }
 
-    // Cash on delivery does not require an online "Pay Now" action.
     if (
       order.payment?.payment_method === "cash" &&
       order.payment.payment_status === "pending"
     ) {
       return false;
     }
-
-    // If there's no payment record at all, it needs payment
     if (!order.payment) {
       return true;
     }
@@ -440,7 +437,9 @@ export const OrderList: React.FC<OrderListProps> = ({
     },
     {
       title: "Approved",
-      value: orders.filter((o) => o.order_status === "approved").length,
+      value: orders.filter(
+        (o) => o.order_status === "approved" || o.order_status === "processing",
+      ).length,
       icon: CheckCircle2,
       iconBg: "bg-blue-100",
       iconColor: "text-blue-600",

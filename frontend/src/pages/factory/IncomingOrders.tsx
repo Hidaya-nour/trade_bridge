@@ -47,7 +47,7 @@ const mapOrderToIncoming = (order: Order): IncomingOrder => {
     deliveryId: order.delivery?.id,
     customerId: Number(order.buyer_id) || 0,
     customerName,
-    customerContact: order.buyer?.full_name || customerName,
+    buyer?.full_name ct: order.buyer?.full_name || customerName,
     customerPhone: "N/A",
     customerLocation:
       order.delivery?.dropoff_location ||

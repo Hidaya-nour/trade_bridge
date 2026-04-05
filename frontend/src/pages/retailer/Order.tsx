@@ -33,7 +33,7 @@ const OrdersPage: React.FC = () => {
         (o) => o.order_status === "processing" || o.order_status === "approved",
       ).length,
       shipped: orders.filter((o) => o.order_status === "shipped").length,
-      delivered: orders.filter((o) => o.order_status === "delivered").length,
+      delivered: orders.filter((o) => o.order_status === "closed").length,
     };
   }, [orders]);
 

@@ -220,7 +220,8 @@ export const CartPage: React.FC<CartPageProps> = ({ config }) => {
           ? supplierSubtotal * (config.bulkDiscountPercentage || 0.1)
           : 0;
         const supplierTax =
-          (supplierSubtotal - supplierDiscount) * Number(orderData.vatRate || 0);
+          (supplierSubtotal - supplierDiscount) *
+          Number(orderData.vatRate || 0);
 
         const orderPayload = {
           supplier_id: supplierId,
@@ -387,7 +388,10 @@ export const CartPage: React.FC<CartPageProps> = ({ config }) => {
       );
     });
 
-    return Object.values(supplierShippingMap).reduce((sum, fee) => sum + fee, 0);
+    return Object.values(supplierShippingMap).reduce(
+      (sum, fee) => sum + fee,
+      0,
+    );
   }, [selectedItems]);
 
   // Calculate discount
@@ -537,14 +541,16 @@ export const CartPage: React.FC<CartPageProps> = ({ config }) => {
     selectedItems.forEach((item) => {
       const supplier = item.product?.supplier;
       const supplierId = item.product?.supplier_id || supplier?.id || "unknown";
-      const { shipping: itemShipping, blocked } = resolveProductShipping(item.product);
+      const { shipping: itemShipping, blocked } = resolveProductShipping(
+        item.product,
+      );
 
       if (!groups[supplierId]) {
         groups[supplierId] = {
           supplierId,
           supplierName:
             supplier?.business_name ||
-          supplier?.full_name ||
+            supplier?.full_name ||
             "Unknown Supplier",
           supplierVerified: supplier?.is_verified || false,
           items: [],
@@ -556,7 +562,10 @@ export const CartPage: React.FC<CartPageProps> = ({ config }) => {
 
       groups[supplierId].items.push(item);
       groups[supplierId].subtotal += (item.product?.price || 0) * item.quantity;
-      groups[supplierId].shipping = Math.max(groups[supplierId].shipping, itemShipping);
+      groups[supplierId].shipping = Math.max(
+        groups[supplierId].shipping,
+        itemShipping,
+      );
       groups[supplierId].hasNoDeliveryItem =
         groups[supplierId].hasNoDeliveryItem || blocked;
     });
@@ -828,50 +837,6 @@ export const CartPage: React.FC<CartPageProps> = ({ config }) => {
                 </CardContent>
               </Card>
             ))}
-
-            {/* Bulk Order Note */}
-            {config.bulkDiscountThreshold && (
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-start gap-3">
-                    <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
-                      <AlertCircle className="h-4 w-4 text-blue-600" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium">
-                        Bulk Order Discount Available
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Add more items to qualify for volume discounts.{" "}
-                        {remainingForDiscount > 0 ? (
-                          <>
-                            Spend {formatPrice(remainingForDiscount)} more to
-                            get {config.bulkDiscountPercentage! * 100}% off.
-                          </>
-                        ) : (
-                          <>
-                            You've qualified for{" "}
-                            {config.bulkDiscountPercentage! * 100}% discount!
-                          </>
-                        )}
-                      </p>
-                      <div className="mt-2 h-2 w-full bg-muted rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-primary rounded-full"
-                          style={{
-                            width: `${bulkDiscountProgress}%`,
-                          }}
-                        />
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {formatPrice(subtotal)} /{" "}
-                        {formatPrice(config.bulkDiscountThreshold)}
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
           </div>
 
           {/* Order Summary - Right Column */}
@@ -902,10 +867,10 @@ export const CartPage: React.FC<CartPageProps> = ({ config }) => {
                       <span>-{formatPrice(discount)}</span>
                     </div>
                   )}
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">VAT</span>
-                  <span className="font-medium">{formatPrice(tax)}</span>
-                </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">VAT</span>
+                    <span className="font-medium">{formatPrice(tax)}</span>
+                  </div>
                   <Separator className="my-2" />
                   <div className="flex justify-between text-base font-bold">
                     <span>Total</span>
@@ -956,35 +921,6 @@ export const CartPage: React.FC<CartPageProps> = ({ config }) => {
                 </p>
               </CardFooter>
             </Card>
-
-            {/* Delivery Info */}
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium">
-                  Delivery Information
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex items-start gap-3">
-                  <Truck className="h-4 w-4 text-muted-foreground mt-0.5" />
-                  <div>
-                    <p className="text-xs font-medium">Estimated Delivery</p>
-                    <p className="text-xs text-muted-foreground">
-                      Timeline depends on each supplier delivery policy.
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <Shield className="h-4 w-4 text-muted-foreground mt-0.5" />
-                  <div>
-                    <p className="text-xs font-medium">Secure Transaction</p>
-                    <p className="text-xs text-muted-foreground">
-                      Your payment information is encrypted
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
           </div>
         </div>
       )}
@@ -1024,9 +960,3 @@ const toOrderItem = (item: CartItem): OrderItem => ({
   unit_price: item.product?.price || 0,
   product: item.product,
 });
-
-
-
-
-
-

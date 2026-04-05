@@ -116,21 +116,16 @@ const mapOrderToDetails = (order: Order): OrderDetailsData => {
       name: supplierName,
       contact: order.supplier?.full_name,
     },
-    canReview: true,
+    canReview: order.order_status == "closed" ? true : false,
     canReorder: true,
-    canCancel: true,
+    canCancel: order.order_status !== "cancelled" ? true : false,
   };
 };
 
 const OrderDetailsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const {
-    currentOrder,
-    fetchOrderById,
-    isLoading,
-    error,
-    createOrder,
-  } = useOrderStore();
+  const { currentOrder, fetchOrderById, isLoading, error, createOrder } =
+    useOrderStore();
 
   useEffect(() => {
     if (id) {
