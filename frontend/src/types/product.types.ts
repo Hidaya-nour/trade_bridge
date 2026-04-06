@@ -87,7 +87,6 @@ export interface CatalogProduct {
   location: string;
   latitude?: number | null;
   longitude?: number | null;
-  delivery_time: string;
   description: string;
   tags: string[];
   image?: string | null;

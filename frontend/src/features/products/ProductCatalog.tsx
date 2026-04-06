@@ -9,15 +9,10 @@ import {
   ShoppingCart,
   Eye,
   Package,
-  Truck,
-  Clock,
-  CheckCircle2,
   X,
   Plus,
   Minus,
   MapPin,
-  Factory,
-  Store,
   ChevronRight,
   CreditCard,
   XCircle,
@@ -26,7 +21,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -45,25 +39,19 @@ import {
   SheetFooter,
   SheetClose,
 } from "@/components/ui/sheet";
-import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Slider } from "@/components/ui/slider";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
-
-import {
-  StatusBadge,
-  EmptyState,
-  PaginationBar,
-  SearchFilter,
-} from "@/components";
+import { EmptyState, PaginationBar } from "@/components";
 import { formatPrice } from "@/lib/formatters";
 import { useOrderStore } from "@/stores/order.store";
 import toast from "react-hot-toast";
 import { PlaceOrderDialog } from "@/components/order/PlaceOrderDialog";
 import paymentService from "@/services/payment.service";
 import documentService from "@/services/document.service";
+import supplierPaymentMethodService from "@/services/supplier-payment-method.service";
+import { supplierMethodsToPaymentMethods } from "@/lib/payment-method-utils";
 import type { CatalogConfig, CatalogProduct } from "@/types/product.types";
+import type { PaymentMethod } from "@/types/payment.types";
 
 // ============================================================================
 // PROPS
@@ -167,8 +155,37 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
     null,
   );
   const [orderQuantity, setOrderQuantity] = useState<number>(0);
+  const [supplierAllowedMethods, setSupplierAllowedMethods] = useState<
+    PaymentMethod[]
+  >([]);
+  const [supplierPaymentMethods] = useState<any[]>([]);
 
   const { createOrder, isLoading: orderLoading } = useOrderStore();
+
+  React.useEffect(() => {
+    const loadSupplierPaymentMethods = async () => {
+      if (!selectedProduct?.supplier_id) {
+        setSupplierAllowedMethods([]);
+        return;
+      }
+
+      try {
+        const response =
+          await supplierPaymentMethodService.getActiveBySupplierId(
+            selectedProduct.supplier_id,
+          );
+        const activeMethods = response.data || response;
+        setSupplierAllowedMethods(
+          supplierMethodsToPaymentMethods(activeMethods),
+        );
+      } catch (error) {
+        console.error("Unable to load supplier payment methods", error);
+        setSupplierAllowedMethods([]);
+      }
+    };
+
+    void loadSupplierPaymentMethods();
+  }, [selectedProduct]);
 
   const itemsPerPage = 9;
 
@@ -1065,15 +1082,6 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
                             ({product.review_count} reviews)
                           </span>
                         </div>
-                        <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                          <Truck className="h-4 w-4" />
-                          {product.delivery_time}
-                        </div>
-                        {product.stock_quantity !== undefined && (
-                          <div className="text-sm text-muted-foreground">
-                            Stock: {product.stock_quantity.toLocaleString()}
-                          </div>
-                        )}
                       </div>
 
                       {config.showVolumeDiscount && product.volume_discount && (
@@ -1265,6 +1273,8 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
             ordersPath: config.ordersPath,
             bulkDiscountPercentage: config.bulkDiscountPercentage,
           }}
+          supplierAllowedMethods={supplierAllowedMethods}
+          supplierPaymentMethods={supplierPaymentMethods}
           onPlaceOrder={handlePlaceOrder}
           onProcessPayment={handleProcessPayment as any}
           isPlacing={orderLoading}

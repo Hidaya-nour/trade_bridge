@@ -17,6 +17,7 @@ router.post(
 );
 router.get('/', (req, res) => paymentMethodController.getSupplierPaymentMethods(req, res));
 router.get('/active', (req, res) => paymentMethodController.getActivePaymentMethods(req, res));
+router.get('/supplier/:supplierId/active', (req, res) => paymentMethodController.getActivePaymentMethodsForSupplier(req, res));
 router.get('/primary', (req, res) => paymentMethodController.getPrimaryPaymentMethod(req, res));
 router.put(
   '/:id',

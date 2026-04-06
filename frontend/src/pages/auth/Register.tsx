@@ -17,7 +17,7 @@ export const RegisterPage: React.FC = () => {
     email: "",
     password: "",
     full_name: "",
-    role: " ",
+    role: "retailer",
     phone: "",
     business_name: "",
   });

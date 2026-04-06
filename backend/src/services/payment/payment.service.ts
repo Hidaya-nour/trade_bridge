@@ -3,6 +3,7 @@ import { Order } from '../../models/order.model';
 import User from '../../models/user.model';
 import { initializeChapaTransaction, verifyChapaTransaction } from '../../config/chapa';
 import { AppError } from '../../utils/errors';
+import { SupplierPaymentMethodService } from '../supplier-payment-method/supplier-payment-method.service';
 
 type PaymentMethod =
   | 'cash'
@@ -11,6 +12,23 @@ type PaymentMethod =
   | 'mobile_banking'
   | 'bank_transfer'
   | 'chapa';
+
+const supplierPaymentToOrderMethodMap: Record<string, PaymentMethod | null> = {
+  bank_transfer: 'cheque',
+  mobile_money: 'mobile_banking',
+  cash_on_delivery: 'cash',
+  credit_card: 'chapa',
+  other: 'credit',
+};
+
+const paymentMethodToSupplierTypes: Record<PaymentMethod, string[]> = {
+  cash: ['cash_on_delivery'],
+  mobile_banking: ['mobile_money'],
+  cheque: ['bank_transfer'],
+  chapa: ['credit_card'],
+  credit: ['other'],
+  bank_transfer: ['bank_transfer'],
+};
 
 interface SubmitPaymentPayload {
   payment_method?: PaymentMethod;
@@ -29,6 +47,7 @@ interface SubmitPaymentPayload {
 }
 
 class PaymentService {
+  private supplierPaymentMethodService = new SupplierPaymentMethodService();
   private async closeOrderIfPaidAndDelivered(orderId: string) {
     const order = await Order.findByPk(orderId);
     if (!order) return;
@@ -92,6 +111,20 @@ class PaymentService {
     const selectedMethod = (payload.payment_method ||
       payment?.payment_method ||
       'cash') as PaymentMethod;
+
+    // validate method against supplier payment methods
+    const supplierPaymentMethods = await this.supplierPaymentMethodService.getActiveSupplierPaymentMethods(order.supplier_id);
+    const mappedMethods = supplierPaymentMethods
+      .map((m: any) => supplierPaymentToOrderMethodMap[m.method_type])
+      .filter(Boolean) as PaymentMethod[];
+    const allowedMethods = Array.from(new Set(mappedMethods));
+
+    if (!allowedMethods.includes(selectedMethod)) {
+      throw new AppError(
+        `Payment method '${selectedMethod}' is not permitted by supplier`,
+        400,
+      );
+    }
 
     let paymentCreatedInThisRequest = false;
     if (!payment) {

@@ -6,30 +6,18 @@ import {
   Filter,
   Star,
   MapPin,
-  Clock,
   CheckCircle2,
-  XCircle,
   ChevronRight,
   Package,
   Truck,
-  Shield,
-  TrendingUp,
-  Users,
-  Award,
   Scale,
   X,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -48,12 +36,9 @@ import {
   SheetFooter,
   SheetClose,
 } from "@/components/ui/sheet";
-import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Slider } from "@/components/ui/slider";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Pagination,
   PaginationContent,
@@ -78,8 +63,6 @@ const suppliers = [
     rating: 4.9,
     reviews: 128,
     products: 45,
-    responseTime: "< 2 hours",
-    deliveryTime: "2-3 days",
     min_order_amount: "ETB 5,000",
     priceLevel: "$$",
     totalOrders: 1250,
@@ -355,8 +338,7 @@ const SupplierDirectoryPage: React.FC = () => {
         return b.rating - a.rating;
       case "orders":
         return b.totalOrders - a.totalOrders;
-      case "response":
-        return a.responseTime.localeCompare(b.responseTime);
+
       case "name":
         return a.name.localeCompare(b.name);
       default:
@@ -767,10 +749,6 @@ const SupplierDirectoryPage: React.FC = () => {
                   <div className="flex items-center text-xs text-muted-foreground">
                     <Package className="h-3 w-3 mr-1" />
                     {supplier.products} products
-                  </div>
-                  <div className="flex items-center text-xs text-muted-foreground">
-                    <Truck className="h-3 w-3 mr-1" />
-                    {supplier.deliveryTime}
                   </div>
                 </div>
 

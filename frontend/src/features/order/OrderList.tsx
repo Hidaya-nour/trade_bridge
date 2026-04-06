@@ -47,9 +47,15 @@ import {
 import { formatPrice, formatDate } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 import type { Order } from "@/types/order.types";
-import type { PaymentMethod, PaymentDetails } from "@/types/payment.types";
+import type {
+  PaymentMethod,
+  PaymentDetails,
+  SupplierPaymentMethodInfo,
+} from "@/types/payment.types";
 import OrderTrackingDialog from "@/components/order/OrderTrackingDialog";
 import { PlaceOrderDialog } from "@/components/order/PlaceOrderDialog";
+import supplierPaymentMethodService from "@/services/supplier-payment-method.service";
+import { supplierMethodsToPaymentMethods } from "@/lib/payment-method-utils";
 import { RateReviewDialog } from "@/components/product/RateReviewDialog";
 import toast from "react-hot-toast";
 
@@ -148,6 +154,12 @@ export const OrderList: React.FC<OrderListProps> = ({
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [showRateDialog, setShowRateDialog] = useState(false);
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+  const [supplierAllowedMethods, setSupplierAllowedMethods] = useState<
+    PaymentMethod[]
+  >([]);
+  const [supplierPaymentMethods, setSupplierPaymentMethods] = useState<
+    SupplierPaymentMethodInfo[]
+  >([]);
   const [showReorderDialog, setShowReorderDialog] = useState(false);
   const [cancellationReason, setCancellationReason] = useState("");
   const [rating, setRating] = useState(5);
@@ -215,15 +227,12 @@ export const OrderList: React.FC<OrderListProps> = ({
       return false;
     }
 
-    // Cash on delivery does not require an online "Pay Now" action.
     if (
       order.payment?.payment_method === "cash" &&
       order.payment.payment_status === "pending"
     ) {
       return false;
     }
-
-    // If there's no payment record at all, it needs payment
     if (!order.payment) {
       return true;
     }
@@ -375,6 +384,33 @@ export const OrderList: React.FC<OrderListProps> = ({
     return Number.isFinite(parsed) ? parsed : 0;
   };
 
+  useEffect(() => {
+    const loadSupplierMethods = async () => {
+      if (!selectedOrder?.supplier_id) {
+        setSupplierAllowedMethods([]);
+        return;
+      }
+
+      try {
+        const response =
+          await supplierPaymentMethodService.getActiveBySupplierId(
+            selectedOrder.supplier_id,
+          );
+
+        const activeMethods = response.data || response;
+        setSupplierAllowedMethods(
+          supplierMethodsToPaymentMethods(activeMethods),
+        );
+        setSupplierPaymentMethods(activeMethods);
+      } catch (err) {
+        console.error("Failed to load supplier active payment methods", err);
+        setSupplierAllowedMethods([]);
+      }
+    };
+
+    loadSupplierMethods();
+  }, [selectedOrder]);
+
   const getOrderDisplayTotal = (order: Order): number => {
     if (order.payment?.total_amount !== undefined) {
       return toAmount(order.payment.total_amount);
@@ -401,7 +437,9 @@ export const OrderList: React.FC<OrderListProps> = ({
     },
     {
       title: "Approved",
-      value: orders.filter((o) => o.order_status === "approved").length,
+      value: orders.filter(
+        (o) => o.order_status === "approved" || o.order_status === "processing",
+      ).length,
       icon: CheckCircle2,
       iconBg: "bg-blue-100",
       iconColor: "text-blue-600",
@@ -951,11 +989,7 @@ export const OrderList: React.FC<OrderListProps> = ({
                         </Button>
                       )}
 
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      asChild
-                    >
+                    <Button size="sm" variant="outline" asChild>
                       <Link
                         to={`/${config.role}/${config.type === "purchases" ? "purchase-orders" : "orders"}/${order.id}/receipt`}
                       >
@@ -1009,6 +1043,8 @@ export const OrderList: React.FC<OrderListProps> = ({
               "mobile_banking",
               "chapa",
             ],
+            supplierAllowedMethods: supplierAllowedMethods,
+            supplierPaymentMethods,
             creditTerms: config.paymentConfig?.creditTerms || {
               enabled: true,
               maxCreditAmount: 50000,

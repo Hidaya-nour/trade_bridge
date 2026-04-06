@@ -25,6 +25,11 @@ class SupplierPaymentMethodService {
     const response = await api.delete(`/supplier-payment-methods/${id}`);
     return response.data;
   }
+
+  async getActiveBySupplierId(supplierId: string) {
+    const response = await api.get(`/supplier-payment-methods/supplier/${supplierId}/active`);
+    return response.data;
+  }
 }
 
 export default new SupplierPaymentMethodService();

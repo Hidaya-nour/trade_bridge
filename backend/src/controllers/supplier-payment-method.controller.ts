@@ -80,6 +80,25 @@ export class SupplierPaymentMethodController {
     }
   }
 
+  async getActivePaymentMethodsForSupplier(req: Request, res: Response) {
+    try {
+      const { supplierId } = req.params;
+      if (!supplierId) {
+        throw new AppError('Supplier ID is required', 400);
+      }
+
+      const paymentMethods = await paymentMethodService.getActiveSupplierPaymentMethods(supplierId);
+      res.json({ success: true, data: paymentMethods });
+    } catch (error) {
+      if (error instanceof AppError) {
+        res.status(error.statusCode).json({ success: false, message: error.message });
+      } else {
+        logger.error('Get active payment methods for supplier error:', error);
+        res.status(500).json({ success: false, message: 'Internal server error' });
+      }
+    }
+  }
+
   async update(req: Request, res: Response) {
     try {
       this.ensureSupplierRole(req);
@@ -135,7 +154,7 @@ export class SupplierPaymentMethodController {
     body('provider_name').isString().notEmpty(),
     body('account_holder_name').isString().notEmpty(),
     body('account_identifier').isString().notEmpty(),
-    body('account_display').isString().notEmpty(),
+    body('account_display').optional().isString(),
     body('is_primary').optional().isBoolean()
   ];
 

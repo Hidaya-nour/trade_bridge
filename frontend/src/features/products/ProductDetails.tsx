@@ -1,29 +1,20 @@
 import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import {
   Package,
   Star,
   Truck,
   Clock,
   MapPin,
-  CheckCircle2,
   XCircle,
   Shield,
   Building2,
-  Phone,
-  Mail,
   ChevronRight,
   Plus,
   Minus,
   ShoppingCart,
-  Heart,
   Share2,
   Award,
-  TrendingUp,
-  Scale,
-  FileText,
-  Factory,
-  Store,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -37,15 +28,10 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Separator } from "@/components/ui/separator";
-import { Progress } from "@/components/ui/progress";
-
-import { StatusBadge } from "@/components";
 import { formatPrice } from "@/lib/formatters";
 import { getInitials, cn } from "@/lib/utils";
 import { ProductGallery } from "@/components/product/ProductGallery";
 import { ProductSpecifications } from "@/components/product/ProductSpecifications";
-import { RateReviewDialog } from "@/components/product/RateReviewDialog";
 
 // ============================================================================
 // TYPES
@@ -141,28 +127,9 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
   cartQuantity = 0,
   onSetCartQuantity,
   onViewSupplier,
-  onCompare,
-  onRateProduct,
 }) => {
-  const navigate = useNavigate();
-  const [quantity, setQuantity] = useState(product.min_order_amount);
+  const [quantity] = useState(product.min_order_amount);
   const [activeTab, setActiveTab] = useState("description");
-  const [showRateDialog, setShowRateDialog] = useState(false);
-  const [rating, setRating] = useState(5);
-  const [review, setReview] = useState("");
-
-  const getRoleIcon = () => {
-    switch (role) {
-      case "retailer":
-        return Store;
-      case "distributor":
-        return Factory;
-      case "factory":
-        return Package;
-      default:
-        return Package;
-    }
-  };
 
   const getSupplierPath = () => {
     switch (role) {
@@ -175,28 +142,10 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
     }
   };
 
-  const RoleIcon = getRoleIcon();
-
-  const incrementQuantity = () => {
-    setQuantity((prev) =>
-      Math.min(prev + 1, product.maxOrder || prev + product.min_order_amount),
-    );
-  };
-
-  const decrementQuantity = () => {
-    setQuantity((prev) => Math.max(prev - 1, product.min_order_amount));
-  };
-
   const handleAddToCart = () => {
     onAddToCart(quantity);
   };
 
-  const handleSubmitReview = () => {
-    onRateProduct?.(product.id, rating, review);
-    setShowRateDialog(false);
-    setRating(5);
-    setReview("");
-  };
   return (
     <div className="space-y-6">
       {/* Breadcrumb */}
@@ -588,21 +537,9 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
                 <div>
                   <h3 className="text-sm font-semibold">Customer Reviews</h3>
                   <p className="text-xs text-muted-foreground">
-                    Share your experience with this product.
+                    Others experience with this product.
                   </p>
                 </div>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => {
-                    setRating(5);
-                    setReview("");
-                    setShowRateDialog(true);
-                  }}
-                >
-                  <Star className="h-3 w-3 mr-2" />
-                  Rate Product
-                </Button>
               </div>
               {product.reviews && product.reviews.length > 0 ? (
                 <div className="space-y-4">
@@ -686,23 +623,6 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
           </div>
         </div>
       )}
-
-      <RateReviewDialog
-        open={showRateDialog}
-        onOpenChange={(open) => {
-          setShowRateDialog(open);
-          if (!open) {
-            setRating(5);
-            setReview("");
-          }
-        }}
-        productName={product.name}
-        rating={rating}
-        onRatingChange={setRating}
-        review={review}
-        onReviewChange={setReview}
-        onSubmit={handleSubmitReview}
-      />
     </div>
   );
 };

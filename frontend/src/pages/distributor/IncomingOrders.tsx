@@ -49,7 +49,7 @@ const mapOrderToIncoming = (order: Order): IncomingOrder => {
     customerId: Number(order.buyer_id) || 0,
     customerName,
     customerContact: order.buyer?.full_name || customerName,
-    customerPhone: "N/A",
+    customerPhone: order.buyer?.phone || "NA",
     customerLocation:
       order.delivery?.dropoff_location ||
       order.delivery?.pickup_location ||

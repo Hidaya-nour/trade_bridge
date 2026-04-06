@@ -63,11 +63,6 @@ const roleNavigation = {
       href: "/retailer/cart",
       icon: ShoppingCart,
     },
-    {
-      name: "Analytics",
-      href: "/retailer/analytics",
-      icon: BarChart3,
-    },
   ],
 
   distributor: {
@@ -87,7 +82,6 @@ const roleNavigation = {
         name: "Inventory",
         href: "/distributor/inventory",
         icon: Warehouse,
-        badge: "Low Stock",
       },
     ],
     retailOperations: [
@@ -161,13 +155,9 @@ const roleNavigation = {
 
   driver: [
     { name: "Dashboard", href: "/driver/dashboard", icon: LayoutDashboard },
-    { name: "Notifications", href: "/driver/notifications", icon: Bell },
-    { name: "Active Deliveries", href: "/driver/active", icon: Truck },
-    { name: "Live Tracking", href: "/driver/tracking", icon: TrendingUp },
+    { name: "Active Deliveries", href: "/driver/tracking", icon: TrendingUp },
     { name: "Delivery History", href: "/driver/history", icon: Package },
     { name: "Report Issues", href: "/driver/issues", icon: AlertCircle },
-    { name: "Driver Profile", href: "/driver/profile", icon: Users },
-    { name: "Help & Support", href: "/support", icon: HelpCircle },
   ],
 
   admin: [
@@ -179,15 +169,12 @@ const roleNavigation = {
       icon: Shield,
     },
     { name: "Product Listings", href: "/admin/products", icon: Package },
-    { name: "Order Oversight", href: "/admin/orders", icon: ShoppingCart },
     {
       name: "Dispute Management",
       href: "/admin/disputes",
       icon: HelpCircle,
     },
     { name: "Platform Analytics", href: "/admin/analytics", icon: BarChart3 },
-    { name: "System Settings", href: "/admin/settings", icon: Settings },
-    { name: "Payment Monitoring", href: "/admin/payments", icon: CreditCard },
   ],
 };
 
@@ -200,7 +187,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
   collapsed = false,
   onToggle,
 }) => {
-  const { user, logout } = useAuthStore();
+  const { user } = useAuthStore();
   const location = useLocation();
   const navigate = useNavigate();
   const userRole = user?.role as keyof typeof roleNavigation;
@@ -751,10 +738,9 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
             variant="ghost"
             size="icon"
             className="h-10 w-10 mx-auto text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-            // asChild
             onClick={async () => {
-              await useAuthStore.getState().logout(); // clear Zustand store
-              navigate("/login"); // redirect to login page
+              await useAuthStore.getState().logout();
+              navigate("/login");
             }}
           >
             <LogOut className="mr-2 h-4 w-4 transition-transform group-hover:translate-x-0.5" />

@@ -98,19 +98,21 @@ const PaymentTab: React.FC<PaymentTabProps> = ({
                         <SelectValue placeholder="Select method type" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="bank_transfer">
-                          Bank Transfer
-                        </SelectItem>
-                        <SelectItem value="mobile_money">
-                          Mobile Money
-                        </SelectItem>
                         <SelectItem value="cash_on_delivery">
                           Cash on Delivery
                         </SelectItem>
-                        <SelectItem value="credit_card">Credit Card</SelectItem>
-                        <SelectItem value="debit_card">Debit Card</SelectItem>
-                        <SelectItem value="paypal">PayPal</SelectItem>
-                        <SelectItem value="other">Other</SelectItem>
+                        <SelectItem value="mobile_money">
+                          Mobile Banking
+                        </SelectItem>
+                        <SelectItem value="bank_transfer">
+                          Bank Transfer / Cheque
+                        </SelectItem>
+                        <SelectItem value="credit_card">
+                          Chapa Payment
+                        </SelectItem>
+                        <SelectItem value="other">
+                          Credit / Pay Later
+                        </SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -150,19 +152,6 @@ const PaymentTab: React.FC<PaymentTabProps> = ({
                         }))
                       }
                       placeholder="Account number / phone"
-                    />
-                  </div>
-                  <div className="space-y-2 md:col-span-2">
-                    <Label>Display Text</Label>
-                    <Input
-                      value={newPaymentMethod.account_display}
-                      onChange={(e) =>
-                        setNewPaymentMethod((prev) => ({
-                          ...prev,
-                          account_display: e.target.value,
-                        }))
-                      }
-                      placeholder="What buyers should see"
                     />
                   </div>
                 </div>

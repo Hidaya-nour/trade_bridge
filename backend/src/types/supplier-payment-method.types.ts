@@ -1,4 +1,4 @@
-export type PaymentMethodType = 'bank_transfer' | 'mobile_money' | 'cash_on_delivery' | 'credit_card' | 'debit_card' | 'paypal' | 'other';
+export type PaymentMethodType = 'cash_on_delivery' | 'mobile_money' | 'bank_transfer' | 'credit_card' | 'other';
 
 export interface ISupplierPaymentMethod {
   id: string;
@@ -21,7 +21,7 @@ export interface CreateSupplierPaymentMethodDTO {
   provider_name: string;
   account_holder_name: string;
   account_identifier: string;
-  account_display: string;
+  account_display?: string;
   is_primary?: boolean;
 }
 
