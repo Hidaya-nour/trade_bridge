@@ -63,11 +63,6 @@ const roleNavigation = {
       href: "/retailer/cart",
       icon: ShoppingCart,
     },
-    {
-      name: "Analytics",
-      href: "/retailer/analytics",
-      icon: BarChart3,
-    },
   ],
 
   distributor: {
@@ -87,7 +82,6 @@ const roleNavigation = {
         name: "Inventory",
         href: "/distributor/inventory",
         icon: Warehouse,
-        badge: "Low Stock",
       },
     ],
     retailOperations: [
