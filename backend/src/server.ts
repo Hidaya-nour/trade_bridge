@@ -45,6 +45,7 @@ import factoryAgentRoutes from './routes/factory-agent.routes';
 import ratingReviewRoutes from './routes/rating-review.routes';
 import supplierRoutes from './routes/supplier.routes'
 import driverRoutes from './routes/driver.routes';
+import forecastRoutes from './routes/forecast.routes';
 import { AppError, ValidationError } from './utils/errors';
 dotenv.config();
 
@@ -110,7 +111,7 @@ app.use('/api/reviews', ratingReviewRoutes);
 app.use('/api/suppliers', supplierRoutes);
 app.use('/api/drivers', driverRoutes);
 app.use('/api/delivery', deliveryRoutes);
-
+app.use('/api/forecast', forecastRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

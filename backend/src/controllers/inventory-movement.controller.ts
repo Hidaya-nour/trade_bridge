@@ -65,7 +65,7 @@ export class InventoryMovementController {
   }
 
   // Get inventory movement by ID
-  async getMovementById(req: Request, res: Response) {
+  async getMovementById(req: Request, res: Response): Promise<any> {
     try {
       const { id } = req.params;
       const movement = await inventoryService.getMovementById(id);
@@ -74,13 +74,13 @@ export class InventoryMovementController {
         return res.status(404).json({ success: false, message: 'Inventory movement not found' });
       }
 
-      res.json({ success: true, data: { movement } });
+      return res.json({ success: true, data: { movement } });
     } catch (error) {
       if (error instanceof AppError) {
-        res.status(error.statusCode).json({ success: false, message: error.message });
+        return res.status(error.statusCode).json({ success: false, message: error.message });
       } else {
         logger.error('Get inventory movement error:', error);
-        res.status(500).json({ success: false, message: 'Internal server error' });
+        return res.status(500).json({ success: false, message: 'Internal server error' });
       }
     }
   }

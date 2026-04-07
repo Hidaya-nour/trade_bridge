@@ -32,7 +32,6 @@ import {
   Upload,
 } from "lucide-react";
 import { formatPrice } from "@/lib/formatters";
-import { supplierMethodTypeToPaymentMethod } from "@/lib/payment-method-utils";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import toast from "react-hot-toast";
@@ -72,7 +71,6 @@ export interface PaymentDialogProps {
   isProcessing?: boolean;
   config?: {
     allowedMethods?: PaymentMethod[];
-    supplierAllowedMethods?: PaymentMethod[];
     creditTerms?: {
       enabled: boolean;
       maxCreditAmount?: number;
@@ -84,15 +82,6 @@ export interface PaymentDialogProps {
       accountNumber: string;
       accountName: string;
       branch?: string;
-    }[];
-    supplierPaymentMethods?: {
-      id: string;
-      method_type: string;
-      provider_name: string;
-      account_holder_name: string;
-      account_identifier: string;
-      account_display: string;
-      is_primary?: boolean;
     }[];
     chapaEnabled?: boolean;
     requireApprovalFor?: PaymentMethod[];
@@ -118,7 +107,10 @@ export interface PaymentDetails {
   drawerName?: string;
 
   // Mobile banking fields
+  transactionId?: string;
   mobileProvider?: string;
+  phoneNumber?: string;
+  transferDate?: string;
 
   // Chapa fields
   chapaEmail?: string;
@@ -151,7 +143,7 @@ const PAYMENT_METHODS: PaymentMethodConfig[] = [
     id: "cheque",
     name: "Cheque",
     icon: Receipt,
-    description: "Pay by cheque and upload proof or scanned cheque",
+    description: "Pay by cheque with document upload",
     requiresDocument: true,
     enabled: true,
   },
@@ -159,7 +151,7 @@ const PAYMENT_METHODS: PaymentMethodConfig[] = [
     id: "mobile_banking",
     name: "Mobile Banking",
     icon: Smartphone,
-    description: "Pay via mobile money and upload screenshot of transfer",
+    description: "Pay via mobile money transfer",
     requiresDocument: true,
     enabled: true,
   },
@@ -167,7 +159,7 @@ const PAYMENT_METHODS: PaymentMethodConfig[] = [
     id: "chapa",
     name: "Chapa",
     icon: CreditCard,
-    description: "Pay securely with in-app Chapa payment",
+    description: "Pay securely with Chapa payment gateway",
     enabled: true,
   },
 ];
@@ -202,51 +194,19 @@ export const PaymentDialog: React.FC<PaymentDialogProps> = ({
   isProcessing = false,
   config = {},
 }) => {
-  const [selectedMethod, setSelectedMethod] = useState<PaymentMethod | null>(
-    null,
-  );
+  const [selectedMethod, setSelectedMethod] = useState<PaymentMethod>("cash");
   const [paymentDetails, setPaymentDetails] = useState<PaymentDetails>({});
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string>("method");
   const [agreedToTerms, setAgreedToTerms] = useState(false);
 
-  // Filter available payment methods based on config and supplier settings
-  const availableMethods = PAYMENT_METHODS.filter((method) => {
-    const allowedByConfig =
-      !config.allowedMethods || config.allowedMethods.includes(method.id);
-    const hasSupplierMethods =
-      Array.isArray(config.supplierAllowedMethods) &&
-      config.supplierAllowedMethods.length > 0;
-    const allowedBySupplier =
-      !config.supplierAllowedMethods ||
-      (hasSupplierMethods && config.supplierAllowedMethods.includes(method.id));
-
-    return method.enabled && allowedByConfig && allowedBySupplier;
-  });
-
-  React.useEffect(() => {
-    if (availableMethods.length === 0) {
-      setSelectedMethod(null);
-      return;
-    }
-
-    if (
-      !selectedMethod ||
-      !availableMethods.some((method) => method.id === selectedMethod)
-    ) {
-      setSelectedMethod(availableMethods[0].id);
-    }
-  }, [availableMethods, selectedMethod]);
-
-  const getSupplierMethodsForPaymentMethod = (method: PaymentMethod) => {
-    if (!config.supplierPaymentMethods) return [];
-    return config.supplierPaymentMethods.filter(
-      (supplierMethod) =>
-        supplierMethodTypeToPaymentMethod(supplierMethod.method_type) ===
-        method,
-    );
-  };
+  // Filter available payment methods based on config
+  const availableMethods = PAYMENT_METHODS.filter(
+    (method) =>
+      method.enabled &&
+      (!config.allowedMethods || config.allowedMethods.includes(method.id)),
+  );
 
   // Handle file upload
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -275,10 +235,6 @@ export const PaymentDialog: React.FC<PaymentDialogProps> = ({
 
   // Handle payment submission
   const handleSubmit = async () => {
-    if (!selectedMethod) {
-      toast.error("Please select a payment method");
-      return;
-    }
     // Validate based on payment method
     if (selectedMethod === "credit" && config.creditTerms?.enabled) {
       if (!paymentDetails.creditCustomerName) {
@@ -309,8 +265,27 @@ export const PaymentDialog: React.FC<PaymentDialogProps> = ({
     }
 
     if (selectedMethod === "mobile_banking") {
+      if (!paymentDetails.transactionId) {
+        toast.error("Please enter transaction ID");
+        return;
+      }
+      if (!paymentDetails.mobileProvider) {
+        toast.error("Please select mobile provider");
+        return;
+      }
       if (uploadedFiles.length === 0) {
         toast.error("Please upload payment receipt/screenshot");
+        return;
+      }
+    }
+
+    if (selectedMethod === "chapa") {
+      if (!paymentDetails.chapaEmail) {
+        toast.error("Please enter email address for Chapa payment");
+        return;
+      }
+      if (!paymentDetails.chapaFirstName || !paymentDetails.chapaLastName) {
+        toast.error("Please enter your full name");
         return;
       }
     }
@@ -367,64 +342,57 @@ export const PaymentDialog: React.FC<PaymentDialogProps> = ({
           </TabsList>
 
           <TabsContent value="method" className="space-y-4 py-4">
-            {availableMethods.length === 0 ? (
-              <div className="rounded-lg border border-yellow-300 bg-yellow-50 p-4 text-sm text-yellow-800">
-                Supplier has no supported payment methods for your role. Please
-                ask the supplier to add a payment method first.
-              </div>
-            ) : (
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                {availableMethods.map((method) => {
-                  const Icon = method.icon;
-                  const isSelected = selectedMethod === method.id;
-                  const requiresApproval =
-                    config.requireApprovalFor?.includes(method.id) ||
-                    method.requiresApproval;
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              {availableMethods.map((method) => {
+                const Icon = method.icon;
+                const isSelected = selectedMethod === method.id;
+                const requiresApproval =
+                  config.requireApprovalFor?.includes(method.id) ||
+                  method.requiresApproval;
 
-                  return (
-                    <div
-                      key={method.id}
+                return (
+                  <div
+                    key={method.id}
+                    className={cn(
+                      "relative flex flex-col items-center p-4 border-2 rounded-lg cursor-pointer transition-all",
+                      isSelected
+                        ? "border-primary bg-primary/5"
+                        : "border-muted hover:border-primary/50 hover:bg-accent",
+                    )}
+                    onClick={() => setSelectedMethod(method.id)}
+                  >
+                    <Icon
                       className={cn(
-                        "relative flex flex-col items-center p-4 border-2 rounded-lg cursor-pointer transition-all",
-                        isSelected
-                          ? "border-primary bg-primary/5"
-                          : "border-muted hover:border-primary/50 hover:bg-accent",
+                        "h-8 w-8 mb-2",
+                        isSelected ? "text-primary" : "text-muted-foreground",
                       )}
-                      onClick={() => setSelectedMethod(method.id)}
-                    >
-                      <Icon
-                        className={cn(
-                          "h-8 w-8 mb-2",
-                          isSelected ? "text-primary" : "text-muted-foreground",
-                        )}
-                      />
-                      <span className="text-sm font-medium text-center">
-                        {method.name}
-                      </span>
-                      <span className="text-xs text-muted-foreground text-center mt-1">
-                        {method.description}
-                      </span>
-                      {requiresApproval && (
-                        <Badge
-                          variant="outline"
-                          className="mt-2 bg-yellow-50 text-yellow-700 border-yellow-200"
-                        >
-                          Requires Approval
-                        </Badge>
-                      )}
-                      {method.requiresDocument && (
-                        <Badge
-                          variant="outline"
-                          className="mt-1 bg-blue-50 text-blue-700 border-blue-200"
-                        >
-                          Upload Required
-                        </Badge>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+                    />
+                    <span className="text-sm font-medium text-center">
+                      {method.name}
+                    </span>
+                    <span className="text-xs text-muted-foreground text-center mt-1">
+                      {method.description}
+                    </span>
+                    {requiresApproval && (
+                      <Badge
+                        variant="outline"
+                        className="mt-2 bg-yellow-50 text-yellow-700 border-yellow-200"
+                      >
+                        Requires Approval
+                      </Badge>
+                    )}
+                    {method.requiresDocument && (
+                      <Badge
+                        variant="outline"
+                        className="mt-1 bg-blue-50 text-blue-700 border-blue-200"
+                      >
+                        Upload Required
+                      </Badge>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
 
             <DialogFooter className="pt-4">
               <Button variant="outline" onClick={() => onOpenChange(false)}>
@@ -432,7 +400,7 @@ export const PaymentDialog: React.FC<PaymentDialogProps> = ({
               </Button>
               <Button
                 onClick={() => setActiveTab("details")}
-                disabled={!selectedMethod || availableMethods.length === 0}
+                disabled={!selectedMethod}
               >
                 Continue to Details
                 <ChevronRight className="h-4 w-4 ml-2" />
@@ -593,27 +561,6 @@ export const PaymentDialog: React.FC<PaymentDialogProps> = ({
                   </div>
                 </div>
 
-                {getSupplierMethodsForPaymentMethod("cheque").length > 0 && (
-                  <div className="space-y-2 rounded-lg border bg-muted/50 p-4 text-sm">
-                    {getSupplierMethodsForPaymentMethod("cheque").map(
-                      (method) => (
-                        <div key={method.id} className="space-y-1">
-                          <p className="font-semibold">
-                            {method.provider_name}
-                          </p>
-                          <p>Account: {method.account_identifier}</p>
-                          <p>Holder: {method.account_holder_name}</p>
-                          {method.account_display && (
-                            <p className="text-muted-foreground">
-                              {method.account_display}
-                            </p>
-                          )}
-                        </div>
-                      ),
-                    )}
-                  </div>
-                )}
-
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="cheque-number">Cheque Number *</Label>
@@ -751,39 +698,111 @@ export const PaymentDialog: React.FC<PaymentDialogProps> = ({
                         Mobile Banking Payment
                       </h4>
                       <p className="text-sm text-indigo-700">
-                        Use the supplier’s mobile banking details below and
-                        upload a screenshot of your payment.
+                        Please upload your payment receipt/screenshot after
+                        completing the transfer.
                       </p>
                     </div>
                   </div>
                 </div>
 
-                {getSupplierMethodsForPaymentMethod("mobile_banking").length >
-                0 ? (
-                  <div className="space-y-2 rounded-lg border bg-muted/50 p-4 text-sm">
-                    {getSupplierMethodsForPaymentMethod("mobile_banking").map(
-                      (method) => (
-                        <div key={method.id} className="space-y-1">
-                          <p className="font-semibold">
-                            {method.provider_name}
+                {/* Bank Account Details */}
+                {config.bankAccounts && config.bankAccounts.length > 0 && (
+                  <div className="space-y-2">
+                    <Label>Bank Account Details</Label>
+                    <div className="bg-muted/50 rounded-lg p-3 space-y-2">
+                      {config.bankAccounts.map((account, index, accounts) => (
+                        <div key={index} className="text-sm">
+                          <p className="font-medium">{account.bankName}</p>
+                          <p className="text-muted-foreground">
+                            Account: {account.accountNumber}
                           </p>
-                          <p>Account: {method.account_identifier}</p>
-                          <p>Holder: {method.account_holder_name}</p>
-                          {method.account_display && (
+                          <p className="text-muted-foreground">
+                            Name: {account.accountName}
+                          </p>
+                          {account.branch && (
                             <p className="text-muted-foreground">
-                              {method.account_display}
+                              Branch: {account.branch}
                             </p>
                           )}
+                          {index < accounts.length - 1 && (
+                            <Separator className="my-2" />
+                          )}
                         </div>
-                      ),
-                    )}
-                  </div>
-                ) : (
-                  <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-4 text-sm text-yellow-800">
-                    No supplier mobile banking details are available. Please
-                    contact the supplier for payment instructions.
+                      ))}
+                    </div>
                   </div>
                 )}
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="transaction-id">Transaction ID *</Label>
+                    <Input
+                      id="transaction-id"
+                      placeholder="Enter transaction ID"
+                      value={paymentDetails.transactionId || ""}
+                      onChange={(e) =>
+                        setPaymentDetails({
+                          ...paymentDetails,
+                          transactionId: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="mobile-provider">Mobile Provider *</Label>
+                    <Select
+                      value={paymentDetails.mobileProvider || ""}
+                      onValueChange={(value) =>
+                        setPaymentDetails({
+                          ...paymentDetails,
+                          mobileProvider: value,
+                        })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select provider" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {MOBILE_PROVIDERS.map((provider) => (
+                          <SelectItem key={provider.id} value={provider.id}>
+                            {provider.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="phone-number">Phone Number</Label>
+                    <Input
+                      id="phone-number"
+                      placeholder="+251 91 234 5678"
+                      value={paymentDetails.phoneNumber || ""}
+                      onChange={(e) =>
+                        setPaymentDetails({
+                          ...paymentDetails,
+                          phoneNumber: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="transfer-date">Transfer Date</Label>
+                    <Input
+                      id="transfer-date"
+                      type="date"
+                      value={paymentDetails.transferDate || ""}
+                      onChange={(e) =>
+                        setPaymentDetails({
+                          ...paymentDetails,
+                          transferDate: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
+                </div>
 
                 {/* File Upload */}
                 <div className="space-y-2">
@@ -843,39 +862,81 @@ export const PaymentDialog: React.FC<PaymentDialogProps> = ({
                       </h4>
                       <p className="text-sm text-emerald-700">
                         You will be redirected to Chapa's secure payment gateway
-                        to complete this order. We will use your registered
-                        profile email and name for the checkout.
+                        to complete your payment.
                       </p>
                     </div>
                   </div>
                 </div>
 
-                <div className="space-y-2 rounded-lg border bg-muted/50 p-4 text-sm">
-                  <p className="font-semibold">Chapa payment details</p>
-                  <p>
-                    No additional payment details are required here. After
-                    submitting, you will be redirected to Chapa to finish the
-                    payment securely.
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    If your profile email is invalid, the payment may fail.
-                    Please update your account email before continuing.
-                  </p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="chapa-email">Email Address *</Label>
+                    <Input
+                      id="chapa-email"
+                      type="email"
+                      placeholder="your@email.com"
+                      value={paymentDetails.chapaEmail || ""}
+                      onChange={(e) =>
+                        setPaymentDetails({
+                          ...paymentDetails,
+                          chapaEmail: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="chapa-phone">Phone Number</Label>
+                    <Input
+                      id="chapa-phone"
+                      placeholder="+251 91 234 5678"
+                      value={paymentDetails.phoneNumber || ""}
+                      onChange={(e) =>
+                        setPaymentDetails({
+                          ...paymentDetails,
+                          phoneNumber: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="chapa-notes">Notes</Label>
-                  <Textarea
-                    id="chapa-notes"
-                    placeholder="Any additional instructions or reference"
-                    value={paymentDetails.notes || ""}
-                    onChange={(e) =>
-                      setPaymentDetails({
-                        ...paymentDetails,
-                        notes: e.target.value,
-                      })
-                    }
-                  />
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="chapa-firstname">First Name *</Label>
+                    <Input
+                      id="chapa-firstname"
+                      placeholder="First name"
+                      value={paymentDetails.chapaFirstName || ""}
+                      onChange={(e) =>
+                        setPaymentDetails({
+                          ...paymentDetails,
+                          chapaFirstName: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="chapa-lastname">Last Name *</Label>
+                    <Input
+                      id="chapa-lastname"
+                      placeholder="Last name"
+                      value={paymentDetails.chapaLastName || ""}
+                      onChange={(e) =>
+                        setPaymentDetails({
+                          ...paymentDetails,
+                          chapaLastName: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
+                </div>
+
+                <div className="bg-muted/50 rounded-lg p-3">
+                  <p className="text-xs text-muted-foreground">
+                    <strong>Note:</strong> You will be redirected to Chapa's
+                    secure payment page after clicking "Proceed to Payment".
+                    Your payment information is encrypted and secure.
+                  </p>
                 </div>
               </div>
             )}

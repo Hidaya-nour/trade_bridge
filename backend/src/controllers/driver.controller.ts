@@ -73,7 +73,7 @@ class DriverController {
     try {
       const supplierId = (req as any).user.id as string;
       const { id } = req.params;
-      const updated = await DriverService.updateDriver(id, supplierId, req.body);
+      const updated = await driverService.updateDriver(id, supplierId, req.body);
       return res.json({ success: true, data: { driver: updated } });
     } catch (err) {
       if (err instanceof AppError) {

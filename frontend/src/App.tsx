@@ -26,6 +26,7 @@ import BroadcastAnnouncementsPage from "./pages/factory/BroadcastAnnouncements";
 import PurchaseOrdersPage from "./pages/distributor/PurchaseOrders";
 import MarketPlace from "./pages/distributor/MarketPlace";
 import ProductionAnalyticsPage from "./pages/factory/ProductionAnalytics";
+import FactoryForecastPage from "./pages/factory/Forecast";
 import AdminDashboard from "./pages/admin/dashboard";
 import UserManagementPage from "./pages/admin/UserManagementPage";
 import { VerificationsPage } from "./pages/admin/VerificationsPage";
@@ -361,6 +362,14 @@ function App() {
             element={
               <DashboardLayout>
                 <FactoryDashboard />
+              </DashboardLayout>
+            }
+          />
+          <Route
+            path="/factory/forecast"
+            element={
+              <DashboardLayout>
+                <FactoryForecastPage />
               </DashboardLayout>
             }
           />

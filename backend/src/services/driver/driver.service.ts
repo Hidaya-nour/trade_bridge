@@ -63,7 +63,7 @@ export class DriverService {
     return this.DriverRepo.findById(id);
   }
 
-  async Driver(id: string, supplierId: string) {
+  async removeDriver(id: string, supplierId: string) {
     const record = await this.DriverRepo.findById(id);
     if (!record || record.supplier_id !== supplierId) {
       throw new AppError('Driver not found for this supplier', 404);

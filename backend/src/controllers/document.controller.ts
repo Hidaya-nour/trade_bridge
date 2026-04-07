@@ -40,32 +40,32 @@ export class DocumentController {
     }
   }
 
-  async getAllForAdmin(req: Request, res: Response) {
+  async getAllForAdmin(req: Request, res: Response): Promise<any> {
     try {
       const docs = await documentService.getAllForAdmin();
-      res.json({ success: true, data: docs });
+      return res.json({ success: true, data: docs });
     } catch (error) {
       if (error instanceof AppError) {
-        res.status(error.statusCode).json({ success: false, message: error.message });
+        return res.status(error.statusCode).json({ success: false, message: error.message });
       } else {
         logger.error('Get admin documents error:', error);
-        res.status(500).json({ success: false, message: 'Internal server error' });
+        return res.status(500).json({ success: false, message: 'Internal server error' });
       }
     }
   }
 
-  async getById(req: Request, res: Response) {
+  async getById(req: Request, res: Response): Promise<any> {
     try {
       const { id } = req.params;
       const doc = await documentService.getDocumentById(id);
       if (!doc) return res.status(404).json({ success: false, message: 'Document not found' });
-      res.json({ success: true, data: doc });
+      return res.json({ success: true, data: doc });
     } catch (error) {
       if (error instanceof AppError) {
-        res.status(error.statusCode).json({ success: false, message: error.message });
+        return res.status(error.statusCode).json({ success: false, message: error.message });
       } else {
         logger.error('Get document error:', error);
-        res.status(500).json({ success: false, message: 'Internal server error' });
+        return res.status(500).json({ success: false, message: 'Internal server error' });
       }
     }
   }

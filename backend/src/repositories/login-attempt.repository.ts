@@ -1,5 +1,6 @@
 import { BaseRepository } from './base.repository';
 import LoginAttempt from '../models/login-attempt.model';
+import { Op } from 'sequelize';
 
 export class LoginAttemptRepository extends BaseRepository<LoginAttempt> {
   constructor() {
@@ -21,7 +22,7 @@ export class LoginAttemptRepository extends BaseRepository<LoginAttempt> {
         email,
         success: false,
         attempted_at: {
-          [this.model.sequelize!.Op.gte]: since
+          [Op.gte]: since
         }
       },
       order: [['attempted_at', 'DESC']]
@@ -42,7 +43,7 @@ export class LoginAttemptRepository extends BaseRepository<LoginAttempt> {
         email,
         success: false,
         attempted_at: {
-          [this.model.sequelize!.Op.gte]: since
+          [Op.gte]: since
         }
       }
     });

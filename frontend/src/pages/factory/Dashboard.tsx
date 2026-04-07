@@ -1,7 +1,6 @@
-import React, { useEffect, useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
-  Factory,
   Package,
   ShoppingCart,
   TrendingUp,
@@ -9,17 +8,14 @@ import {
   Clock,
   CheckCircle2,
   XCircle,
-  AlertCircle,
   Users,
   DollarSign,
   BarChart3,
   Calendar,
   Eye,
-  Shield,
   AlertTriangle,
   Activity,
   Target,
-  Star,
   Minus,
   Plus,
   ChevronRight,
@@ -35,9 +31,6 @@ import {
   CardFooter,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Progress } from "@/components/ui/progress";
-import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 import {
@@ -51,6 +44,7 @@ import { getInitials } from "@/lib/utils";
 import { useAuthStore } from "@/stores/auth.store";
 import { useOrderStore } from "@/stores/order.store";
 import { useProductStore } from "@/stores/product.store";
+import forecastService from "@/services/forecast.service";
 import type { Order } from "@/types/order.types";
 
 // ============================================================================
@@ -141,13 +135,83 @@ const FactoryDashboard: React.FC = () => {
   const authUser = useAuthStore((state) => state.user);
   const { orders, fetchOrdersAsSupplier } = useOrderStore();
   const { products, fetchProducts } = useProductStore();
+  const [productForecasts, setProductForecasts] = useState<
+    Record<
+      string,
+      {
+        totalForecast: number;
+        trend: "up" | "down" | "stable";
+      }
+    >
+  >({});
+  const [forecastLoading, setForecastLoading] = useState(false);
+  const [forecastError, setForecastError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchOrdersAsSupplier({ sortBy: "created_at", sortOrder: "DESC", limit: 20 });
-    fetchProducts({ sortBy: "created_at", sortOrder: "DESC", limit: 30 } as any, {
-      replace: true,
+    fetchOrdersAsSupplier({
+      sortBy: "created_at",
+      sortOrder: "DESC",
+      limit: 20,
     });
+    fetchProducts(
+      { sortBy: "created_at", sortOrder: "DESC", limit: 30 } as any,
+      {
+        replace: true,
+      },
+    );
   }, [fetchOrdersAsSupplier, fetchProducts]);
+
+  useEffect(() => {
+    const loadForecasts = async () => {
+      if (!products.length) return;
+
+      setForecastLoading(true);
+      setForecastError(null);
+
+      try {
+        const forecastEntries = await Promise.all(
+          products.slice(0, 6).map(async (product: any) => {
+            try {
+              const result = await forecastService.getInventoryForecast(
+                product.id,
+                7,
+              );
+              const totalForecast = result.forecast.reduce(
+                (sum, point) => sum + point.forecast_quantity,
+                0,
+              );
+              const trend =
+                totalForecast > Number(product.stock_quantity || 0)
+                  ? "up"
+                  : totalForecast < Number(product.stock_quantity || 0)
+                    ? "down"
+                    : "stable";
+
+              return [product.id, { totalForecast, trend }] as const;
+            } catch (fetchError) {
+              console.error(
+                "Forecast load failed for product",
+                product.id,
+                fetchError,
+              );
+              return [
+                product.id,
+                { totalForecast: 0, trend: "stable" as const },
+              ] as const;
+            }
+          }),
+        );
+
+        setProductForecasts(Object.fromEntries(forecastEntries));
+      } catch (error: any) {
+        setForecastError(error.message || "Unable to load forecast");
+      } finally {
+        setForecastLoading(false);
+      }
+    };
+
+    loadForecasts();
+  }, [products]);
 
   if (!authUser) return null; // prevent crash if not loaded
 
@@ -160,38 +224,42 @@ const FactoryDashboard: React.FC = () => {
   };
 
   const recentOrders = useMemo<ProductionOrder[]>(() => {
-    return (orders as Order[])
-      .slice(0, 8)
-      .map((order) => {
-        const firstItem = order.items?.[0];
-        const itemQty = order.items?.reduce((acc, item) => acc + item.quantity, 0) || 0;
-        const amount = Number(order.total_price) || 0;
-        const normalizedStatus: ProductionOrder["status"] =
-          order.order_status === "closed" ? "delivered" : order.order_status;
+    return (orders as Order[]).slice(0, 8).map((order) => {
+      const firstItem = order.items?.[0];
+      const itemQty =
+        order.items?.reduce((acc, item) => acc + item.quantity, 0) || 0;
+      const amount = Number(order.total_price) || 0;
+      const normalizedStatus: ProductionOrder["status"] =
+        order.order_status === "closed" ? "delivered" : order.order_status;
 
-        return {
-          id: order.id,
-          productName: firstItem?.product?.name || "Order items",
-          productId: Number(firstItem?.product_id || 0),
-          quantity: itemQty,
-          unit: firstItem?.product?.unit_type || "units",
-          distributorId: Number(order.buyer_id || 0),
-          distributorName:
-            order.buyer?.business_name || order.buyer?.full_name || "Distributor",
-          orderDate: order.created_at,
-          requestedDelivery: order.delivery?.completed_at || order.created_at,
-          status: normalizedStatus,
-          priority: amount >= 100000 ? "high" : amount >= 30000 ? "medium" : "low",
-          value: amount,
-        };
-      });
+      return {
+        id: order.id,
+        productName: firstItem?.product?.name || "Order items",
+        productId: Number(firstItem?.product_id || 0),
+        quantity: itemQty,
+        unit: firstItem?.product?.unit_type || "units",
+        distributorId: Number(order.buyer_id || 0),
+        distributorName:
+          order.buyer?.business_name || order.buyer?.full_name || "Distributor",
+        orderDate: order.created_at,
+        requestedDelivery: order.delivery?.completed_at || order.created_at,
+        status: normalizedStatus,
+        priority:
+          amount >= 100000 ? "high" : amount >= 30000 ? "medium" : "low",
+        value: amount,
+      };
+    });
   }, [orders]);
 
   const inventoryAlerts = useMemo<InventoryAlert[]>(() => {
     return products
-      .filter((product: any) => Number(product.stock_quantity || 0) <= INVENTORY_ALERT_THRESHOLD)
+      .filter(
+        (product: any) =>
+          Number(product.stock_quantity || 0) <= INVENTORY_ALERT_THRESHOLD,
+      )
       .sort(
-        (a: any, b: any) => Number(a.stock_quantity || 0) - Number(b.stock_quantity || 0),
+        (a: any, b: any) =>
+          Number(a.stock_quantity || 0) - Number(b.stock_quantity || 0),
       )
       .slice(0, 8)
       .map((product: any) => ({
@@ -211,21 +279,39 @@ const FactoryDashboard: React.FC = () => {
   const demandForecasts = useMemo<ProductForecast[]>(() => {
     return products.slice(0, 6).map((product: any) => {
       const stock = Number(product.stock_quantity || 0);
-      const reorderPoint = Math.max(10, Math.floor(stock * 0.6) || 10);
-      const forecastedDemand = Math.max(stock + 20, reorderPoint + 10);
+      const forecastData = productForecasts[product.id];
+      const forecastedDemand = forecastLoading
+        ? stock + 20
+        : forecastData?.totalForecast ||
+          Math.max(
+            stock + 20,
+            Math.max(10, Math.floor(stock * 0.6) || 10) + 10,
+          );
+      const trend =
+        forecastData?.trend ??
+        (stock < forecastedDemand
+          ? "up"
+          : stock > forecastedDemand
+            ? "down"
+            : "stable");
+
       return {
         id: Number(product.id),
         name: product.name,
         category: product.category || "General",
         forecastedDemand,
         currentStock: stock,
-        reorderPoint,
-        confidence: Math.min(98, Math.max(65, 80 + Math.floor(stock / 20))),
-        trend: stock < reorderPoint ? "up" : stock > forecastedDemand ? "down" : "stable",
+        reorderPoint: Math.max(10, Math.floor(stock * 0.6) || 10),
+        confidence: forecastLoading
+          ? 75
+          : forecastData
+            ? Math.min(98, Math.max(65, 80 + Math.floor(stock / 20)))
+            : 75,
+        trend,
         seasonality: "Live",
       };
     });
-  }, [products]);
+  }, [products, productForecasts, forecastLoading]);
 
   const productionSchedule = useMemo(() => {
     return recentOrders.slice(0, 3).map((order) => ({
@@ -238,7 +324,9 @@ const FactoryDashboard: React.FC = () => {
   }, [recentOrders]);
 
   const factoryStats = useMemo<FactoryStats>(() => {
-    const pendingApprovals = recentOrders.filter((order) => order.status === "pending").length;
+    const pendingApprovals = recentOrders.filter(
+      (order) => order.status === "pending",
+    ).length;
     const processingOrders = recentOrders.filter(
       (order) => order.status === "approved" || order.status === "processing",
     ).length;
@@ -255,7 +343,8 @@ const FactoryDashboard: React.FC = () => {
       inventoryAlerts: inventoryAlerts.length,
       productionCapacity: Math.min(100, processingOrders * 10),
       qualityRate: 95,
-      activeDistributors: new Set(orders.map((order: Order) => order.buyer_id)).size,
+      activeDistributors: new Set(orders.map((order: Order) => order.buyer_id))
+        .size,
       newPartnershipRequests: 0,
     };
   }, [recentOrders, orders, inventoryAlerts.length]);

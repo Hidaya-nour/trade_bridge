@@ -106,7 +106,7 @@ export class ChatMessageController {
   }
 
   // Get message by ID
-  async getMessageById(req: Request, res: Response) {
+  async getMessageById(req: Request, res: Response): Promise<any> {
     try {
       const { id } = req.params;
       const message = await chatService.getMessageById(id);
@@ -115,13 +115,13 @@ export class ChatMessageController {
         return res.status(404).json({ success: false, message: 'Message not found' });
       }
 
-      res.json({ success: true, data: { message } });
+      return res.json({ success: true, data: { message } });
     } catch (error) {
       if (error instanceof AppError) {
-        res.status(error.statusCode).json({ success: false, message: error.message });
+        return res.status(error.statusCode).json({ success: false, message: error.message });
       } else {
         logger.error('Get message error:', error);
-        res.status(500).json({ success: false, message: 'Internal server error' });
+        return res.status(500).json({ success: false, message: 'Internal server error' });
       }
     }
   }

@@ -6,7 +6,7 @@ import { SupplierService } from '../services/supplier/supplier.service';
 const supplierService = new SupplierService();
 
 export class SupplierController {
-  async getSuppliersByIds(req: Request, res: Response) {
+  async getSuppliersByIds(req: Request, res: Response): Promise<any> {
     try {
       const { supplierIds } = req.body;
       
@@ -19,15 +19,15 @@ export class SupplierController {
 
       const suppliers = await supplierService.getSuppliersByIds(supplierIds);
       
-      res.json({
+      return res.json({
         success: true,
         data: { suppliers }
       });
     } catch (error) {
       if (error instanceof AppError) {
-        res.status(error.statusCode).json({ success: false, message: error.message });
+        return res.status(error.statusCode).json({ success: false, message: error.message });
       } else {
-        res.status(500).json({
+        return res.status(500).json({
           success: false,
           message: 'Failed to fetch suppliers'
         });
@@ -35,7 +35,7 @@ export class SupplierController {
     }
   }
 
-  async getSupplierById(req: Request, res: Response) {
+  async getSupplierById(req: Request, res: Response): Promise<any> {
     try {
       const { id } = req.params;
       const supplier = await supplierService.getSupplierById(id);
@@ -47,28 +47,28 @@ export class SupplierController {
         });
       }
 
-      res.json({
+      return res.json({
         success: true,
         data: { supplier }
       });
     } catch (error) {
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         message: 'Failed to fetch supplier'
       });
     }
   }
 
-  async getAllSuppliers(req: Request, res: Response) {
+  async getAllSuppliers(req: Request, res: Response): Promise<any> {
     try {
       const suppliers = await supplierService.getAllSuppliers();
       
-      res.json({
+      return res.json({
         success: true,
         data: { suppliers }
       });
     } catch (error) {
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         message: 'Failed to fetch suppliers'
       });
