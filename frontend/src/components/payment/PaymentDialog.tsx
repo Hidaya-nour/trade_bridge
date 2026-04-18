@@ -7,7 +7,13 @@ import {
   AlertCircle,
 } from "lucide-react";
 
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -98,9 +104,8 @@ export const PaymentDialog: React.FC<PaymentDialogProps> = ({
   isProcessing = false,
   config = {},
 }) => {
-  const [selectedMethod, setSelectedMethod] = useState<PaymentMethod>(
-    "app_payment",
-  );
+  const [selectedMethod, setSelectedMethod] =
+    useState<PaymentMethod>("app_payment");
   const [paymentDetails, setPaymentDetails] = useState<PaymentDetails>({});
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -211,10 +216,6 @@ export const PaymentDialog: React.FC<PaymentDialogProps> = ({
         toast.error("Please select the mobile provider");
         return;
       }
-      if (!paymentDetails.transactionId?.trim()) {
-        toast.error("Please enter the mobile banking transaction ID");
-        return;
-      }
       if (uploadedFiles.length === 0) {
         toast.error("Please upload mobile banking payment proof");
         return;
@@ -233,14 +234,14 @@ export const PaymentDialog: React.FC<PaymentDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl">
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-hidden sm:max-h-[85vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>
             Complete Payment{orderNumber ? ` for Order #${orderNumber}` : ""}
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-6">
+        <div className="flex-1 space-y-6 overflow-y-auto pr-1">
           <div className="rounded-lg border bg-muted/30 p-4">
             <div className="flex items-center justify-between gap-3">
               <div>
@@ -299,7 +300,9 @@ export const PaymentDialog: React.FC<PaymentDialogProps> = ({
                 {supplierMethodDetails.map((method) => (
                   <div key={method.id} className="rounded-md bg-muted/40 p-3">
                     <div className="flex items-center gap-2">
-                      <span className="font-medium">{method.provider_name}</span>
+                      <span className="font-medium">
+                        {method.provider_name}
+                      </span>
                       {method.is_primary && <Badge>Primary</Badge>}
                     </div>
                     <p className="text-sm text-muted-foreground">
@@ -307,6 +310,9 @@ export const PaymentDialog: React.FC<PaymentDialogProps> = ({
                     </p>
                     <p className="text-sm">
                       {method.account_display || method.account_holder_name}
+                    </p>
+                    <p className="text-sm">
+                      {`Name: ${method.account_holder_name}`}
                     </p>
                   </div>
                 ))}
@@ -342,8 +348,8 @@ export const PaymentDialog: React.FC<PaymentDialogProps> = ({
             <div className="space-y-4 rounded-lg border p-4">
               <p className="font-medium">Mobile Banking</p>
               <p className="text-sm text-muted-foreground">
-                Transfer the payment using the supplier details above, then add
-                your transaction reference and proof.
+                Transfer the payment using the supplier details above, then
+                upload your payment proof.
               </p>
 
               <div className="grid gap-4 md:grid-cols-2">
@@ -389,36 +395,6 @@ export const PaymentDialog: React.FC<PaymentDialogProps> = ({
                       setPaymentDetails((prev) => ({
                         ...prev,
                         phoneNumber: event.target.value,
-                      }))
-                    }
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="transaction-id">Transaction ID</Label>
-                  <Input
-                    id="transaction-id"
-                    placeholder="Enter transaction reference"
-                    value={paymentDetails.transactionId || ""}
-                    onChange={(event) =>
-                      setPaymentDetails((prev) => ({
-                        ...prev,
-                        transactionId: event.target.value,
-                      }))
-                    }
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="transfer-date">Transfer Date</Label>
-                  <Input
-                    id="transfer-date"
-                    type="date"
-                    value={paymentDetails.transferDate || ""}
-                    onChange={(event) =>
-                      setPaymentDetails((prev) => ({
-                        ...prev,
-                        transferDate: event.target.value,
                       }))
                     }
                   />
