@@ -1,0 +1,51 @@
+# Node / frontend / mobile
+node_modules/
+dist/
+build/
+.expo/
+.expo-shared/
+mobile/dist-web/
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ML raw data
+ml/data/raw/
+
+# ML processed outputs
+ml/data/processed/*.csv
+ml/data/processed/*_report.json
+ml/data/processed/*metrics.json
+
+# Trained model artifacts
+ml/models/*.joblib
+ml/models/*.pkl
+ml/models/*.pickle
+ml/models/*.h5
+ml/models/*.pt
+ml/models/*.onnx
+
+# Python cache inside ml scripts
+ml/scripts/__pycache__/
+
+# Jupyter checkpoints
+.ipynb_checkpoints/
