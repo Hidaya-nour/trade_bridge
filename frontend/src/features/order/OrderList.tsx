@@ -55,7 +55,10 @@ import type {
 import OrderTrackingDialog from "@/components/order/OrderTrackingDialog";
 import { PlaceOrderDialog } from "@/components/order/PlaceOrderDialog";
 import supplierPaymentMethodService from "@/services/supplier-payment-method.service";
-import { supplierMethodsToPaymentMethods } from "@/lib/payment-method-utils";
+import {
+  getPaymentMethodLabel,
+  supplierMethodsToPaymentMethods,
+} from "@/lib/payment-method-utils";
 import { RateReviewDialog } from "@/components/product/RateReviewDialog";
 import toast from "react-hot-toast";
 
@@ -227,12 +230,6 @@ export const OrderList: React.FC<OrderListProps> = ({
       return false;
     }
 
-    if (
-      order.payment?.payment_method === "cash" &&
-      order.payment.payment_status === "pending"
-    ) {
-      return false;
-    }
     if (!order.payment) {
       return true;
     }
@@ -250,20 +247,20 @@ export const OrderList: React.FC<OrderListProps> = ({
 
     setPaymentProcessing(true);
     try {
-      const success = await onProcessPayment(
-        selectedOrder.id,
-        method,
-        details,
-        documents,
-      );
-
-      if (success) {
-        toast.success(
-          method === "credit"
-            ? "Credit request submitted successfully! Awaiting approval."
-            : "Payment processed successfully!",
+        const success = await onProcessPayment(
+          selectedOrder.id,
+          method,
+          details,
+          documents,
         );
-        return true;
+
+        if (success) {
+          toast.success(
+            method === "app_payment"
+              ? "Redirecting to app payment checkout..."
+              : "Payment submitted successfully!",
+          );
+          return true;
       } else {
         toast.error("Payment failed. Please try again.");
         return false;
@@ -1036,31 +1033,9 @@ export const OrderList: React.FC<OrderListProps> = ({
           onPaymentSubmit={handlePaymentSubmit}
           isProcessing={paymentProcessing}
           config={{
-            allowedMethods: [
-              "cash",
-              "credit",
-              "cheque",
-              "mobile_banking",
-              "chapa",
-            ],
+            allowedMethods: ["app_payment", "mobile_banking"],
             supplierAllowedMethods: supplierAllowedMethods,
             supplierPaymentMethods,
-            creditTerms: config.paymentConfig?.creditTerms || {
-              enabled: true,
-              maxCreditAmount: 50000,
-              dueDays: 30,
-              interestRate: 2.5,
-            },
-            bankAccounts: config.paymentConfig?.bankAccounts || [
-              {
-                bankName: "Commercial Bank of Ethiopia",
-                accountNumber: "1000134567890",
-                accountName: "TradeBridge Trading PLC",
-                branch: "Head Office",
-              },
-            ],
-            chapaEnabled: config.paymentConfig?.chapaEnabled || true,
-            requireApprovalFor: ["credit"],
             maxDocumentSize: 5,
           }}
         />

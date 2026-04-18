@@ -150,7 +150,7 @@ export class SupplierPaymentMethodController {
   }
 
   static createValidation = [
-    body('method_type').isIn(['bank_transfer', 'mobile_money', 'cash_on_delivery', 'credit_card', 'debit_card', 'paypal', 'other']),
+    body('method_type').isIn(['mobile_money', 'credit_card', 'mobile_banking', 'chapa']),
     body('provider_name').isString().notEmpty(),
     body('account_holder_name').isString().notEmpty(),
     body('account_identifier').isString().notEmpty(),

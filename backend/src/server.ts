@@ -167,8 +167,32 @@ const startServer = async () => {
   }
 
   if (process.env.NODE_ENV === 'development') {
-    await sequelize.sync({ alter: true });
-    logger.info('✅ Database synced (alter)');
+    // Dev-only safety: older DBs may contain legacy/invalid ENUM values for
+    // `supplier_payment_methods.method_type`, which can cause `sync({ alter: true })`
+    // to fail with "Data truncated". Normalize and convert to VARCHAR before alter-sync.
+    try {
+      await sequelize.query(
+        // Use a value that is likely present in older ENUM definitions.
+        "UPDATE supplier_payment_methods SET method_type='mobile_banking' WHERE method_type='' OR method_type IS NULL",
+      );
+      await sequelize.query(
+        "ALTER TABLE `supplier_payment_methods` MODIFY `method_type` VARCHAR(50) NOT NULL",
+      );
+    } catch (error) {
+      logger.warn(
+        'Skipping supplier_payment_methods.method_type normalization (table may not exist yet)',
+        error,
+      );
+    }
+
+    try {
+      await sequelize.sync({ alter: true });
+      logger.info('✅ Database synced (alter)');
+    } catch (error) {
+      logger.error('❌ Database sync (alter) failed', error);
+      // Allow the server to start in development even if alter-sync fails.
+      // This prevents hard-blocking local work due to schema drift.
+    }
   }
 
   app.listen(PORT, () => {

@@ -106,7 +106,7 @@ const payments: Payment[] = [
     dueDate: "2026-03-15",
     amount: 15262.5,
     status: "pending",
-    method: "Credit",
+    method: "App Payment",
     invoiceUrl: "#",
   },
   {
@@ -116,7 +116,7 @@ const payments: Payment[] = [
     dueDate: "2026-03-10",
     amount: 13460,
     status: "pending",
-    method: "Credit",
+    method: "App Payment",
     invoiceUrl: "#",
   },
   {
@@ -137,7 +137,7 @@ const payments: Payment[] = [
     dueDate: "2026-02-01",
     amount: 8028,
     status: "paid",
-    method: "Cash",
+    method: "App Payment",
     invoiceUrl: "#",
   },
   {
@@ -147,7 +147,7 @@ const payments: Payment[] = [
     dueDate: "2026-01-28",
     amount: 99250,
     status: "paid",
-    method: "Credit",
+    method: "App Payment",
     invoiceUrl: "#",
   },
   {
@@ -157,35 +157,23 @@ const payments: Payment[] = [
     dueDate: "2026-02-25",
     amount: 23400,
     status: "overdue",
-    method: "Credit",
+    method: "App Payment",
     invoiceUrl: "#",
   },
 ];
 
 const paymentMethods = [
   {
-    id: "credit",
-    name: "Credit (30 days)",
+    id: "app_payment",
+    name: "App Payment",
     icon: CreditCard,
-    description: "Pay within 30 days",
+    description: "Complete payment through the in-app checkout flow",
   },
   {
-    id: "mobile",
+    id: "mobile_banking",
     name: "Mobile Banking",
     icon: Smartphone,
-    description: "Telebirr, M-Pesa",
-  },
-  {
-    id: "bank",
-    name: "Bank Transfer",
-    icon: Building,
-    description: "Direct bank transfer",
-  },
-  {
-    id: "cash",
-    name: "Cash on Delivery",
-    icon: Wallet,
-    description: "Pay when delivered",
+    description: "Transfer manually and upload payment proof",
   },
 ];
 
@@ -201,7 +189,7 @@ const PaymentsPage: React.FC<PaymentsPageProps> = ({ role }) => {
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
-  const [paymentMethod, setPaymentMethod] = useState("credit");
+  const [paymentMethod, setPaymentMethod] = useState("app_payment");
 
   const credit = role === "retailer" ? retailerCredit : distributorCredit;
 

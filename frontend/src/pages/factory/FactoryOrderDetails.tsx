@@ -6,6 +6,7 @@ import { useOrderStore } from "@/stores/order.store";
 import { useDriverStore } from "@/stores/driver.store";
 import deliveryService from "@/services/delivery.service";
 import paymentService from "@/services/payment.service";
+import { getPaymentMethodLabel } from "@/lib/payment-method-utils";
 import toast from "react-hot-toast";
 import type { Order, OrderStatus, OrderDetailsData } from "@/types/order.types";
 import { WithAsync } from "@/components/shared/WithAsync";
@@ -102,7 +103,7 @@ const mapOrderToDetails = (
     orderDate: order.created_at,
     status: order.order_status as OrderStatus,
     paymentStatus: mapPaymentStatus(order.payment?.payment_status),
-    paymentMethod: order.payment?.payment_method || "N/A",
+    paymentMethod: getPaymentMethodLabel(order.payment?.payment_method),
     paymentTerms: "N/A",
     paymentId: order.payment?.id,
     paymentAmount: order.payment?.total_amount,

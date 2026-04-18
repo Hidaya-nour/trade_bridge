@@ -75,7 +75,7 @@ const faqItems = [
     category: "orders",
     question: "What payment methods are accepted?",
     answer:
-      "We accept Cash on Delivery, Credit (30-day terms for verified businesses), Cheque, Mobile Banking (Telebirr, M-Pesa), and Online Payments via Chapa. Credit terms are available based on your order history and verification status.",
+      "We accept only two payment methods on TradeBridge: App Payment and Mobile Banking. App Payment uses the in-app online checkout flow, while Mobile Banking lets you transfer manually and upload proof.",
   },
   {
     id: "3",
@@ -138,7 +138,7 @@ const faqItems = [
     category: "returns",
     question: "How do I get a refund?",
     answer:
-      "Once your return is approved by the supplier, refunds are processed to your original payment method. Credit payments are refunded as credit to your account. Cash on Delivery refunds are processed via mobile banking.",
+      "Once your return is approved by the supplier, refunds are processed back through your original payment method. Mobile Banking refunds are coordinated with the supplier, and App Payment refunds follow the online payment flow.",
   },
 ];
 
@@ -162,8 +162,8 @@ const guides = [
   },
   {
     id: 3,
-    title: "Understanding Credit Terms",
-    description: "How credit works for verified businesses",
+    title: "Using TradeBridge Payments",
+    description: "How app payment and mobile banking work",
     category: "Payments",
     readTime: "4 min",
     icon: CreditCard,

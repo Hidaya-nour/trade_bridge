@@ -98,20 +98,11 @@ const PaymentTab: React.FC<PaymentTabProps> = ({
                         <SelectValue placeholder="Select method type" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="cash_on_delivery">
-                          Cash on Delivery
-                        </SelectItem>
                         <SelectItem value="mobile_money">
                           Mobile Banking
                         </SelectItem>
-                        <SelectItem value="bank_transfer">
-                          Bank Transfer / Cheque
-                        </SelectItem>
                         <SelectItem value="credit_card">
-                          Chapa Payment
-                        </SelectItem>
-                        <SelectItem value="other">
-                          Credit / Pay Later
+                          App Payment
                         </SelectItem>
                       </SelectContent>
                     </Select>
@@ -126,7 +117,7 @@ const PaymentTab: React.FC<PaymentTabProps> = ({
                           provider_name: e.target.value,
                         }))
                       }
-                      placeholder="e.g. CBE, Telebirr"
+                      placeholder="e.g. Telebirr, TradeBridge Pay"
                     />
                   </div>
                   <div className="space-y-2">
@@ -191,7 +182,11 @@ const PaymentTab: React.FC<PaymentTabProps> = ({
                     >
                       <div>
                         <p className="text-sm font-medium">
-                          {method.provider_name} ({method.method_type})
+                          {method.provider_name} (
+                          {method.method_type === "credit_card"
+                            ? "App Payment"
+                            : "Mobile Banking"}
+                          )
                         </p>
                         <p className="text-xs text-muted-foreground">
                           {method.account_display}

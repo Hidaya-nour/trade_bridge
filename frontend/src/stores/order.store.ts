@@ -4,18 +4,31 @@ import orderService from '../services/order.service';
 import paymentService from '../services/payment.service';
 import type { Order, OrderFilters } from '@/types/order.types';
 
+const normalizePaymentMethod = (method?: string) =>
+  method === 'chapa' ? 'app_payment' : method;
+
+const normalizeOrder = (order: Order): Order => ({
+  ...order,
+  payment: order.payment
+    ? {
+        ...order.payment,
+        payment_method: normalizePaymentMethod(order.payment.payment_method),
+      }
+    : order.payment,
+});
+
 const enrichOrdersWithPayments = async (orders: Order[]) => {
   const enriched = await Promise.all(
     orders.map(async (order) => {
-      if (order.payment) return order;
+      if (order.payment) return normalizeOrder(order);
       try {
         const response = await paymentService.getByOrderId(order.id);
         const payment =
           response?.data?.payment || response?.payment || response?.data;
-        if (!payment) return order;
-        return { ...order, payment };
+        if (!payment) return normalizeOrder(order);
+        return normalizeOrder({ ...order, payment });
       } catch {
-        return order;
+        return normalizeOrder(order);
       }
     }),
   );
@@ -123,8 +136,9 @@ export const useOrderStore = create<OrderState>((set, get) => ({
     set({ isLoading: true, error: null, currentOrder: null });
     try {
       const response = await orderService.getOrderById(id);
-      set({ currentOrder: response.data.order, isLoading: false });
-      return response.data.order;
+      const normalizedOrder = normalizeOrder(response.data.order);
+      set({ currentOrder: normalizedOrder, isLoading: false });
+      return normalizedOrder;
     } catch (error: any) {
       set({
         error: error.response?.data?.message || 'Failed to fetch order',
@@ -145,7 +159,7 @@ export const useOrderStore = create<OrderState>((set, get) => ({
       const response = await orderService.getOrdersAsSupplier(mergedFilters);
       
       set({
-        orders: response.data.orders,
+        orders: response.data.orders.map(normalizeOrder),
         totalOrders: response.data.total,
         currentPage: response.data.page,
         totalPages: response.data.totalPages,
@@ -167,7 +181,7 @@ export const useOrderStore = create<OrderState>((set, get) => ({
       
       // Update order in list
       const orders = get().orders.map(o => 
-        o.id === id ? response.data.order : o
+        o.id === id ? normalizeOrder(response.data.order) : o
       );
       
       set({ orders, isLoading: false });

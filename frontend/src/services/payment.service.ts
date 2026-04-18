@@ -1,18 +1,15 @@
 import api from './api';
 
 export interface SubmitOrderPaymentData {
-  payment_method: 'cash' | 'credit' | 'cheque' | 'mobile_banking' | 'chapa' | 'bank_transfer';
+  payment_method: 'app_payment' | 'mobile_banking';
   amount_paid?: number;
   notes?: string;
   proof_document_id?: string;
   payment_details?: {
-    chequeNumber?: string;
-    bankName?: string;
-    chequeDate?: string;
     transactionId?: string;
     transferDate?: string;
-    chapaTxRef?: string;
-    chapaPaymentUrl?: string;
+    mobileProvider?: string;
+    phoneNumber?: string;
   };
 }
 

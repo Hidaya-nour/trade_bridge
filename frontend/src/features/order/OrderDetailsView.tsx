@@ -60,6 +60,7 @@ import { Label } from "@/components/ui/label";
 import { StatusBadge } from "@/components";
 import { PlaceOrderDialog } from "@/components/order/PlaceOrderDialog";
 import { formatPrice, formatDate, formatDateTime } from "@/lib/formatters";
+import { getPaymentMethodLabel } from "@/lib/payment-method-utils";
 import { getInitials, cn } from "@/lib/utils";
 import deliveryService from "@/services/delivery.service";
 import toast from "react-hot-toast";
@@ -294,7 +295,7 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
   const paymentMethodLabel =
     !order.paymentMethod || order.paymentMethod === "N/A"
       ? "Not selected"
-      : order.paymentMethod;
+      : getPaymentMethodLabel(order.paymentMethod);
   const orderBasePath = ordersPath || `/${role}/orders`;
   const receiptUrl = `${orderBasePath}/${order.id}/receipt`;
 
