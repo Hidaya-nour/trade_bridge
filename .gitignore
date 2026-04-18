@@ -4,6 +4,50 @@ dist/
 build/
 .expo/
 .expo-shared/
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ML raw and generated data
+ml/data/raw/
+ml/data/processed/
+
+# Trained model artifacts
+ml/models/*.joblib
+ml/models/*.pkl
+ml/models/*.pickle
+ml/models/*.h5
+ml/models/*.pt
+ml/models/*.onnx
+
+# Jupyter checkpoints
+.ipynb_checkpoints/
+
+# Node / frontend / mobile
+node_modules/
+dist/
+build/
+.expo/
+.expo-shared/
 mobile/dist-web/
 
 # Python
