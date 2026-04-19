@@ -78,11 +78,6 @@ const roleNavigation = {
         href: "/distributor/products",
         icon: Package,
       },
-      {
-        name: "Inventory",
-        href: "/distributor/inventory",
-        icon: Warehouse,
-      },
     ],
     retailOperations: [
       {
@@ -300,18 +295,6 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
                       </span>
                     )}
                   </div>
-                  {!collapsed && item.badge && (
-                    <Badge
-                      variant={isActive(item.href) ? "default" : "secondary"}
-                      className={cn(
-                        "ml-auto text-[10px] px-1.5 py-0.5 font-medium",
-                        item.badge === "Low Stock" &&
-                          "bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-950/20 dark:text-amber-400 dark:border-amber-800",
-                      )}
-                    >
-                      {item.badge}
-                    </Badge>
-                  )}
                 </div>
               </Link>
             </Button>
