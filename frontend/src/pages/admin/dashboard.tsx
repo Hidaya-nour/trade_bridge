@@ -82,10 +82,11 @@ import {
 } from "@/components";
 import { formatPrice, formatCompactPrice, formatDate } from "@/lib/formatters";
 import { getInitials, cn } from "@/lib/utils";
+import documentService from "@/services/document.service";
 import { useAuthStore } from "@/stores/auth.store";
 import { useOrderStore } from "@/stores/order.store";
-import { useSupplierStore } from "@/stores/supplier.store";
 import { useDisputeStore } from "@/stores/dispute.store";
+import { useUserStore } from "@/stores/user.store";
 
 // ============================================================================
 // TYPES
@@ -103,10 +104,10 @@ interface PlatformStats {
 }
 
 interface RecentUser {
-  id: number;
+  id: string | number;
   name: string;
   email: string;
-  role: "retailer" | "distributor" | "factory" | "driver";
+  role: "retailer" | "distributor" | "factory" | "driver" | "supplier";
   business: string;
   status: "active" | "pending" | "suspended";
   joinedDate: string;
@@ -114,16 +115,26 @@ interface RecentUser {
   verified: boolean;
 }
 
+interface PendingApprovalDocument {
+  id: string;
+  name: string;
+  url: string;
+  type: string;
+  status: string;
+  rejectionReason?: string;
+}
+
 interface PendingApproval {
-  id: number;
+  id: string;
   type: "supplier" | "distributor" | "factory" | "driver";
   name: string;
   business: string;
   email: string;
   phone: string;
   submittedDate: string;
-  documents: string[];
+  documents: PendingApprovalDocument[];
   priority: "high" | "medium" | "low";
+  status: "pending" | "approved";
 }
 
 interface Dispute {
@@ -140,17 +151,88 @@ interface Dispute {
   priority: "high" | "medium" | "low";
 }
 
+const mapDocType = (docType?: string): string => {
+  switch (docType) {
+    case "business_license":
+      return "license";
+    case "tax_certificate":
+      return "tin";
+    case "id_card":
+      return "id";
+    default:
+      return "other";
+  }
+};
+
+const buildPendingApprovals = (docs: any[]): PendingApproval[] => {
+  const grouped = new Map<string, any[]>();
+
+  docs.forEach((doc) => {
+    const user = doc.user;
+    if (!user?.id) return;
+    if (!grouped.has(user.id)) grouped.set(user.id, []);
+    grouped.get(user.id)!.push(doc);
+  });
+
+  return Array.from(grouped.entries()).flatMap(([userId, userDocs]) => {
+    const sortedDocs = [...userDocs].sort((a, b) => {
+      const aDate = new Date(a.uploaded_at || a.created_at || 0).getTime();
+      const bDate = new Date(b.uploaded_at || b.created_at || 0).getTime();
+      return bDate - aDate;
+    });
+
+    const user = sortedDocs[0]?.user;
+    if (!user) return [];
+
+    const verified = Boolean(user.verified) || Boolean(user.approved_at);
+    if (verified) return [];
+
+    return [
+      {
+        id: userId,
+        type:
+          user.role === "driver"
+            ? "driver"
+            : user.role === "factory"
+              ? "factory"
+              : user.role === "distributor"
+                ? "distributor"
+                : "supplier",
+        name: user.full_name || user.business_name || "Supplier",
+        business: user.business_name || user.full_name || "Business",
+        email: user.email || "N/A",
+        phone: user.phone || "N/A",
+        submittedDate:
+          sortedDocs[0]?.uploaded_at ||
+          sortedDocs[0]?.created_at ||
+          new Date().toISOString(),
+        documents: sortedDocs.map((doc) => ({
+          id: doc.id,
+          name: doc.original_file_name || doc.document_type || "document",
+          url: doc.file_secure_url || "#",
+          type: mapDocType(doc.document_type),
+          status: doc.verification_status || "pending",
+          rejectionReason: doc.rejection_reason || undefined,
+        })),
+        priority: "medium",
+        status: "pending",
+      },
+    ];
+  });
+};
+
 const AdminDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState("overview");
   const [pendingApprovalsData, setPendingApprovalsData] = useState<
     PendingApproval[]
   >([]);
   const [disputesData, setDisputesData] = useState<Dispute[]>([]);
+  const [recentUsersData, setRecentUsersData] = useState<RecentUser[]>([]);
 
   const authUser = useAuthStore((state) => state.user);
   const { stats: orderStats, fetchOrderStats } = useOrderStore();
-  const { getTopSuppliers } = useSupplierStore();
   const { fetchAll: fetchDisputes, items: disputeItems } = useDisputeStore();
+  const { fetchRecentUsers } = useUserStore();
 
   useEffect(() => {
     fetchOrderStats();
@@ -159,25 +241,44 @@ const AdminDashboard: React.FC = () => {
 
   useEffect(() => {
     const loadApprovals = async () => {
-      const suppliers = await getTopSuppliers(12);
-      const approvals = (suppliers || [])
-        .filter((supplier) => !supplier.is_verified)
-        .map((supplier, index) => ({
-          id: Number(supplier.id) || index + 1,
-          type: supplier.role,
-          name: supplier.full_name || supplier.business_name || "Supplier",
-          business: supplier.business_name || supplier.full_name || "Business",
-          email: "N/A",
-          phone: "N/A",
-          submittedDate: supplier.joined_date || new Date().toISOString(),
-          documents: [],
-          priority: "medium" as const,
-        }));
-      setPendingApprovalsData(approvals);
+      try {
+        const response = await documentService.getAllForAdmin();
+        const data = response.data || response;
+        const approvals = buildPendingApprovals(data || []);
+        setPendingApprovalsData(approvals);
+      } catch (error) {
+        console.error("Failed to load pending approvals:", error);
+        setPendingApprovalsData([]);
+      }
     };
 
     loadApprovals();
-  }, [getTopSuppliers]);
+  }, []);
+
+  useEffect(() => {
+    const loadRecentUsers = async () => {
+      try {
+        const users = await fetchRecentUsers(10);
+        const formattedUsers: RecentUser[] = users.map((user: any) => ({
+          id: user.id,
+          name: user.full_name || user.business_name || "User",
+          email: user.email,
+          role: user.role,
+          business: user.business_name || user.full_name || "",
+          status: user.status,
+          joinedDate: user.created_at,
+          avatar: user.profile_image,
+          verified: user.verified || false,
+        }));
+        setRecentUsersData(formattedUsers);
+      } catch (error) {
+        console.error("Failed to load recent users:", error);
+        setRecentUsersData([]);
+      }
+    };
+
+    loadRecentUsers();
+  }, [fetchRecentUsers]);
 
   useEffect(() => {
     const normalizedDisputes = (disputeItems || [])
@@ -241,51 +342,6 @@ const AdminDashboard: React.FC = () => {
     }),
     [orderStats, pendingApprovalsData.length, disputesData],
   );
-
-  const recentUsersData = useMemo<RecentUser[]>(() => {
-    const fromApprovals = pendingApprovalsData.map((approval) => ({
-      id: approval.id,
-      name: approval.name,
-      email: approval.email,
-      role: approval.type === "driver" ? "driver" : approval.type,
-      business: approval.business,
-      status: "pending" as const,
-      joinedDate: approval.submittedDate,
-      verified: false,
-    }));
-
-    const fromDisputes = disputesData.flatMap((dispute, index) => [
-      {
-        id: 100000 + index * 2,
-        name: dispute.raisedBy,
-        email: "N/A",
-        role: dispute.raisedByRole,
-        business: dispute.raisedBy,
-        status: "active" as const,
-        joinedDate: dispute.date,
-        verified: true,
-      },
-      {
-        id: 100001 + index * 2,
-        name: dispute.against,
-        email: "N/A",
-        role: dispute.againstRole,
-        business: dispute.against,
-        status: "active" as const,
-        joinedDate: dispute.date,
-        verified: true,
-      },
-    ]);
-
-    const deduped = new Map<string, RecentUser>();
-    [...fromApprovals, ...fromDisputes].forEach((userRow) => {
-      if (!deduped.has(userRow.name)) {
-        deduped.set(userRow.name, userRow);
-      }
-    });
-
-    return Array.from(deduped.values()).slice(0, 8);
-  }, [pendingApprovalsData, disputesData]);
 
   const platformHealth = useMemo(() => {
     const totalOrders = livePlatformStats.totalOrders || 0;

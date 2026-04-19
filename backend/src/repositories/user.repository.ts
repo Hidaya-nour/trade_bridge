@@ -1,5 +1,5 @@
 import { BaseRepository } from './base.repository';
-import { IUser, UserRole, UserStatus } from '../types/auth.types';
+import { UserRole, UserStatus } from '../types/auth.types';
 import { Op } from 'sequelize';
 import User from '../models/user.model';
 
@@ -84,6 +84,65 @@ export class UserRepository extends BaseRepository<User> {
       attributes: ['id', 'full_name', 'email', 'phone'],
       limit: 50,
       order: [['full_name', 'ASC']],
+    });
+  }
+
+  async getUsers(options?: {
+    limit?: number;
+    offset?: number;
+    role?: UserRole;
+    status?: UserStatus;
+    search?: string;
+    orderBy?: 'created_at' | 'full_name' | 'email';
+    orderDirection?: 'ASC' | 'DESC';
+  }): Promise<{ users: User[]; total: number }> {
+    const {
+      limit = 50,
+      offset = 0,
+      role,
+      status,
+      search,
+      orderBy = 'created_at',
+      orderDirection = 'DESC'
+    } = options || {};
+
+    const whereClause: any = {
+      deleted_at: null
+    };
+
+    if (role) {
+      whereClause.role = role;
+    }
+
+    if (status) {
+      whereClause.status = status;
+    }
+
+    if (search && search.trim()) {
+      whereClause[Op.or] = [
+        { email: { [Op.like]: `%${search}%` } },
+        { full_name: { [Op.like]: `%${search}%` } },
+        { business_name: { [Op.like]: `%${search}%` } }
+      ];
+    }
+
+    const users = await this.findAll({
+      where: whereClause,
+      limit,
+      offset,
+      order: [[orderBy, orderDirection]]
+    });
+
+    const total = await this.count(whereClause);
+
+    return { users, total };
+  }
+
+  async getRecentUsers(limit: number = 10): Promise<User[]> {
+    return this.findAll({
+      where: { deleted_at: null },
+      limit,
+      order: [['created_at', 'DESC']]
     });
   }
 }

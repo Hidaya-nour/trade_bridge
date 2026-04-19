@@ -219,6 +219,75 @@ export class AuthController {
     }
   };
 
+  getUsers = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const adminId = req.user?.id;
+      if (!adminId) {
+        res.status(401).json({ success: false, message: 'Authentication required' });
+        return;
+      }
+
+      const {
+        limit = '50',
+        offset = '0',
+        role,
+        status,
+        search,
+        orderBy = 'created_at',
+        orderDirection = 'DESC'
+      } = req.query;
+
+      const options = {
+        limit: parseInt(limit as string),
+        offset: parseInt(offset as string),
+        role: role as any,
+        status: status as any,
+        search: search as string,
+        orderBy: orderBy as any,
+        orderDirection: orderDirection as any
+      };
+
+      const result = await this.authService.getUsers(options);
+
+      res.json({
+        success: true,
+        data: result
+      });
+    } catch (error) {
+      if (error instanceof AppError) {
+        res.status(error.statusCode).json({ success: false, message: error.message });
+      } else {
+        logger.error('Get users error:', error);
+        res.status(500).json({ success: false, message: 'Internal server error' });
+      }
+    }
+  };
+
+  getRecentUsers = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const adminId = req.user?.id;
+      if (!adminId) {
+        res.status(401).json({ success: false, message: 'Authentication required' });
+        return;
+      }
+
+      const limit = parseInt(req.query.limit as string) || 10;
+      const users = await this.authService.getRecentUsers(limit);
+
+      res.json({
+        success: true,
+        data: { users }
+      });
+    } catch (error) {
+      if (error instanceof AppError) {
+        res.status(error.statusCode).json({ success: false, message: error.message });
+      } else {
+        logger.error('Get recent users error:', error);
+        res.status(500).json({ success: false, message: 'Internal server error' });
+      }
+    }
+  };
+
   uploadProfileImage = async (req: Request, res: Response): Promise<void> => {
     try {
       const userId = req.user?.id;
