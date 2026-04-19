@@ -4,7 +4,7 @@ import { TokenService } from './token.service';
 import { EmailService } from '../notification/email.service';
 import { AppError, AuthError } from '../../utils/errors';
 import logger from '../../utils/logger';
-import { IUser, ITokens, UserRole } from '../../types/auth.types';
+import { IUser, ITokens, UserRole, UserStatus } from '../../types/auth.types';
 import crypto from 'crypto';
 import { isCloudinaryConfigured, uploadBufferToCloudinary } from '../../config/cloudinary';
 
@@ -388,4 +388,42 @@ async register(data: RegisterDTO): Promise<{ user: SafeUser }> {
 //     await this.userRepo.update(userId, { verified: true } as any);
 //     logger.info(`Email verified for user: ${userId}`);
 //   }
+
+  /**
+   * Get users for admin (with pagination and filtering)
+   */
+  async getUsers(options?: {
+    limit?: number;
+    offset?: number;
+    role?: UserRole;
+    status?: UserStatus;
+    search?: string;
+    orderBy?: 'created_at' | 'full_name' | 'email';
+    orderDirection?: 'ASC' | 'DESC';
+  }): Promise<{ users: SafeUser[]; total: number }> {
+    const result = await this.userRepo.getUsers(options);
+    
+    // Remove password_hash from response
+    const safeUsers = result.users.map(user => {
+      const userJson = user.toJSON();
+      const { password_hash: _, ...safeUser } = userJson;
+      return safeUser as SafeUser;
+    });
+
+    return { users: safeUsers, total: result.total };
+  }
+
+  /**
+   * Get recent users for admin dashboard
+   */
+  async getRecentUsers(limit: number = 10): Promise<SafeUser[]> {
+    const users = await this.userRepo.getRecentUsers(limit);
+    
+    // Remove password_hash from response
+    return users.map(user => {
+      const userJson = user.toJSON();
+      const { password_hash: _, ...safeUser } = userJson;
+      return safeUser as SafeUser;
+    });
+  }
 }

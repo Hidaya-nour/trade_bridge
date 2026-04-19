@@ -74,5 +74,7 @@ router.post('/logout-all', authenticate, authController.logoutAll);
 
 // Admin routes
 router.post('/admin/approve/:id', authenticate, authorize('admin'), authController.approveUser);
+router.get('/admin/users', authenticate, authorize('admin'), authController.getUsers);
+router.get('/admin/recent-users', authenticate, authorize('admin'), authController.getRecentUsers);
 
 export default router;
