@@ -15,7 +15,6 @@ import MessagesPage from "./pages/shared/Messages";
 import CompareSuppliersPage from "./pages/retailer/CompareSuppliers";
 import SupplierDirectoryPage from "./pages/retailer/SupplierDirectory";
 import DistributorDashboard from "./pages/distributor/Dashboard";
-import DistributorStockPage from "./pages/distributor/Stock";
 import ManageProductsPage from "./pages/distributor/ManageProducts";
 import IncomingOrdersPage from "./pages/distributor/IncomingOrders";
 import FactoryIncomingOrdersPage from "./pages/factory/IncomingOrders";
@@ -229,14 +228,7 @@ function App() {
               </DashboardLayout>
             }
           />
-          <Route
-            path="/distributor/stock"
-            element={
-              <DashboardLayout>
-                <DistributorStockPage />
-              </DashboardLayout>
-            }
-          />
+
           <Route
             path="/distributor/products/add"
             element={
