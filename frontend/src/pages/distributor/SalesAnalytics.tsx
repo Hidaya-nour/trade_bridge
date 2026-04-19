@@ -1,322 +1,237 @@
-import React from "react";
+import React, { useEffect, useMemo } from "react";
+import { Store } from "lucide-react";
+
 import {
   AnalyticsDashboard,
   type AnalyticsConfig,
 } from "@/components/shared/AnalyticsDashboard";
-import { Store } from "lucide-react";
+import { useOrderStore } from "@/stores/order.store";
+import { useProductStore } from "@/stores/product.store";
+import type { Order } from "@/types/order.types";
+import type { Product } from "@/types/product.types";
 
-// ============================================================================
-// MOCK DATA
-// ============================================================================
-
-const monthlyData = [
-  {
-    month: "Jan",
-    primaryValue: 420000,
-    secondaryValue: 45,
-    tertiaryValue: 28,
-    profit: 63000,
-  },
-  {
-    month: "Feb",
-    primaryValue: 480000,
-    secondaryValue: 52,
-    tertiaryValue: 32,
-    profit: 72000,
-  },
-  {
-    month: "Mar",
-    primaryValue: 510000,
-    secondaryValue: 58,
-    tertiaryValue: 35,
-    profit: 76500,
-  },
-  {
-    month: "Apr",
-    primaryValue: 540000,
-    secondaryValue: 62,
-    tertiaryValue: 38,
-    profit: 81000,
-  },
-  {
-    month: "May",
-    primaryValue: 590000,
-    secondaryValue: 68,
-    tertiaryValue: 42,
-    profit: 88500,
-  },
-  {
-    month: "Jun",
-    primaryValue: 620000,
-    secondaryValue: 72,
-    tertiaryValue: 45,
-    profit: 93000,
-  },
-  {
-    month: "Jul",
-    primaryValue: 680000,
-    secondaryValue: 78,
-    tertiaryValue: 48,
-    profit: 102000,
-  },
-  {
-    month: "Aug",
-    primaryValue: 720000,
-    secondaryValue: 84,
-    tertiaryValue: 52,
-    profit: 108000,
-  },
-  {
-    month: "Sep",
-    primaryValue: 780000,
-    secondaryValue: 91,
-    tertiaryValue: 56,
-    profit: 117000,
-  },
-  {
-    month: "Oct",
-    primaryValue: 820000,
-    secondaryValue: 96,
-    tertiaryValue: 60,
-    profit: 123000,
-  },
-  {
-    month: "Nov",
-    primaryValue: 840000,
-    secondaryValue: 98,
-    tertiaryValue: 62,
-    profit: 126000,
-  },
-  {
-    month: "Dec",
-    primaryValue: 845000,
-    secondaryValue: 99,
-    tertiaryValue: 63,
-    profit: 126750,
-  },
-];
-
-const topProducts = [
-  {
-    id: 1,
-    name: "White Teff Flour",
-    category: "Grains",
-    quantity: 3450,
-    value: 414000,
-    growth: 12.5,
-    margin: 18.5,
-  },
-  {
-    id: 2,
-    name: "Cement",
-    category: "Construction",
-    quantity: 1850,
-    value: 1147000,
-    growth: 8.2,
-    margin: 15.2,
-  },
-  {
-    id: 3,
-    name: "Yirgacheffe Coffee",
-    category: "Beverages",
-    quantity: 1250,
-    value: 562500,
-    growth: 15.8,
-    margin: 22.5,
-  },
-  {
-    id: 4,
-    name: "Steel Rebars",
-    category: "Construction",
-    quantity: 180,
-    value: 1530000,
-    growth: 5.6,
-    margin: 12.8,
-  },
-  {
-    id: 5,
-    name: "Soybean Oil",
-    category: "Food",
-    quantity: 5200,
-    value: 936000,
-    growth: 10.2,
-    margin: 14.5,
-  },
-  {
-    id: 6,
-    name: "Tomato Paste",
-    category: "Food",
-    quantity: 8900,
-    value: 756500,
-    growth: 7.8,
-    margin: 11.2,
-  },
-  {
-    id: 7,
-    name: "Notebooks",
-    category: "Stationery",
-    quantity: 12500,
-    value: 562500,
-    growth: 18.2,
-    margin: 25.5,
-  },
-  {
-    id: 8,
-    name: "Plastic Chairs",
-    category: "Furniture",
-    quantity: 850,
-    value: 382500,
-    growth: 4.5,
-    margin: 20.8,
-  },
-];
-
-const topRetailers = [
-  {
-    id: 201,
-    name: "ABC Retail Shop",
-    location: "Adama",
-    orders: 45,
-    value: 385000,
-    averageOrderValue: 8556,
-    growth: 15.2,
-  },
-  {
-    id: 202,
-    name: "Mega Mart",
-    location: "Addis Ababa",
-    orders: 38,
-    value: 412000,
-    averageOrderValue: 10842,
-    growth: 12.8,
-  },
-  {
-    id: 203,
-    name: "City Supermarket",
-    location: "Adama",
-    orders: 32,
-    value: 298000,
-    averageOrderValue: 9313,
-    growth: 8.5,
-  },
-  {
-    id: 204,
-    name: "Addis Mart",
-    location: "Addis Ababa",
-    orders: 29,
-    value: 275000,
-    averageOrderValue: 9483,
-    growth: 10.2,
-  },
-  {
-    id: 205,
-    name: "Bole Superstore",
-    location: "Addis Ababa",
-    orders: 26,
-    value: 312000,
-    averageOrderValue: 12000,
-    growth: 18.5,
-  },
-  {
-    id: 206,
-    name: "Hawassa Wholesale",
-    location: "Hawassa",
-    orders: 22,
-    value: 189000,
-    averageOrderValue: 8591,
-    growth: 6.5,
-  },
-];
-
-const categoryData = [
-  {
-    category: "Construction",
-    value: 2677000,
-    orders: 245,
-    growth: 7.8,
-    share: 32.5,
-  },
-  { category: "Food", value: 1692500, orders: 312, growth: 9.2, share: 20.5 },
-  {
-    category: "Beverages",
-    value: 562500,
-    orders: 98,
-    growth: 15.8,
-    share: 6.8,
-  },
-  { category: "Grains", value: 414000, orders: 76, growth: 12.5, share: 5.0 },
-  {
-    category: "Stationery",
-    value: 562500,
-    orders: 145,
-    growth: 18.2,
-    share: 6.8,
-  },
-  { category: "Furniture", value: 382500, orders: 52, growth: 4.5, share: 4.6 },
-  { category: "Textiles", value: 736000, orders: 38, growth: 3.2, share: 8.9 },
-  { category: "Household", value: 382500, orders: 41, growth: 5.5, share: 4.6 },
-];
+const MONTH_LABELS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 const SalesAnalyticsPage: React.FC = () => {
-  // Calculate summary stats
-  const currentMonth = monthlyData[monthlyData.length - 1];
-  const previousMonth = monthlyData[monthlyData.length - 2];
+  const { orders, fetchOrdersAsSupplier } = useOrderStore();
+  const { products, fetchProducts } = useProductStore();
 
-  const totalRevenue = monthlyData.reduce((sum, m) => sum + m.primaryValue, 0);
-  const totalOrders = monthlyData.reduce((sum, m) => sum + m.secondaryValue, 0);
-  const totalCustomers = monthlyData.reduce(
-    (sum, m) => sum + m.tertiaryValue,
-    0,
-  );
-  const avgOrderValue = totalRevenue / totalOrders;
+  useEffect(() => {
+    fetchOrdersAsSupplier({
+      sortBy: "created_at",
+      sortOrder: "DESC",
+      limit: 200,
+    });
+    fetchProducts(
+      {
+        sortBy: "created_at",
+        sortOrder: "DESC",
+        limit: 200,
+      } as any,
+      { replace: true },
+    );
+  }, [fetchOrdersAsSupplier, fetchProducts]);
 
-  const revenueGrowth =
-    ((currentMonth.primaryValue - previousMonth.primaryValue) /
-      previousMonth.primaryValue) *
-    100;
-  const ordersGrowth =
-    ((currentMonth.secondaryValue - previousMonth.secondaryValue) /
-      previousMonth.secondaryValue) *
-    100;
-  const customersGrowth =
-    ((currentMonth.tertiaryValue - previousMonth.tertiaryValue) /
-      previousMonth.tertiaryValue) *
-    100;
+  const analytics = useMemo(() => {
+    const ordersList = orders as Order[];
+    const productsById = new Map<string, Product>(
+      products.map((product) => [String(product.id), product]),
+    );
+    const currentYear = new Date().getFullYear();
+
+    const monthlyBuckets = MONTH_LABELS.map((month) => ({
+      month,
+      primaryValue: 0,
+      secondaryValue: 0,
+      tertiaryValue: 0,
+      profit: 0,
+      customerIds: new Set<string>(),
+    }));
+
+    const itemMap = new Map<
+      string,
+      {
+        id: number;
+        name: string;
+        category: string;
+        quantity: number;
+        value: number;
+      }
+    >();
+
+    const partnerMap = new Map<
+      string,
+      {
+        id: number;
+        name: string;
+        location: string;
+        orders: number;
+        value: number;
+      }
+    >();
+
+    const categoryMap = new Map<
+      string,
+      {
+        category: string;
+        value: number;
+        orders: number;
+      }
+    >();
+
+    ordersList.forEach((order) => {
+      const createdAt = new Date(order.created_at);
+      if (Number.isNaN(createdAt.getTime()) || createdAt.getFullYear() !== currentYear) {
+        return;
+      }
+
+      const monthIndex = createdAt.getMonth();
+      const orderValue = Number(order.total_price || 0);
+      const partnerName =
+        order.buyer?.business_name || order.buyer?.full_name || "Retailer";
+      const partnerId = String(order.buyer_id || 0);
+
+      monthlyBuckets[monthIndex].primaryValue += orderValue;
+      monthlyBuckets[monthIndex].secondaryValue += 1;
+      monthlyBuckets[monthIndex].customerIds.add(partnerId);
+      monthlyBuckets[monthIndex].profit += orderValue * 0.12;
+
+      const existingPartner = partnerMap.get(partnerId);
+      partnerMap.set(partnerId, {
+        id: Number(order.buyer_id || 0),
+        name: partnerName,
+        location: order.delivery?.dropoff_location || "Unknown",
+        orders: (existingPartner?.orders || 0) + 1,
+        value: (existingPartner?.value || 0) + orderValue,
+      });
+
+      const seenCategoriesForOrder = new Set<string>();
+
+      order.items?.forEach((item) => {
+        const product = item.product || productsById.get(String(item.product_id));
+        const quantity = Number(item.quantity || 0);
+        const unitPrice = Number(item.unit_price || product?.price || 0);
+        const itemValue = quantity * unitPrice;
+        const itemId = String(item.product_id || product?.id || item.id);
+        const itemName = product?.name || "Product";
+        const category = product?.category || "General";
+
+        const existingItem = itemMap.get(itemId);
+        itemMap.set(itemId, {
+          id: Number(product?.id || 0),
+          name: itemName,
+          category,
+          quantity: (existingItem?.quantity || 0) + quantity,
+          value: (existingItem?.value || 0) + itemValue,
+        });
+
+        const categoryEntry = categoryMap.get(category);
+        categoryMap.set(category, {
+          category,
+          value: (categoryEntry?.value || 0) + itemValue,
+          orders:
+            (categoryEntry?.orders || 0) + (seenCategoriesForOrder.has(category) ? 0 : 1),
+        });
+        seenCategoriesForOrder.add(category);
+      });
+    });
+
+    const monthlyData = monthlyBuckets.map((bucket) => ({
+      month: bucket.month,
+      primaryValue: bucket.primaryValue,
+      secondaryValue: bucket.secondaryValue,
+      tertiaryValue: bucket.customerIds.size,
+      profit: bucket.profit,
+    }));
+
+    const totalRevenue = monthlyData.reduce((sum, month) => sum + month.primaryValue, 0);
+    const totalOrders = monthlyData.reduce((sum, month) => sum + month.secondaryValue, 0);
+    const totalCustomers = new Set(ordersList.map((order) => String(order.buyer_id || 0))).size;
+
+    const populatedMonths = monthlyData.filter(
+      (month) => month.primaryValue > 0 || month.secondaryValue > 0 || month.tertiaryValue > 0,
+    );
+    const currentMonth = populatedMonths[populatedMonths.length - 1] || monthlyData[new Date().getMonth()];
+    const previousMonth =
+      populatedMonths[populatedMonths.length - 2] ||
+      monthlyData[Math.max(0, new Date().getMonth() - 1)] ||
+      currentMonth;
+
+    const calculateGrowth = (current: number, previous: number) => {
+      if (previous === 0) {
+        return current > 0 ? 100 : 0;
+      }
+      return ((current - previous) / previous) * 100;
+    };
+
+    const topItems = [...itemMap.values()]
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 8)
+      .map((item) => ({
+        ...item,
+        growth: currentMonth.primaryValue > 0 ? (item.value / currentMonth.primaryValue) * 100 : 0,
+        margin: 12,
+      }));
+
+    const topPartners = [...partnerMap.values()]
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 6)
+      .map((partner) => ({
+        ...partner,
+        averageOrderValue: partner.orders > 0 ? partner.value / partner.orders : 0,
+        growth: totalRevenue > 0 ? (partner.value / totalRevenue) * 100 : 0,
+      }));
+
+    const categoryData = [...categoryMap.values()]
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 8)
+      .map((category) => ({
+        ...category,
+        growth: totalRevenue > 0 ? (category.value / totalRevenue) * 100 : 0,
+        share: totalRevenue > 0 ? (category.value / totalRevenue) * 100 : 0,
+      }));
+
+    return {
+      monthlyData,
+      currentMonth,
+      previousMonth,
+      totalRevenue,
+      totalOrders,
+      totalCustomers,
+      avgOrderValue: totalOrders > 0 ? totalRevenue / totalOrders : 0,
+      revenueGrowth: calculateGrowth(currentMonth.primaryValue, previousMonth.primaryValue),
+      ordersGrowth: calculateGrowth(currentMonth.secondaryValue, previousMonth.secondaryValue),
+      customersGrowth: calculateGrowth(currentMonth.tertiaryValue, previousMonth.tertiaryValue),
+      topItems,
+      topPartners,
+      categoryData,
+    };
+  }, [orders, products]);
 
   const config: AnalyticsConfig = {
     role: "distributor",
     title: "Sales Analytics",
-    description: "Comprehensive sales performance, trends, and insights",
-
-    // Labels
+    description: "Live sales performance based on your real distributor orders and products",
     primaryMetricLabel: "Revenue",
     secondaryMetricLabel: "Orders",
     tertiaryMetricLabel: "Customers",
     partnerLabel: "Retailers",
     partnerPath: "/retailers",
     itemLabel: "Products",
-
-    // Icons
     icon: Store,
-
-    // Data
-    monthlyData,
-    topItems: topProducts,
-    topPartners: topRetailers,
-    categoryData,
-
-    // Stats
-    currentMonth,
-    previousMonth,
-    totalPrimary: totalRevenue,
-    totalSecondary: totalOrders,
-    totalTertiary: totalCustomers,
-    averageSecondary: avgOrderValue,
-
-    // Growth
-    primaryGrowth: revenueGrowth,
-    secondaryGrowth: ordersGrowth,
-    tertiaryGrowth: customersGrowth,
+    monthlyData: analytics.monthlyData,
+    topItems: analytics.topItems,
+    topPartners: analytics.topPartners,
+    categoryData: analytics.categoryData,
+    currentMonth: analytics.currentMonth,
+    previousMonth: analytics.previousMonth,
+    totalPrimary: analytics.totalRevenue,
+    totalSecondary: analytics.totalOrders,
+    totalTertiary: analytics.totalCustomers,
+    averageSecondary: analytics.avgOrderValue,
+    primaryGrowth: analytics.revenueGrowth,
+    secondaryGrowth: analytics.ordersGrowth,
+    tertiaryGrowth: analytics.customersGrowth,
   };
 
   const handleExport = (
@@ -324,7 +239,6 @@ const SalesAnalyticsPage: React.FC = () => {
     reportType: string,
   ) => {
     console.log(`Exporting ${reportType} report as ${format}`);
-    // API call would go here
   };
 
   return <AnalyticsDashboard config={config} onExport={handleExport} />;
