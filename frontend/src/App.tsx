@@ -228,6 +228,7 @@ function App() {
               </DashboardLayout>
             }
           />
+
           <Route
             path="/distributor/products/add"
             element={
