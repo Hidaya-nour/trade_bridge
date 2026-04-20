@@ -16,6 +16,7 @@ import {
   RotateCcw,
   MessageSquare,
   User,
+  AlertCircle,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -63,12 +64,14 @@ import { formatPrice, formatDate, formatDateTime } from "@/lib/formatters";
 import { getPaymentMethodLabel } from "@/lib/payment-method-utils";
 import { getInitials, cn } from "@/lib/utils";
 import deliveryService from "@/services/delivery.service";
+import disputeService from "@/services/dispute.service";
 import toast from "react-hot-toast";
 import type {
   OrderStatus,
   OrderDetailsData,
   OrderDetailsLinks,
 } from "@/types/order.types";
+import { Textarea } from "@/components/ui/textarea";
 
 type OrderDetailsViewProps = {
   initialOrder: OrderDetailsData;
@@ -121,12 +124,16 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
   const [showAssignDialog, setShowAssignDialog] = useState(false);
   const [showReviewDialog, setShowReviewDialog] = useState(false);
   const [showReorderDialog, setShowReorderDialog] = useState(false);
+  const [showDisputeDialog, setShowDisputeDialog] = useState(false);
   const [selectedDriver, setSelectedDriver] = useState("");
   const [cancellationReason, setCancellationReason] = useState("");
   const [rating, setRating] = useState(5);
   const [review, setReview] = useState("");
+  const [disputeReason, setDisputeReason] = useState<string>("late_delivery");
+  const [disputeDescription, setDisputeDescription] = useState<string>("");
   const [assignLoading, setAssignLoading] = useState(false);
   const [paymentApproving, setPaymentApproving] = useState(false);
+  const [disputeSubmitting, setDisputeSubmitting] = useState(false);
 
   useEffect(() => {
     setOrder(initialOrder);
@@ -204,6 +211,41 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
       }));
     } finally {
       setPaymentApproving(false);
+    }
+  };
+
+  const handleRaiseDispute = async () => {
+    if (!order?.id || !order?.party?.id) {
+      toast.error("Unable to raise dispute for this order.");
+      return;
+    }
+
+    const reason = disputeReason.trim();
+    const details = disputeDescription.trim();
+    if (!details) {
+      toast.error("Please describe the issue.");
+      return;
+    }
+
+    setDisputeSubmitting(true);
+    try {
+      await disputeService.create({
+        order_id: order.id,
+        against_user: order.party.id,
+        reason,
+        description: details,
+      });
+      toast.success("Dispute raised. Our team will review it.");
+      setShowDisputeDialog(false);
+      setDisputeReason("late_delivery");
+      setDisputeDescription("");
+    } catch (err: any) {
+      toast.error(
+        err?.response?.data?.message ||
+          "Failed to raise dispute. Please try again.",
+      );
+    } finally {
+      setDisputeSubmitting(false);
     }
   };
 
@@ -764,7 +806,22 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                   </Button>
                 )}
 
-              <Button variant="outline" className="w-full justify-start" asChild>
+              {mode === "outgoing" && (
+                <Button
+                  variant="outline"
+                  className="w-full justify-start"
+                  onClick={() => setShowDisputeDialog(true)}
+                >
+                  <AlertCircle className="mr-2 h-4 w-4" />
+                  Raise Dispute
+                </Button>
+              )}
+
+              <Button
+                variant="outline"
+                className="w-full justify-start"
+                asChild
+              >
                 <Link to={receiptUrl}>
                   <Download className="mr-2 h-4 w-4" />
                   Download Receipt
@@ -840,6 +897,61 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Raise Dispute Dialog */}
+      <Dialog open={showDisputeDialog} onOpenChange={setShowDisputeDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Raise a Dispute</DialogTitle>
+            <DialogDescription>
+              Tell us what went wrong so we can help resolve it quickly.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Reason</Label>
+              <Select value={disputeReason} onValueChange={setDisputeReason}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select reason" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="late_delivery">Late delivery</SelectItem>
+                  <SelectItem value="damaged_items">Damaged items</SelectItem>
+                  <SelectItem value="wrong_items">Wrong items</SelectItem>
+                  <SelectItem value="missing_items">Missing items</SelectItem>
+                  <SelectItem value="quality_issue">Quality issue</SelectItem>
+                  <SelectItem value="payment_issue">Payment issue</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Description</Label>
+              <Textarea
+                value={disputeDescription}
+                onChange={(e) => setDisputeDescription(e.target.value)}
+                placeholder="Describe the issue (include item names, quantities, and any evidence you have)."
+                rows={5}
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              disabled={disputeSubmitting}
+              onClick={() => setShowDisputeDialog(false)}
+            >
+              Cancel
+            </Button>
+            <Button disabled={disputeSubmitting} onClick={handleRaiseDispute}>
+              Submit Dispute
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Assign Driver Dialog */}
       <Dialog open={showAssignDialog} onOpenChange={setShowAssignDialog}>
@@ -990,7 +1102,6 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
           onProcessPayment={onProcessPayment as any}
         />
       )}
-
     </div>
   );
 };

@@ -72,6 +72,7 @@ if (filters.supplier_id) {
       where[Op.or] = [
         { name: { [Op.like]: `%${filters.search}%` } },
         { description: { [Op.like]: `%${filters.search}%` } },
+        { sku: { [Op.like]: `%${filters.search}%` } },
       ];
     }
 

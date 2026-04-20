@@ -12,6 +12,7 @@ import HelpSupportPage from "./pages/shared/HelpSupport";
 import SettingsPage from "./pages/shared/Settings";
 import NotificationsPage from "./pages/shared/Notifications";
 import MessagesPage from "./pages/shared/Messages";
+import MyDisputesPage from "./pages/shared/MyDisputes";
 import CompareSuppliersPage from "./pages/retailer/CompareSuppliers";
 import SupplierDirectoryPage from "./pages/retailer/SupplierDirectory";
 import DistributorDashboard from "./pages/distributor/Dashboard";
@@ -179,6 +180,14 @@ function App() {
               </DashboardLayout>
             }
           />
+          <Route
+            path="/retailer/disputes"
+            element={
+              <DashboardLayout>
+                <MyDisputesPage role="retailer" />
+              </DashboardLayout>
+            }
+          />
 
           <Route
             path="/messages"
@@ -343,6 +352,14 @@ function App() {
             }
           />
           <Route
+            path="/distributor/disputes"
+            element={
+              <DashboardLayout>
+                <MyDisputesPage role="distributor" />
+              </DashboardLayout>
+            }
+          />
+          <Route
             path="/distributor/products/:id"
             element={
               <DashboardLayout>
@@ -452,6 +469,14 @@ function App() {
             element={
               <DashboardLayout>
                 <AgentsPage />
+              </DashboardLayout>
+            }
+          />
+          <Route
+            path="/factory/disputes"
+            element={
+              <DashboardLayout>
+                <MyDisputesPage role="factory" />
               </DashboardLayout>
             }
           />

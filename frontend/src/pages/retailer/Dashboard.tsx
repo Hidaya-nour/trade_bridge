@@ -246,6 +246,17 @@ const RetailerDashboard: React.FC = () => {
               title="Offers For You"
               description="Current distributor promotions matched to retailer buying activity."
               items={promotions.slice(0, 4)}
+              getProductLink={(promotion) => {
+                const code = promotion.code?.trim();
+                if (!code) return null;
+                const match = products?.find(
+                  (product) =>
+                    String((product as any).sku || "")
+                      .trim()
+                      .toUpperCase() === code.toUpperCase(),
+                );
+                return match?.id ? `/retailer/products/${match.id}` : null;
+              }}
               compact
               emptyTitle="No active offers right now"
               emptyDescription="Distributor promotions will appear here when they go live."

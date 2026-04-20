@@ -354,7 +354,8 @@ const DistributorOrderDetailsPage: React.FC = () => {
                 party: (supplierId) => `/distributor/suppliers/${supplierId}`,
                 product: (productId) => `/distributor/products/${productId}`,
                 reorder: (orderId) => `/distributor/reorder?order=${orderId}`,
-                message: (supplierId) => `/messages?supplier=${supplierId}`,
+                message: (supplierId) =>
+                  `/messages?supplier=${supplierId}${id ? `&order=${id}` : ""}`,
               }
         }
         cancelReasonOptions={

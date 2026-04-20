@@ -63,6 +63,11 @@ const roleNavigation = {
       href: "/retailer/cart",
       icon: ShoppingCart,
     },
+    {
+      name: "My Disputes",
+      href: "/retailer/disputes",
+      icon: AlertCircle,
+    },
   ],
 
   distributor: {
@@ -94,6 +99,11 @@ const roleNavigation = {
         name: "Broadcast Promotions",
         href: "/distributor/promotions",
         icon: TrendingUp,
+      },
+      {
+        name: "My Disputes",
+        href: "/distributor/disputes",
+        icon: AlertCircle,
       },
     ],
     purchasing: [
@@ -133,6 +143,11 @@ const roleNavigation = {
       name: "Order Management",
       href: "/factory/orders",
       icon: Package,
+    },
+    {
+      name: "My Disputes",
+      href: "/factory/disputes",
+      icon: AlertCircle,
     },
     {
       name: "Agents",

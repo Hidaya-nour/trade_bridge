@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { useLocation } from "react-router-dom";
 import {
   Check,
   CheckCheck,
@@ -49,6 +50,7 @@ const getInitials = (name: string) =>
     .toUpperCase();
 
 const MessagesPage: React.FC = () => {
+  const location = useLocation();
   const [messageInput, setMessageInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [isNewChatOpen, setIsNewChatOpen] = useState(false);
@@ -74,15 +76,51 @@ const MessagesPage: React.FC = () => {
     setCurrentConversation,
   } = useMessageStore();
 
+  const requestedChat = useMemo(() => {
+    const params = new URLSearchParams(location.search);
+    const userId = params.get("supplier") || params.get("user");
+    const orderId = params.get("order") || undefined;
+    return {
+      userId: userId ? userId.trim() : null,
+      orderId: orderId ? orderId.trim() : undefined,
+    };
+  }, [location.search]);
+
   useEffect(() => {
     void fetchUserMessages();
   }, [fetchUserMessages]);
 
   useEffect(() => {
+    if (!requestedChat.userId) return;
+    if (requestedChat.userId === currentConversationUserId) return;
+    void startChatWithUser(requestedChat.userId);
+  }, [currentConversationUserId, requestedChat.userId, startChatWithUser]);
+
+  useEffect(() => {
+    if (!requestedChat.userId || !requestedChat.orderId) return;
+    if (requestedChat.userId !== currentConversationUserId) return;
+    void fetchConversation(requestedChat.userId, requestedChat.orderId);
+  }, [
+    currentConversationUserId,
+    fetchConversation,
+    requestedChat.orderId,
+    requestedChat.userId,
+  ]);
+
+  useEffect(() => {
+    // If we arrived via a deep-link (e.g. Contact Supplier), don't auto-select
+    // the first conversation and override the requested participant.
+    if (requestedChat.userId) return;
+
     if (!currentConversationUserId && conversations.length > 0) {
       setCurrentConversation(conversations[0].participant_id);
     }
-  }, [conversations, currentConversationUserId, setCurrentConversation]);
+  }, [
+    conversations,
+    currentConversationUserId,
+    requestedChat.userId,
+    setCurrentConversation,
+  ]);
 
   useEffect(() => {
     if (currentConversationUserId) {

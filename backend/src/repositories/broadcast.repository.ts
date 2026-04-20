@@ -13,6 +13,31 @@ export class BroadcastRepository extends BaseRepository<Broadcast> {
     super(Broadcast);
   }
 
+  async refreshTimeBasedStatuses(now: Date = new Date()): Promise<void> {
+    // Scheduled broadcasts become active when the start date arrives.
+    await this.model.update(
+      { status: 'active' } as any,
+      {
+        where: {
+          status: 'scheduled',
+          start_date: { [Op.lte]: now },
+          end_date: { [Op.gt]: now },
+        } as any,
+      },
+    );
+
+    // Active (or scheduled) broadcasts expire once the end date has passed.
+    await this.model.update(
+      { status: 'expired' } as any,
+      {
+        where: {
+          status: { [Op.in]: ['active', 'scheduled'] },
+          end_date: { [Op.lte]: now },
+        } as any,
+      },
+    );
+  }
+
   async findByOwner(ownerId: string, ownerRole?: BroadcastOwnerRole): Promise<Broadcast[]> {
     const where: Record<string, unknown> = { owner_id: ownerId };
 
@@ -63,10 +88,11 @@ export class BroadcastRepository extends BaseRepository<Broadcast> {
     ownerRoles?: BroadcastOwnerRole[];
     excludeOwnerId?: string;
   }): Promise<Broadcast[]> {
+    const now = new Date();
     const where: Record<string, unknown> = {
-      status: 'active',
-      start_date: { [Op.lte]: new Date() },
-      end_date: { [Op.gte]: new Date() },
+      status: { [Op.in]: ['active', 'scheduled'] },
+      start_date: { [Op.lte]: now },
+      end_date: { [Op.gte]: now },
     };
 
     if (options?.ownerRoles && options.ownerRoles.length > 0) {
@@ -79,6 +105,27 @@ export class BroadcastRepository extends BaseRepository<Broadcast> {
 
     return this.findAll({
       where,
+      order: [
+        ['priority', 'ASC'],
+        ['created_at', 'DESC'],
+      ],
+    });
+  }
+
+  async findActiveDiscountByOwnerAndCode(
+    ownerId: string,
+    code: string,
+    now: Date = new Date(),
+  ): Promise<Broadcast | null> {
+    return this.model.findOne({
+      where: {
+        owner_id: ownerId,
+        type: 'discount',
+        code,
+        status: { [Op.in]: ['active', 'scheduled'] },
+        start_date: { [Op.lte]: now },
+        end_date: { [Op.gte]: now },
+      } as any,
       order: [
         ['priority', 'ASC'],
         ['created_at', 'DESC'],
