@@ -104,17 +104,25 @@ const DistributorDashboard: React.FC = () => {
   const [promotions, setPromotions] = useState<BroadcastRecord[]>([]);
 
   useEffect(() => {
-    fetchOrdersAsSupplier({ sortBy: "created_at", sortOrder: "DESC", limit: 20 });
-    fetchProducts({ sortBy: "created_at", sortOrder: "DESC", limit: 30 } as any, {
-      replace: true,
+    fetchOrdersAsSupplier({
+      sortBy: "created_at",
+      sortOrder: "DESC",
+      limit: 20,
     });
+    fetchProducts(
+      { sortBy: "created_at", sortOrder: "DESC", limit: 30 } as any,
+      {
+        replace: true,
+      },
+    );
   }, [fetchOrdersAsSupplier, fetchProducts]);
 
   useEffect(() => {
     const loadShipments = async () => {
       try {
         const response = await deliveryService.getAll({ limit: 10 });
-        const rows = response?.data?.deliveries || response?.data || response || [];
+        const rows =
+          response?.data?.deliveries || response?.data || response || [];
         const normalized = Array.isArray(rows) ? rows : [];
         setRecentShipments(normalized);
       } catch {
@@ -134,7 +142,10 @@ const DistributorDashboard: React.FC = () => {
         ]);
         setPromotions(response.data || []);
       } catch (error) {
-        console.error("Failed to load distributor dashboard promotions:", error);
+        console.error(
+          "Failed to load distributor dashboard promotions:",
+          error,
+        );
         setPromotions([]);
       }
     };
@@ -153,31 +164,36 @@ const DistributorDashboard: React.FC = () => {
   };
 
   const incomingOrders = useMemo<DashboardIncomingOrder[]>(() => {
-    return (orders as Order[])
-      .slice(0, 4)
-      .map((order) => {
-        const buyer = order.buyer?.business_name || order.buyer?.full_name || "Retailer";
-        const totalItems = order.items?.reduce((acc, item) => acc + item.quantity, 0) || 0;
-        const amount = Number(order.total_price) || 0;
-        const status = order.order_status as DashboardIncomingOrder["status"];
-        return {
-          id: order.id,
-          retailer: buyer,
-          retailerId: order.buyer?.id,
-          items: totalItems,
-          total: amount,
-          status,
-          date: order.created_at,
-          priority: amount >= 100000 ? "high" : amount >= 30000 ? "medium" : "low",
-        };
-      });
+    return (orders as Order[]).slice(0, 4).map((order) => {
+      const buyer =
+        order.buyer?.business_name || order.buyer?.full_name || "Retailer";
+      const totalItems =
+        order.items?.reduce((acc, item) => acc + item.quantity, 0) || 0;
+      const amount = Number(order.total_price) || 0;
+      const status = order.order_status as DashboardIncomingOrder["status"];
+      return {
+        id: order.id,
+        retailer: buyer,
+        retailerId: order.buyer?.id,
+        items: totalItems,
+        total: amount,
+        status,
+        date: order.created_at,
+        priority:
+          amount >= 100000 ? "high" : amount >= 30000 ? "medium" : "low",
+      };
+    });
   }, [orders]);
 
   const lowStockProducts = useMemo(() => {
     return products
-      .filter((product: any) => Number(product.stock_quantity || 0) <= LOW_STOCK_THRESHOLD)
+      .filter(
+        (product: any) =>
+          Number(product.stock_quantity || 0) <= LOW_STOCK_THRESHOLD,
+      )
       .sort(
-        (a: any, b: any) => Number(a.stock_quantity || 0) - Number(b.stock_quantity || 0),
+        (a: any, b: any) =>
+          Number(a.stock_quantity || 0) - Number(b.stock_quantity || 0),
       )
       .slice(0, 10)
       .map((product: any) => ({
@@ -207,7 +223,9 @@ const DistributorDashboard: React.FC = () => {
       },
       {
         title: "Pending Orders",
-        value: orders.filter((o: Order) => o.order_status === "pending").length.toString(),
+        value: orders
+          .filter((o: Order) => o.order_status === "pending")
+          .length.toString(),
         change: `${orders.filter((o: Order) => o.order_status === "processing").length} processing`,
         trend: "neutral" as const,
         icon: Clock,
@@ -218,7 +236,8 @@ const DistributorDashboard: React.FC = () => {
         title: "Low Stock Items",
         value: lowStockProducts.length.toString(),
         change: `${products.length} total products`,
-        trend: lowStockProducts.length > 0 ? ("up" as const) : ("neutral" as const),
+        trend:
+          lowStockProducts.length > 0 ? ("up" as const) : ("neutral" as const),
         icon: AlertCircle,
         iconColor: "text-red-600",
         iconBg: "bg-red-100",
@@ -248,7 +267,10 @@ const DistributorDashboard: React.FC = () => {
             : shipmentStatus === "picked_up"
               ? "in-transit"
               : shipmentStatus,
-        date: shipment.updated_at || shipment.created_at || new Date().toISOString(),
+        date:
+          shipment.updated_at ||
+          shipment.created_at ||
+          new Date().toISOString(),
       };
     });
   }, [recentShipments]);
@@ -264,7 +286,9 @@ const DistributorDashboard: React.FC = () => {
 
     return {
       scheduled: deliveriesToday.length,
-      remaining: deliveriesToday.filter((delivery) => delivery.status !== "delivered").length,
+      remaining: deliveriesToday.filter(
+        (delivery) => delivery.status !== "delivered",
+      ).length,
       pendingPickups: pendingPickupCount,
     };
   }, [shipmentRows, incomingOrders]);

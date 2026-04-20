@@ -66,7 +66,10 @@ const DistributorMarketplacePage: React.FC = () => {
         ]);
         setPromotions(response.data || []);
       } catch (error) {
-        console.error("Failed to load distributor marketplace promotions:", error);
+        console.error(
+          "Failed to load distributor marketplace promotions:",
+          error,
+        );
         setPromotions([]);
       }
     };
@@ -99,7 +102,9 @@ const DistributorMarketplacePage: React.FC = () => {
         latitude: Number.isFinite(Number(p.supplier?.addresses?.[0]?.latitude))
           ? Number(p.supplier?.addresses?.[0]?.latitude)
           : null,
-        longitude: Number.isFinite(Number(p.supplier?.addresses?.[0]?.longitude))
+        longitude: Number.isFinite(
+          Number(p.supplier?.addresses?.[0]?.longitude),
+        )
           ? Number(p.supplier?.addresses?.[0]?.longitude)
           : null,
         deliveryTime: p.delivery_time || "2-3 days",

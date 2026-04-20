@@ -64,9 +64,12 @@ const RetailerDashboard: React.FC = () => {
   }, [fetchOrderStats]);
 
   useEffect(() => {
-    fetchProducts({ limit: 8, sortBy: "created_at", sortOrder: "DESC" } as any, {
-      replace: true,
-    });
+    fetchProducts(
+      { limit: 8, sortBy: "created_at", sortOrder: "DESC" } as any,
+      {
+        replace: true,
+      },
+    );
   }, [fetchProducts]);
 
   useEffect(() => {
@@ -81,7 +84,9 @@ const RetailerDashboard: React.FC = () => {
         deliveryTime: "2-5 days",
         price: "$$",
         match: `${Math.min(99, 80 + (supplier.total_products || 0))}%`,
-        avatar: getInitials(supplier.business_name || supplier.full_name || "SP"),
+        avatar: getInitials(
+          supplier.business_name || supplier.full_name || "SP",
+        ),
         verified: supplier.is_verified,
       }));
       setRecommendedSuppliers(normalized);
