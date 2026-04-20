@@ -1,82 +1,114 @@
-# Demand Forecasting and Supplier Recommendation
+# TradeBridge ML
 
-This folder contains machine learning pipelines for demand forecasting and supplier recommendation.
+Production-ready starter ML workspace for TradeBridge using the Olist dataset.
 
-## Data Preparation
+## Structure
 
-First, export data from the Trade Bridge database:
+```text
+ml/
+  app.py
+  build_features.py
+  load_data.py
+  predict.py
+  preprocess.py
+  train_forecast.py
+  train_recommendation.py
+  requirements.txt
+  data/
+    raw/
+    processed/
+  models/
+  src/
+    api/
+      app.py
+    common/
+      io.py
+    data_processing/
+      load_data.py
+      preprocess.py
+    features/
+      build_features.py
+    models/
+      train_recommendation.py
+      train_forecast.py
+      predict.py
+    config.py
+```
 
-1. Run the data export script from the backend:
+## Workflow
+
+1. Put all Olist CSV files in `data/raw/`
+2. Run preprocessing
+3. Build supplier and demand features
+4. Train the recommendation and forecast models
+5. Serve predictions with FastAPI
+
+## Commands
+
+### Load / validate raw data
 
 ```bash
-cd backend
-npx ts-node src/utils/export-ml-data.ts
+cd ml
+python load_data.py
 ```
 
-This will create:
-- `ml/data/demand_data.csv` — Historical sales data for demand forecasting
-- `ml/data/supplier_data.csv` — Supplier performance data for recommendation
+### Preprocess Olist data
 
-## Demand Forecasting
-
-Predicts future demand quantities for products based on historical sales.
-
-### Dataset format
-`demand_data.csv`:
-- `date` — ISO date string, e.g. `2026-04-01`
-- `product_id` — product identifier
-- `quantity_sold` — number of units sold on that date
-
-### Training
 ```bash
-python demand_forecasting.py --input data/demand_data.csv --output models/demand_forecast_model.pkl
+cd ml
+python preprocess.py
 ```
 
-Example output:
-```
-Training MAE: 0.9950, RMSE: 1.0198
-Test MAE: 1.8900, RMSE: 2.4380
-Model artifact saved to models\demand_forecast_model.pkl
-```
+### Build feature datasets
 
-### Prediction
 ```bash
-python predict.py --model models/demand_forecast_model.pkl --product-id <product_id> --days 7 --history-file data/demand_data.csv
+cd ml
+python build_features.py
 ```
 
-## Supplier Recommendation
+### Train supplier recommendation model
 
-Classifies suppliers by suitability score (1-5) based on performance metrics.
-
-### Dataset format
-`supplier_data.csv`:
-- `supplier_id` — supplier identifier
-- `on_time_delivery_rate` — percentage of on-time deliveries
-- `quality_rating` — average quality rating
-- `order_fulfillment_time` — average fulfillment time in days
-- `price_competitiveness` — average price score
-- `total_orders` — total orders processed
-- `suitability_score` — target score (1-5)
-
-### Training
 ```bash
-python supplier_recommendation.py --input data/supplier_data.csv --output models/supplier_recommendation_model.pkl
+cd ml
+python train_recommendation.py
 ```
 
-Example output:
+### Train demand forecast model
+
+```bash
+cd ml
+python train_forecast.py
 ```
-Training Accuracy: 1.0000, F1: 1.0000
-Test Accuracy: 1.0000, Precision: 1.0000, Recall: 1.0000, F1: 1.0000
-Model artifact saved to models\supplier_recommendation_model.pkl
+
+### Run API
+
+```bash
+cd ml
+uvicorn app:app --reload
 ```
 
-## Evaluation
+## Endpoints
 
-Both scripts now include proper train/test splits and print evaluation metrics:
-- Demand Forecasting: MAE, RMSE on training and test sets
-- Supplier Recommendation: Accuracy, Precision, Recall, F1
+### `POST /recommend-supplier`
 
-## Notes
-- Use real data from `export-ml-data.ts` for production models
-- Models are trained locally with CPU
-- Artifacts include scalers and encoders for inference
+Request body:
+
+```json
+{
+  "top_k": 5,
+  "seller_state": "SP",
+  "product_category_name": "beleza_saude"
+}
+```
+
+### `POST /forecast-demand`
+
+Request body:
+
+```json
+{
+  "product_id": "123",
+  "seller_id": "abc",
+  "horizon_days": 7
+}
+```

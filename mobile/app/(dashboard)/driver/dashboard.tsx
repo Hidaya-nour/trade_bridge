@@ -14,13 +14,9 @@ import { useAuthStore } from "@/features/auth/auth.store";
 import {
   ACTIVE_DELIVERIES,
   DELIVERY_HISTORY,
+  DRIVER_DELIVERIES,
   NOTIFICATIONS,
   type DeliveryStatus,
-  type IssueType,
-  ISSUE_LABELS,
-  type AssignedDelivery,
-  type DriverNotification,
-  type DeliveryHistoryItem,
 } from "./driverData";
 
 const formatStatus = (status: DeliveryStatus) =>
@@ -107,7 +103,7 @@ export default function DriverDashboardScreen() {
           </View>
           <View style={styles.statCard}>
             <Text style={styles.statLabel}>Total Orders</Text>
-            <Text style={styles.statValue}>{ACTIVE_DELIVERIES.length}</Text>
+            <Text style={styles.statValue}>{DRIVER_DELIVERIES.length}</Text>
           </View>
         </View>
 
@@ -124,9 +120,9 @@ export default function DriverDashboardScreen() {
                 icon: "notifications-outline",
               },
               {
-                label: "History",
-                route: "/driver/history",
-                icon: "time-outline",
+                label: "Deliveries",
+                route: "/driver/deliveries",
+                icon: "car-outline",
               },
               {
                 label: "Issues",
@@ -152,7 +148,10 @@ export default function DriverDashboardScreen() {
         </View>
 
         {activeRoute ? (
-          <View style={styles.sectionCard}>
+          <Pressable
+            style={styles.sectionCard}
+            onPress={() => router.push(`/driver/deliveries/${activeRoute.id}` as never)}
+          >
             <Text style={styles.sectionTitle}>Current Active Order</Text>
             <Text style={styles.sectionSubtitle}>{activeRoute.orderCode}</Text>
             <Text style={styles.metaText}>
@@ -192,7 +191,7 @@ export default function DriverDashboardScreen() {
                 </Text>
               </View>
             </View>
-          </View>
+          </Pressable>
         ) : (
           <View style={styles.sectionCard}>
             <Text style={styles.sectionTitle}>No active route</Text>
