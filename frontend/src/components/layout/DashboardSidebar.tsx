@@ -11,6 +11,7 @@ import {
   Store,
   BarChart3,
   TrendingUp,
+  Navigation,
   MessageSquare,
   Bell,
   Settings,
@@ -151,6 +152,7 @@ const roleNavigation = {
   driver: [
     { name: "Dashboard", href: "/driver/dashboard", icon: LayoutDashboard },
     { name: "Deliveries", href: "/driver/deliveries", icon: TrendingUp },
+    { name: "Live Tracking", href: "/driver/tracking", icon: Navigation },
     { name: "Delivery History", href: "/driver/history", icon: Package },
     { name: "Report Issues", href: "/driver/issues", icon: AlertCircle },
   ],

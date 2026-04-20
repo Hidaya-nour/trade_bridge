@@ -19,21 +19,28 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
-
+import deliveryService from "@/services/delivery.service";
 import {
-  DRIVER_DELIVERIES,
+  mapApiDeliveryToDriverDelivery,
   type DeliveryPriority,
   type DeliveryStatus,
   type DriverDelivery,
-} from "./driverData";
+} from "./driver-delivery.utils";
 
-type DeliveryTab = "pending" | "assigned" | "in_transit" | "delivered" | "cancelled";
+type DeliveryTab =
+  | "pending"
+  | "assigned"
+  | "in_transit"
+  | "delivered"
+  | "failed"
+  | "cancelled";
 
 const deliveryTabs: DeliveryTab[] = [
   "pending",
   "assigned",
   "in_transit",
   "delivered",
+  "failed",
   "cancelled",
 ];
 
@@ -46,6 +53,7 @@ const statusColorMap: Record<DeliveryStatus, string> = {
   picked_up: "border-violet-200 bg-violet-50 text-violet-700",
   in_transit: "border-orange-200 bg-orange-50 text-orange-700",
   delivered: "border-emerald-200 bg-emerald-50 text-emerald-700",
+  failed: "border-rose-200 bg-rose-50 text-rose-700",
   cancelled: "border-rose-200 bg-rose-50 text-rose-700",
 };
 
@@ -67,14 +75,49 @@ const getLoadTotal = (delivery: DriverDelivery) =>
   delivery.products.reduce((total, product) => total + product.quantity, 0);
 
 export const ActiveDeliveriesPage: React.FC = () => {
+  const [deliveries, setDeliveries] = useState<DriverDelivery[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState<DeliveryTab>("pending");
   const [selectedDeliveryId, setSelectedDeliveryId] = useState<string | null>(null);
 
+  useEffect(() => {
+    const loadDeliveries = async () => {
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const response = await deliveryService.getMyDeliveries();
+        const rows: any[] = Array.isArray(response?.data?.deliveries)
+          ? response.data.deliveries
+          : [];
+        const mapped = rows.map(mapApiDeliveryToDriverDelivery);
+
+        setDeliveries(mapped);
+
+        const defaultTab = deliveryTabs.find((tab) =>
+          mapped.some((delivery) => matchesTab(delivery, tab)),
+        );
+        setActiveTab(defaultTab ?? "pending");
+      } catch (loadError: any) {
+        setError(
+          loadError?.response?.data?.message ||
+            "Failed to load deliveries from the backend.",
+        );
+        setDeliveries([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadDeliveries();
+  }, []);
+
   const filteredDeliveries = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
 
-    return DRIVER_DELIVERIES.filter((delivery) => {
+    return deliveries.filter((delivery) => {
       const matchesSearch =
         !query ||
         [
@@ -87,7 +130,7 @@ export const ActiveDeliveriesPage: React.FC = () => {
 
       return matchesSearch && matchesTab(delivery, activeTab);
     });
-  }, [activeTab, searchQuery]);
+  }, [activeTab, deliveries, searchQuery]);
 
   const selectedDelivery = useMemo(
     () =>
@@ -105,33 +148,33 @@ export const ActiveDeliveriesPage: React.FC = () => {
     () =>
       deliveryTabs.reduce(
         (counts, tab) => {
-          counts[tab] = DRIVER_DELIVERIES.filter((delivery) =>
+          counts[tab] = deliveries.filter((delivery) =>
             matchesTab(delivery, tab),
           ).length;
           return counts;
         },
         {} as Record<DeliveryTab, number>,
       ),
-    [],
+    [deliveries],
   );
 
   const nextDelivery =
-    DRIVER_DELIVERIES.find(
+    deliveries.find(
       (delivery) =>
-        delivery.status !== "delivered" && delivery.status !== "cancelled",
+        !["delivered", "failed", "cancelled"].includes(delivery.status),
     ) ?? null;
 
   return (
     <div className="space-y-6">
-      <section className="overflow-hidden rounded-3xl border border-slate-200 bg-slate-950 text-white shadow-sm">
+      <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white text-slate-950 shadow-sm">
         <div className="grid gap-6 p-6 lg:grid-cols-[1.2fr_0.8fr] lg:p-8">
           <div className="space-y-5">
             <div className="space-y-2">
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-sky-300/90">
+              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-sky-600">
                 Driver Workspace
               </p>
               <h1 className="text-3xl font-bold tracking-tight">Deliveries</h1>
-              <p className="max-w-2xl text-sm leading-6 text-slate-300">
+              <p className="max-w-2xl text-sm leading-6 text-slate-600">
                 Review assignments by status, search across stops, and keep the
                 current delivery details visible while you work.
               </p>
@@ -141,10 +184,10 @@ export const ActiveDeliveriesPage: React.FC = () => {
               {deliveryTabs.map((tab) => (
                 <div
                   key={tab}
-                  className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 backdrop-blur"
+                  className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 backdrop-blur"
                 >
                   <p className="text-2xl font-bold">{tabCounts[tab]}</p>
-                  <p className="mt-1 text-xs uppercase tracking-wide text-slate-300">
+                  <p className="mt-1 text-xs uppercase tracking-wide text-slate-500">
                     {tab.replace("_", " ")}
                   </p>
                 </div>
@@ -152,29 +195,29 @@ export const ActiveDeliveriesPage: React.FC = () => {
             </div>
           </div>
 
-          <div className="rounded-3xl border border-sky-400/20 bg-sky-400/10 p-5">
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-sky-200">
+          <div className="rounded-3xl border border-sky-200 bg-sky-50 p-5">
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-sky-600">
               Next Priority Stop
             </p>
             {nextDelivery ? (
               <div className="mt-4 space-y-4">
                 <div>
                   <p className="text-2xl font-bold">{nextDelivery.orderCode}</p>
-                  <p className="mt-1 text-sm text-slate-200">
+                  <p className="mt-1 text-sm text-slate-600">
                     {nextDelivery.destination}
                   </p>
                 </div>
                 <div className="grid gap-3 sm:grid-cols-2">
-                  <div className="rounded-2xl bg-white/10 p-3">
-                    <p className="text-xs uppercase tracking-wide text-slate-300">
+                  <div className="rounded-2xl bg-slate-50 p-3">
+                    <p className="text-xs uppercase tracking-wide text-slate-500">
                       ETA
                     </p>
                     <p className="mt-1 text-lg font-semibold">
                       {nextDelivery.etaMinutes} min
                     </p>
                   </div>
-                  <div className="rounded-2xl bg-white/10 p-3">
-                    <p className="text-xs uppercase tracking-wide text-slate-300">
+                  <div className="rounded-2xl bg-slate-50 p-3">
+                    <p className="text-xs uppercase tracking-wide text-slate-500">
                       Route Progress
                     </p>
                     <p className="mt-1 text-lg font-semibold">
@@ -182,12 +225,12 @@ export const ActiveDeliveriesPage: React.FC = () => {
                     </p>
                   </div>
                 </div>
-                <p className="text-sm text-slate-200">
+                <p className="text-sm text-slate-600">
                   {nextDelivery.supplierName} to {nextDelivery.buyerName}
                 </p>
               </div>
             ) : (
-              <p className="mt-4 text-sm text-slate-200">
+              <p className="mt-4 text-sm text-slate-600">
                 No active route is waiting right now.
               </p>
             )}
@@ -196,8 +239,8 @@ export const ActiveDeliveriesPage: React.FC = () => {
       </section>
 
       <section className="space-y-4 rounded-3xl border border-slate-200 bg-white p-4 shadow-sm lg:p-5">
-        <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-          <div className="relative w-full xl:max-w-md">
+        <div className="flex flex-col gap-3">
+          <div className="relative w-full">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
             <Input
               value={searchQuery}
@@ -210,9 +253,9 @@ export const ActiveDeliveriesPage: React.FC = () => {
           <Tabs
             value={activeTab}
             onValueChange={(value) => setActiveTab(value as DeliveryTab)}
-            className="w-full xl:w-auto"
+            className="w-full"
           >
-            <TabsList className="h-auto w-full flex-wrap gap-2 rounded-2xl bg-slate-100 p-1 xl:w-auto">
+            <TabsList className="h-auto w-full flex-wrap gap-2 rounded-2xl bg-slate-100 p-1">
               {deliveryTabs.map((tab) => (
                 <TabsTrigger
                   key={tab}
@@ -250,7 +293,29 @@ export const ActiveDeliveriesPage: React.FC = () => {
               </div>
             </div>
 
-            {filteredDeliveries.length ? (
+            {isLoading ? (
+              <Card className="rounded-3xl border-dashed shadow-none">
+                <CardContent className="flex min-h-60 flex-col items-center justify-center px-6 py-12 text-center">
+                  <Package2 className="h-10 w-10 text-slate-300" />
+                  <h3 className="mt-4 text-lg font-semibold text-slate-900">
+                    Loading deliveries
+                  </h3>
+                  <p className="mt-2 max-w-sm text-sm text-slate-500">
+                    Fetching your assigned deliveries from the backend.
+                  </p>
+                </CardContent>
+              </Card>
+            ) : error ? (
+              <Card className="rounded-3xl border-dashed shadow-none">
+                <CardContent className="flex min-h-60 flex-col items-center justify-center px-6 py-12 text-center">
+                  <AlertTriangle className="h-10 w-10 text-rose-400" />
+                  <h3 className="mt-4 text-lg font-semibold text-slate-900">
+                    Could not load deliveries
+                  </h3>
+                  <p className="mt-2 max-w-sm text-sm text-slate-500">{error}</p>
+                </CardContent>
+              </Card>
+            ) : filteredDeliveries.length ? (
               <div className="space-y-3">
                 {filteredDeliveries.map((delivery) => {
                   const loadTotal = getLoadTotal(delivery);
@@ -263,7 +328,7 @@ export const ActiveDeliveriesPage: React.FC = () => {
                       className={cn(
                         "w-full rounded-3xl border p-5 text-left transition-all",
                         selectedDelivery?.id === delivery.id
-                          ? "border-slate-900 bg-slate-950 text-white shadow-lg shadow-slate-950/10"
+                          ? "border-sky-500 bg-sky-50 text-slate-950 shadow-lg shadow-sky-500/10"
                           : "border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm",
                       )}
                     >
@@ -277,7 +342,7 @@ export const ActiveDeliveriesPage: React.FC = () => {
                               className={cn(
                                 "border",
                                 selectedDelivery?.id === delivery.id
-                                  ? "border-white/20 bg-white/10 text-white"
+                                  ? statusColorMap[delivery.status]
                                   : statusColorMap[delivery.status],
                               )}
                             >
@@ -287,7 +352,7 @@ export const ActiveDeliveriesPage: React.FC = () => {
                               className={cn(
                                 "border-0",
                                 selectedDelivery?.id === delivery.id
-                                  ? "bg-white/10 text-white"
+                                  ? priorityColorMap[delivery.priority]
                                   : priorityColorMap[delivery.priority],
                               )}
                             >
@@ -296,22 +361,22 @@ export const ActiveDeliveriesPage: React.FC = () => {
                           </div>
 
                           <div className="grid gap-3 md:grid-cols-2">
-                            <div className="rounded-2xl border border-black/5 bg-black/[0.03] p-3 text-sm">
+                            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3 text-sm">
                               <p className="text-xs uppercase tracking-wide text-slate-500">
                                 Route
                               </p>
-                              <p className="mt-1 font-medium text-inherit">
+                              <p className="mt-1 font-medium text-slate-950">
                                 {delivery.supplierName} to {delivery.buyerName}
                               </p>
                               <p className="mt-2 text-sm text-slate-500">
                                 {delivery.destination}
                               </p>
                             </div>
-                            <div className="rounded-2xl border border-black/5 bg-black/[0.03] p-3 text-sm">
+                            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3 text-sm">
                               <p className="text-xs uppercase tracking-wide text-slate-500">
                                 Window
                               </p>
-                              <p className="mt-1 font-medium text-inherit">
+                              <p className="mt-1 font-medium text-slate-950">
                                 {delivery.scheduledWindow}
                               </p>
                               <p className="mt-2 text-sm text-slate-500">
@@ -323,27 +388,27 @@ export const ActiveDeliveriesPage: React.FC = () => {
                           </div>
 
                           <div className="grid gap-3 sm:grid-cols-3">
-                            <div className="rounded-2xl bg-white/5 px-3 py-2">
+                            <div className="rounded-2xl bg-slate-50 px-3 py-2">
                               <p className="text-xs uppercase tracking-wide text-slate-500">
                                 Load
                               </p>
-                              <p className="mt-1 font-semibold text-inherit">
+                              <p className="mt-1 font-semibold text-slate-950">
                                 {loadTotal} units
                               </p>
                             </div>
-                            <div className="rounded-2xl bg-white/5 px-3 py-2">
+                            <div className="rounded-2xl bg-slate-50 px-3 py-2">
                               <p className="text-xs uppercase tracking-wide text-slate-500">
                                 Distance
                               </p>
-                              <p className="mt-1 font-semibold text-inherit">
+                              <p className="mt-1 font-semibold text-slate-950">
                                 {delivery.distanceKm} km
                               </p>
                             </div>
-                            <div className="rounded-2xl bg-white/5 px-3 py-2">
+                            <div className="rounded-2xl bg-slate-50 px-3 py-2">
                               <p className="text-xs uppercase tracking-wide text-slate-500">
                                 Progress
                               </p>
-                              <p className="mt-1 font-semibold text-inherit">
+                              <p className="mt-1 font-semibold text-slate-950">
                                 {delivery.routeProgress}%
                               </p>
                             </div>

@@ -1,8 +1,10 @@
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useEffect, useState } from "react";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import ScreenWrapper from "@/components/layout/ScreenWrapper";
-import { getDeliveryById, type DeliveryPriority, type DeliveryStatus } from "../driverData";
+import deliveryService from "@/features/driver-deliveries/delivery.service";
+import { type DeliveryPriority, type DeliveryStatus, type DriverDelivery } from "@/features/driver-deliveries/delivery.types";
 
 const formatStatus = (status: DeliveryStatus) =>
   status.replace("_", " ").replace(/\b\w/g, (char) => char.toUpperCase());
@@ -17,6 +19,12 @@ const getStatusColors = (status: DeliveryStatus) => {
       return { bg: "#fff7ed", text: "#c2410c", border: "#fed7aa" };
     case "delivered":
       return { bg: "#ecfdf3", text: "#15803d", border: "#bbf7d0" };
+    case "pending":
+      return { bg: "#fef3c7", text: "#d97706", border: "#fcd34d" };
+    case "failed":
+      return { bg: "#fee2e2", text: "#dc2626", border: "#fca5a5" };
+    case "cancelled":
+      return { bg: "#fee2e2", text: "#dc2626", border: "#fca5a5" };
   }
 };
 
@@ -34,7 +42,61 @@ const getPriorityColors = (priority: DeliveryPriority) => {
 export default function DriverDeliveryDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const delivery = getDeliveryById(id);
+  const [delivery, setDelivery] = useState<DriverDelivery | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadDelivery = async () => {
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const rows = await deliveryService.getMyDeliveries();
+        setDelivery(rows.find((item) => item.id === id) ?? null);
+      } catch (loadError: any) {
+        setError(
+          loadError?.response?.data?.message ||
+            "Failed to load delivery details from the backend.",
+        );
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadDelivery();
+  }, [id]);
+
+  if (isLoading) {
+    return (
+      <ScreenWrapper title="Delivery Details" subtitle="Driver">
+        <View style={styles.missingWrap}>
+          <ActivityIndicator size="small" color="#2563eb" />
+          <Text style={styles.missingTitle}>Loading delivery</Text>
+          <Text style={styles.missingSubtitle}>
+            Fetching delivery details from the backend.
+          </Text>
+        </View>
+      </ScreenWrapper>
+    );
+  }
+
+  if (error) {
+    return (
+      <ScreenWrapper title="Delivery Details" subtitle="Driver">
+        <View style={styles.missingWrap}>
+          <Text style={styles.missingTitle}>Could not load delivery</Text>
+          <Text style={styles.missingSubtitle}>{error}</Text>
+          <Pressable
+            style={styles.backButton}
+            onPress={() => router.replace("/driver/deliveries" as never)}
+          >
+            <Text style={styles.backButtonText}>Back to Deliveries</Text>
+          </Pressable>
+        </View>
+      </ScreenWrapper>
+    );
+  }
 
   if (!delivery) {
     return (

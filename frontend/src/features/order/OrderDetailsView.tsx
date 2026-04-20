@@ -222,7 +222,10 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
             pickup_location: "Not provided",
           };
           const created = await deliveryService.create(createPayload);
-          deliveryId = created?.data?.id || created?.id;
+          deliveryId =
+            created?.data?.delivery?.id ||
+            created?.data?.id ||
+            created?.id;
         }
 
         if (!deliveryId) {
