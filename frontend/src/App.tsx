@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
+import { BrowserRouter as Router, Navigate, Route, Routes } from "react-router-dom";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import HomePage from "./pages/Home";
 import AboutPage from "./pages/About";
@@ -529,12 +529,16 @@ function App() {
             }
           />
           <Route
-            path="/driver/active"
+            path="/driver/deliveries"
             element={
               <DashboardLayout>
                 <ActiveDeliveriesPage />
               </DashboardLayout>
             }
+          />
+          <Route
+            path="/driver/active"
+            element={<Navigate to="/driver/deliveries" replace />}
           />
           <Route
             path="/driver/history"

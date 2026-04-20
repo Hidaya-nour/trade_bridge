@@ -1,6 +1,12 @@
-export type DeliveryStatus = "pending" | "assigned" | "picked_up" | "in_transit" | "delivered" | "cancelled";
+export type DeliveryStatus =
+  | "pending"
+  | "assigned"
+  | "picked_up"
+  | "in_transit"
+  | "delivered"
+  | "cancelled";
+
 export type DeliveryPriority = "standard" | "urgent" | "fragile";
-export type IssueType = "damaged_products" | "delivery_delay" | "failed_attempt" | "vehicle_breakdown";
 
 export interface DeliveryProduct {
   name: string;
@@ -36,29 +42,6 @@ export interface DriverDelivery {
   issueReported: boolean;
   timeline: DeliveryTimelineItem[];
 }
-
-export interface DriverNotification {
-  id: string;
-  title: string;
-  detail: string;
-  time: string;
-  unread: boolean;
-}
-
-export interface DeliveryHistoryItem {
-  id: string;
-  orderCode: string;
-  destination: string;
-  deliveredAt: string;
-  issueReported: boolean;
-}
-
-export const ISSUE_LABELS: Record<IssueType, string> = {
-  damaged_products: "Damaged Products",
-  delivery_delay: "Delivery Delay",
-  failed_attempt: "Failed Attempt",
-  vehicle_breakdown: "Vehicle Breakdown",
-};
 
 export const DRIVER_DELIVERIES: DriverDelivery[] = [
   {
@@ -282,43 +265,5 @@ export const DRIVER_DELIVERIES: DriverDelivery[] = [
   },
 ];
 
-export const ACTIVE_DELIVERIES = DRIVER_DELIVERIES.filter(
-  (delivery) => delivery.status !== "delivered",
-);
-
-export const DELIVERY_HISTORY: DeliveryHistoryItem[] = DRIVER_DELIVERIES.filter(
-  (delivery) => delivery.status === "delivered",
-).map((delivery) => ({
-  id: delivery.id,
-  orderCode: delivery.orderCode,
-  destination: delivery.destination,
-  deliveredAt: delivery.deliveredAt || "Completed",
-  issueReported: delivery.issueReported,
-}));
-
 export const getDeliveryById = (id?: string) =>
   DRIVER_DELIVERIES.find((delivery) => delivery.id === id);
-
-export const NOTIFICATIONS: DriverNotification[] = [
-  {
-    id: "n-1",
-    title: "New delivery assigned",
-    detail: "ORD-7856 was assigned to you by Blue Nile Distribution.",
-    time: "5 min ago",
-    unread: true,
-  },
-  {
-    id: "n-2",
-    title: "Delivery destination updated",
-    detail: "ORD-7841 dropoff note has been updated by buyer.",
-    time: "22 min ago",
-    unread: true,
-  },
-  {
-    id: "n-3",
-    title: "Status received",
-    detail: "ORD-7834 status changed to In Transit successfully.",
-    time: "1 hr ago",
-    unread: false,
-  },
-];

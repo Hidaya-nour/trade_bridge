@@ -150,7 +150,7 @@ const roleNavigation = {
 
   driver: [
     { name: "Dashboard", href: "/driver/dashboard", icon: LayoutDashboard },
-    { name: "Active Deliveries", href: "/driver/tracking", icon: TrendingUp },
+    { name: "Deliveries", href: "/driver/deliveries", icon: TrendingUp },
     { name: "Delivery History", href: "/driver/history", icon: Package },
     { name: "Report Issues", href: "/driver/issues", icon: AlertCircle },
   ],
@@ -246,58 +246,76 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
             </p>
           )}
           {nav.main.map((item) => (
-            <Button
-              key={item.name}
-              variant={isActive(item.href) ? "secondary" : "ghost"}
-              size={collapsed ? "icon" : "default"}
-              className={cn(
-                "group relative transition-all",
-                collapsed
-                  ? "h-10 w-10 mx-auto hover:bg-accent"
-                  : "w-full justify-start px-3",
-                !collapsed && "hover:translate-x-0.5",
-                isActive(item.href) &&
-                  !collapsed &&
-                  "bg-primary/10 text-primary hover:bg-primary/15",
-                isActive(item.href) &&
-                  collapsed &&
-                  "bg-primary/10 text-primary hover:bg-primary/15",
-              )}
-              asChild
-            >
-              <Link to={item.href}>
-                {!collapsed && isActive(item.href) && (
-                  <span className="absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full bg-primary" />
-                )}
-                <div
+            (() => {
+              const badge = (item as any).badge;
+
+              return (
+                <Button
+                  key={item.name}
+                  variant={isActive(item.href) ? "secondary" : "ghost"}
+                  size={collapsed ? "icon" : "default"}
                   className={cn(
-                    "flex items-center",
-                    collapsed ? "justify-center" : "justify-between w-full",
+                    "group relative transition-all",
+                    collapsed
+                      ? "h-10 w-10 mx-auto hover:bg-accent"
+                      : "w-full justify-start px-3",
+                    !collapsed && "hover:translate-x-0.5",
+                    isActive(item.href) &&
+                      !collapsed &&
+                      "bg-primary/10 text-primary hover:bg-primary/15",
+                    isActive(item.href) &&
+                      collapsed &&
+                      "bg-primary/10 text-primary hover:bg-primary/15",
                   )}
+                  asChild
                 >
-                  <div className="flex items-center gap-3">
-                    <item.icon
-                      className={cn(
-                        "h-4 w-4 transition-colors",
-                        isActive(item.href)
-                          ? "text-primary"
-                          : "text-muted-foreground group-hover:text-foreground",
-                      )}
-                    />
-                    {!collapsed && (
-                      <span
-                        className={cn(
-                          "text-sm transition-colors",
-                          isActive(item.href) ? "font-medium" : "font-normal",
-                        )}
-                      >
-                        {item.name}
-                      </span>
+                  <Link to={item.href}>
+                    {!collapsed && isActive(item.href) && (
+                      <span className="absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full bg-primary" />
                     )}
-                  </div>
-                </div>
-              </Link>
-            </Button>
+                    <div
+                      className={cn(
+                        "flex items-center",
+                        collapsed ? "justify-center" : "justify-between w-full",
+                      )}
+                    >
+                      <div className="flex items-center gap-3">
+                        <item.icon
+                          className={cn(
+                            "h-4 w-4 transition-colors",
+                            isActive(item.href)
+                              ? "text-primary"
+                              : "text-muted-foreground group-hover:text-foreground",
+                          )}
+                        />
+                        {!collapsed && (
+                          <span
+                            className={cn(
+                              "text-sm transition-colors",
+                              isActive(item.href) ? "font-medium" : "font-normal",
+                            )}
+                          >
+                            {item.name}
+                          </span>
+                        )}
+                      </div>
+                      {!collapsed && badge && (
+                        <Badge
+                          variant={isActive(item.href) ? "default" : "secondary"}
+                          className={cn(
+                            "ml-auto text-[10px] px-1.5 py-0.5 font-medium",
+                            badge === "Low Stock" &&
+                              "bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-950/20 dark:text-amber-400 dark:border-amber-800",
+                          )}
+                        >
+                          {badge}
+                        </Badge>
+                      )}
+                    </div>
+                  </Link>
+                </Button>
+              );
+            })()
           ))}
         </div>
 
@@ -485,7 +503,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
   };
 
   const renderRegularNav = () => {
-    const nav = roleNavigation[userRole] as any[];
+    const nav: any[] = roleNavigation[userRole] as any[];
 
     return (
       <div className={cn("space-y-4", collapsed ? "px-2 py-4" : "px-3 py-4")}>

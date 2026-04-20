@@ -57,7 +57,7 @@ export const roleSidebarNavigation: Record<UserRole, SidebarNavItem[]> = {
   ],
   driver: [
     { section: "Main Menu", label: "Dashboard", href: "/driver/dashboard", icon: "grid-outline" },
-    { section: "Delivery", label: "Active Deliveries", href: "/driver/active", icon: "car-outline" },
+    { section: "Delivery", label: "Deliveries", href: "/driver/deliveries", icon: "car-outline" },
     { section: "Delivery", label: "Live Tracking", href: "/driver/tracking", icon: "navigate-outline" },
     { section: "Delivery", label: "Delivery History", href: "/driver/history", icon: "time-outline" },
     { section: "Delivery", label: "Report Issue", href: "/driver/issues", icon: "alert-circle-outline" },
@@ -86,6 +86,7 @@ export const getRouteTitle = (pathname: string) => {
     if (segment === "suppliers") return "Suppliers";
     if (segment === "cart") return "Cart";
     if (segment === "compare") return "Compare Suppliers";
+    if (segment === "deliveries") return "Deliveries";
     if (segment === "tracking") return "Tracking";
     if (segment === "users") return "Users";
   }

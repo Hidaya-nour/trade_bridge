@@ -1,4 +1,4 @@
-﻿import React, { useState } from "react";
+﻿import React, { useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -10,41 +10,66 @@ import {
   Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import ScreenWrapper from "@/components/layout/ScreenWrapper";
+import { useRouter } from "expo-router";
 
-export default function DriverDashboard() {
+import ScreenWrapper from "@/components/layout/ScreenWrapper";
+import { useAuthStore } from "@/features/auth/auth.store";
+
+import {
+  ACTIVE_DELIVERIES,
+  DELIVERY_HISTORY,
+  DRIVER_DELIVERIES,
+  NOTIFICATIONS,
+  type DeliveryStatus,
+} from "./driverData";
+
+/* ================= Helpers ================= */
+
+const formatStatus = (status: DeliveryStatus) =>
+  status.replace("_", " ").toUpperCase();
+
+const getStatusStyle = (status: DeliveryStatus) => {
+  switch (status) {
+    case "assigned":
+      return { bg: "#eff6ff", border: "#bfdbfe", text: "#1d4ed8" };
+    case "picked_up":
+      return { bg: "#ede9fe", border: "#ddd6fe", text: "#6d28d9" };
+    case "in_transit":
+      return { bg: "#fff7ed", border: "#fed7aa", text: "#c2410c" };
+    case "delivered":
+      return { bg: "#ecfdf3", border: "#bbf7d0", text: "#15803d" };
+    default:
+      return { bg: "#f8fafc", border: "#e2e8f0", text: "#475569" };
+  }
+};
+
+/* ================= Component ================= */
+
+export default function DriverDashboardScreen() {
+  const router = useRouter();
+  const user = useAuthStore((state) => state.user);
+
   const [isOnline, setIsOnline] = useState(false);
 
-  // Sample data - replace with actual data
-  const activeDelivery = {
-    pickup: "123 Main St, Addis Ababa",
-    dropoff: "456 Elm St, Addis Ababa",
-    distance: "5.2 km",
-    eta: "15 min",
-    status: "Heading to pickup",
-  };
+  /* ===== Derived Data ===== */
+  const activeDeliveries = ACTIVE_DELIVERIES;
+  const activeRoute = ACTIVE_DELIVERIES[0];
+  const completedToday = DELIVERY_HISTORY.length;
 
-  const newRequest = {
-    pickup: "789 Oak St, Addis Ababa",
-    dropoff: "101 Pine St, Addis Ababa",
-    distance: "3.8 km",
-    eta: "10 min",
-  };
+  const unreadNotifications = useMemo(
+    () => NOTIFICATIONS.filter((n) => n.unread).length,
+    []
+  );
 
-  const earnings = 250.0;
-  const deliveriesCompleted = 8;
-
-  const handleCall = (type: "supplier" | "customer") => {
-    const phoneNumber = type === "supplier" ? "+251911123456" : "+251922654321"; // Sample numbers
-    Linking.openURL(`tel:${phoneNumber}`);
-  };
-
-  const handleMessage = () => {
-    Alert.alert("Message", "Open chat with customer");
-  };
+  /* ===== Actions ===== */
 
   const handleOpenMaps = () => {
-    const url = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(activeDelivery.dropoff)}`;
+    if (!activeRoute) return;
+
+    const url = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(
+      activeRoute.destination
+    )}`;
+
     Linking.openURL(url);
   };
 
@@ -52,351 +77,241 @@ export default function DriverDashboard() {
     Alert.alert("Action", `${action} pressed`);
   };
 
+  /* ================= Render ================= */
+
   return (
     <ScreenWrapper title="Driver Dashboard">
       <ScrollView
         style={styles.container}
         contentContainerStyle={styles.contentContainer}
       >
-        {/* Top Section */}
-        <View style={styles.topSection}>
-          <View style={styles.statusContainer}>
+        {/* ===== ONLINE STATUS ===== */}
+        <View style={styles.card}>
+          <View style={styles.rowBetween}>
             <Text style={styles.statusText}>
               You are {isOnline ? "Online" : "Offline"}
             </Text>
-            <Switch
-              value={isOnline}
-              onValueChange={setIsOnline}
-              trackColor={{ false: "#767577", true: "#81b0ff" }}
-              thumbColor={isOnline ? "#f5dd4b" : "#f4f3f4"}
-            />
+            <Switch value={isOnline} onValueChange={setIsOnline} />
           </View>
         </View>
 
-        {/* Main Section - Active Delivery */}
-        <View style={styles.mainSection}>
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>Active Delivery</Text>
-            <View style={styles.locationContainer}>
-              <Ionicons name="location" size={20} color="#10b981" />
-              <Text style={styles.locationText}>{activeDelivery.pickup}</Text>
-            </View>
-            <View style={styles.arrowContainer}>
-              <Ionicons name="arrow-down" size={16} color="#6b7280" />
-            </View>
-            <View style={styles.locationContainer}>
-              <Ionicons name="location" size={20} color="#ef4444" />
-              <Text style={styles.locationText}>{activeDelivery.dropoff}</Text>
-            </View>
-            <View style={styles.detailsContainer}>
-              <Text style={styles.detailText}>
-                Distance: {activeDelivery.distance}
-              </Text>
-              <Text style={styles.detailText}>ETA: {activeDelivery.eta}</Text>
-            </View>
-            <Text style={styles.statusBadge}>{activeDelivery.status}</Text>
-            <View style={styles.buttonContainer}>
-              <Pressable
-                style={[styles.actionButton, styles.secondaryButton]}
-                onPress={() => handleAction("Mark as Picked Up")}
-              >
-                <Text style={styles.buttonText}>Mark as Picked Up</Text>
-              </Pressable>
-              <Pressable
-                style={[styles.actionButton, styles.primaryButton]}
-                onPress={() => handleAction("Mark as Delivered")}
-              >
-                <Text style={styles.buttonText}>Mark as Delivered</Text>
-              </Pressable>
-            </View>
-          </View>
+        {/* ===== STATS ===== */}
+        <View style={styles.statsGrid}>
+          <StatCard label="Active Routes" value={activeDeliveries.length} />
+          <StatCard label="Completed Today" value={completedToday} />
+          <StatCard label="Unread Alerts" value={unreadNotifications} />
+          <StatCard
+            label="Total Orders"
+            value={DRIVER_DELIVERIES.length}
+          />
         </View>
 
-        {/* Navigation */}
-        <View style={styles.navigationSection}>
-          <Pressable style={styles.mapsButton} onPress={handleOpenMaps}>
-            <Ionicons name="map" size={24} color="#ffffff" />
-            <Text style={styles.mapsButtonText}>Open in Maps</Text>
-          </Pressable>
-        </View>
+        {/* ===== MAP BUTTON ===== */}
+        <Pressable style={styles.mapsButton} onPress={handleOpenMaps}>
+          <Ionicons name="map" size={20} color="#fff" />
+          <Text style={styles.mapsText}>Open in Maps</Text>
+        </Pressable>
 
-        {/* Quick Actions */}
-        <View style={styles.quickActionsSection}>
+        {/* ===== QUICK ACTIONS ===== */}
+        <View style={styles.section}>
           <Text style={styles.sectionTitle}>Quick Actions</Text>
-          <View style={styles.quickActionsContainer}>
-            <Pressable
-              style={styles.quickActionButton}
-              onPress={() => handleCall("supplier")}
-            >
-              <Ionicons name="call" size={24} color="#10b981" />
-              <Text style={styles.quickActionText}>Call Supplier</Text>
-            </Pressable>
-            <Pressable
-              style={styles.quickActionButton}
-              onPress={() => handleCall("customer")}
-            >
-              <Ionicons name="call" size={24} color="#3b82f6" />
-              <Text style={styles.quickActionText}>Call Customer</Text>
-            </Pressable>
-            <Pressable style={styles.quickActionButton} onPress={handleMessage}>
-              <Ionicons name="chatbubble" size={24} color="#8b5cf6" />
-              <Text style={styles.quickActionText}>Message</Text>
-            </Pressable>
+
+          <View style={styles.actionRow}>
+            {ACTIONS.map((action) => (
+              <Pressable
+                key={action.route}
+                style={styles.actionChip}
+                onPress={() => router.push(action.route as never)}
+              >
+                <Ionicons name={action.icon as any} size={16} color="#1d4ed8" />
+                <Text style={styles.actionText}>{action.label}</Text>
+              </Pressable>
+            ))}
           </View>
         </View>
 
-        {/* Secondary Section - New Request */}
-        {newRequest && (
-          <View style={styles.secondarySection}>
-            <View style={styles.card}>
-              <Text style={styles.cardTitle}>New Delivery Request</Text>
-              <View style={styles.locationContainer}>
-                <Ionicons name="location" size={20} color="#10b981" />
-                <Text style={styles.locationText}>{newRequest.pickup}</Text>
-              </View>
-              <View style={styles.arrowContainer}>
-                <Ionicons name="arrow-down" size={16} color="#6b7280" />
-              </View>
-              <View style={styles.locationContainer}>
-                <Ionicons name="location" size={20} color="#ef4444" />
-                <Text style={styles.locationText}>{newRequest.dropoff}</Text>
-              </View>
-              <View style={styles.detailsContainer}>
-                <Text style={styles.detailText}>
-                  Distance: {newRequest.distance}
-                </Text>
-                <Text style={styles.detailText}>ETA: {newRequest.eta}</Text>
-              </View>
-              <View style={styles.buttonContainer}>
-                <Pressable
-                  style={[styles.actionButton, styles.rejectButton]}
-                  onPress={() => handleAction("Reject")}
-                >
-                  <Text style={styles.buttonText}>Reject</Text>
-                </Pressable>
-                <Pressable
-                  style={[styles.actionButton, styles.acceptButton]}
-                  onPress={() => handleAction("Accept")}
-                >
-                  <Text style={styles.buttonText}>Accept</Text>
-                </Pressable>
-              </View>
+        {/* ===== ACTIVE DELIVERY ===== */}
+        {activeRoute ? (
+          <View style={styles.card}>
+            <Text style={styles.sectionTitle}>Current Delivery</Text>
+
+            <Text style={styles.subtitle}>{activeRoute.orderCode}</Text>
+
+            <Text style={styles.meta}>
+              Pickup: {activeRoute.pickupPoint}
+            </Text>
+            <Text style={styles.meta}>
+              Dropoff: {activeRoute.destination}
+            </Text>
+
+            {/* Progress */}
+            <View style={styles.progressTrack}>
+              <View
+                style={[
+                  styles.progressFill,
+                  { width: `${activeRoute.routeProgress}%` },
+                ]}
+              />
             </View>
+
+            <Text style={styles.progressLabel}>
+              {activeRoute.routeProgress}% completed
+            </Text>
+
+            {/* Status + Action */}
+            <View style={styles.rowBetween}>
+              <View
+                style={[
+                  styles.statusBadge,
+                  {
+                    backgroundColor: getStatusStyle(activeRoute.status).bg,
+                    borderColor: getStatusStyle(activeRoute.status).border,
+                  },
+                ]}
+              >
+                <Text
+                  style={{
+                    color: getStatusStyle(activeRoute.status).text,
+                    fontWeight: "600",
+                  }}
+                >
+                  {formatStatus(activeRoute.status)}
+                </Text>
+              </View>
+
+              <Pressable
+                style={styles.acceptButton}
+                onPress={() => handleAction("Accept")}
+              >
+                <Text style={styles.buttonText}>Accept</Text>
+              </Pressable>
+            </View>
+          </View>
+        ) : (
+          <View style={styles.card}>
+            <Text style={styles.sectionTitle}>No active route</Text>
+            <Text style={styles.subtitle}>
+              Waiting for assignment...
+            </Text>
           </View>
         )}
-
-        {/* Bottom Section */}
-        <View style={styles.bottomSection}>
-          <View style={styles.summaryContainer}>
-            <View style={styles.summaryItem}>
-              <Text style={styles.summaryLabel}>Today's Earnings</Text>
-              <Text style={styles.summaryValue}>${earnings.toFixed(2)}</Text>
-            </View>
-            <View style={styles.summaryItem}>
-              <Text style={styles.summaryLabel}>Deliveries Completed</Text>
-              <Text style={styles.summaryValue}>{deliveriesCompleted}</Text>
-            </View>
-          </View>
-        </View>
       </ScrollView>
     </ScreenWrapper>
   );
 }
 
+/* ================= Sub Components ================= */
+
+const StatCard = ({ label, value }: { label: string; value: number }) => (
+  <View style={styles.statCard}>
+    <Text style={styles.statLabel}>{label}</Text>
+    <Text style={styles.statValue}>{value}</Text>
+  </View>
+);
+
+const ACTIONS = [
+  { label: "Notifications", route: "/driver/notifications", icon: "notifications-outline" },
+  { label: "Deliveries", route: "/driver/deliveries", icon: "car-outline" },
+  { label: "Issues", route: "/driver/issues", icon: "alert-circle-outline" },
+  { label: "Profile", route: "/driver/profile", icon: "person-outline" },
+];
+
+/* ================= Styles ================= */
+
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#f8fafc",
-  },
-  contentContainer: {
-    padding: 16,
-  },
-  topSection: {
-    marginBottom: 20,
-  },
-  statusContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: "#ffffff",
-    padding: 16,
-    borderRadius: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  statusText: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#1f2937",
-  },
-  mainSection: {
-    marginBottom: 20,
-  },
+  container: { flex: 1, backgroundColor: "#f8fafc" },
+  contentContainer: { padding: 16 },
+
   card: {
-    backgroundColor: "#ffffff",
-    padding: 20,
-    borderRadius: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  cardTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#1f2937",
-    marginBottom: 16,
-  },
-  locationContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 8,
-  },
-  locationText: {
-    fontSize: 16,
-    color: "#374151",
-    marginLeft: 8,
-    flex: 1,
-  },
-  arrowContainer: {
-    alignItems: "center",
-    marginVertical: 8,
-  },
-  detailsContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 16,
-  },
-  detailText: {
-    fontSize: 14,
-    color: "#6b7280",
-  },
-  statusBadge: {
-    backgroundColor: "#fef3c7",
-    color: "#d97706",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    fontSize: 14,
-    fontWeight: "600",
-    alignSelf: "flex-start",
-    marginBottom: 20,
-  },
-  buttonContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  actionButton: {
-    flex: 1,
-    paddingVertical: 16,
+    backgroundColor: "#fff",
+    padding: 16,
     borderRadius: 12,
+    marginBottom: 16,
+  },
+
+  rowBetween: {
+    flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
-    marginHorizontal: 4,
   },
-  primaryButton: {
-    backgroundColor: "#10b981",
+
+  statusText: { fontSize: 16, fontWeight: "600" },
+
+  statsGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+    marginBottom: 16,
   },
-  secondaryButton: {
-    backgroundColor: "#3b82f6",
+
+  statCard: {
+    width: "48%",
+    backgroundColor: "#fff",
+    padding: 12,
+    borderRadius: 10,
   },
-  rejectButton: {
-    backgroundColor: "#ef4444",
-  },
-  acceptButton: {
-    backgroundColor: "#10b981",
-  },
-  buttonText: {
-    color: "#ffffff",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  navigationSection: {
-    marginBottom: 20,
-  },
+
+  statLabel: { fontSize: 12, color: "#6b7280" },
+  statValue: { fontSize: 18, fontWeight: "700" },
+
   mapsButton: {
     backgroundColor: "#1f2937",
     flexDirection: "row",
-    alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 16,
-    borderRadius: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  mapsButtonText: {
-    color: "#ffffff",
-    fontSize: 16,
-    fontWeight: "600",
-    marginLeft: 8,
-  },
-  quickActionsSection: {
-    marginBottom: 20,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#1f2937",
-    marginBottom: 12,
-  },
-  quickActionsContainer: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-  },
-  quickActionButton: {
     alignItems: "center",
-    backgroundColor: "#ffffff",
-    padding: 16,
-    borderRadius: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-    flex: 1,
-    marginHorizontal: 4,
+    padding: 14,
+    borderRadius: 10,
+    marginBottom: 16,
   },
-  quickActionText: {
-    fontSize: 12,
-    color: "#6b7280",
-    marginTop: 4,
-    fontWeight: "500",
-  },
-  secondarySection: {
-    marginBottom: 20,
-  },
-  bottomSection: {
-    marginTop: 20,
-  },
-  summaryContainer: {
-    backgroundColor: "#ffffff",
-    padding: 20,
-    borderRadius: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  summaryItem: {
+
+  mapsText: { color: "#fff", marginLeft: 6 },
+
+  section: { marginBottom: 16 },
+  sectionTitle: { fontSize: 16, fontWeight: "600", marginBottom: 10 },
+
+  actionRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+
+  actionChip: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 12,
+    backgroundColor: "#e0edff",
+    padding: 8,
+    borderRadius: 8,
   },
-  summaryLabel: {
-    fontSize: 16,
-    color: "#6b7280",
+
+  actionText: { marginLeft: 6 },
+
+  subtitle: { color: "#6b7280", marginBottom: 8 },
+  meta: { fontSize: 13, marginBottom: 4 },
+
+  progressTrack: {
+    height: 6,
+    backgroundColor: "#e5e7eb",
+    borderRadius: 4,
+    marginVertical: 10,
   },
-  summaryValue: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#1f2937",
+
+  progressFill: {
+    height: 6,
+    backgroundColor: "#10b981",
+    borderRadius: 4,
   },
+
+  progressLabel: { fontSize: 12, marginBottom: 10 },
+
+  statusBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 20,
+    borderWidth: 1,
+  },
+
+  acceptButton: {
+    backgroundColor: "#10b981",
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+
+  buttonText: { color: "#fff", fontWeight: "600" },
 });
