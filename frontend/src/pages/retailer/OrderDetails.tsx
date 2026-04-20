@@ -229,7 +229,8 @@ const OrderDetailsPage: React.FC = () => {
           party: (supplierId) => `/retailer/supplier/${supplierId}`,
           product: (productId) => `/retailer/products/${productId}`,
           reorder: (orderId) => `/retailer/reorder?order=${orderId}`,
-          message: (supplierId) => `/messages?supplier=${supplierId}`,
+          message: (supplierId) =>
+            `/messages?supplier=${supplierId}${id ? `&order=${id}` : ""}`,
         }}
       />
     </WithAsync>

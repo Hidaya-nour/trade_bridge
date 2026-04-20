@@ -849,10 +849,21 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
                         <span className="text-xl font-bold text-primary">
                           {formatPrice(product.price)}
                         </span>
+                        {typeof product.original_price === "number" &&
+                          product.original_price > product.price && (
+                            <span className="text-xs text-muted-foreground line-through">
+                              {formatPrice(product.original_price)}
+                            </span>
+                          )}
                         <span className="text-xs text-muted-foreground">
                           /{product.unit}
                         </span>
                       </div>
+                      {product.promotion_label && (
+                        <p className="mt-1 text-xs font-medium text-emerald-700">
+                          {product.promotion_label}
+                        </p>
+                      )}
                       <p className="text-xs text-muted-foreground mt-1">
                         Min. order: {product.min_order_amount}
                       </p>
@@ -1060,6 +1071,17 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
                           <div className="text-xl font-bold text-primary">
                             {formatPrice(product.price)}
                           </div>
+                          {typeof product.original_price === "number" &&
+                            product.original_price > product.price && (
+                              <div className="text-xs text-muted-foreground line-through">
+                                {formatPrice(product.original_price)}
+                              </div>
+                            )}
+                          {product.promotion_label && (
+                            <div className="text-xs font-medium text-emerald-700 mt-1">
+                              {product.promotion_label}
+                            </div>
+                          )}
                           <div className="text-xs text-muted-foreground">
                             /{product.unit} • Min: {product.min_order_amount}
                           </div>

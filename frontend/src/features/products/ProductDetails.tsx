@@ -210,10 +210,21 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
                 <span className="text-3xl font-bold text-primary">
                   {formatPrice(product.price)}
                 </span>
+                {typeof product.original_price === "number" &&
+                  product.original_price > product.price && (
+                    <span className="text-sm text-muted-foreground line-through">
+                      {formatPrice(product.original_price)}
+                    </span>
+                  )}
                 <span className="text-sm text-muted-foreground">
                   / {product.unit_type}
                 </span>
               </div>
+              {product.promotion_label && (
+                <p className="mt-1 text-sm font-medium text-emerald-700">
+                  {product.promotion_label}
+                </p>
+              )}
               <p className="text-sm text-muted-foreground mt-1">
                 Minimum order: {product.min_order_amount} {product.unit_type}
               </p>

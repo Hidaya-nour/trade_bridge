@@ -142,6 +142,7 @@ interface BroadcastPageProps {
     draft: number;
     totalRedemptions: number;
   };
+  productsForLink?: Array<{ id: string; name: string; sku: string }>;
   onCreateItem: (item: any) => void | Promise<void>;
   onDeleteItem: (id: string) => void | Promise<void>;
   onDuplicateItem: (item: BroadcastItem) => void | Promise<void>;
@@ -157,6 +158,7 @@ export const BroadcastPage: React.FC<BroadcastPageProps> = ({
   items: initialItems,
   segments,
   stats,
+  productsForLink,
   onCreateItem,
   onDeleteItem,
   onDuplicateItem,
@@ -192,6 +194,7 @@ export const BroadcastPage: React.FC<BroadcastPageProps> = ({
     startDate: "",
     endDate: "",
     promoCode: "",
+    promotedProductSku: "",
     priority: "medium",
   });
   const isCreateFormValid =
@@ -305,6 +308,7 @@ export const BroadcastPage: React.FC<BroadcastPageProps> = ({
         startDate: "",
         endDate: "",
         promoCode: "",
+        promotedProductSku: "",
         priority: "medium",
       });
       setShowCreateDialog(false);
@@ -1043,6 +1047,62 @@ export const BroadcastPage: React.FC<BroadcastPageProps> = ({
                   </div>
                 )}
               </div>
+
+              <Separator />
+
+              {/* Link Product */}
+              {productsForLink && productsForLink.length > 0 && (
+                <div className="space-y-4">
+                  <h4 className="text-sm font-medium">Promoted Product (Optional)</h4>
+                  <div className="space-y-2">
+                    <Label htmlFor="promotedProduct">Choose Product</Label>
+                    <Select
+                      value={newItem.promotedProductSku || "none"}
+                      onValueChange={(value) => {
+                        setNewItem((prev) => {
+                          const previousLinked = prev.promotedProductSku;
+                          if (value === "none") {
+                            return {
+                              ...prev,
+                              promotedProductSku: "",
+                              promoCode:
+                                prev.promoCode &&
+                                prev.promoCode === previousLinked
+                                  ? ""
+                                  : prev.promoCode,
+                            };
+                          }
+
+                          const nextSku = value;
+                          const shouldOverwrite =
+                            !prev.promoCode || prev.promoCode === previousLinked;
+
+                          return {
+                            ...prev,
+                            promotedProductSku: nextSku,
+                            promoCode: shouldOverwrite ? nextSku : prev.promoCode,
+                          };
+                        });
+                      }}
+                    >
+                      <SelectTrigger id="promotedProduct">
+                        <SelectValue placeholder="Select a product to link" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">No linked product</SelectItem>
+                        {productsForLink.map((product) => (
+                          <SelectItem key={product.id} value={product.sku}>
+                            {product.name} ({product.sku})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      Linking a product will set the promo code to its SKU so buyers can open it directly.
+                    </p>
+                  </div>
+                </div>
+              )}
 
               <Separator />
 

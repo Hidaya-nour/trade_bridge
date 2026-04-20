@@ -1,6 +1,7 @@
 import { OrderRepository } from '../../repositories/order.repository';
 import { ProductRepository } from '../../repositories/product.repository';
 import { UserRepository } from '../../repositories/user.repository';
+import { BroadcastRepository } from '../../repositories/broadcast.repository';
 import { SupplierPaymentMethodService } from '../supplier-payment-method/supplier-payment-method.service';
 import { AppError } from '../../utils/errors';
 import { 
@@ -32,6 +33,7 @@ export class OrderService {
   private orderRepo = new OrderRepository();
   private productRepo = new ProductRepository();
   private userRepo = new UserRepository();
+  private broadcastRepo = new BroadcastRepository();
   private supplierPaymentMethodService = new SupplierPaymentMethodService();
 
   // ========================================================================
@@ -129,6 +131,47 @@ export class OrderService {
     let subtotal = 0;
     const orderItems = [];
 
+    const toNumber = (value: any, fallback = 0) => {
+      const parsed = Number(value);
+      return Number.isFinite(parsed) ? parsed : fallback;
+    };
+
+    const applyDiscountPromotion = (
+      baseUnitPrice: number,
+      quantity: number,
+      promotion: any,
+    ) => {
+      if (!promotion) return baseUnitPrice;
+      if (promotion.type !== 'discount') return baseUnitPrice;
+
+      const discountType = promotion.discount_type;
+      const discountValue = toNumber(promotion.discount_value, 0);
+      const minOrder = promotion.min_order !== null && promotion.min_order !== undefined
+        ? toNumber(promotion.min_order, 0)
+        : null;
+      const maxDiscount = promotion.max_discount !== null && promotion.max_discount !== undefined
+        ? toNumber(promotion.max_discount, 0)
+        : null;
+
+      if (minOrder !== null && minOrder > 0 && quantity < minOrder) return baseUnitPrice;
+      if (!discountType || discountValue <= 0) return baseUnitPrice;
+
+      let perUnitDiscount = 0;
+      if (discountType === 'percentage') {
+        perUnitDiscount = baseUnitPrice * Math.min(100, discountValue) / 100;
+      } else if (discountType === 'fixed') {
+        perUnitDiscount = discountValue;
+      }
+
+      let totalDiscount = perUnitDiscount * quantity;
+      if (maxDiscount !== null && maxDiscount > 0) {
+        totalDiscount = Math.min(totalDiscount, maxDiscount);
+      }
+
+      const unitPrice = baseUnitPrice - totalDiscount / Math.max(1, quantity);
+      return Math.max(0, Number(unitPrice.toFixed(2)));
+    };
+
     for (const item of items) {
       const product = await this.productRepo.findById(item.product_id);
       
@@ -152,13 +195,19 @@ export class OrderService {
         throw new AppError(`Minimum order for ${product.name} is ${product.min_order_amount}`, 400);
       }
 
-      const itemTotal = product.price * item.quantity;
+      const promotion = await this.broadcastRepo.findActiveDiscountByOwnerAndCode(
+        supplier_id,
+        product.sku,
+      );
+
+      const unitPrice = applyDiscountPromotion(toNumber(product.price, 0), item.quantity, promotion);
+      const itemTotal = unitPrice * item.quantity;
       subtotal += itemTotal;
 
       orderItems.push({
         product_id: product.id,
         quantity: item.quantity,
-        unit_price: product.price
+        unit_price: unitPrice,
       });
 
       // Reserve stock

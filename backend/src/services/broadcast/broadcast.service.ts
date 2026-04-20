@@ -145,6 +145,7 @@ export class BroadcastService {
     ownerRole?: BroadcastOwnerRole,
   ): Promise<IBroadcast[]> {
     await this.ensureTableReady();
+    await this.broadcastRepo.refreshTimeBasedStatuses();
     return this.broadcastRepo.findByOwner(ownerId, ownerRole);
   }
 
@@ -153,6 +154,7 @@ export class BroadcastService {
     excludeOwnerId?: string;
   }): Promise<IBroadcast[]> {
     await this.ensureTableReady();
+    await this.broadcastRepo.refreshTimeBasedStatuses();
     return this.broadcastRepo.findActive(options);
   }
 

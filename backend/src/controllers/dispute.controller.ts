@@ -6,18 +6,38 @@ import User from '../models/user.model';
 import { Op } from 'sequelize';
 import logger from '../utils/logger';
 
+const parseReasonFromDescription = (description?: string | null) => {
+  const raw = String(description || '').trim();
+  const match = raw.match(/^\[([a-zA-Z0-9_]+)\]\s*(.*)$/s);
+  if (!match) {
+    return { reason: 'other', description: raw };
+  }
+
+  const reason = match[1].trim().toLowerCase() || 'other';
+  const cleaned = (match[2] || '').trim();
+  return { reason, description: cleaned };
+};
+
+const formatReasonPrefix = (reason?: string | null) => {
+  const raw = String(reason || '').trim().toLowerCase();
+  if (!raw) return null;
+  const safe = raw.replace(/[^a-z0-9_]/g, '_').replace(/_+/g, '_');
+  return safe ? safe : null;
+};
+
 const mapDispute = (dispute: any) => {
   const raisedBy = dispute.raisedByUser ?? dispute.raised_by ?? null;
   const against = dispute.againstUser ?? dispute.against ?? null;
   const resolvedBy = dispute.resolvedByUser ?? null;
   const order = dispute.order ?? null;
+  const parsed = parseReasonFromDescription(dispute.description);
 
   return {
     id: dispute.id,
     order_id: dispute.order_id,
     order_total: order?.total_price ?? 0,
-    description: dispute.description,
-    reason: 'other',
+    description: parsed.description,
+    reason: parsed.reason,
     amount: Number(order?.total_price ?? 0),
     status: dispute.status,
     resolution: null,
@@ -91,14 +111,21 @@ const disputeInclude = [
 export class DisputeController {
   async createDispute(req: Request, res: Response) {
     try {
-      const { order_id, against_user, description } = req.body;
+      const { order_id, against_user, description, reason } = req.body;
       const raised_by = req.user?.id as string;
+
+      const prefix = formatReasonPrefix(reason);
+      const bodyDescription = String(description || '').trim();
+      const storedDescription =
+        prefix && bodyDescription && !bodyDescription.startsWith('[')
+          ? `[${prefix}] ${bodyDescription}`
+          : bodyDescription;
 
       const dispute = await Dispute.create({
         order_id,
         raised_by,
         against_user,
-        description,
+        description: storedDescription,
         status: 'open',
       } as any);
 
@@ -131,19 +158,33 @@ export class DisputeController {
         offset = '0',
       } = req.query;
 
-      const whereClause: any = {};
+      const userId = req.user?.id as string | undefined;
+      const userRole = String(req.user?.role || '').toLowerCase();
+
+      const clauses: any[] = [];
+
+      if (userRole !== 'admin' && userId) {
+        clauses.push({
+          [Op.or]: [{ raised_by: userId }, { against_user: userId }],
+        });
+      }
 
       if (status && status !== 'all') {
-        whereClause.status = status;
+        clauses.push({ status });
       }
 
       if (search && String(search).trim()) {
         const term = `%${String(search).trim()}%`;
-        whereClause[Op.or] = [
-          { id: { [Op.like]: term } },
-          { description: { [Op.like]: term } },
-        ];
+        clauses.push({
+          [Op.or]: [
+            { id: { [Op.like]: term } },
+            { description: { [Op.like]: term } },
+          ],
+        });
       }
+
+      const whereClause: any =
+        clauses.length > 0 ? { [Op.and]: clauses } : {};
 
       const disputes = await Dispute.findAll({
         where: whereClause,
@@ -179,6 +220,19 @@ export class DisputeController {
         return;
       }
 
+      const userId = req.user?.id as string | undefined;
+      const userRole = String(req.user?.role || '').toLowerCase();
+
+      if (
+        userRole !== 'admin' &&
+        userId &&
+        dispute.raised_by !== userId &&
+        dispute.against_user !== userId
+      ) {
+        res.status(403).json({ success: false, message: 'Not authorized' });
+        return;
+      }
+
       res.json({ success: true, data: { dispute: mapDispute(dispute) } });
     } catch (err) {
       logger.error('Get dispute error', err);
@@ -188,6 +242,12 @@ export class DisputeController {
 
   async updateDispute(req: Request, res: Response) {
     try {
+      const userRole = String(req.user?.role || '').toLowerCase();
+      if (userRole !== 'admin') {
+        res.status(403).json({ success: false, message: 'Only admins can update disputes' });
+        return;
+      }
+
       const dispute = await Dispute.findByPk(req.params.id);
 
       if (!dispute) {

@@ -1,4 +1,5 @@
 import React from "react";
+import { Link } from "react-router-dom";
 import {
   BadgePercent,
   Tag,
@@ -10,6 +11,7 @@ import {
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/shared/EmptyState";
 import type { BroadcastRecord } from "@/types/broadcast.types";
 import { formatDate, formatPrice } from "@/lib/formatters";
@@ -22,6 +24,7 @@ interface ActivePromotionsPanelProps {
   emptyTitle?: string;
   emptyDescription?: string;
   compact?: boolean;
+  getProductLink?: (promotion: BroadcastRecord) => string | null;
 }
 
 const typeIconMap = {
@@ -63,6 +66,7 @@ export const ActivePromotionsPanel: React.FC<ActivePromotionsPanelProps> = ({
   emptyTitle = "No active promotions",
   emptyDescription = "New offers will appear here when suppliers publish them.",
   compact = false,
+  getProductLink,
 }) => {
   return (
     <Card>
@@ -86,6 +90,7 @@ export const ActivePromotionsPanel: React.FC<ActivePromotionsPanelProps> = ({
           >
             {items.map((item) => {
               const Icon = typeIconMap[item.type];
+              const productLink = getProductLink ? getProductLink(item) : null;
               return (
                 <div
                   key={item.id}
@@ -128,6 +133,14 @@ export const ActivePromotionsPanel: React.FC<ActivePromotionsPanelProps> = ({
                       Ends {formatDate(item.end_date)}
                     </span>
                   </div>
+
+                  {productLink && (
+                    <div className="mt-4 flex">
+                      <Button size="sm" variant="outline" asChild>
+                        <Link to={productLink}>View product</Link>
+                      </Button>
+                    </div>
+                  )}
                 </div>
               );
             })}
