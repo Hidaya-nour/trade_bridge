@@ -390,9 +390,7 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
       const result = await paymentService.submitByOrder(orderId, {
         payment_method: paymentMethod as any,
         amount_paid:
-          paymentMethod === "cash" ||
-          paymentMethod === "credit" ||
-          paymentMethod === "chapa"
+          paymentMethod === "app_payment"
             ? undefined
             : selectedProduct
               ? selectedProduct.price * orderQuantity
@@ -402,7 +400,7 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
         payment_details: paymentDetails,
       });
 
-      if (paymentMethod === "chapa") {
+      if (paymentMethod === "app_payment") {
         const checkoutUrl =
           result?.data?.chapa?.checkout_url ||
           result?.data?.payment?.chapa_payment_url;

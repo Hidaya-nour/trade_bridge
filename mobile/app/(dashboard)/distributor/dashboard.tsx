@@ -205,7 +205,9 @@ export default function DistributorDashboardScreen() {
               <Text
                 style={[
                   styles.trendText,
-                  stat.trend === "up" ? styles.trendTextUp : styles.trendTextDown,
+                  stat.trend === "up"
+                    ? styles.trendTextUp
+                    : styles.trendTextDown,
                 ]}
               >
                 {stat.change}
@@ -239,22 +241,45 @@ export default function DistributorDashboardScreen() {
           return (
             <View key={order.id} style={styles.orderItem}>
               <View style={styles.orderLeft}>
-                <View style={[styles.priorityDot, { backgroundColor: priorityStyle.text }]} />
+                <View
+                  style={[
+                    styles.priorityDot,
+                    { backgroundColor: priorityStyle.text },
+                  ]}
+                />
                 <View>
                   <View style={styles.orderIdRow}>
                     <Text style={styles.orderIdText}>{order.id}</Text>
-                    <View style={[styles.smallBadge, { backgroundColor: statusStyle.bg, borderColor: statusStyle.border, borderWidth: 1 }]}>
-                      <Text style={[styles.smallBadgeText, { color: statusStyle.text }]}>
+                    <View
+                      style={[
+                        styles.smallBadge,
+                        {
+                          backgroundColor: statusStyle.bg,
+                          borderColor: statusStyle.border,
+                          borderWidth: 1,
+                        },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.smallBadgeText,
+                          { color: statusStyle.text },
+                        ]}
+                      >
                         {order.status.toUpperCase()}
                       </Text>
                     </View>
                   </View>
                   <Text style={styles.orderRetailerText}>{order.retailer}</Text>
-                  <Text style={styles.orderDateText}>{formatDate(order.date)}</Text>
+                  <Text style={styles.orderDateText}>
+                    {formatDate(order.date)}
+                  </Text>
                 </View>
               </View>
               <View style={styles.orderRight}>
-                <Text style={styles.orderTotalText}>{formatCurrency(order.total)}</Text>
+                <Text style={styles.orderTotalText}>
+                  {formatCurrency(order.total)}
+                </Text>
                 <Text style={styles.orderItemsText}>{order.items} items</Text>
               </View>
             </View>
@@ -290,10 +315,24 @@ export default function DistributorDashboardScreen() {
               <View style={styles.stockItemHeader}>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.stockItemName}>{item.name}</Text>
-                  <Text style={styles.stockItemSub}>{item.supplier} • {item.sku}</Text>
+                  <Text style={styles.stockItemSub}>
+                    {item.supplier} • {item.sku}
+                  </Text>
                 </View>
-                <View style={[styles.stockStatusBadge, isCritical ? styles.stockCritical : styles.stockLow]}>
-                  <Text style={[styles.stockStatusText, isCritical ? styles.stockCriticalText : styles.stockLowText]}>
+                <View
+                  style={[
+                    styles.stockStatusBadge,
+                    isCritical ? styles.stockCritical : styles.stockLow,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.stockStatusText,
+                      isCritical
+                        ? styles.stockCriticalText
+                        : styles.stockLowText,
+                    ]}
+                  >
                     {isCritical ? "Critical" : "Low"}
                   </Text>
                 </View>
@@ -311,8 +350,8 @@ export default function DistributorDashboardScreen() {
                     styles.progressBarFill,
                     {
                       width: `${Math.min(100, ratio * 100)}%`,
-                      backgroundColor: isCritical ? "#ef4444" : "#f59e0b"
-                    }
+                      backgroundColor: isCritical ? "#ef4444" : "#f59e0b",
+                    },
                   ]}
                 />
               </View>
@@ -347,7 +386,12 @@ export default function DistributorDashboardScreen() {
 
           return (
             <View key={shipment.id} style={styles.shipmentItem}>
-              <View style={[styles.shipmentIconLayout, { backgroundColor: statusStyle.bg }]}>
+              <View
+                style={[
+                  styles.shipmentIconLayout,
+                  { backgroundColor: statusStyle.bg },
+                ]}
+              >
                 <Ionicons
                   name={shipment.status === "in-transit" ? "car" : "time"}
                   size={18}
@@ -357,12 +401,21 @@ export default function DistributorDashboardScreen() {
               <View style={styles.shipmentDetails}>
                 <View style={styles.shipmentHeader}>
                   <Text style={styles.shipmentId}>{shipment.id}</Text>
-                  <Text style={[styles.shipmentStatusText, { color: statusStyle.text }]}>
+                  <Text
+                    style={[
+                      styles.shipmentStatusText,
+                      { color: statusStyle.text },
+                    ]}
+                  >
                     {shipment.status.replace("-", " ").toUpperCase()}
                   </Text>
                 </View>
-                <Text style={styles.shipmentSub}>Order: {shipment.orderId} • {shipment.retailer}</Text>
-                <Text style={styles.shipmentDriver}>Driver: {shipment.driver}</Text>
+                <Text style={styles.shipmentSub}>
+                  Order: {shipment.orderId} • {shipment.retailer}
+                </Text>
+                <Text style={styles.shipmentDriver}>
+                  Driver: {shipment.driver}
+                </Text>
               </View>
             </View>
           );
@@ -373,7 +426,9 @@ export default function DistributorDashboardScreen() {
 
   const renderQuickActions = () => (
     <View style={styles.sectionCard}>
-      <Text style={[styles.sectionTitle, { marginBottom: 12 }]}>Quick Actions</Text>
+      <Text style={[styles.sectionTitle, { marginBottom: 12 }]}>
+        Quick Actions
+      </Text>
       <View style={styles.quickActionsGrid}>
         <Pressable style={styles.actionBtn}>
           <View style={[styles.actionIconWrap, { backgroundColor: "#f0f9ff" }]}>
@@ -408,7 +463,9 @@ export default function DistributorDashboardScreen() {
 
   const renderPerformance = () => (
     <View style={styles.sectionCard}>
-      <Text style={[styles.sectionTitle, { marginBottom: 16 }]}>Performance Summary</Text>
+      <Text style={[styles.sectionTitle, { marginBottom: 16 }]}>
+        Performance Summary
+      </Text>
 
       <View style={styles.performanceRow}>
         <View style={styles.perfHeader}>
@@ -416,7 +473,12 @@ export default function DistributorDashboardScreen() {
           <Text style={styles.perfValue}>94.2%</Text>
         </View>
         <View style={styles.progressBarBg}>
-          <View style={[styles.progressBarFill, { width: "94.2%", backgroundColor: "#2563eb" }]} />
+          <View
+            style={[
+              styles.progressBarFill,
+              { width: "94.2%", backgroundColor: "#2563eb" },
+            ]}
+          />
         </View>
       </View>
 
@@ -426,7 +488,12 @@ export default function DistributorDashboardScreen() {
           <Text style={styles.perfValue}>97.8%</Text>
         </View>
         <View style={styles.progressBarBg}>
-          <View style={[styles.progressBarFill, { width: "97.8%", backgroundColor: "#16a34a" }]} />
+          <View
+            style={[
+              styles.progressBarFill,
+              { width: "97.8%", backgroundColor: "#16a34a" },
+            ]}
+          />
         </View>
       </View>
 
@@ -436,7 +503,12 @@ export default function DistributorDashboardScreen() {
           <Text style={styles.perfValue}>4.8/5.0</Text>
         </View>
         <View style={styles.progressBarBg}>
-          <View style={[styles.progressBarFill, { width: "96%", backgroundColor: "#d97706" }]} />
+          <View
+            style={[
+              styles.progressBarFill,
+              { width: "96%", backgroundColor: "#d97706" },
+            ]}
+          />
         </View>
       </View>
     </View>
@@ -446,7 +518,9 @@ export default function DistributorDashboardScreen() {
     <ScreenWrapper title="Dashboard" subtitle="Distributor">
       <ScrollView
         contentContainerStyle={styles.container}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
       >
         <View style={styles.welcomeBanner}>
           <View>
@@ -461,7 +535,6 @@ export default function DistributorDashboardScreen() {
         {renderActiveShipments()}
         {renderLowStock()}
         {renderPerformance()}
-
       </ScrollView>
     </ScreenWrapper>
   );

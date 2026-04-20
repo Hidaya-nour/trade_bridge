@@ -7,7 +7,7 @@ export interface Payment {
   dueDate: string;
   amount: number;
   status: "paid" | "pending" | "overdue" | "refunded";
-  method: "Credit" | "Mobile Banking" | "Cash" | "Bank Transfer" | "Cheque";
+  method: "App Payment" | "Mobile Banking";
   reference?: string;
   invoiceUrl?: string;
 }
@@ -21,12 +21,7 @@ export interface CreditSummary {
   nextPaymentDate: string;
 }
 
-export type PaymentMethod =
-  | "cash"
-  | "credit"
-  | "cheque"
-  | "mobile_banking"
-  | "chapa";
+export type PaymentMethod = "app_payment" | "mobile_banking";
 
 export interface PaymentMethodConfig {
   id: PaymentMethod;
@@ -38,42 +33,29 @@ export interface PaymentMethodConfig {
   enabled: boolean;
 }
 
+export interface SupplierPaymentMethodInfo {
+  id: string;
+  method_type: string;
+  provider_name: string;
+  account_holder_name: string;
+  account_identifier?: string;
+  account_display?: string;
+  is_primary?: boolean;
+  is_active?: boolean;
+}
+
 export interface PaymentDetails {
   notes?: string;
-  creditCustomerName?: string;
-  creditDueDate?: string;
-  creditTerms?: string;
-  chequeNumber?: string;
-  bankName?: string;
-  branch?: string;
-  chequeDate?: string;
-  drawerName?: string;
   transactionId?: string;
   mobileProvider?: string;
   phoneNumber?: string;
   transferDate?: string;
-  chapaEmail?: string;
-  chapaFirstName?: string;
-  chapaLastName?: string;
-  chapaTxRef?: string;
 }
 
 export interface PaymentDialogConfig {
   allowedMethods?: PaymentMethod[];
   supplierAllowedMethods?: PaymentMethod[];
-  creditTerms?: {
-    enabled: boolean;
-    maxCreditAmount?: number;
-    dueDays?: number;
-    interestRate?: number;
-  };
-  bankAccounts?: {
-    bankName: string;
-    accountNumber: string;
-    accountName: string;
-    branch?: string;
-  }[];
-  chapaEnabled?: boolean;
+  supplierPaymentMethods?: SupplierPaymentMethodInfo[];
   requireApprovalFor?: PaymentMethod[];
   maxDocumentSize?: number;
   allowedDocumentTypes?: string[];

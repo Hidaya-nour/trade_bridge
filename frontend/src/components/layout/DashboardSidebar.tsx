@@ -78,11 +78,6 @@ const roleNavigation = {
         href: "/distributor/products",
         icon: Package,
       },
-      {
-        name: "Inventory",
-        href: "/distributor/inventory",
-        icon: Warehouse,
-      },
     ],
     retailOperations: [
       {

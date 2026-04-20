@@ -3,6 +3,7 @@ import { IncomingOrders } from "@/features/order/IncomingOrders";
 import { Factory } from "lucide-react";
 
 import { useOrderStore } from "@/stores/order.store";
+import { getPaymentMethodLabel } from "@/lib/payment-method-utils";
 import type {
   Order,
   IncomingOrdersConfig,
@@ -64,7 +65,7 @@ const mapOrderToIncoming = (order: Order): IncomingOrder => {
     total,
     status: order.order_status,
     paymentStatus: mapPaymentStatus(order.payment?.payment_status),
-    paymentMethod: order.payment?.payment_method || "N/A",
+    paymentMethod: getPaymentMethodLabel(order.payment?.payment_method),
     paymentAmount: Number((order.payment as any)?.total_amount) || undefined,
     paymentPaid: Number((order.payment as any)?.amount_paid) || undefined,
     paymentProofUrl: (order.payment as any)?.proofDocument?.file_secure_url,

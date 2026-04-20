@@ -6,28 +6,15 @@ import { AppError } from '../../utils/errors';
 import { SupplierPaymentMethodService } from '../supplier-payment-method/supplier-payment-method.service';
 
 type PaymentMethod =
-  | 'cash'
-  | 'credit'
-  | 'cheque'
+  | 'app_payment'
   | 'mobile_banking'
-  | 'bank_transfer'
   | 'chapa';
 
 const supplierPaymentToOrderMethodMap: Record<string, PaymentMethod | null> = {
-  bank_transfer: 'cheque',
   mobile_money: 'mobile_banking',
-  cash_on_delivery: 'cash',
-  credit_card: 'chapa',
-  other: 'credit',
-};
-
-const paymentMethodToSupplierTypes: Record<PaymentMethod, string[]> = {
-  cash: ['cash_on_delivery'],
-  mobile_banking: ['mobile_money'],
-  cheque: ['bank_transfer'],
-  chapa: ['credit_card'],
-  credit: ['other'],
-  bank_transfer: ['bank_transfer'],
+  mobile_banking: 'mobile_banking',
+  credit_card: 'app_payment',
+  chapa: 'app_payment',
 };
 
 interface SubmitPaymentPayload {
@@ -36,13 +23,10 @@ interface SubmitPaymentPayload {
   notes?: string;
   proof_document_id?: string;
   payment_details?: {
-    chequeNumber?: string;
-    bankName?: string;
-    chequeDate?: string;
     transactionId?: string;
+    mobileProvider?: string;
+    phoneNumber?: string;
     transferDate?: string;
-    chapaTxRef?: string;
-    chapaPaymentUrl?: string;
   };
 }
 
@@ -108,9 +92,13 @@ class PaymentService {
     }
 
     let payment = await this.getOrRestorePaymentByOrderId(orderId);
-    const selectedMethod = (payload.payment_method ||
-      payment?.payment_method ||
-      'cash') as PaymentMethod;
+    const selectedMethod = (
+      payload.payment_method ||
+      (payment?.payment_method === 'chapa'
+        ? 'app_payment'
+        : payment?.payment_method) ||
+      'app_payment'
+    ) as PaymentMethod;
 
     // validate method against supplier payment methods
     const supplierPaymentMethods = await this.supplierPaymentMethodService.getActiveSupplierPaymentMethods(order.supplier_id);
@@ -137,7 +125,8 @@ class PaymentService {
     }
 
     try {
-      payment.payment_method = selectedMethod as any;
+      payment.payment_method =
+        (selectedMethod === 'app_payment' ? 'chapa' : selectedMethod) as any;
       payment.notes = payload.notes;
       payment.proof_document_id = payload.proof_document_id;
 
@@ -146,40 +135,37 @@ class PaymentService {
       }
 
       // Method-specific fields
-      if (selectedMethod === 'cheque') {
-        payment.cheque_number = payload.payment_details?.chequeNumber;
-        payment.cheque_bank = payload.payment_details?.bankName;
-        payment.cheque_date = payload.payment_details?.chequeDate
-          ? new Date(payload.payment_details.chequeDate)
-          : undefined;
-        payment.cheque_status = 'submitted';
-      }
-
       if (selectedMethod === 'mobile_banking') {
         const transactionId = payload.payment_details?.transactionId;
+        const mobileProvider = payload.payment_details?.mobileProvider;
+        const phoneNumber = payload.payment_details?.phoneNumber;
         const transferDate = payload.payment_details?.transferDate;
-        payment.notes = [payment.notes, transactionId && `tx:${transactionId}`, transferDate && `date:${transferDate}`]
+        payment.notes = [
+          payment.notes,
+          mobileProvider && `provider:${mobileProvider}`,
+          phoneNumber && `phone:${phoneNumber}`,
+          transactionId && `tx:${transactionId}`,
+          transferDate && `date:${transferDate}`,
+        ]
           .filter(Boolean)
           .join(' | ');
       }
 
       let chapaCheckoutUrl: string | null = null;
 
-      if (selectedMethod === 'chapa') {
+      if (selectedMethod === 'app_payment') {
         const buyer = await User.findByPk(order.buyer_id);
         if (!buyer?.email || !buyer?.full_name) {
-          throw new AppError('Buyer profile must include name and email for Chapa payment', 400);
+          throw new AppError('Buyer profile must include name and email for app payment', 400);
         }
         if (!this.isValidEmail(buyer.email)) {
           throw new AppError(
-            'Your account email is invalid for Chapa. Please update your profile email and try again.',
+            'Your account email is invalid for app payment. Please update your profile email and try again.',
             400,
           );
         }
 
-        const txRef =
-          payload.payment_details?.chapaTxRef ||
-          `tb-${order.id.slice(0, 8)}-${Date.now()}`;
+        const txRef = `tb-${order.id.slice(0, 8)}-${Date.now()}`;
         const [firstName, ...restNames] = buyer.full_name.split(' ');
         const lastName = restNames.join(' ') || firstName;
         const backendBaseUrl =
@@ -208,10 +194,7 @@ class PaymentService {
           },
         });
 
-        chapaCheckoutUrl =
-          payload.payment_details?.chapaPaymentUrl ||
-          initialized?.data?.checkout_url ||
-          null;
+        chapaCheckoutUrl = initialized?.data?.checkout_url || null;
 
         if (!chapaCheckoutUrl) {
           throw new AppError('Chapa checkout URL was not returned', 400);
@@ -222,13 +205,8 @@ class PaymentService {
       }
 
       // Default flow per method.
-      if (selectedMethod === 'cash') {
-        payment.payment_status = 'pending';
-      } else if (selectedMethod === 'credit') {
-        payment.payment_status = 'processing';
-      } else {
-        payment.payment_status = 'processing';
-      }
+      payment.payment_status =
+        selectedMethod === 'mobile_banking' ? 'processing' : 'pending';
 
       await payment.save();
       return {
@@ -243,7 +221,7 @@ class PaymentService {
     } catch (error) {
       // If we created the payment row in this request and failed to initialize Chapa,
       // cleanup to avoid stale pending records without checkout URL.
-      if (paymentCreatedInThisRequest && selectedMethod === 'chapa') {
+      if (paymentCreatedInThisRequest && selectedMethod === 'app_payment') {
         await payment.destroy();
       }
       throw error;

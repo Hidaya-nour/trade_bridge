@@ -5,6 +5,7 @@ import toast from "react-hot-toast";
 
 import { useOrderStore } from "@/stores/order.store";
 import paymentService from "@/services/payment.service";
+import { getPaymentMethodLabel } from "@/lib/payment-method-utils";
 import type { Order } from "@/types/order.types";
 import type { IncomingOrder } from "@/types/order.types";
 import { WithAsync } from "@/components/shared/WithAsync";
@@ -64,7 +65,7 @@ const mapOrderToIncoming = (order: Order): IncomingOrder => {
     status: order.order_status,
     paymentId: order.payment?.id,
     paymentStatus: mapPaymentStatus(order.payment?.payment_status),
-    paymentMethod: order.payment?.payment_method || "N/A",
+    paymentMethod: getPaymentMethodLabel(order.payment?.payment_method),
     paymentAmount: Number((order.payment as any)?.total_amount) || undefined,
     paymentPaid: Number((order.payment as any)?.amount_paid) || undefined,
     paymentProofUrl: (order.payment as any)?.proofDocument?.file_secure_url,

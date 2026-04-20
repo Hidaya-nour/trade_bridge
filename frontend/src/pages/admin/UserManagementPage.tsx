@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import {
   Users,
@@ -93,7 +93,7 @@ import {
 
 import { formatDate } from "@/lib/formatters";
 import { getInitials, cn } from "@/lib/utils";
-
+import { EmptyState } from "../../components/shared/EmptyState";
 // ============================================================================
 // TYPES
 // ============================================================================
@@ -102,16 +102,16 @@ type UserRole = "retailer" | "distributor" | "factory" | "driver" | "admin";
 type UserStatus = "active" | "pending" | "suspended" | "inactive";
 
 interface User {
-  id: number;
+  id: string;
   name: string;
   email: string;
-  phone: string;
+  phone?: string;
   role: UserRole;
   status: UserStatus;
-  business: string;
-  location: string;
+  business?: string;
+  location?: string;
   joinedDate: string;
-  lastActive: string;
+  lastActive?: string;
   verified: boolean;
   avatar?: string;
   totalOrders?: number;
@@ -120,201 +120,7 @@ interface User {
   documents?: string[];
 }
 
-// ============================================================================
-// MOCK DATA
-// ============================================================================
-
-const mockUsers: User[] = [
-  {
-    id: 1,
-    name: "Hidaya Nurmeika",
-    email: "hidaya@abcretail.com",
-    phone: "+251 91 234 5678",
-    role: "retailer",
-    status: "active",
-    business: "ABC Retail Shop",
-    location: "Addis Ababa",
-    joinedDate: "2026-01-15",
-    lastActive: "2026-02-13",
-    verified: true,
-    totalOrders: 45,
-    totalSpent: 125000,
-    rating: 4.8,
-  },
-  {
-    id: 2,
-    name: "Abebe Kebede",
-    email: "abebe@adama-wholesalers.com",
-    phone: "+251 92 345 6789",
-    role: "distributor",
-    status: "active",
-    business: "Adama Wholesalers",
-    location: "Adama",
-    joinedDate: "2026-01-10",
-    lastActive: "2026-02-13",
-    verified: true,
-    totalOrders: 230,
-    totalSpent: 1250000,
-    rating: 4.7,
-    documents: ["license.pdf", "tin_certificate.pdf"],
-  },
-  {
-    id: 3,
-    name: "Tadesse Haile",
-    email: "tadesse@mugher.com",
-    phone: "+251 93 456 7890",
-    role: "factory",
-    status: "active",
-    business: "Mugher Cement",
-    location: "Addis Ababa",
-    joinedDate: "2026-01-05",
-    lastActive: "2026-02-12",
-    verified: true,
-    totalOrders: 180,
-    totalSpent: 3500000,
-    rating: 4.9,
-    documents: ["license.pdf", "certificate.pdf"],
-  },
-  {
-    id: 4,
-    name: "Almaz Worku",
-    email: "almaz@citymarket.com",
-    phone: "+251 94 567 8901",
-    role: "retailer",
-    status: "pending",
-    business: "City Supermarket",
-    location: "Bahir Dar",
-    joinedDate: "2026-02-07",
-    lastActive: "2026-02-07",
-    verified: false,
-    documents: ["license.pdf"],
-  },
-  {
-    id: 5,
-    name: "Meron Assefa",
-    email: "meron@bolesuper.com",
-    phone: "+251 95 678 9012",
-    role: "retailer",
-    status: "active",
-    business: "Bole Superstore",
-    location: "Addis Ababa",
-    joinedDate: "2026-01-20",
-    lastActive: "2026-02-13",
-    verified: true,
-    totalOrders: 78,
-    totalSpent: 890000,
-    rating: 4.6,
-  },
-  {
-    id: 6,
-    name: "Dawit Mekonnen",
-    email: "dawit@driver.com",
-    phone: "+251 96 789 0123",
-    role: "driver",
-    status: "active",
-    business: "Independent Driver",
-    location: "Adama",
-    joinedDate: "2026-01-25",
-    lastActive: "2026-02-12",
-    verified: true,
-    documents: ["license.pdf", "vehicle_reg.pdf"],
-  },
-  {
-    id: 7,
-    name: "Birtukan Alemu",
-    email: "birtukan@freshmart.com",
-    phone: "+251 97 890 1234",
-    role: "retailer",
-    status: "suspended",
-    business: "Fresh Mart",
-    location: "Hawassa",
-    joinedDate: "2025-12-10",
-    lastActive: "2026-02-01",
-    verified: true,
-    totalOrders: 23,
-    totalSpent: 340000,
-    rating: 3.2,
-  },
-  {
-    id: 8,
-    name: "Tekle Berhan",
-    email: "tekle@ethiopia-coffee.com",
-    phone: "+251 98 901 2345",
-    role: "distributor",
-    status: "active",
-    business: "Ethiopia Coffee Export",
-    location: "Addis Ababa",
-    joinedDate: "2025-11-15",
-    lastActive: "2026-02-13",
-    verified: true,
-    totalOrders: 310,
-    totalSpent: 4500000,
-    rating: 4.9,
-    documents: ["license.pdf", "export_cert.pdf"],
-  },
-  {
-    id: 9,
-    name: "Mulugeta Dessie",
-    email: "mulugeta@bahirdarhoney.com",
-    phone: "+251 99 012 3456",
-    role: "factory",
-    status: "pending",
-    business: "Bahir Dar Honey",
-    location: "Bahir Dar",
-    joinedDate: "2026-02-12",
-    lastActive: "2026-02-12",
-    verified: false,
-    documents: ["license.pdf", "certificate.pdf"],
-  },
-  {
-    id: 10,
-    name: "Eyerusalem Tsegaye",
-    email: "eyerusalem@driver.com",
-    phone: "+251 91 123 4567",
-    role: "driver",
-    status: "inactive",
-    business: "Independent Driver",
-    location: "Dire Dawa",
-    joinedDate: "2026-01-03",
-    lastActive: "2026-02-05",
-    verified: true,
-    documents: ["license.pdf"],
-  },
-  {
-    id: 11,
-    name: "Kebede Asfaw",
-    email: "kebede@oromiadairy.com",
-    phone: "+251 92 234 5678",
-    role: "factory",
-    status: "active",
-    business: "Oromia Dairy",
-    location: "Adama",
-    joinedDate: "2025-10-20",
-    lastActive: "2026-02-13",
-    verified: true,
-    totalOrders: 145,
-    totalSpent: 2800000,
-    rating: 4.7,
-    documents: ["license.pdf", "health_cert.pdf"],
-  },
-  {
-    id: 12,
-    name: "Tsion Hailemariam",
-    email: "tsion@addispharma.com",
-    phone: "+251 93 345 6789",
-    role: "distributor",
-    status: "active",
-    business: "Addis Pharmaceutical",
-    location: "Addis Ababa",
-    joinedDate: "2025-09-12",
-    lastActive: "2026-02-13",
-    verified: true,
-    totalOrders: 420,
-    totalSpent: 5800000,
-    rating: 4.9,
-    documents: ["license.pdf", "pharma_license.pdf"],
-  },
-];
+import { useUserStore } from "@/stores/user.store";
 
 // ============================================================================
 // CONSTANTS
@@ -351,34 +157,59 @@ export const UserManagementPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedRole, setSelectedRole] = useState<string>("all");
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
-  const [selectedUsers, setSelectedUsers] = useState<number[]>([]);
+  const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [sortBy, setSortBy] = useState<"name" | "date" | "orders">("date");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [showSuspendDialog, setShowSuspendDialog] = useState(false);
-  const [selectedUserForAction, setSelectedUserForAction] =
-    useState<User | null>(null);
+
+  const { users, total, loading, fetchUsers, setFilters } = useUserStore();
 
   const itemsPerPage = 10;
 
-  // Filter users
-  const filteredUsers = mockUsers.filter((user) => {
-    const matchesSearch =
-      searchQuery === "" ||
-      user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.business.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.phone.includes(searchQuery);
+  // Load users on component mount and when filters change
+  useEffect(() => {
+    const role = selectedRole === "all" ? undefined : selectedRole;
+    const status = selectedStatus === "all" ? undefined : selectedStatus;
+    const search = searchQuery.trim() || undefined;
 
-    const matchesRole = selectedRole === "all" || user.role === selectedRole;
-    const matchesStatus =
-      selectedStatus === "all" || user.status === selectedStatus;
+    setFilters({ role, status, search });
+    fetchUsers(
+      { role, status, search },
+      { page: currentPage, limit: itemsPerPage },
+    );
+  }, [
+    selectedRole,
+    selectedStatus,
+    searchQuery,
+    currentPage,
+    fetchUsers,
+    setFilters,
+  ]);
 
-    return matchesSearch && matchesRole && matchesStatus;
-  });
+  // Convert store users to component format
+  const formattedUsers: User[] = users.map((user) => ({
+    id: user.id,
+    name: user.full_name || user.business_name || "User",
+    email: user.email,
+    phone: user.phone,
+    role: user.role,
+    status: user.status as UserStatus,
+    business: user.business_name || user.full_name,
+    location: "", // Not available in current API
+    joinedDate: user.created_at,
+    lastActive: user.last_login || user.created_at,
+    verified: user.verified,
+    avatar: user.profile_image,
+    // These fields are not available in current API
+    totalOrders: undefined,
+    totalSpent: undefined,
+    rating: undefined,
+    documents: undefined,
+  }));
 
-  // Sort users
-  const sortedUsers = [...filteredUsers].sort((a, b) => {
+  // Sort users (client-side sorting for now)
+  const sortedUsers = [...formattedUsers].sort((a, b) => {
     if (sortBy === "name") {
       return sortOrder === "asc"
         ? a.name.localeCompare(b.name)
@@ -396,7 +227,7 @@ export const UserManagementPage: React.FC = () => {
   });
 
   // Pagination
-  const totalPages = Math.ceil(sortedUsers.length / itemsPerPage);
+  const totalPages = Math.ceil(total / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedUsers = sortedUsers.slice(
     startIndex,
@@ -413,7 +244,7 @@ export const UserManagementPage: React.FC = () => {
   };
 
   // Handle select user
-  const handleSelectUser = (userId: number) => {
+  const handleSelectUser = (userId: string) => {
     setSelectedUsers((prev) =>
       prev.includes(userId)
         ? prev.filter((id) => id !== userId)
@@ -466,7 +297,7 @@ export const UserManagementPage: React.FC = () => {
             </div>
             <div>
               <p className="text-xs text-muted-foreground">Total Users</p>
-              <p className="text-xl font-bold">{mockUsers.length}</p>
+              <p className="text-xl font-bold">{total}</p>
             </div>
           </CardContent>
         </Card>
@@ -478,7 +309,7 @@ export const UserManagementPage: React.FC = () => {
             <div>
               <p className="text-xs text-muted-foreground">Retailers</p>
               <p className="text-xl font-bold">
-                {mockUsers.filter((u) => u.role === "retailer").length}
+                {users.filter((u) => u.role === "retailer").length}
               </p>
             </div>
           </CardContent>
@@ -491,7 +322,7 @@ export const UserManagementPage: React.FC = () => {
             <div>
               <p className="text-xs text-muted-foreground">Distributors</p>
               <p className="text-xl font-bold">
-                {mockUsers.filter((u) => u.role === "distributor").length}
+                {users.filter((u) => u.role === "distributor").length}
               </p>
             </div>
           </CardContent>
@@ -504,7 +335,7 @@ export const UserManagementPage: React.FC = () => {
             <div>
               <p className="text-xs text-muted-foreground">Factories</p>
               <p className="text-xl font-bold">
-                {mockUsers.filter((u) => u.role === "factory").length}
+                {users.filter((u) => u.role === "factory").length}
               </p>
             </div>
           </CardContent>
@@ -517,7 +348,7 @@ export const UserManagementPage: React.FC = () => {
             <div>
               <p className="text-xs text-muted-foreground">Drivers</p>
               <p className="text-xl font-bold">
-                {mockUsers.filter((u) => u.role === "driver").length}
+                {users.filter((u) => u.role === "driver").length}
               </p>
             </div>
           </CardContent>
@@ -653,113 +484,135 @@ export const UserManagementPage: React.FC = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {paginatedUsers.map((user) => (
-                <TableRow key={user.id}>
-                  <TableCell>
-                    <Checkbox
-                      checked={selectedUsers.includes(user.id)}
-                      onCheckedChange={() => handleSelectUser(user.id)}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      <Avatar className="h-8 w-8">
-                        <AvatarFallback
-                          className={cn("text-xs", roleColors[user.role])}
-                        >
-                          {getInitials(user.name)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <Link
-                          to={`/admin/users/${user.id}`}
-                          className="text-sm font-medium hover:text-primary"
-                        >
-                          {user.name}
-                        </Link>
-                        <p className="text-xs text-muted-foreground">
-                          {user.email}
-                        </p>
-                      </div>
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={8} className="text-center py-8">
+                    <div className="flex items-center justify-center">
+                      <RefreshCw className="h-4 w-4 animate-spin mr-2" />
+                      Loading users...
                     </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge className={cn("gap-1", roleColors[user.role])}>
-                      {getRoleIcon(user.role)}
-                      <span className="capitalize">{user.role}</span>
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge className={statusColors[user.status]}>
-                      <span className="capitalize">{user.status}</span>
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <p className="text-sm">{user.business}</p>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-1 text-sm">
-                      <MapPin className="h-3 w-3 text-muted-foreground" />
-                      {user.location}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="text-sm">{formatDate(user.joinedDate)}</div>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button size="sm" variant="ghost">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem asChild>
-                          <Link to={`/admin/users/${user.id}`}>
-                            <Eye className="h-4 w-4 mr-2" />
-                            View Details
-                          </Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem>
-                          <Edit className="h-4 w-4 mr-2" />
-                          Edit User
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        {user.status === "active" ? (
-                          <DropdownMenuItem className="text-amber-600">
-                            <Ban className="h-4 w-4 mr-2" />
-                            Suspend
-                          </DropdownMenuItem>
-                        ) : user.status === "suspended" ? (
-                          <DropdownMenuItem className="text-green-600">
-                            <RefreshCw className="h-4 w-4 mr-2" />
-                            Reactivate
-                          </DropdownMenuItem>
-                        ) : null}
-                        {!user.verified && (
-                          <DropdownMenuItem className="text-green-600">
-                            <CheckCircle2 className="h-4 w-4 mr-2" />
-                            Verify User
-                          </DropdownMenuItem>
-                        )}
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem className="text-red-600">
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
                   </TableCell>
                 </TableRow>
-              ))}
+              ) : paginatedUsers.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={8} className="text-center py-8">
+                    <EmptyState
+                      title="No users found"
+                      description="Try adjusting your search or filters"
+                      icon={Users}
+                    />
+                  </TableCell>
+                </TableRow>
+              ) : (
+                paginatedUsers.map((user) => (
+                  <TableRow key={user.id}>
+                    <TableCell>
+                      <Checkbox
+                        checked={selectedUsers.includes(user.id)}
+                        onCheckedChange={() => handleSelectUser(user.id)}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-8 w-8">
+                          <AvatarFallback
+                            className={cn("text-xs", roleColors[user.role])}
+                          >
+                            {getInitials(user.name)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <Link
+                            to={`/admin/users/${user.id}`}
+                            className="text-sm font-medium hover:text-primary"
+                          >
+                            {user.name}
+                          </Link>
+                          <p className="text-xs text-muted-foreground">
+                            {user.email}
+                          </p>
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge className={cn("gap-1", roleColors[user.role])}>
+                        {getRoleIcon(user.role)}
+                        <span className="capitalize">{user.role}</span>
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge className={statusColors[user.status]}>
+                        <span className="capitalize">{user.status}</span>
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <p className="text-sm">{user.business}</p>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1 text-sm">
+                        <MapPin className="h-3 w-3 text-muted-foreground" />
+                        {user.location}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="text-sm">
+                        {formatDate(user.joinedDate)}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button size="sm" variant="ghost">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem asChild>
+                            <Link to={`/admin/users/${user.id}`}>
+                              <Eye className="h-4 w-4 mr-2" />
+                              View Details
+                            </Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem>
+                            <Edit className="h-4 w-4 mr-2" />
+                            Edit User
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          {user.status === "active" ? (
+                            <DropdownMenuItem className="text-amber-600">
+                              <Ban className="h-4 w-4 mr-2" />
+                              Suspend
+                            </DropdownMenuItem>
+                          ) : user.status === "suspended" ? (
+                            <DropdownMenuItem className="text-green-600">
+                              <RefreshCw className="h-4 w-4 mr-2" />
+                              Reactivate
+                            </DropdownMenuItem>
+                          ) : null}
+                          {!user.verified && (
+                            <DropdownMenuItem className="text-green-600">
+                              <CheckCircle2 className="h-4 w-4 mr-2" />
+                              Verify User
+                            </DropdownMenuItem>
+                          )}
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem className="text-red-600">
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </CardContent>
         <CardFooter className="flex items-center justify-between p-4 border-t">
           <p className="text-sm text-muted-foreground">
             Showing {startIndex + 1}-
-            {Math.min(startIndex + itemsPerPage, sortedUsers.length)} of{" "}
-            {sortedUsers.length} users
+            {Math.min(startIndex + itemsPerPage, total)} of {total} users
           </p>
           <Pagination>
             <PaginationContent>

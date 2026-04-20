@@ -6,19 +6,15 @@ import paymentController from '../controllers/payment.controller';
 
 const router = Router();
 
-// Public callback endpoint for Chapa redirects/webhooks.
+// Public callback endpoint for app-payment redirects/webhooks.
 router.get('/chapa/callback', (req, res) => paymentController.chapaCallback(req, res));
 router.post('/chapa/callback', (req, res) => paymentController.chapaCallback(req, res));
 
 router.use(authenticate);
 
 const paymentMethodValues = [
-  'cash',
-  'credit',
-  'cheque',
+  'app_payment',
   'mobile_banking',
-  'bank_transfer',
-  'chapa',
 ];
 
 const paymentStatusValues = [

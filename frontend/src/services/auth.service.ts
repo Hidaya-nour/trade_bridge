@@ -77,5 +77,35 @@ export const authService = {
   async approveUser(userId: string) {
     const response = await api.post(`/auth/admin/approve/${userId}`);
     return response.data;
+  },
+
+  async getUsers(options?: {
+    limit?: number;
+    offset?: number;
+    role?: string;
+    status?: string;
+    search?: string;
+    orderBy?: string;
+    orderDirection?: string;
+  }) {
+    const params = new URLSearchParams();
+    if (options?.limit) params.append('limit', options.limit.toString());
+    if (options?.offset) params.append('offset', options.offset.toString());
+    if (options?.role) params.append('role', options.role);
+    if (options?.status) params.append('status', options.status);
+    if (options?.search) params.append('search', options.search);
+    if (options?.orderBy) params.append('orderBy', options.orderBy);
+    if (options?.orderDirection) params.append('orderDirection', options.orderDirection);
+
+    const queryString = params.toString();
+    const url = queryString ? `/auth/admin/users?${queryString}` : '/auth/admin/users';
+    const response = await api.get(url);
+    return response.data.data;
+  },
+
+  async getRecentUsers(limit?: number) {
+    const url = limit ? `/auth/admin/recent-users?limit=${limit}` : '/auth/admin/recent-users';
+    const response = await api.get(url);
+    return response.data.data;
   }
 };

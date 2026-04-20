@@ -127,7 +127,7 @@ const userData = {
     ],
   },
   payment: {
-    defaultMethod: "credit",
+    defaultMethod: "app_payment",
     creditLimit: "ETB 50,000",
     creditUsed: "ETB 12,500",
     creditAvailable: "ETB 37,500",
@@ -215,7 +215,7 @@ const SettingsPage: React.FC = () => {
   });
   const [paymentMessage, setPaymentMessage] = useState<string | null>(null);
   const [newPaymentMethod, setNewPaymentMethod] = useState({
-    method_type: "bank_transfer",
+    method_type: "credit_card",
     provider_name: "",
     account_holder_name: "",
     account_identifier: "",
@@ -667,7 +667,7 @@ const SettingsPage: React.FC = () => {
     if (created) {
       setPaymentMessage("Payment method added");
       setNewPaymentMethod({
-        method_type: "bank_transfer",
+        method_type: "credit_card",
         provider_name: "",
         account_holder_name: "",
         account_identifier: "",

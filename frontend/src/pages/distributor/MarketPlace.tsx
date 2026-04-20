@@ -92,7 +92,7 @@ const DistributorMarketplacePage: React.FC = () => {
         free_delivery_max_distance_km: p.free_delivery_max_distance_km,
         volumeDiscount: p.volume_discount,
         leadTime: p.lead_time || "2-3 days",
-        paymentTerms: p.payment_terms || ["Credit", "Mobile", "Bank Transfer"],
+        paymentTerms: p.payment_terms || ["App Payment", "Mobile Banking"],
       }));
       setLocalProducts(transformedProducts);
     } else {

@@ -1,4 +1,9 @@
-export type PaymentMethodType = 'cash_on_delivery' | 'mobile_money' | 'bank_transfer' | 'credit_card' | 'other';
+// Note: `mobile_banking` and `chapa` are legacy DB values kept for backward compatibility.
+export type PaymentMethodType =
+  | 'mobile_money'
+  | 'credit_card'
+  | 'mobile_banking'
+  | 'chapa';
 
 export interface ISupplierPaymentMethod {
   id: string;

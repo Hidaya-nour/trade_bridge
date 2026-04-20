@@ -18,12 +18,14 @@ import Payment from '../../models/payment.model';
 
 const DEFAULT_VAT_RATE = 0.15;
 
-const supplierPaymentToOrderMethodMap: Record<string, 'cash' | 'mobile_banking' | 'cheque' | 'chapa' | 'credit' | null> = {
-  bank_transfer: 'cheque',
+const supplierPaymentToOrderMethodMap: Record<
+  string,
+  'app_payment' | 'mobile_banking' | null
+> = {
   mobile_money: 'mobile_banking',
-  cash_on_delivery: 'cash',
-  credit_card: 'chapa',
-  other: 'credit',
+  mobile_banking: 'mobile_banking',
+  credit_card: 'app_payment',
+  chapa: 'app_payment',
 };
 
 export class OrderService {
@@ -177,7 +179,7 @@ export class OrderService {
     const activeMethods = await this.supplierPaymentMethodService.getActiveSupplierPaymentMethods(supplier_id);
     const mappedMethods = activeMethods
       .map((m: any) => supplierPaymentToOrderMethodMap[m.method_type])
-      .filter(Boolean) as Array<'cash' | 'mobile_banking' | 'cheque' | 'chapa' | 'credit'>;
+      .filter(Boolean) as Array<'app_payment' | 'mobile_banking'>;
     const availablePaymentMethods = Array.from(new Set(mappedMethods));
 
     if (availablePaymentMethods.length === 0) {

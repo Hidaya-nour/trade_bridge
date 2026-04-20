@@ -1,7 +1,7 @@
 // components/shared/PlaceOrderDialog.tsx
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { CreditCard, Wallet, Truck, Building } from "lucide-react";
+import { CreditCard, Smartphone, Truck } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -76,34 +76,16 @@ export interface PlaceOrderDialogProps {
 
 export const PAYMENT_METHODS = [
   {
-    id: "cash",
-    name: "Cash on Delivery",
-    icon: Wallet,
-    description: "Pay when you receive your order",
-  },
-  {
-    id: "credit",
-    name: "Credit",
+    id: "app_payment",
+    name: "App Payment",
     icon: CreditCard,
-    description: "Pay with credit (30 days terms)",
-  },
-  {
-    id: "cheque",
-    name: "Cheque",
-    icon: Building,
-    description: "Pay by cheque",
+    description: "Pay securely in the app",
   },
   {
     id: "mobile_banking",
-    name: "Mobile Banking",
-    icon: Wallet,
+    name: "Mobile Banking", 
+    icon: Smartphone,
     description: "Pay with mobile money",
-  },
-  {
-    id: "chapa",
-    name: "Online Payment",
-    icon: CreditCard,
-    description: "Pay with Chapa, Telebirr, etc.",
   },
 ];
 
@@ -115,6 +97,7 @@ export const PlaceOrderDialog: React.FC<PlaceOrderDialogProps> = ({
   config,
   showPostOrderDialog = true,
   supplierAllowedMethods,
+  supplierPaymentMethods,
   onPlaceOrder,
   onProcessPayment,
   isPlacing: externalIsPlacing,
@@ -448,13 +431,7 @@ export const PlaceOrderDialog: React.FC<PlaceOrderDialogProps> = ({
           onPaymentSubmit={handlePaymentSubmit}
           isProcessing={paymentProcessing}
           config={{
-            allowedMethods: [
-              "cash",
-              "credit",
-              "cheque",
-              "mobile_banking",
-              "chapa",
-            ] as PaymentMethod[],
+            allowedMethods: ["app_payment", "mobile_banking"] as PaymentMethod[],
             supplierAllowedMethods,
             supplierPaymentMethods,
           }}

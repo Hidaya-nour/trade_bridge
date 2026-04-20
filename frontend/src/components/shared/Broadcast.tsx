@@ -1,5 +1,6 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import toast from "react-hot-toast";
 import {
   TrendingUp,
   Send,
@@ -99,6 +100,8 @@ export interface BroadcastItem {
   id: string;
   title: string;
   description: string;
+  summary?: string;
+  isPersisted?: boolean;
   type: "discount" | "bogo" | "free-shipping" | "bundle" | "clearance";
   discountType?: "percentage" | "fixed";
   discountValue?: number;
@@ -139,10 +142,10 @@ interface BroadcastPageProps {
     draft: number;
     totalRedemptions: number;
   };
-  onCreateItem: (item: any) => void;
-  onDeleteItem: (id: string) => void;
-  onDuplicateItem: (item: BroadcastItem) => void;
-  onUpdateStatus: (id: string, status: string) => void;
+  onCreateItem: (item: any) => void | Promise<void>;
+  onDeleteItem: (id: string) => void | Promise<void>;
+  onDuplicateItem: (item: BroadcastItem) => void | Promise<void>;
+  onUpdateStatus: (id: string, status: string) => void | Promise<void>;
 }
 
 // ============================================================================
@@ -159,7 +162,7 @@ export const BroadcastPage: React.FC<BroadcastPageProps> = ({
   onDuplicateItem,
   onUpdateStatus,
 }) => {
-  const [itemList] = useState(initialItems);
+  const [itemList, setItemList] = useState(initialItems);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
@@ -168,7 +171,12 @@ export const BroadcastPage: React.FC<BroadcastPageProps> = ({
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [activeTab, setActiveTab] = useState("active");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const itemsPerPage = 6;
+
+  useEffect(() => {
+    setItemList(initialItems);
+  }, [initialItems]);
 
   // New item form state
   const [newItem, setNewItem] = useState({
@@ -186,6 +194,8 @@ export const BroadcastPage: React.FC<BroadcastPageProps> = ({
     promoCode: "",
     priority: "medium",
   });
+  const isCreateFormValid =
+    newItem.title.trim().length > 0 && newItem.description.trim().length > 0;
 
   // Filter items
   const filteredItems = itemList.filter((item) => {
@@ -219,6 +229,10 @@ export const BroadcastPage: React.FC<BroadcastPageProps> = ({
   const totalPages = Math.ceil(sortedItems.length / itemsPerPage);
 
   const getItemSummary = (item: BroadcastItem) => {
+    if (item.summary) {
+      return item.summary;
+    }
+
     switch (item.type) {
       case "discount":
         return `${item.discountValue}${item.discountType === "percentage" ? "%" : " ETB"} off`;
@@ -257,6 +271,136 @@ export const BroadcastPage: React.FC<BroadcastPageProps> = ({
     return role === "distributor" ? "promotion" : "announcement";
   };
 
+  const getOutcomeLabel = () => {
+    return role === "distributor" ? "Redeemed" : "Orders";
+  };
+
+  const itemLabel = role === "distributor" ? "promotion" : "announcement";
+
+  const handleCreate = async (status: "draft" | "scheduled") => {
+    const actionLabel = status === "draft" ? "save" : "schedule";
+    setIsSubmitting(true);
+    try {
+      await onCreateItem({ ...newItem, status });
+      toast.success(
+        status === "draft"
+          ? `${role === "distributor" ? "Promotion" : "Announcement"} saved as draft`
+          : `${role === "distributor" ? "Promotion" : "Announcement"} scheduled successfully`,
+      );
+      setActiveTab(status === "draft" ? "draft" : "scheduled");
+      setStatusFilter("all");
+      setTypeFilter("all");
+      setSearchQuery("");
+      setCurrentPage(1);
+      setNewItem({
+        title: "",
+        description: "",
+        type: "discount",
+        discountType: "percentage",
+        discountValue: "",
+        minOrder: "",
+        maxDiscount: "",
+        targetAudience: "all",
+        selectedSegments: [] as string[],
+        startDate: "",
+        endDate: "",
+        promoCode: "",
+        priority: "medium",
+      });
+      setShowCreateDialog(false);
+    } catch (error: any) {
+      toast.error(
+        error?.message ||
+          `Failed to ${actionLabel} ${itemLabel}. Please try again.`,
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDuplicate = async (item: BroadcastItem) => {
+    try {
+      await onDuplicateItem(item);
+      toast.success(
+        `${role === "distributor" ? "Promotion" : "Announcement"} duplicated successfully`,
+      );
+    } catch (error: any) {
+      toast.error(
+        error?.message || `Failed to duplicate ${itemLabel}. Please try again.`,
+      );
+    }
+  };
+
+  const handleStatusUpdate = async (id: string, status: string) => {
+    try {
+      await onUpdateStatus(id, status);
+      toast.success(
+        status === "cancelled"
+          ? `${role === "distributor" ? "Promotion" : "Announcement"} ended successfully`
+          : `${role === "distributor" ? "Promotion" : "Announcement"} updated successfully`,
+      );
+    } catch (error: any) {
+      toast.error(
+        error?.message || `Failed to update ${itemLabel}. Please try again.`,
+      );
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!selectedItem) return;
+
+    setIsSubmitting(true);
+    try {
+      await onDeleteItem(selectedItem.id);
+      toast.success(
+        `${role === "distributor" ? "Promotion" : "Announcement"} deleted successfully`,
+      );
+      setShowDeleteDialog(false);
+    } catch (error: any) {
+      toast.error(
+        error?.message || `Failed to delete ${itemLabel}. Please try again.`,
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const getPrimaryAction = (item: BroadcastItem) => {
+    if (item.isPersisted === false) {
+      return {
+        label: "Use Template",
+        icon: Copy,
+        onClick: () => handleDuplicate(item),
+        variant: "outline" as const,
+      };
+    }
+
+    if (item.status === "draft") {
+      return {
+        label: "Publish",
+        icon: Send,
+        onClick: () => handleStatusUpdate(item.id, "scheduled"),
+        variant: "default" as const,
+      };
+    }
+
+    if (item.status === "active") {
+      return {
+        label: "View Performance",
+        icon: BarChart3,
+        onClick: () => undefined,
+        variant: "outline" as const,
+      };
+    }
+
+    return {
+      label: "View Details",
+      icon: Eye,
+      onClick: () => setSelectedItem(item),
+      variant: "outline" as const,
+    };
+  };
+
   const AudienceIcon = getIcon();
 
   return (
@@ -285,7 +429,7 @@ export const BroadcastPage: React.FC<BroadcastPageProps> = ({
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <StatsCard
           title="Active"
           value={stats.active}
@@ -306,13 +450,6 @@ export const BroadcastPage: React.FC<BroadcastPageProps> = ({
           icon={Edit}
           iconBg="bg-gray-100"
           iconColor="text-gray-600"
-        />
-        <StatsCard
-          title="Redemptions"
-          value={stats.totalRedemptions}
-          icon={Tag}
-          iconBg="bg-purple-100"
-          iconColor="text-purple-600"
         />
       </div>
 
@@ -472,48 +609,50 @@ export const BroadcastPage: React.FC<BroadcastPageProps> = ({
                             <Eye className="h-4 w-4 mr-2" />
                             View Details
                           </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            <Edit className="h-4 w-4 mr-2" />
-                            Edit
-                          </DropdownMenuItem>
                           <DropdownMenuItem
-                            onClick={() => onDuplicateItem(item)}
+                            onClick={() => handleDuplicate(item)}
                           >
                             <Copy className="h-4 w-4 mr-2" />
                             Duplicate
                           </DropdownMenuItem>
-                          {item.status === "draft" && (
-                            <DropdownMenuItem
-                              onClick={() =>
-                                onUpdateStatus(item.id, "scheduled")
-                              }
-                            >
-                              <Send className="h-4 w-4 mr-2" />
-                              Publish
-                            </DropdownMenuItem>
+                          {item.isPersisted !== false &&
+                            item.status === "draft" && (
+                              <DropdownMenuItem
+                                onClick={() =>
+                                  handleStatusUpdate(item.id, "scheduled")
+                                }
+                              >
+                                <Send className="h-4 w-4 mr-2" />
+                                Publish
+                              </DropdownMenuItem>
+                            )}
+                          {item.isPersisted !== false &&
+                            item.status === "active" && (
+                              <DropdownMenuItem
+                                className="text-amber-600"
+                                onClick={() =>
+                                  handleStatusUpdate(item.id, "cancelled")
+                                }
+                              >
+                                <XCircle className="h-4 w-4 mr-2" />
+                                End Early
+                              </DropdownMenuItem>
+                            )}
+                          {item.isPersisted !== false && (
+                            <>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                className="text-destructive"
+                                onClick={() => {
+                                  setSelectedItem(item);
+                                  setShowDeleteDialog(true);
+                                }}
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Delete
+                              </DropdownMenuItem>
+                            </>
                           )}
-                          {item.status === "active" && (
-                            <DropdownMenuItem
-                              className="text-amber-600"
-                              onClick={() =>
-                                onUpdateStatus(item.id, "cancelled")
-                              }
-                            >
-                              <XCircle className="h-4 w-4 mr-2" />
-                              End Early
-                            </DropdownMenuItem>
-                          )}
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            className="text-destructive"
-                            onClick={() => {
-                              setSelectedItem(item);
-                              setShowDeleteDialog(true);
-                            }}
-                          >
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Delete
-                          </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
@@ -532,7 +671,7 @@ export const BroadcastPage: React.FC<BroadcastPageProps> = ({
                     {item.code && (
                       <div className="bg-muted/50 rounded-lg p-2 mb-3">
                         <span className="text-xs text-muted-foreground">
-                          Promo Code:{" "}
+                          Code:{" "}
                         </span>
                         <code className="text-xs font-mono bg-background px-2 py-1 rounded">
                           {item.code}
@@ -551,6 +690,12 @@ export const BroadcastPage: React.FC<BroadcastPageProps> = ({
                       </div>
                     </div>
 
+                    {item.isPersisted === false && (
+                      <Badge variant="secondary" className="mb-3">
+                        Suggested
+                      </Badge>
+                    )}
+
                     <div className="mt-3 pt-3 border-t grid grid-cols-3 gap-2 text-center">
                       <div>
                         <p className="text-xs text-muted-foreground">Sent</p>
@@ -566,7 +711,7 @@ export const BroadcastPage: React.FC<BroadcastPageProps> = ({
                       </div>
                       <div>
                         <p className="text-xs text-muted-foreground">
-                          Redeemed
+                          {getOutcomeLabel()}
                         </p>
                         <p className="text-lg font-semibold">
                           {item.redeemedCount}
@@ -575,32 +720,21 @@ export const BroadcastPage: React.FC<BroadcastPageProps> = ({
                     </div>
                   </CardContent>
                   <CardFooter className="pt-0">
-                    <Button
-                      className="w-full"
-                      variant={item.status === "draft" ? "default" : "outline"}
-                      onClick={() => {
-                        if (item.status === "draft") {
-                          onUpdateStatus(item.id, "scheduled");
-                        }
-                      }}
-                    >
-                      {item.status === "draft" ? (
-                        <>
-                          <Send className="h-4 w-4 mr-2" />
-                          Publish
-                        </>
-                      ) : item.status === "active" ? (
-                        <>
-                          <BarChart3 className="h-4 w-4 mr-2" />
-                          View Performance
-                        </>
-                      ) : (
-                        <>
-                          <Eye className="h-4 w-4 mr-2" />
-                          View Details
-                        </>
-                      )}
-                    </Button>
+                    {(() => {
+                      const action = getPrimaryAction(item);
+                      const ActionIcon = action.icon;
+
+                      return (
+                        <Button
+                          className="w-full"
+                          variant={action.variant}
+                          onClick={() => action.onClick()}
+                        >
+                          <ActionIcon className="h-4 w-4 mr-2" />
+                          {action.label}
+                        </Button>
+                      );
+                    })()}
                   </CardFooter>
                 </Card>
               ))}
@@ -941,25 +1075,22 @@ export const BroadcastPage: React.FC<BroadcastPageProps> = ({
           <DialogFooter className="gap-2">
             <Button
               variant="outline"
+              disabled={isSubmitting}
               onClick={() => setShowCreateDialog(false)}
             >
               Cancel
             </Button>
             <Button
               variant="outline"
-              onClick={() => {
-                onCreateItem({ ...newItem, status: "draft" });
-                setShowCreateDialog(false);
-              }}
+              disabled={!isCreateFormValid || isSubmitting}
+              onClick={() => handleCreate("draft")}
             >
               Save as Draft
             </Button>
             <Button
               className="bg-purple-600 hover:bg-purple-700"
-              onClick={() => {
-                onCreateItem({ ...newItem, status: "scheduled" });
-                setShowCreateDialog(false);
-              }}
+              disabled={!isCreateFormValid || isSubmitting}
+              onClick={() => handleCreate("scheduled")}
             >
               <Send className="h-4 w-4 mr-2" />
               Schedule
@@ -983,12 +1114,7 @@ export const BroadcastPage: React.FC<BroadcastPageProps> = ({
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => {
-                if (selectedItem) {
-                  onDeleteItem(selectedItem.id);
-                  setShowDeleteDialog(false);
-                }
-              }}
+              onClick={handleDelete}
               className="bg-red-600 hover:bg-red-700"
             >
               Delete

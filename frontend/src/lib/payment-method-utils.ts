@@ -4,16 +4,12 @@ export const supplierMethodTypeToPaymentMethod = (
   methodType: string,
 ): PaymentMethod | null => {
   switch (methodType) {
-    case 'cash_on_delivery':
-      return 'cash';
     case 'mobile_money':
+    case 'mobile_banking':
       return 'mobile_banking';
-    case 'bank_transfer':
-      return 'cheque';
     case 'credit_card':
-      return 'chapa';
-    case 'other':
-      return 'credit';
+    case 'chapa':
+      return 'app_payment';
     default:
       return null;
   }
@@ -28,4 +24,22 @@ export const supplierMethodsToPaymentMethods = (
     .filter((m): m is PaymentMethod => Boolean(m));
 
   return Array.from(new Set(methods));
+};
+
+export const getPaymentMethodLabel = (
+  method?: string | null,
+): string => {
+  switch (method) {
+    case "app_payment":
+    case "chapa":
+      return "App Payment";
+    case "mobile_banking":
+      return "Mobile Banking";
+    case undefined:
+    case null:
+    case "":
+      return "N/A";
+    default:
+      return method;
+  }
 };

@@ -36,7 +36,11 @@ SupplierPaymentMethod.init(
       references: { model: 'users', key: 'id' }
     },
     method_type: {
-      type: DataTypes.ENUM('bank_transfer', 'mobile_money', 'cash_on_delivery', 'credit_card', 'debit_card', 'paypal', 'other'),
+      // NOTE:
+      // Using ENUM here makes `sequelize.sync({ alter: true })` fragile when the DB
+      // already contains legacy/unknown values (MySQL throws "Data truncated").
+      // Keep this as a string column and enforce allowed values at the API layer.
+      type: DataTypes.STRING(50),
       allowNull: false
     },
     provider_name: {
