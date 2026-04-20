@@ -163,7 +163,8 @@ export const UserManagementPage: React.FC = () => {
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [showSuspendDialog, setShowSuspendDialog] = useState(false);
 
-  const { users, total, loading, fetchUsers, setFilters } = useUserStore();
+  const { users, total, loading, error, fetchUsers, setFilters, clearError } =
+    useUserStore();
 
   const itemsPerPage = 10;
 
@@ -229,10 +230,7 @@ export const UserManagementPage: React.FC = () => {
   // Pagination
   const totalPages = Math.ceil(total / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedUsers = sortedUsers.slice(
-    startIndex,
-    startIndex + itemsPerPage,
-  );
+  const paginatedUsers = sortedUsers;
 
   // Handle select all
   const handleSelectAll = () => {
@@ -396,6 +394,17 @@ export const UserManagementPage: React.FC = () => {
           </div>
         </CardContent>
       </Card>
+
+      {error && (
+        <Card className="border-red-200 bg-red-50">
+          <CardContent className="flex items-center justify-between gap-4 p-4">
+            <p className="text-sm text-red-700">{error}</p>
+            <Button variant="outline" size="sm" onClick={clearError}>
+              Dismiss
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Bulk Actions */}
       {selectedUsers.length > 0 && (
@@ -611,8 +620,8 @@ export const UserManagementPage: React.FC = () => {
         </CardContent>
         <CardFooter className="flex items-center justify-between p-4 border-t">
           <p className="text-sm text-muted-foreground">
-            Showing {startIndex + 1}-
-            {Math.min(startIndex + itemsPerPage, total)} of {total} users
+            Showing {total === 0 ? 0 : startIndex + 1}-
+            {Math.min(startIndex + paginatedUsers.length, total)} of {total} users
           </p>
           <Pagination>
             <PaginationContent>

@@ -1,4 +1,4 @@
-import { FindOptions } from 'sequelize';
+import { FindOptions, Op } from 'sequelize';
 
 import Broadcast from '../models/broadcast.model';
 import { BaseRepository } from './base.repository';
@@ -57,5 +57,32 @@ export class BroadcastRepository extends BaseRepository<Broadcast> {
     data: UpdateBroadcastDTO,
   ): Promise<[number, Broadcast[]]> {
     return this.update(id, data as any);
+  }
+
+  async findActive(options?: {
+    ownerRoles?: BroadcastOwnerRole[];
+    excludeOwnerId?: string;
+  }): Promise<Broadcast[]> {
+    const where: Record<string, unknown> = {
+      status: 'active',
+      start_date: { [Op.lte]: new Date() },
+      end_date: { [Op.gte]: new Date() },
+    };
+
+    if (options?.ownerRoles && options.ownerRoles.length > 0) {
+      where.owner_role = { [Op.in]: options.ownerRoles };
+    }
+
+    if (options?.excludeOwnerId) {
+      where.owner_id = { [Op.ne]: options.excludeOwnerId };
+    }
+
+    return this.findAll({
+      where,
+      order: [
+        ['priority', 'ASC'],
+        ['created_at', 'DESC'],
+      ],
+    });
   }
 }

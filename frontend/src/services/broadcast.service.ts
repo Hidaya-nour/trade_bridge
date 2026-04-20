@@ -7,6 +7,17 @@ import type {
 } from "@/types/broadcast.types";
 
 class BroadcastService {
+  async getActive(ownerRoles?: string[]): Promise<BroadcastListResponse> {
+    const params = new URLSearchParams();
+    if (ownerRoles && ownerRoles.length > 0) {
+      params.append("ownerRoles", ownerRoles.join(","));
+    }
+
+    const query = params.toString();
+    const response = await api.get(`/broadcasts/active${query ? `?${query}` : ""}`);
+    return response.data;
+  }
+
   async getMine(): Promise<BroadcastListResponse> {
     const response = await api.get("/broadcasts");
     return response.data;

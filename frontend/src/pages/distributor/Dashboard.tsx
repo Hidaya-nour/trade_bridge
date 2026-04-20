@@ -42,12 +42,15 @@ import {
   StatusBadge,
   WelcomeHeader,
 } from "@/components";
+import { ActivePromotionsPanel } from "@/components/shared/ActivePromotionsPanel";
 import { formatPrice, formatCompactPrice, formatDate } from "@/lib/formatters";
 import { getInitials } from "@/lib/utils";
 import { useAuthStore } from "@/stores/auth.store";
 import { useOrderStore } from "@/stores/order.store";
 import { useProductStore } from "@/stores/product.store";
 import deliveryService from "@/services/delivery.service";
+import broadcastService from "@/services/broadcast.service";
+import type { BroadcastRecord } from "@/types/broadcast.types";
 import type { Order } from "@/types/order.types";
 
 const LOW_STOCK_THRESHOLD = 30;
@@ -98,6 +101,7 @@ const DistributorDashboard: React.FC = () => {
   const authUser = useAuthStore((state) => state.user);
   const { orders, fetchOrdersAsSupplier } = useOrderStore();
   const { products, fetchProducts } = useProductStore();
+  const [promotions, setPromotions] = useState<BroadcastRecord[]>([]);
 
   useEffect(() => {
     fetchOrdersAsSupplier({ sortBy: "created_at", sortOrder: "DESC", limit: 20 });
@@ -119,6 +123,23 @@ const DistributorDashboard: React.FC = () => {
     };
 
     loadShipments();
+  }, []);
+
+  useEffect(() => {
+    const loadPromotions = async () => {
+      try {
+        const response = await broadcastService.getActive([
+          "factory",
+          "distributor",
+        ]);
+        setPromotions(response.data || []);
+      } catch (error) {
+        console.error("Failed to load distributor dashboard promotions:", error);
+        setPromotions([]);
+      }
+    };
+
+    loadPromotions();
   }, []);
 
   if (!authUser) return null; // prevent crash if not loaded
@@ -264,6 +285,16 @@ const DistributorDashboard: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Column - 2 cols */}
         <div className="lg:col-span-2 space-y-6">
+          {promotions.length > 0 && (
+            <ActivePromotionsPanel
+              title="Marketplace Offers"
+              description="Active promotions from factories and peer distributors."
+              items={promotions.slice(0, 4)}
+              compact
+              emptyTitle="No active marketplace offers"
+              emptyDescription="Factory and distributor promotions will appear here when available."
+            />
+          )}
           {/* Incoming Orders */}
           <Card>
             <CardHeader className="pb-2">
