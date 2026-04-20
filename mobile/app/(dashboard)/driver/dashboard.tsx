@@ -1,4 +1,4 @@
-﻿import React, { useState } from "react";
+﻿import React, { useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -10,8 +10,11 @@ import {
   Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+
 import ScreenWrapper from "@/components/layout/ScreenWrapper";
 import { useAuthStore } from "@/features/auth/auth.store";
+
 import {
   ACTIVE_DELIVERIES,
   DELIVERY_HISTORY,
@@ -19,6 +22,8 @@ import {
   NOTIFICATIONS,
   type DeliveryStatus,
 } from "./driverData";
+
+/* ================= Helpers ================= */
 
 const formatStatus = (status: DeliveryStatus) =>
   status.replace("_", " ").toUpperCase();
@@ -38,22 +43,33 @@ const getStatusStyle = (status: DeliveryStatus) => {
   }
 };
 
+/* ================= Component ================= */
+
 export default function DriverDashboardScreen() {
   const router = useRouter();
   const user = useAuthStore((state) => state.user);
-  const [refreshing, setRefreshing] = useState(false);
+
+  const [isOnline, setIsOnline] = useState(false);
+
+  /* ===== Derived Data ===== */
+  const activeDeliveries = ACTIVE_DELIVERIES;
+  const activeRoute = ACTIVE_DELIVERIES[0];
+  const completedToday = DELIVERY_HISTORY.length;
 
   const unreadNotifications = useMemo(
-    () => NOTIFICATIONS.filter((item) => item.unread).length,
-    [],
+    () => NOTIFICATIONS.filter((n) => n.unread).length,
+    []
   );
 
-  const handleMessage = () => {
-    Alert.alert("Message", "Open chat with customer");
-  };
+  /* ===== Actions ===== */
 
   const handleOpenMaps = () => {
-    const url = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(activeDelivery.dropoff)}`;
+    if (!activeRoute) return;
+
+    const url = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(
+      activeRoute.destination
+    )}`;
+
     Linking.openURL(url);
   };
 
@@ -61,87 +77,51 @@ export default function DriverDashboardScreen() {
     Alert.alert("Action", `${action} pressed`);
   };
 
+  /* ================= Render ================= */
+
   return (
     <ScreenWrapper title="Driver Dashboard">
       <ScrollView
         style={styles.container}
         contentContainerStyle={styles.contentContainer}
       >
-        {/* Top Section */}
-        <View style={styles.topSection}>
-          <View style={styles.statusContainer}>
+        {/* ===== ONLINE STATUS ===== */}
+        <View style={styles.card}>
+          <View style={styles.rowBetween}>
             <Text style={styles.statusText}>
               You are {isOnline ? "Online" : "Offline"}
             </Text>
-            <Switch
-              value={isOnline}
-              onValueChange={setIsOnline}
-              trackColor={{ false: "#767577", true: "#81b0ff" }}
-              thumbColor={isOnline ? "#f5dd4b" : "#f4f3f4"}
-            />
+            <Switch value={isOnline} onValueChange={setIsOnline} />
           </View>
         </View>
 
+        {/* ===== STATS ===== */}
         <View style={styles.statsGrid}>
-          <View style={styles.statCard}>
-            <Text style={styles.statLabel}>Active Routes</Text>
-            <Text style={styles.statValue}>{activeDeliveries.length}</Text>
-          </View>
-          <View style={styles.statCard}>
-            <Text style={styles.statLabel}>Completed Today</Text>
-            <Text style={styles.statValue}>{completedToday}</Text>
-          </View>
-          <View style={styles.statCard}>
-            <Text style={styles.statLabel}>Unread Alerts</Text>
-            <Text style={styles.statValue}>{unreadNotifications}</Text>
-          </View>
-          <View style={styles.statCard}>
-            <Text style={styles.statLabel}>Total Orders</Text>
-            <Text style={styles.statValue}>{DRIVER_DELIVERIES.length}</Text>
-          </View>
+          <StatCard label="Active Routes" value={activeDeliveries.length} />
+          <StatCard label="Completed Today" value={completedToday} />
+          <StatCard label="Unread Alerts" value={unreadNotifications} />
+          <StatCard
+            label="Total Orders"
+            value={DRIVER_DELIVERIES.length}
+          />
         </View>
 
-        {/* Navigation */}
-        <View style={styles.navigationSection}>
-          <Pressable style={styles.mapsButton} onPress={handleOpenMaps}>
-            <Ionicons name="map" size={24} color="#ffffff" />
-            <Text style={styles.mapsButtonText}>Open in Maps</Text>
-          </Pressable>
-        </View>
+        {/* ===== MAP BUTTON ===== */}
+        <Pressable style={styles.mapsButton} onPress={handleOpenMaps}>
+          <Ionicons name="map" size={20} color="#fff" />
+          <Text style={styles.mapsText}>Open in Maps</Text>
+        </Pressable>
 
-        {/* Quick Actions */}
-        <View style={styles.quickActionsSection}>
+        {/* ===== QUICK ACTIONS ===== */}
+        <View style={styles.section}>
           <Text style={styles.sectionTitle}>Quick Actions</Text>
-          <Text style={styles.sectionSubtitle}>
-            Use drawer links for full detail pages
-          </Text>
+
           <View style={styles.actionRow}>
-            {[
-              {
-                label: "Notifications",
-                route: "/driver/notifications",
-                icon: "notifications-outline",
-              },
-              {
-                label: "Deliveries",
-                route: "/driver/deliveries",
-                icon: "car-outline",
-              },
-              {
-                label: "Issues",
-                route: "/driver/issues",
-                icon: "alert-circle-outline",
-              },
-              {
-                label: "Profile",
-                route: "/driver/profile",
-                icon: "person-outline",
-              },
-            ].map((action) => (
+            {ACTIONS.map((action) => (
               <Pressable
                 key={action.route}
-                onPress={() => router.push(action.route as never)}
                 style={styles.actionChip}
+                onPress={() => router.push(action.route as never)}
               >
                 <Ionicons name={action.icon as any} size={16} color="#1d4ed8" />
                 <Text style={styles.actionText}>{action.label}</Text>
@@ -150,19 +130,21 @@ export default function DriverDashboardScreen() {
           </View>
         </View>
 
+        {/* ===== ACTIVE DELIVERY ===== */}
         {activeRoute ? (
-          <Pressable
-            style={styles.sectionCard}
-            onPress={() => router.push(`/driver/deliveries/${activeRoute.id}` as never)}
-          >
-            <Text style={styles.sectionTitle}>Current Active Order</Text>
-            <Text style={styles.sectionSubtitle}>{activeRoute.orderCode}</Text>
-            <Text style={styles.metaText}>
+          <View style={styles.card}>
+            <Text style={styles.sectionTitle}>Current Delivery</Text>
+
+            <Text style={styles.subtitle}>{activeRoute.orderCode}</Text>
+
+            <Text style={styles.meta}>
               Pickup: {activeRoute.pickupPoint}
             </Text>
-            <Text style={styles.metaText}>
+            <Text style={styles.meta}>
               Dropoff: {activeRoute.destination}
             </Text>
+
+            {/* Progress */}
             <View style={styles.progressTrack}>
               <View
                 style={[
@@ -171,10 +153,13 @@ export default function DriverDashboardScreen() {
                 ]}
               />
             </View>
+
             <Text style={styles.progressLabel}>
               {activeRoute.routeProgress}% completed
             </Text>
-            <View style={styles.statusBadgeRow}>
+
+            {/* Status + Action */}
+            <View style={styles.rowBetween}>
               <View
                 style={[
                   styles.statusBadge,
@@ -185,223 +170,148 @@ export default function DriverDashboardScreen() {
                 ]}
               >
                 <Text
-                  style={[
-                    styles.statusBadgeText,
-                    { color: getStatusStyle(activeRoute.status).text },
-                  ]}
+                  style={{
+                    color: getStatusStyle(activeRoute.status).text,
+                    fontWeight: "600",
+                  }}
                 >
-                  <Text style={styles.buttonText}>Accept</Text>
-                </Pressable>
+                  {formatStatus(activeRoute.status)}
+                </Text>
               </View>
+
+              <Pressable
+                style={styles.acceptButton}
+                onPress={() => handleAction("Accept")}
+              >
+                <Text style={styles.buttonText}>Accept</Text>
+              </Pressable>
             </View>
-          </Pressable>
+          </View>
         ) : (
-          <View style={styles.sectionCard}>
+          <View style={styles.card}>
             <Text style={styles.sectionTitle}>No active route</Text>
-            <Text style={styles.sectionSubtitle}>
-              Awaiting assignment from dispatch
+            <Text style={styles.subtitle}>
+              Waiting for assignment...
             </Text>
           </View>
-        </View>
+        )}
       </ScrollView>
     </ScreenWrapper>
   );
 }
 
+/* ================= Sub Components ================= */
+
+const StatCard = ({ label, value }: { label: string; value: number }) => (
+  <View style={styles.statCard}>
+    <Text style={styles.statLabel}>{label}</Text>
+    <Text style={styles.statValue}>{value}</Text>
+  </View>
+);
+
+const ACTIONS = [
+  { label: "Notifications", route: "/driver/notifications", icon: "notifications-outline" },
+  { label: "Deliveries", route: "/driver/deliveries", icon: "car-outline" },
+  { label: "Issues", route: "/driver/issues", icon: "alert-circle-outline" },
+  { label: "Profile", route: "/driver/profile", icon: "person-outline" },
+];
+
+/* ================= Styles ================= */
+
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#f8fafc",
-  },
-  contentContainer: {
-    padding: 16,
-  },
-  topSection: {
-    marginBottom: 20,
-  },
-  statusContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: "#ffffff",
-    padding: 16,
-    borderRadius: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  statusText: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#1f2937",
-  },
-  mainSection: {
-    marginBottom: 20,
-  },
+  container: { flex: 1, backgroundColor: "#f8fafc" },
+  contentContainer: { padding: 16 },
+
   card: {
-    backgroundColor: "#ffffff",
-    padding: 20,
-    borderRadius: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  cardTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#1f2937",
-    marginBottom: 16,
-  },
-  locationContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 8,
-  },
-  locationText: {
-    fontSize: 16,
-    color: "#374151",
-    marginLeft: 8,
-    flex: 1,
-  },
-  arrowContainer: {
-    alignItems: "center",
-    marginVertical: 8,
-  },
-  detailsContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 16,
-  },
-  detailText: {
-    fontSize: 14,
-    color: "#6b7280",
-  },
-  statusBadge: {
-    backgroundColor: "#fef3c7",
-    color: "#d97706",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    fontSize: 14,
-    fontWeight: "600",
-    alignSelf: "flex-start",
-    marginBottom: 20,
-  },
-  buttonContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  actionButton: {
-    flex: 1,
-    paddingVertical: 16,
+    backgroundColor: "#fff",
+    padding: 16,
     borderRadius: 12,
+    marginBottom: 16,
+  },
+
+  rowBetween: {
+    flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
-    marginHorizontal: 4,
   },
-  primaryButton: {
-    backgroundColor: "#10b981",
+
+  statusText: { fontSize: 16, fontWeight: "600" },
+
+  statsGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+    marginBottom: 16,
   },
-  secondaryButton: {
-    backgroundColor: "#3b82f6",
+
+  statCard: {
+    width: "48%",
+    backgroundColor: "#fff",
+    padding: 12,
+    borderRadius: 10,
   },
-  rejectButton: {
-    backgroundColor: "#ef4444",
-  },
-  acceptButton: {
-    backgroundColor: "#10b981",
-  },
-  buttonText: {
-    color: "#ffffff",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  navigationSection: {
-    marginBottom: 20,
-  },
+
+  statLabel: { fontSize: 12, color: "#6b7280" },
+  statValue: { fontSize: 18, fontWeight: "700" },
+
   mapsButton: {
     backgroundColor: "#1f2937",
     flexDirection: "row",
-    alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 16,
-    borderRadius: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  mapsButtonText: {
-    color: "#ffffff",
-    fontSize: 16,
-    fontWeight: "600",
-    marginLeft: 8,
-  },
-  quickActionsSection: {
-    marginBottom: 20,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#1f2937",
-    marginBottom: 12,
-  },
-  quickActionsContainer: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-  },
-  quickActionButton: {
     alignItems: "center",
-    backgroundColor: "#ffffff",
-    padding: 16,
-    borderRadius: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-    flex: 1,
-    marginHorizontal: 4,
+    padding: 14,
+    borderRadius: 10,
+    marginBottom: 16,
   },
-  quickActionText: {
-    fontSize: 12,
-    color: "#6b7280",
-    marginTop: 4,
-    fontWeight: "500",
-  },
-  secondarySection: {
-    marginBottom: 20,
-  },
-  bottomSection: {
-    marginTop: 20,
-  },
-  summaryContainer: {
-    backgroundColor: "#ffffff",
-    padding: 20,
-    borderRadius: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  summaryItem: {
+
+  mapsText: { color: "#fff", marginLeft: 6 },
+
+  section: { marginBottom: 16 },
+  sectionTitle: { fontSize: 16, fontWeight: "600", marginBottom: 10 },
+
+  actionRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+
+  actionChip: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 12,
+    backgroundColor: "#e0edff",
+    padding: 8,
+    borderRadius: 8,
   },
-  summaryLabel: {
-    fontSize: 16,
-    color: "#6b7280",
+
+  actionText: { marginLeft: 6 },
+
+  subtitle: { color: "#6b7280", marginBottom: 8 },
+  meta: { fontSize: 13, marginBottom: 4 },
+
+  progressTrack: {
+    height: 6,
+    backgroundColor: "#e5e7eb",
+    borderRadius: 4,
+    marginVertical: 10,
   },
-  summaryValue: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#1f2937",
+
+  progressFill: {
+    height: 6,
+    backgroundColor: "#10b981",
+    borderRadius: 4,
   },
+
+  progressLabel: { fontSize: 12, marginBottom: 10 },
+
+  statusBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 20,
+    borderWidth: 1,
+  },
+
+  acceptButton: {
+    backgroundColor: "#10b981",
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+
+  buttonText: { color: "#fff", fontWeight: "600" },
 });
