@@ -12,6 +12,7 @@ const router = express.Router();
 const broadcastController = new BroadcastController();
 
 router.use(authenticate);
+router.get('/active', broadcastController.getActiveBroadcasts);
 router.use(requireVerifiedSupplier);
 router.use(authorize('factory', 'distributor', 'admin'));
 

@@ -148,6 +148,14 @@ export class BroadcastService {
     return this.broadcastRepo.findByOwner(ownerId, ownerRole);
   }
 
+  async getActiveBroadcasts(options?: {
+    ownerRoles?: BroadcastOwnerRole[];
+    excludeOwnerId?: string;
+  }): Promise<IBroadcast[]> {
+    await this.ensureTableReady();
+    return this.broadcastRepo.findActive(options);
+  }
+
   async getBroadcastById(
     id: string,
     ownerId: string,

@@ -2,7 +2,8 @@ import { DataTypes, Model, Optional } from 'sequelize';
 import sequelize from '../config/database';
 import { IDispute } from '../types/dispute.types';
 
-interface DisputeCreationAttributes extends Optional<IDispute, 'id' | 'created_at' | 'resolved_at'> {}
+interface DisputeCreationAttributes
+  extends Optional<IDispute, 'id' | 'resolved_at' | 'resolved_by' | 'created_at'> {}
 
 export class Dispute extends Model<IDispute, DisputeCreationAttributes> implements IDispute {
   public id!: string;

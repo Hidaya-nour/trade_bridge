@@ -4,8 +4,12 @@ import type { CatalogConfig, CatalogProduct } from "@/types/product.types";
 import { Store } from "lucide-react";
 import { useProductStore } from "@/stores/product.store";
 import { useCartStore } from "@/stores/cart.store";
+import broadcastService from "@/services/broadcast.service";
+import { ActivePromotionsPanel } from "@/components/shared/ActivePromotionsPanel";
+import type { BroadcastRecord } from "@/types/broadcast.types";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent } from "@/components/ui/card";
+import { useState } from "react";
 // import { useAuthStore } from "@/stores/auth.store";
 
 const categories = ["All Categories", "Beverages", "Food"];
@@ -25,6 +29,7 @@ const RetailerProductsPage: React.FC = () => {
     isLoading: productsLoading,
     fetchProducts,
   } = useProductStore();
+  const [promotions, setPromotions] = useState<BroadcastRecord[]>([]);
 
   const {
     items: cartItems,
@@ -40,6 +45,20 @@ const RetailerProductsPage: React.FC = () => {
     fetchProducts({ is_available: true });
     fetchCart();
   }, [fetchProducts, fetchCart]);
+
+  useEffect(() => {
+    const loadPromotions = async () => {
+      try {
+        const response = await broadcastService.getActive(["distributor"]);
+        setPromotions(response.data || []);
+      } catch (error) {
+        console.error("Failed to load retailer promotions:", error);
+        setPromotions([]);
+      }
+    };
+
+    loadPromotions();
+  }, []);
 
   const addToCart = async (productId: string | number, quantity: number) => {
     try {
@@ -229,16 +248,27 @@ const RetailerProductsPage: React.FC = () => {
   }
 
   return (
-    <ProductCatalog
-      config={config}
-      products={transformedProducts}
-      onAddToCart={addToCart}
-      onRemoveFromCart={removeFromCart}
-      onRemoveItemFromCart={removeItemFromCart}
-      getCartQuantity={getCartQuantity}
-      getTotalCartItems={getTotalCartItems}
-      getTotalCartValue={getTotalCartValue}
-    />
+    <div className="space-y-6">
+      {promotions.length > 0 && (
+        <ActivePromotionsPanel
+          title="Retailer Promotions"
+          description="Live promotions from distributors while you browse products."
+          items={promotions}
+          emptyTitle="No active retailer promotions"
+          emptyDescription="Distributor offers will show up here when they go live."
+        />
+      )}
+      <ProductCatalog
+        config={config}
+        products={transformedProducts}
+        onAddToCart={addToCart}
+        onRemoveFromCart={removeFromCart}
+        onRemoveItemFromCart={removeItemFromCart}
+        getCartQuantity={getCartQuantity}
+        getTotalCartItems={getTotalCartItems}
+        getTotalCartValue={getTotalCartValue}
+      />
+    </div>
   );
 };
 

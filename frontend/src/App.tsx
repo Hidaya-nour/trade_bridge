@@ -29,6 +29,7 @@ import ProductionAnalyticsPage from "./pages/factory/ProductionAnalytics";
 import FactoryForecastPage from "./pages/factory/Forecast";
 import AdminDashboard from "./pages/admin/dashboard";
 import UserManagementPage from "./pages/admin/UserManagementPage";
+import ProductListingsPage from "./pages/admin/ProductListingsPage";
 import { VerificationsPage } from "./pages/admin/VerificationsPage";
 import { DisputesManagementPage } from "./pages/admin/DisputesManagementPage";
 import { ReportsPage } from "./pages/admin/ReportsPage";
@@ -472,6 +473,14 @@ function App() {
             }
           />
           <Route
+            path="/admin/products"
+            element={
+              <DashboardLayout>
+                <ProductListingsPage />
+              </DashboardLayout>
+            }
+          />
+          <Route
             path="/admin/verifications"
             element={
               <DashboardLayout>
@@ -488,10 +497,26 @@ function App() {
             }
           />
           <Route
+            path="/admin/disputes"
+            element={
+              <DashboardLayout>
+                <DisputesManagementPage />
+              </DashboardLayout>
+            }
+          />
+          <Route
             path="/admin/dispute"
             element={
               <DashboardLayout>
                 <DisputesManagementPage />
+              </DashboardLayout>
+            }
+          />
+          <Route
+            path="/admin/analytics"
+            element={
+              <DashboardLayout>
+                <ReportsPage />
               </DashboardLayout>
             }
           />

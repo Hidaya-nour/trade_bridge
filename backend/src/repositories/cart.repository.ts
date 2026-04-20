@@ -4,17 +4,13 @@ import { CartItem } from "../models/cart-item.model";
 import { Product } from "../models/product.model";
 import User from "../models/user.model";
 import { CartWithItems } from "../types/cart.types";
-import { PromotionService } from "../services/promotion/promotion.service";
-import { UserRole } from "../types/auth.types";
 
 export class CartRepository extends BaseRepository<Cart> {
-  private promotionService = new PromotionService();
-
   constructor() {
     super(Cart);
   }
   // Find Cart with Items
-  async findCartWithItems(userId: string, userRole?: UserRole, region?: string): Promise<CartWithItems | null> {
+  async findCartWithItems(userId: string): Promise<CartWithItems | null> {
     const cart = await this.model.findOne({
       where: { user_id: userId },
       include: [
@@ -69,21 +65,9 @@ export class CartRepository extends BaseRepository<Cart> {
       sum + (item.product?.price || 0) * item.quantity, 0
     );
 
-    let discount_total = 0;
-    let final_total = original_total;
-    let applied_promotions: any[] = [];
-
-    // Apply promotions if user info is provided
-    if (userRole && region) {
-      const promotionResult = await this.promotionService.calculateCartTotalWithPromotions(
-        userRole,
-        region,
-        original_total
-      );
-      discount_total = promotionResult.discount_total;
-      final_total = promotionResult.final_total;
-      applied_promotions = promotionResult.applied_promotions;
-    }
+    const discount_total = 0;
+    const final_total = original_total;
+    const applied_promotions: any[] = [];
 
     return {
       id: cart.id,
