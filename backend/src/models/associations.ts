@@ -17,6 +17,7 @@ import Address from './address.model';
 import Review from './rating-reviews.model';
 import Dispute from './dispute.model';
 import SupplierReview from './supplier-review.model';
+import UserReport from './user-report.model';
 
 // This function must be called AFTER all models are imported
 export const setupAssociations = () => {
@@ -354,6 +355,40 @@ export const setupAssociations = () => {
   SupplierReview.belongsTo(User, {
     foreignKey: 'user_id',
     as: 'reviewer',
+  });
+
+  // User Reports
+  User.hasMany(UserReport, {
+    foreignKey: 'reporter_id',
+    as: 'reportsMade',
+    onDelete: 'CASCADE',
+  });
+
+  User.hasMany(UserReport, {
+    foreignKey: 'reported_user_id',
+    as: 'reportsReceived',
+    onDelete: 'CASCADE',
+  });
+
+  UserReport.belongsTo(User, {
+    foreignKey: 'reporter_id',
+    as: 'reporter',
+  });
+
+  UserReport.belongsTo(User, {
+    foreignKey: 'reported_user_id',
+    as: 'reportedUser',
+  });
+
+  Order.hasMany(UserReport, {
+    foreignKey: 'order_id',
+    as: 'reports',
+    onDelete: 'SET NULL',
+  });
+
+  UserReport.belongsTo(Order, {
+    foreignKey: 'order_id',
+    as: 'order',
   });
 
   // Driver relationships

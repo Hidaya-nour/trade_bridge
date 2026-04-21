@@ -53,8 +53,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 
 import { useAuthStore } from "@/stores/auth.store";
 import { useNotificationStore } from "@/stores/notification.store";
-import NotificationDetailDialog from "@/components/notifications/NotificationDetailDialog";
 import type { Notification } from "@/types/notification.types";
+import { m } from "framer-motion";
 
 // Keep messages mock for now (you can replace with real message store later)
 const messages = [
@@ -96,9 +96,7 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ onMenuClick }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [showNotificationSheet, setShowNotificationSheet] = useState(false);
-  const [notificationDetailOpen, setNotificationDetailOpen] = useState(false);
-  const [selectedNotification, setSelectedNotification] =
-    useState<Notification | null>(null);
+  useState<Notification | null>(null);
 
   // Get notifications from store
   const {
@@ -110,20 +108,6 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ onMenuClick }) => {
     markAllRead,
     isLoading,
   } = useNotificationStore();
-
-  const openNotificationDetail = (notification: Notification) => {
-    setSelectedNotification(notification);
-    setNotificationDetailOpen(true);
-    setShowNotificationSheet(false);
-
-    if (!notification.is_read) {
-      markAsRead(notification.id).then(() => {
-        setSelectedNotification((prev) =>
-          prev?.id === notification.id ? { ...prev, is_read: 1 } : prev,
-        );
-      });
-    }
-  };
 
   // Fetch notifications on mount
   useEffect(() => {
@@ -457,7 +441,7 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ onMenuClick }) => {
                                 "flex items-start gap-3 p-3 rounded-lg transition-all hover:bg-accent/50 cursor-pointer",
                                 !notification.is_read && "bg-muted/30",
                               )}
-                              onClick={() => openNotificationDetail(notification)}
+                              onClick={() => handleMarkAsRead(notification.id)}
                             >
                               <div
                                 className={cn(
@@ -514,7 +498,9 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ onMenuClick }) => {
                               <div
                                 key={notification.id}
                                 className="flex items-start gap-3 p-3 rounded-lg transition-all hover:bg-accent/50 cursor-pointer bg-muted/30"
-                                onClick={() => openNotificationDetail(notification)}
+                                onClick={() =>
+                                  handleMarkAsRead(notification.id)
+                                }
                               >
                                 <div
                                   className={cn(
@@ -557,12 +543,6 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ onMenuClick }) => {
               </Tabs>
             </SheetContent>
           </Sheet>
-
-          <NotificationDetailDialog
-            open={notificationDetailOpen}
-            onOpenChange={setNotificationDetailOpen}
-            notification={selectedNotification}
-          />
 
           {/* User Menu */}
           <DropdownMenu>

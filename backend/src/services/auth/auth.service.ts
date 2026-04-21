@@ -277,6 +277,40 @@ async register(data: RegisterDTO): Promise<{ user: SafeUser }> {
     return safeUser as SafeUser;
   }
 
+  async suspendUser(userId: string): Promise<SafeUser> {
+    const user = await this.userRepo.findById(userId);
+    if (!user || user.deleted_at) {
+      throw new AppError('User not found', 404);
+    }
+
+    await this.userRepo.suspendUser(userId);
+    const updated = await this.userRepo.findById(userId);
+    if (!updated) {
+      throw new AppError('Failed to suspend user', 500);
+    }
+
+    const updatedResponse = updated.toJSON() as any;
+    const { password_hash: _, ...safeUser } = updatedResponse;
+    return safeUser as SafeUser;
+  }
+
+  async reactivateUser(userId: string): Promise<SafeUser> {
+    const user = await this.userRepo.findById(userId);
+    if (!user || user.deleted_at) {
+      throw new AppError('User not found', 404);
+    }
+
+    await this.userRepo.update(userId, { status: 'active' } as any);
+    const updated = await this.userRepo.findById(userId);
+    if (!updated) {
+      throw new AppError('Failed to reactivate user', 500);
+    }
+
+    const updatedResponse = updated.toJSON() as any;
+    const { password_hash: _, ...safeUser } = updatedResponse;
+    return safeUser as SafeUser;
+  }
+
   async uploadProfileImage(userId: string, file: Express.Multer.File): Promise<string> {
     if (!file) {
       throw new AppError('Profile image is required', 400);

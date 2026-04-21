@@ -190,6 +190,11 @@ const roleNavigation = {
       href: "/admin/disputes",
       icon: HelpCircle,
     },
+    {
+      name: "User Reports",
+      href: "/admin/user-reports",
+      icon: AlertCircle,
+    },
     { name: "Platform Analytics", href: "/admin/analytics", icon: BarChart3 },
   ],
 };

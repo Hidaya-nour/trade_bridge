@@ -23,6 +23,7 @@ import './models/supplier-payment-method.model';
 import './models/factory-agent.model';
 import './models/rating-reviews.model';
 import './models/supplier-review.model';
+import UserReport from './models/user-report.model';
 import './models/driver.model';
 import './models/dispute.model';
 
@@ -48,6 +49,7 @@ import ratingReviewRoutes from './routes/rating-review.routes';
 import supplierRoutes from './routes/supplier.routes'
 import driverRoutes from './routes/driver.routes';
 import forecastRoutes from './routes/forecast.routes';
+import reportRoutes from './routes/report.routes';
 import { AppError, ValidationError } from './utils/errors';
 dotenv.config();
 
@@ -114,6 +116,7 @@ app.use('/api/suppliers', supplierRoutes);
 app.use('/api/drivers', driverRoutes);
 app.use('/api/delivery', deliveryRoutes);
 app.use('/api/forecast', forecastRoutes);
+app.use('/api/reports', reportRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -195,6 +198,14 @@ const startServer = async () => {
       // Allow the server to start in development even if alter-sync fails.
       // This prevents hard-blocking local work due to schema drift.
     }
+  }
+
+  // Ensure newly added tables exist even if alter-sync is skipped/fails (common in dev).
+  // Scoped to the user reporting feature to avoid unintended schema changes.
+  try {
+    await UserReport.sync();
+  } catch (error) {
+    logger.warn('Failed to ensure user_reports table exists', error);
   }
 
   app.listen(PORT, () => {

@@ -31,6 +31,7 @@ import toast from "react-hot-toast";
 import type { OrderItem } from "@/types/order.types";
 import { PaymentDialog } from "../payment/PaymentDialog";
 import type { PaymentDetails, PaymentMethod } from "@/types/payment.types";
+import { Textarea } from "../ui/textarea";
 
 export interface OrderSummary {
   subtotal: number;
@@ -60,6 +61,7 @@ export interface PlaceOrderDialogProps {
   onPlaceOrder?: (
     paymentMethod?: string,
     deliveryOption?: string,
+    deliveryAddress?: string,
   ) => Promise<{
     primaryOrderId: string;
     orderIds?: string[];
@@ -83,7 +85,7 @@ export const PAYMENT_METHODS = [
   },
   {
     id: "mobile_banking",
-    name: "Mobile Banking", 
+    name: "Mobile Banking",
     icon: Smartphone,
     description: "Pay with mobile money",
   },
@@ -104,6 +106,7 @@ export const PlaceOrderDialog: React.FC<PlaceOrderDialogProps> = ({
 }) => {
   const navigate = useNavigate();
   const [deliveryOption] = React.useState("supplier_policy");
+  const [deliveryAddress, setDeliveryAddress] = React.useState("");
   const [internalIsPlacing, setInternalIsPlacing] = React.useState(false);
   const [openPaymentDialog, setOpenPaymentDialog] = React.useState(false);
   const [openPostOrderChoice, setOpenPostOrderChoice] = React.useState(false);
@@ -195,7 +198,17 @@ export const PlaceOrderDialog: React.FC<PlaceOrderDialogProps> = ({
     if (onPlaceOrder) {
       setInternalIsPlacing(true);
       try {
-        const result = await onPlaceOrder(undefined, deliveryOption);
+        const normalizedAddress = deliveryAddress.trim();
+        if (!normalizedAddress) {
+          toast.error("Please provide a delivery address.");
+          return;
+        }
+
+        const result = await onPlaceOrder(
+          undefined,
+          deliveryOption,
+          normalizedAddress,
+        );
         if (result?.primaryOrderId && onProcessPayment) {
           if (showPostOrderDialog) {
             setCreatedOrderId(result.primaryOrderId);
@@ -330,6 +343,20 @@ export const PlaceOrderDialog: React.FC<PlaceOrderDialogProps> = ({
               )}
             </div>
 
+            {/* Delivery Address */}
+            <div className="space-y-2">
+              <h4 className="text-sm font-medium">Delivery Address</h4>
+              <p className="text-xs text-muted-foreground">
+                Provide the destination location for supplier delivery or an
+                independent driver.
+              </p>
+              <Textarea
+                placeholder="City, sub-city, street, landmark, phone (if needed)…"
+                value={deliveryAddress}
+                onChange={(e) => setDeliveryAddress(e.target.value)}
+              />
+            </div>
+
             {/* Order Total */}
             <div className="bg-muted/50 p-4 rounded-lg">
               <div className="space-y-2">
@@ -396,8 +423,8 @@ export const PlaceOrderDialog: React.FC<PlaceOrderDialogProps> = ({
           <AlertDialogHeader>
             <AlertDialogTitle>Order Placed Successfully</AlertDialogTitle>
             <AlertDialogDescription>
-              Your order has been created. Do you want to finish now or proceed
-              with payment?
+              Your order has been created. You can pay now or pay later (credit
+              / invoice flow).
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -408,7 +435,7 @@ export const PlaceOrderDialog: React.FC<PlaceOrderDialogProps> = ({
                 navigate(config.ordersPath);
               }}
             >
-              Finish
+              Pay Later
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
@@ -431,7 +458,10 @@ export const PlaceOrderDialog: React.FC<PlaceOrderDialogProps> = ({
           onPaymentSubmit={handlePaymentSubmit}
           isProcessing={paymentProcessing}
           config={{
-            allowedMethods: ["app_payment", "mobile_banking"] as PaymentMethod[],
+            allowedMethods: [
+              "app_payment",
+              "mobile_banking",
+            ] as PaymentMethod[],
             supplierAllowedMethods,
             supplierPaymentMethods,
           }}

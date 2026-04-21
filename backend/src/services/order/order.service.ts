@@ -16,6 +16,8 @@ import {
 import logger from '../../utils/logger';
 import notificationService from '../../services/notification/notification.service';
 import Payment from '../../models/payment.model';
+import { User } from '../../models/user.model';
+import { Op } from 'sequelize';
 
 const DEFAULT_VAT_RATE = 0.15;
 
@@ -451,9 +453,72 @@ export class OrderService {
   // ========================================================================
 
   async getOrderStats(userId?: string, userRole?: string) {
-    return this.orderRepo.getOrderStats(
-      userRole === 'supplier' ? userId : undefined
+    const isAdmin = userRole === 'admin';
+
+    const stats = await this.orderRepo.getOrderStats(
+      isAdmin ? undefined : userId ? { userId } : undefined,
     );
+
+    if (!isAdmin) {
+      return {
+        ...stats,
+        total_spent: stats.total_value,
+        spent_growth: stats.value_growth,
+      };
+    }
+
+    const [activeUsers, totalSuppliers] = await Promise.all([
+      User.count({
+        where: {
+          deleted_at: null,
+          status: 'active',
+        } as any,
+      }),
+      User.count({
+        where: {
+          deleted_at: null,
+          status: 'active',
+          role: { [Op.in]: ['factory', 'distributor'] },
+        } as any,
+      }),
+    ]);
+
+    const now = new Date();
+    const startCurrent = new Date(now);
+    startCurrent.setDate(startCurrent.getDate() - 30);
+    const startPrev = new Date(now);
+    startPrev.setDate(startPrev.getDate() - 60);
+
+    const currentUsers = await User.count({
+      where: {
+        deleted_at: null,
+        created_at: { [Op.gte]: startCurrent },
+      } as any,
+    });
+    const prevUsers = await User.count({
+      where: {
+        deleted_at: null,
+        created_at: { [Op.gte]: startPrev, [Op.lt]: startCurrent },
+      } as any,
+    });
+
+    const pct = (current: number, previous: number) => {
+      if (previous <= 0) return current > 0 ? 100 : 0;
+      return Number((((current - previous) / previous) * 100).toFixed(2));
+    };
+
+    const user_growth = pct(currentUsers, prevUsers);
+
+    return {
+      ...stats,
+      total_revenue: stats.total_value,
+      revenue_today: stats.value_today,
+      orders_today: stats.orders_today,
+      active_users: activeUsers,
+      total_suppliers: totalSuppliers,
+      user_growth,
+      platform_growth: Number(((stats.order_growth + user_growth) / 2).toFixed(2)),
+    };
   }
 
   async getOrderSummary(orderId: string, userId: string, userRole: string) {
