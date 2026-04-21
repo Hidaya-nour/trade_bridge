@@ -230,24 +230,11 @@ export const CartPage: React.FC<CartPageProps> = ({ config }) => {
           items: orderData.items.map((item: any) => ({
             product_id: item.product_id,
             quantity: item.quantity,
-            unit_price: item.unit_price,
           })),
           // Only request supplier delivery when all selected items for that supplier support delivery.
           ...(normalizedAddress && !orderData.hasNoDeliveryItem
             ? { delivery_address: normalizedAddress }
             : {}),
-          total_price: Number(
-            (
-              supplierSubtotal +
-              supplierShipping +
-              supplierTax -
-              supplierDiscount
-            ).toFixed(2),
-          ),
-          shipping_cost: supplierShipping,
-          tax_amount: Number(supplierTax.toFixed(2)),
-          discount_amount: Number(supplierDiscount.toFixed(2)),
-          delivery_option: selectedDeliveryOption,
           notes: "",
           ...(paymentMethod ? { payment_method: paymentMethod } : {}),
         };
@@ -299,8 +286,7 @@ export const CartPage: React.FC<CartPageProps> = ({ config }) => {
 
       const result = await paymentService.submitByOrder(orderId, {
         payment_method: paymentMethod as any,
-        amount_paid:
-          paymentMethod === "app_payment" ? undefined : total,
+        amount_paid: paymentMethod === "app_payment" ? undefined : total,
         proof_document_id: proofDocumentId,
         notes: paymentDetails?.notes,
         payment_details: paymentDetails,

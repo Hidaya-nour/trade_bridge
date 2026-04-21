@@ -223,8 +223,12 @@ export const PlaceOrderDialog: React.FC<PlaceOrderDialogProps> = ({
 
         onOpenChange(false);
         navigate(config.ordersPath);
-      } catch (error) {
-        toast.error("Failed to place order");
+      } catch (error: any) {
+        toast.error(
+          error.response?.data?.message ||
+            error.response?.data?.message ||
+            "Failed to place order",
+        );
       } finally {
         setInternalIsPlacing(false);
       }

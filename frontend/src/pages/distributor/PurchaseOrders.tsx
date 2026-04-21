@@ -122,13 +122,7 @@ const PurchaseOrdersPage: React.FC = () => {
       const itemsWithPrice = reorderItems.map((item) => ({
         product_id: item.product_id,
         quantity: item.quantity,
-        unit_price: item.product?.price || 0,
       }));
-
-      const totalPrice = itemsWithPrice.reduce(
-        (sum, i) => sum + i.unit_price * i.quantity,
-        0,
-      );
 
       const supplierId = reorderItems[0].product?.supplier_id;
 
@@ -137,8 +131,6 @@ const PurchaseOrdersPage: React.FC = () => {
         supplier_id: supplierId,
         items: itemsWithPrice,
         ...(normalizedAddress ? { delivery_address: normalizedAddress } : {}),
-        total_price: totalPrice,
-        delivery_option: selectedDeliveryOption,
         ...(paymentMethod ? { payment_method: paymentMethod } : {}),
       };
 
@@ -151,7 +143,7 @@ const PurchaseOrdersPage: React.FC = () => {
       toast.success("Order placed successfully!");
       return {
         primaryOrderId: order.id,
-        total: totalPrice,
+        total: order.total_price,
       };
     } catch (err) {
       console.error("Reorder failed:", err);

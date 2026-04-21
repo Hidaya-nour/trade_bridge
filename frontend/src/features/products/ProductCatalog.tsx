@@ -390,17 +390,11 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
           {
             product_id: selectedProduct.id,
             quantity: orderQuantity,
-            unit_price: selectedProduct.price,
           },
         ],
         ...(normalizedAddress && !blocked
           ? { delivery_address: normalizedAddress }
           : {}),
-        total_price: Number((itemTotal + shipping + tax - discount).toFixed(2)),
-        shipping_cost: shipping,
-        tax_amount: Number(tax.toFixed(2)),
-        discount_amount: discount,
-        delivery_option: selectedDeliveryOption,
         notes: "",
         ...(paymentMethod ? { payment_method: paymentMethod } : {}),
       };
@@ -411,7 +405,7 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
         toast.success("Order placed successfully!");
         return {
           primaryOrderId: order.id,
-          total: orderPayload.total_price,
+          total: order.total_price,
         };
       } else {
         toast.error("Failed to place order");
@@ -478,12 +472,15 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
   const comparedProducts = React.useMemo(() => {
     if (compareIds.length === 0) return [];
     const byId = new Map(initialProducts.map((p) => [p.id, p]));
-    return compareIds.map((id) => byId.get(id)).filter(Boolean) as CatalogProduct[];
+    return compareIds
+      .map((id) => byId.get(id))
+      .filter(Boolean) as CatalogProduct[];
   }, [compareIds, initialProducts]);
 
   const toggleCompare = (productId: string) => {
     setCompareIds((prev) => {
-      if (prev.includes(productId)) return prev.filter((id) => id !== productId);
+      if (prev.includes(productId))
+        return prev.filter((id) => id !== productId);
       if (prev.length >= 3) {
         toast.error("Compare supports up to 3 products.");
         return prev;
@@ -990,7 +987,8 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
           )}
 
           {moqBounds.max > 0 &&
-            (moqRange[0] !== moqBounds.min || moqRange[1] !== moqBounds.max) && (
+            (moqRange[0] !== moqBounds.min ||
+              moqRange[1] !== moqBounds.max) && (
               <Badge variant="secondary" className="gap-1">
                 MOQ: {moqRange[0]}-{moqRange[1]}
                 <X
@@ -1067,7 +1065,9 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
                   <Button
                     type="button"
                     size="icon"
-                    variant={compareIds.includes(product.id) ? "default" : "secondary"}
+                    variant={
+                      compareIds.includes(product.id) ? "default" : "secondary"
+                    }
                     className="absolute top-3 left-3 h-8 w-8"
                     onClick={(e) => {
                       e.stopPropagation();
@@ -1346,7 +1346,11 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
                       <Button
                         type="button"
                         size="icon"
-                        variant={compareIds.includes(product.id) ? "default" : "secondary"}
+                        variant={
+                          compareIds.includes(product.id)
+                            ? "default"
+                            : "secondary"
+                        }
                         className="absolute top-2 left-2 h-8 w-8"
                         onClick={(e) => {
                           e.stopPropagation();
