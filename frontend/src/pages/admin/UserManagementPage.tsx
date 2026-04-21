@@ -94,6 +94,7 @@ import {
 import { formatDate } from "@/lib/formatters";
 import { getInitials, cn } from "@/lib/utils";
 import { EmptyState } from "../../components/shared/EmptyState";
+import { reportService } from "@/services/report.service";
 // ============================================================================
 // TYPES
 // ============================================================================
@@ -162,6 +163,15 @@ export const UserManagementPage: React.FC = () => {
   const [sortBy, setSortBy] = useState<"name" | "date" | "orders">("date");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [showSuspendDialog, setShowSuspendDialog] = useState(false);
+  const [reportCountsByUser, setReportCountsByUser] = useState<
+    Record<string, { total: number; open: number; last?: string }>
+  >({});
+  const [reportsDialogOpen, setReportsDialogOpen] = useState(false);
+  const [reportsDialogLoading, setReportsDialogLoading] = useState(false);
+  const [selectedReportUser, setSelectedReportUser] = useState<User | null>(
+    null,
+  );
+  const [selectedUserReports, setSelectedUserReports] = useState<any[]>([]);
 
   const { users, total, loading, error, fetchUsers, setFilters, clearError } =
     useUserStore();
@@ -187,6 +197,47 @@ export const UserManagementPage: React.FC = () => {
     fetchUsers,
     setFilters,
   ]);
+
+  useEffect(() => {
+    const loadReportSummary = async () => {
+      try {
+        const response = await reportService.getAdminSummary();
+        const summary = response?.data?.summary || [];
+        const next: Record<string, { total: number; open: number; last?: string }> =
+          {};
+        summary.forEach((item: any) => {
+          if (!item?.reported_user_id) return;
+          next[item.reported_user_id] = {
+            total: Number(item.total_reports || 0),
+            open: Number(item.open_reports || 0),
+            last: item.last_reported_at || undefined,
+          };
+        });
+        setReportCountsByUser(next);
+      } catch (err) {
+        setReportCountsByUser({});
+      }
+    };
+
+    loadReportSummary();
+  }, []);
+
+  const openUserReports = async (user: User) => {
+    setSelectedReportUser(user);
+    setReportsDialogOpen(true);
+    setReportsDialogLoading(true);
+    try {
+      const response = await reportService.getAdminReportsForUser(user.id, {
+        page: 1,
+        limit: 50,
+      });
+      setSelectedUserReports(response?.data?.reports || []);
+    } catch (err) {
+      setSelectedUserReports([]);
+    } finally {
+      setReportsDialogLoading(false);
+    }
+  };
 
   // Convert store users to component format
   const formattedUsers: User[] = users.map((user) => ({
@@ -475,6 +526,7 @@ export const UserManagementPage: React.FC = () => {
                 <TableHead>Status</TableHead>
                 <TableHead>Business</TableHead>
                 <TableHead>Location</TableHead>
+                <TableHead>Reports</TableHead>
                 <TableHead>
                   <Button
                     variant="ghost"
@@ -495,7 +547,7 @@ export const UserManagementPage: React.FC = () => {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8">
+                  <TableCell colSpan={9} className="text-center py-8">
                     <div className="flex items-center justify-center">
                       <RefreshCw className="h-4 w-4 animate-spin mr-2" />
                       Loading users...
@@ -504,7 +556,7 @@ export const UserManagementPage: React.FC = () => {
                 </TableRow>
               ) : paginatedUsers.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8">
+                  <TableCell colSpan={9} className="text-center py-8">
                     <EmptyState
                       title="No users found"
                       description="Try adjusting your search or filters"
@@ -562,6 +614,35 @@ export const UserManagementPage: React.FC = () => {
                         <MapPin className="h-3 w-3 text-muted-foreground" />
                         {user.location}
                       </div>
+                    </TableCell>
+                    <TableCell>
+                      {(() => {
+                        const counts = reportCountsByUser[user.id];
+                        if (!counts || counts.total === 0) {
+                          return (
+                            <span className="text-xs text-muted-foreground">
+                              0
+                            </span>
+                          );
+                        }
+                        return (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 px-2"
+                            onClick={() => void openUserReports(user)}
+                          >
+                            <Badge variant="secondary" className="h-5 px-2">
+                              {counts.total}
+                            </Badge>
+                            {counts.open > 0 && (
+                              <Badge className="ml-1 h-5 px-2 bg-red-600">
+                                {counts.open} open
+                              </Badge>
+                            )}
+                          </Button>
+                        );
+                      })()}
                     </TableCell>
                     <TableCell>
                       <div className="text-sm">
@@ -676,6 +757,79 @@ export const UserManagementPage: React.FC = () => {
           </Pagination>
         </CardFooter>
       </Card>
+
+      {/* User Reports Dialog */}
+      <Dialog open={reportsDialogOpen} onOpenChange={setReportsDialogOpen}>
+        <DialogContent className="sm:max-w-[700px]">
+          <DialogHeader>
+            <DialogTitle>
+              Reports{selectedReportUser ? `: ${selectedReportUser.name}` : ""}
+            </DialogTitle>
+            <DialogDescription>
+              Review report history to spot repeated abuse and take action.
+            </DialogDescription>
+          </DialogHeader>
+
+          <ScrollArea className="max-h-[60vh] pr-4">
+            {reportsDialogLoading ? (
+              <div className="py-8 text-sm text-muted-foreground">
+                Loading reports...
+              </div>
+            ) : selectedUserReports.length === 0 ? (
+              <div className="py-8 text-sm text-muted-foreground">
+                No reports found for this user.
+              </div>
+            ) : (
+              <div className="space-y-3 py-1">
+                {selectedUserReports.map((report: any) => (
+                  <div
+                    key={report.id}
+                    className="rounded-lg border p-3 space-y-2"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium truncate">
+                          {report.reason}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {report.created_at
+                            ? formatDate(report.created_at)
+                            : ""}
+                          {report.reporter?.full_name
+                            ? ` • by ${report.reporter.full_name}`
+                            : ""}
+                        </p>
+                      </div>
+                      <Badge variant="outline" className="capitalize">
+                        {String(report.status || "open")}
+                      </Badge>
+                    </div>
+                    {report.description && (
+                      <p className="text-sm whitespace-pre-wrap text-muted-foreground">
+                        {report.description}
+                      </p>
+                    )}
+                    {report.order_id && (
+                      <p className="text-xs text-muted-foreground">
+                        Order: {report.order_id}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </ScrollArea>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setReportsDialogOpen(false)}
+            >
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Suspend Confirmation Dialog */}
       <Dialog open={showSuspendDialog} onOpenChange={setShowSuspendDialog}>

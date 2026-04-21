@@ -365,16 +365,20 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
   const handlePlaceOrder = async (
     paymentMethod?: string,
     deliveryOption?: string,
+    deliveryAddress?: string,
   ) => {
     if (!selectedProduct) return;
     const selectedDeliveryOption = deliveryOption || "supplier_policy";
 
     try {
+      const normalizedAddress = (deliveryAddress || "").trim();
       const itemTotal = selectedProduct.price * orderQuantity;
       const { shipping, blocked } = resolveProductShipping(selectedProduct);
       if (blocked) {
-        toast.error("This product is marked as no-delivery by supplier.");
-        return;
+        toast(
+          "This product is marked as no-delivery by supplier. You can request an independent driver after ordering.",
+          { icon: "ℹ️" } as any,
+        );
       }
       const vatRate = resolveProductVatRate(selectedProduct);
       const tax = itemTotal * vatRate;
@@ -389,6 +393,9 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
             unit_price: selectedProduct.price,
           },
         ],
+        ...(normalizedAddress && !blocked
+          ? { delivery_address: normalizedAddress }
+          : {}),
         total_price: Number((itemTotal + shipping + tax - discount).toFixed(2)),
         shipping_cost: shipping,
         tax_amount: Number(tax.toFixed(2)),

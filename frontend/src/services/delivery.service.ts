@@ -8,6 +8,11 @@ class DeliveryService {
     return response.data;
   }
 
+  async getSupplierDeliveries() {
+    const response = await api.get(`${this.BASE}/supplier-deliveries`);
+    return response.data;
+  }
+
   async getAll(params?: any) {
     const response = await api.get(this.BASE, { params });
     return response.data;

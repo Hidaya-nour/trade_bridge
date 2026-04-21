@@ -214,6 +214,7 @@ const DistributorOrderDetailsPage: React.FC = () => {
   const handleReorderPlaceOrder = async (
     paymentMethod?: string,
     deliveryOption?: string,
+    deliveryAddress?: string,
   ) => {
     if (!currentOrder) return;
     const items =
@@ -227,6 +228,7 @@ const DistributorOrderDetailsPage: React.FC = () => {
       items,
       ...(paymentMethod ? { payment_method: paymentMethod } : {}),
       ...(deliveryOption ? { delivery_option: deliveryOption } : {}),
+      ...(deliveryAddress ? { delivery_address: deliveryAddress } : {}),
     };
     const created = await createOrder(payload);
     if (created) {
