@@ -44,6 +44,7 @@ import SupplierProfilePage from "./pages/retailer/SupplierProfile";
 import { Toaster } from "react-hot-toast";
 import DistributorProductDetailPage from "./pages/distributor/ProductDetails";
 import DistributorMyProductDetailPage from "./pages/distributor/MyProductDetails";
+import DistributorFactoryProfilePage from "./pages/distributor/FactoryProfile";
 import FactoryMyProductDetailPage from "./pages/factory/ProductDetails";
 import AgentsPage from "./pages/factory/Agents";
 import LandingLayout from "./components/landing/layout/LandingLayout";
@@ -60,6 +61,7 @@ import DriverHistoryPage from "./pages/driver/DriverHistoryPage";
 import ActiveDeliveriesPage from "./pages/driver/ActiveDeliveriesPage";
 import OrderReceiptPage from "./pages/shared/OrderReceipt";
 import VerifyReceiptPage from "./pages/shared/VerifyReceipt";
+import ExportReportsPage from "./pages/shared/ExportReports";
 
 function App() {
   return (
@@ -166,6 +168,14 @@ function App() {
           />
           <Route
             path="/retailer/supplier/:id"
+            element={
+              <DashboardLayout>
+                <SupplierProfilePage />
+              </DashboardLayout>
+            }
+          />
+          <Route
+            path="/retailer/suppliers/:id"
             element={
               <DashboardLayout>
                 <SupplierProfilePage />
@@ -336,10 +346,26 @@ function App() {
             }
           />
           <Route
+            path="/distributor/factories/:id"
+            element={
+              <DashboardLayout>
+                <DistributorFactoryProfilePage />
+              </DashboardLayout>
+            }
+          />
+          <Route
             path="/distributor/analytics"
             element={
               <DashboardLayout>
                 <SalesAnalyticsPage />
+              </DashboardLayout>
+            }
+          />
+          <Route
+            path="/distributor/reports"
+            element={
+              <DashboardLayout>
+                <ExportReportsPage role="distributor" />
               </DashboardLayout>
             }
           />
@@ -453,6 +479,14 @@ function App() {
             element={
               <DashboardLayout>
                 <ProductionAnalyticsPage />
+              </DashboardLayout>
+            }
+          />
+          <Route
+            path="/factory/reports"
+            element={
+              <DashboardLayout>
+                <ExportReportsPage role="factory" />
               </DashboardLayout>
             }
           />

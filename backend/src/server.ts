@@ -22,6 +22,7 @@ import './models/audit-log.model';
 import './models/supplier-payment-method.model';
 import './models/factory-agent.model';
 import './models/rating-reviews.model';
+import './models/supplier-review.model';
 import './models/driver.model';
 import './models/dispute.model';
 

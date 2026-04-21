@@ -50,6 +50,8 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { useNotificationStore } from "@/stores/notification.store";
+import NotificationDetailDialog from "@/components/notifications/NotificationDetailDialog";
+import type { Notification } from "@/types/notification.types";
 
 const NotificationsPage: React.FC = () => {
   // Get notifications from store
@@ -64,6 +66,22 @@ const NotificationsPage: React.FC = () => {
     deleteNotification,
     setFilters,
   } = useNotificationStore();
+
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [selectedNotification, setSelectedNotification] =
+    useState<Notification | null>(null);
+
+  const openNotificationDetail = (notification: Notification) => {
+    setSelectedNotification(notification);
+    setDetailOpen(true);
+    if (!notification.is_read) {
+      markAsRead(notification.id).then(() => {
+        setSelectedNotification((prev) =>
+          prev?.id === notification.id ? { ...prev, is_read: 1 } : prev,
+        );
+      });
+    }
+  };
 
   // Fetch notifications on mount
   useEffect(() => {
@@ -349,6 +367,15 @@ const NotificationsPage: React.FC = () => {
                           "p-6 hover:bg-accent/50 transition-colors relative",
                           !notification.is_read && "bg-primary/5",
                         )}
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => openNotificationDetail(notification)}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault();
+                            openNotificationDetail(notification);
+                          }
+                        }}
                       >
                         <div className="flex items-start gap-4">
                           {getIconForType(notification.type) && (
@@ -419,6 +446,7 @@ const NotificationsPage: React.FC = () => {
                                       variant="ghost"
                                       size="icon"
                                       className="h-8 w-8"
+                                      onClick={(e) => e.stopPropagation()}
                                     >
                                       <MoreVertical className="h-4 w-4" />
                                     </Button>
@@ -426,9 +454,10 @@ const NotificationsPage: React.FC = () => {
                                   <DropdownMenuContent align="end">
                                     {!notification.is_read && (
                                       <DropdownMenuItem
-                                        onClick={() =>
-                                          markAsRead(notification.id)
-                                        }
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          void markAsRead(notification.id);
+                                        }}
                                       >
                                         <Check className="h-4 w-4 mr-2" />
                                         Mark as Read
@@ -436,9 +465,10 @@ const NotificationsPage: React.FC = () => {
                                     )}
                                     <DropdownMenuItem
                                       className="text-destructive"
-                                      onClick={() =>
-                                        deleteNotification(notification.id)
-                                      }
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        void deleteNotification(notification.id);
+                                      }}
                                     >
                                       <X className="h-4 w-4 mr-2" />
                                       Delete
@@ -480,6 +510,15 @@ const NotificationsPage: React.FC = () => {
                             "p-6 hover:bg-accent/50 transition-colors relative",
                             !notification.is_read && "bg-primary/5",
                           )}
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => openNotificationDetail(notification)}
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter" || event.key === " ") {
+                              event.preventDefault();
+                              openNotificationDetail(notification);
+                            }
+                          }}
                         >
                           <div className="flex items-start gap-4">
                             {getIconForType(notification.type) && (
@@ -544,38 +583,41 @@ const NotificationsPage: React.FC = () => {
                                   </Button>
                                 )} */}
 
-                                  <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                      <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-8 w-8"
-                                      >
-                                        <MoreVertical className="h-4 w-4" />
-                                      </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end">
-                                      {!notification.is_read && (
-                                        <DropdownMenuItem
-                                          onClick={() =>
-                                            markAsRead(notification.id)
-                                          }
-                                        >
-                                          <Check className="h-4 w-4 mr-2" />
-                                          Mark as Read
-                                        </DropdownMenuItem>
-                                      )}
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-8 w-8"
+                                      onClick={(e) => e.stopPropagation()}
+                                    >
+                                      <MoreVertical className="h-4 w-4" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    {!notification.is_read && (
                                       <DropdownMenuItem
-                                        className="text-destructive"
-                                        onClick={() =>
-                                          deleteNotification(notification.id)
-                                        }
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          void markAsRead(notification.id);
+                                        }}
                                       >
-                                        <X className="h-4 w-4 mr-2" />
-                                        Delete
+                                        <Check className="h-4 w-4 mr-2" />
+                                        Mark as Read
                                       </DropdownMenuItem>
-                                    </DropdownMenuContent>
-                                  </DropdownMenu>
+                                    )}
+                                    <DropdownMenuItem
+                                      className="text-destructive"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        void deleteNotification(notification.id);
+                                      }}
+                                    >
+                                      <X className="h-4 w-4 mr-2" />
+                                      Delete
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
                                 </div>
                               </div>
                             </div>
@@ -599,6 +641,13 @@ const NotificationsPage: React.FC = () => {
           </Tabs>
         </CardContent>
       </Card>
+
+      <NotificationDetailDialog
+        open={detailOpen}
+        onOpenChange={setDetailOpen}
+        notification={selectedNotification}
+        onDelete={(id) => deleteNotification(id).then(() => setDetailOpen(false))}
+      />
 
       {/* Notification Preferences Summary */}
       <Card>

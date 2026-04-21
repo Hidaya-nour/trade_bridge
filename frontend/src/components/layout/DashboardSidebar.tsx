@@ -129,6 +129,11 @@ const roleNavigation = {
         href: "/distributor/analytics",
         icon: BarChart3,
       },
+      {
+        name: "Export Reports",
+        href: "/distributor/reports",
+        icon: FileText,
+      },
     ],
   },
 
@@ -154,7 +159,8 @@ const roleNavigation = {
       href: "/factory/agents",
       icon: Warehouse,
     },
-    { name: "Sales Reports", href: "/factory/sales", icon: BarChart3 },
+    { name: "Production Analytics", href: "/factory/analytics", icon: BarChart3 },
+    { name: "Export Reports", href: "/factory/reports", icon: FileText },
     { name: "Inventory", href: "/factory/inventory", icon: FileText },
     {
       name: "Broadcast Announcements",

@@ -16,6 +16,7 @@ import Document from './document.model';
 import Address from './address.model';
 import Review from './rating-reviews.model';
 import Dispute from './dispute.model';
+import SupplierReview from './supplier-review.model';
 
 // This function must be called AFTER all models are imported
 export const setupAssociations = () => {
@@ -330,6 +331,29 @@ export const setupAssociations = () => {
   User.hasMany(Review, {
     foreignKey: 'user_id',
     as: 'reviews',
+  });
+
+  // Supplier Reviews (User -> SupplierReview with two roles)
+  User.hasMany(SupplierReview, {
+    foreignKey: 'supplier_id',
+    as: 'supplierReviewsReceived',
+    onDelete: 'CASCADE',
+  });
+
+  User.hasMany(SupplierReview, {
+    foreignKey: 'user_id',
+    as: 'supplierReviewsWritten',
+    onDelete: 'CASCADE',
+  });
+
+  SupplierReview.belongsTo(User, {
+    foreignKey: 'supplier_id',
+    as: 'supplier',
+  });
+
+  SupplierReview.belongsTo(User, {
+    foreignKey: 'user_id',
+    as: 'reviewer',
   });
 
   // Driver relationships

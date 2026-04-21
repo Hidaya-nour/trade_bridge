@@ -135,10 +135,12 @@ class PaymentController {
       const returnUrl =
         process.env.CHAPA_RETURN_URL ||
         `${process.env.FRONTEND_URL || 'http://localhost:5173'}/retailer/orders`;
+      const paymentStatus = result?.payment?.payment_status;
+      const paymentParam = paymentStatus === 'completed' ? 'success' : 'failed';
 
       if (req.method === 'GET') {
         return res.redirect(
-          `${returnUrl}?payment=success&tx_ref=${encodeURIComponent(txRef)}`,
+          `${returnUrl}?payment=${encodeURIComponent(paymentParam)}&tx_ref=${encodeURIComponent(txRef)}`,
         );
       }
 

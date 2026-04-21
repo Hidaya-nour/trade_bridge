@@ -32,6 +32,13 @@ interface SubmitPaymentPayload {
 
 class PaymentService {
   private supplierPaymentMethodService = new SupplierPaymentMethodService();
+
+  private toStoredPaymentMethod(method: string): 'mobile_banking' | 'chapa' {
+    // Frontend/API uses "app_payment" to mean "platform checkout". In the DB we store this as "chapa".
+    if (method === 'app_payment' || method === 'chapa') return 'chapa';
+    return 'mobile_banking';
+  }
+
   private async closeOrderIfPaidAndDelivered(orderId: string) {
     const order = await Order.findByPk(orderId);
     if (!order) return;
@@ -60,9 +67,10 @@ class PaymentService {
   }
 
   async createPayment(orderId: string, total: number, method: string) {
+    const storedMethod = this.toStoredPaymentMethod(method);
     const existing = await this.getOrRestorePaymentByOrderId(orderId);
     if (existing) {
-      existing.payment_method = method as any;
+      existing.payment_method = storedMethod as any;
       existing.total_amount = total as any;
       existing.amount_paid = 0 as any;
       existing.payment_status = 'pending';
@@ -72,7 +80,7 @@ class PaymentService {
 
     const payment = await Payment.create({
       order_id: orderId,
-      payment_method: method,
+      payment_method: storedMethod,
       total_amount: total,
       amount_paid: 0,
       payment_status: 'pending'
@@ -125,8 +133,7 @@ class PaymentService {
     }
 
     try {
-      payment.payment_method =
-        (selectedMethod === 'app_payment' ? 'chapa' : selectedMethod) as any;
+      payment.payment_method = this.toStoredPaymentMethod(selectedMethod) as any;
       payment.notes = payload.notes;
       payment.proof_document_id = payload.proof_document_id;
 
@@ -171,12 +178,9 @@ class PaymentService {
         const backendBaseUrl =
           process.env.BACKEND_URL ||
           `http://localhost:${process.env.PORT || 5000}`;
-        const frontendBaseUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
         const callbackUrl =
           process.env.CHAPA_CALLBACK_URL ||
           `${backendBaseUrl}/api/payments/chapa/callback`;
-        const returnUrl =
-          process.env.CHAPA_RETURN_URL || `${frontendBaseUrl}/retailer/orders`;
 
         const initialized = await initializeChapaTransaction({
           amount: String(Number(order.total_price).toFixed(2)),
@@ -186,7 +190,8 @@ class PaymentService {
           last_name: lastName,
           tx_ref: txRef,
           callback_url: callbackUrl,
-          return_url: returnUrl,
+          // Ensure payment verification runs server-side before redirecting back to the UI.
+          return_url: callbackUrl,
           phone_number: buyer.phone || undefined,
           customization: {
             title: 'TradeBridge',

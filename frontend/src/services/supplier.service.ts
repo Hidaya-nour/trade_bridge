@@ -357,6 +357,23 @@ class SupplierService {
   }
 
   /**
+   * Check whether the current user can review this supplier
+   */
+  async getReviewEligibility(
+    supplierId: string,
+  ): Promise<ApiResponse<{ can_review: boolean }>> {
+    try {
+      const response = await api.get(
+        `${this.BASE_PATH}/${supplierId}/review-eligibility`,
+      );
+      return response.data;
+    } catch (error) {
+      console.error(`Error checking review eligibility for ${supplierId}:`, error);
+      throw error;
+    }
+  }
+
+  /**
    * Submit a review for a supplier
    */
   async submitReview(

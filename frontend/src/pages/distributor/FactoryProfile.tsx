@@ -16,7 +16,7 @@ import productService from "@/services/product.service";
 import supplierService from "@/services/supplier.service";
 import SupplierReviewDialog from "@/components/supplier/SupplierReviewDialog";
 
-const RetailerSupplierProfilePage: React.FC = () => {
+const DistributorFactoryProfilePage: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
 
@@ -69,12 +69,12 @@ const RetailerSupplierProfilePage: React.FC = () => {
         setReviewSummary({ average_rating: 0, total_reviews: 0 });
         toast.error(
           reviewsRes.reason?.response?.data?.message ||
-            "Failed to load supplier reviews",
+            "Failed to load factory reviews",
         );
       }
     } catch (err: any) {
-      console.error("Failed to load supplier profile", err);
-      setError(err?.response?.data?.message || "Failed to load supplier profile");
+      console.error("Failed to load factory profile", err);
+      setError(err?.response?.data?.message || "Failed to load factory profile");
     } finally {
       setLoading(false);
     }
@@ -84,14 +84,13 @@ const RetailerSupplierProfilePage: React.FC = () => {
     void load();
   }, [load]);
 
-  const supplierName =
-    supplier?.business_name || supplier?.full_name || "Supplier";
+  const supplierName = supplier?.business_name || supplier?.full_name || "Factory";
 
   if (!supplierId) {
     return (
       <div className="p-6">
         <Card>
-          <CardContent className="p-6">Supplier not found.</CardContent>
+          <CardContent className="p-6">Factory not found.</CardContent>
         </Card>
       </div>
     );
@@ -106,7 +105,7 @@ const RetailerSupplierProfilePage: React.FC = () => {
           </Button>
           <div>
             <h1 className="text-2xl font-bold">{supplierName}</h1>
-            <p className="text-sm text-muted-foreground">Supplier profile</p>
+            <p className="text-sm text-muted-foreground">Factory profile</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -116,11 +115,11 @@ const RetailerSupplierProfilePage: React.FC = () => {
             disabled={loading}
           >
             <Star className="h-4 w-4 mr-2" />
-            Rate Supplier
+            Rate Factory
           </Button>
           <Button asChild>
-            <Link to={`/retailer/products`}>
-              Browse Products
+            <Link to={`/distributor/marketplace`}>
+              Marketplace
               <ChevronRight className="h-4 w-4 ml-2" />
             </Link>
           </Button>
@@ -130,7 +129,7 @@ const RetailerSupplierProfilePage: React.FC = () => {
       {loading ? (
         <Card>
           <CardContent className="p-6 text-sm text-muted-foreground">
-            Loading supplier profile…
+            Loading factory profile…
           </CardContent>
         </Card>
       ) : error ? (
@@ -208,7 +207,7 @@ const RetailerSupplierProfilePage: React.FC = () => {
               {products.length === 0 ? (
                 <Card>
                   <CardContent className="p-6 text-sm text-muted-foreground">
-                    No products found for this supplier.
+                    No products found for this factory.
                   </CardContent>
                 </Card>
               ) : (
@@ -234,7 +233,7 @@ const RetailerSupplierProfilePage: React.FC = () => {
                             </div>
                           </div>
                           <Button asChild size="sm" variant="outline">
-                            <Link to={`/retailer/products/${product.id}`}>
+                            <Link to={`/distributor/products/${product.id}`}>
                               <Package className="h-4 w-4 mr-2" />
                               View
                             </Link>
@@ -250,7 +249,7 @@ const RetailerSupplierProfilePage: React.FC = () => {
             <TabsContent value="reviews" className="mt-6">
               <Card>
                 <CardHeader>
-                  <CardTitle>Supplier Reviews</CardTitle>
+                  <CardTitle>Factory Reviews</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {reviews.length === 0 ? (
@@ -294,7 +293,7 @@ const RetailerSupplierProfilePage: React.FC = () => {
         supplierId={supplierId}
         supplierName={supplierName}
         onSubmitted={() => {
-          toast.success("Refreshing supplier reviews…");
+          toast.success("Refreshing factory reviews…");
           void load();
         }}
       />
@@ -302,4 +301,4 @@ const RetailerSupplierProfilePage: React.FC = () => {
   );
 };
 
-export default RetailerSupplierProfilePage;
+export default DistributorFactoryProfilePage;

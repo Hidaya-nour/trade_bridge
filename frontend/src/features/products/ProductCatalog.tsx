@@ -16,6 +16,7 @@ import {
   ChevronRight,
   CreditCard,
   XCircle,
+  Scale,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -41,6 +42,14 @@ import {
 } from "@/components/ui/sheet";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Slider } from "@/components/ui/slider";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { EmptyState, PaginationBar } from "@/components";
 import { formatPrice } from "@/lib/formatters";
 import { useOrderStore } from "@/stores/order.store";
@@ -52,6 +61,7 @@ import supplierPaymentMethodService from "@/services/supplier-payment-method.ser
 import { supplierMethodsToPaymentMethods } from "@/lib/payment-method-utils";
 import type { CatalogConfig, CatalogProduct } from "@/types/product.types";
 import type { PaymentMethod } from "@/types/payment.types";
+import SupplierReviewDialog from "@/components/supplier/SupplierReviewDialog";
 
 // ============================================================================
 // PROPS
@@ -143,8 +153,16 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
   const [selectedSupplier, setSelectedSupplier] = useState<string>("");
   const [selectedLocation, setSelectedLocation] = useState<string>("");
   const [priceRange, setPriceRange] = useState([0, 10000]);
+  const [moqRange, setMoqRange] = useState([0, 0]);
   const [sortBy, setSortBy] = useState("recommended");
   const [currentPage, setCurrentPage] = useState(1);
+  const [compareIds, setCompareIds] = useState<string[]>([]);
+  const [compareOpen, setCompareOpen] = useState(false);
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const [reviewSupplier, setReviewSupplier] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
   const [manualInputValue, setManualInputValue] = useState<{
     [key: string]: string;
   }>({});
@@ -189,6 +207,32 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
 
   const itemsPerPage = 9;
 
+  const moqBounds = React.useMemo(() => {
+    const values = initialProducts
+      .map((product) => Number(product.min_order_amount || 0))
+      .filter((value) => Number.isFinite(value) && value > 0);
+    if (values.length === 0) return { min: 0, max: 0 };
+    return { min: Math.min(...values), max: Math.max(...values) };
+  }, [initialProducts]);
+
+  React.useEffect(() => {
+    setMoqRange(([currentMin, currentMax]) => {
+      if (currentMin === 0 && currentMax === 0) {
+        return [moqBounds.min, moqBounds.max];
+      }
+      return [
+        Math.max(moqBounds.min, currentMin),
+        Math.min(moqBounds.max, currentMax),
+      ];
+    });
+  }, [moqBounds.min, moqBounds.max]);
+
+  React.useEffect(() => {
+    setCompareIds((prev) =>
+      prev.filter((id) => initialProducts.some((p) => p.id === id)),
+    );
+  }, [initialProducts]);
+
   // Get unique suppliers for filter
   const suppliers = Array.from(
     new Map(
@@ -220,12 +264,18 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
     const matchesPrice =
       product.price >= priceRange[0] && product.price <= priceRange[1];
 
+    const matchesMoq =
+      moqBounds.max <= 0 ||
+      (product.min_order_amount >= moqRange[0] &&
+        product.min_order_amount <= moqRange[1]);
+
     return (
       matchesSearch &&
       matchesCategory &&
       matchesSupplier &&
       matchesLocation &&
-      matchesPrice
+      matchesPrice &&
+      matchesMoq
     );
   });
 
@@ -418,6 +468,29 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
 
   const SupplierIcon = config.icon;
 
+  const comparedProducts = React.useMemo(() => {
+    if (compareIds.length === 0) return [];
+    const byId = new Map(initialProducts.map((p) => [p.id, p]));
+    return compareIds.map((id) => byId.get(id)).filter(Boolean) as CatalogProduct[];
+  }, [compareIds, initialProducts]);
+
+  const toggleCompare = (productId: string) => {
+    setCompareIds((prev) => {
+      if (prev.includes(productId)) return prev.filter((id) => id !== productId);
+      if (prev.length >= 3) {
+        toast.error("Compare supports up to 3 products.");
+        return prev;
+      }
+      return [...prev, productId];
+    });
+  };
+
+  const openSupplierReview = (supplierId: string, supplierName: string) => {
+    if (!supplierId) return;
+    setReviewSupplier({ id: supplierId, name: supplierName || "Supplier" });
+    setReviewOpen(true);
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -438,6 +511,169 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
           <p className="text-muted-foreground mt-1">{config.description}</p>
         </div>
         <div className="flex items-center gap-2">
+          <Sheet open={compareOpen} onOpenChange={setCompareOpen}>
+            <Button
+              variant="outline"
+              className="gap-2"
+              onClick={() => setCompareOpen(true)}
+              disabled={compareIds.length === 0}
+            >
+              <Scale className="h-4 w-4" />
+              Compare ({compareIds.length})
+            </Button>
+            <SheetContent side="right" className="w-full sm:max-w-2xl">
+              <SheetHeader>
+                <SheetTitle>Compare Products</SheetTitle>
+                <SheetDescription>
+                  Compare prices, minimum order amount, and supplier details.
+                </SheetDescription>
+              </SheetHeader>
+
+              <div className="mt-4 space-y-4">
+                {comparedProducts.length === 0 ? (
+                  <EmptyState
+                    icon={Scale}
+                    title="No products selected"
+                    description="Select up to 3 products to compare."
+                  />
+                ) : (
+                  <>
+                    <div className="flex flex-wrap gap-2">
+                      {comparedProducts.map((product) => (
+                        <Badge
+                          key={product.id}
+                          variant="secondary"
+                          className="gap-2"
+                        >
+                          {product.name}
+                          <X
+                            className="h-3 w-3 cursor-pointer"
+                            onClick={() => toggleCompare(product.id)}
+                          />
+                        </Badge>
+                      ))}
+                    </div>
+
+                    <div className="rounded-lg border overflow-hidden">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="w-[170px]">
+                              Attribute
+                            </TableHead>
+                            {comparedProducts.map((product) => (
+                              <TableHead
+                                key={product.id}
+                                className="min-w-[180px]"
+                              >
+                                <Link
+                                  to={`/${config.role}/products/${product.id}`}
+                                  className="hover:text-primary"
+                                  onClick={() => setCompareOpen(false)}
+                                >
+                                  {product.name}
+                                </Link>
+                              </TableHead>
+                            ))}
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          <TableRow>
+                            <TableCell className="font-medium">Price</TableCell>
+                            {comparedProducts.map((product) => (
+                              <TableCell key={product.id}>
+                                {formatPrice(product.price)} / {product.unit}
+                              </TableCell>
+                            ))}
+                          </TableRow>
+                          <TableRow>
+                            <TableCell className="font-medium">
+                              Min. Order
+                            </TableCell>
+                            {comparedProducts.map((product) => (
+                              <TableCell key={product.id}>
+                                {product.min_order_amount}
+                              </TableCell>
+                            ))}
+                          </TableRow>
+                          <TableRow>
+                            <TableCell className="font-medium">
+                              {config.supplierLabel}
+                            </TableCell>
+                            {comparedProducts.map((product) => (
+                              <TableCell key={product.id}>
+                                <Link
+                                  to={`/${config.role}${config.supplierPath}/${product.supplier_id}`}
+                                  className="hover:text-primary"
+                                  onClick={() => setCompareOpen(false)}
+                                >
+                                  {product.supplier_name}
+                                </Link>
+                                {product.supplier?.is_verified ? (
+                                  <div className="text-xs text-emerald-700 mt-1">
+                                    Verified
+                                  </div>
+                                ) : null}
+                              </TableCell>
+                            ))}
+                          </TableRow>
+                          <TableRow>
+                            <TableCell className="font-medium">
+                              Location
+                            </TableCell>
+                            {comparedProducts.map((product) => (
+                              <TableCell key={product.id}>
+                                {product.location}
+                              </TableCell>
+                            ))}
+                          </TableRow>
+                          <TableRow>
+                            <TableCell className="font-medium">
+                              Rating
+                            </TableCell>
+                            {comparedProducts.map((product) => (
+                              <TableCell key={product.id}>
+                                {product.rating} ({product.review_count})
+                              </TableCell>
+                            ))}
+                          </TableRow>
+                          <TableRow>
+                            <TableCell className="font-medium">
+                              Delivery
+                            </TableCell>
+                            {comparedProducts.map((product) => (
+                              <TableCell key={product.id}>
+                                {product.delivery_available === false
+                                  ? "Not available"
+                                  : product.delivery_pricing === "paid"
+                                    ? "Paid"
+                                    : "Available"}
+                              </TableCell>
+                            ))}
+                          </TableRow>
+                        </TableBody>
+                      </Table>
+                    </div>
+
+                    <SheetFooter>
+                      <div className="flex w-full gap-2">
+                        <Button
+                          variant="outline"
+                          className="flex-1"
+                          onClick={() => setCompareIds([])}
+                        >
+                          Clear selection
+                        </Button>
+                        <SheetClose asChild>
+                          <Button className="flex-1">Done</Button>
+                        </SheetClose>
+                      </div>
+                    </SheetFooter>
+                  </>
+                )}
+              </div>
+            </SheetContent>
+          </Sheet>
           {getTotalCartItems() > 0 && (
             <Button asChild variant="outline">
               <Link to={config.cartPath} className="gap-2">
@@ -492,12 +728,20 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
                     Filters
                     {(selectedCategory !== "All Categories" ||
                       selectedSupplier ||
-                      selectedLocation) && (
+                      selectedLocation ||
+                      (moqBounds.max > 0 &&
+                        (moqRange[0] !== moqBounds.min ||
+                          moqRange[1] !== moqBounds.max))) && (
                       <Badge className="ml-1 h-5 w-5 p-0 flex items-center justify-center">
                         {[
                           selectedCategory !== "All Categories" ? 1 : 0,
                           selectedSupplier ? 1 : 0,
                           selectedLocation ? 1 : 0,
+                          moqBounds.max > 0 &&
+                          (moqRange[0] !== moqBounds.min ||
+                            moqRange[1] !== moqBounds.max)
+                            ? 1
+                            : 0,
                         ].reduce((a, b) => a + b, 0)}
                       </Badge>
                     )}
@@ -508,7 +752,8 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
                     <SheetTitle>Filter Products</SheetTitle>
                     <SheetDescription>
                       Narrow down products by category,{" "}
-                      {config.supplierLabel.toLowerCase()}, location, and price
+                      {config.supplierLabel.toLowerCase()}, location, price, and
+                      minimum order amount
                     </SheetDescription>
                   </SheetHeader>
 
@@ -610,6 +855,42 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
                           </div>
                         </div>
                       </div>
+
+                      {/* MOQ Filter */}
+                      {moqBounds.max > 0 && (
+                        <div className="space-y-4">
+                          <h3 className="text-sm font-medium">
+                            Minimum Order Amount
+                          </h3>
+                          <Slider
+                            defaultValue={[moqBounds.min, moqBounds.max]}
+                            min={moqBounds.min}
+                            max={moqBounds.max}
+                            step={1}
+                            value={moqRange}
+                            onValueChange={setMoqRange}
+                            className="py-4"
+                          />
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-1">
+                              <span className="text-xs text-muted-foreground">
+                                Min:
+                              </span>
+                              <span className="text-sm font-medium">
+                                {moqRange[0].toLocaleString()}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <span className="text-xs text-muted-foreground">
+                                Max:
+                              </span>
+                              <span className="text-sm font-medium">
+                                {moqRange[1].toLocaleString()}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </ScrollArea>
 
@@ -623,6 +904,7 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
                           setSelectedSupplier("");
                           setSelectedLocation("");
                           setPriceRange([0, 10000]);
+                          setMoqRange([moqBounds.min, moqBounds.max]);
                         }}
                       >
                         Reset
@@ -662,7 +944,10 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
       {/* Active Filters */}
       {(selectedCategory !== "All Categories" ||
         selectedSupplier ||
-        selectedLocation) && (
+        selectedLocation ||
+        (moqBounds.max > 0 &&
+          (moqRange[0] !== moqBounds.min ||
+            moqRange[1] !== moqBounds.max))) && (
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-xs text-muted-foreground">Active filters:</span>
 
@@ -697,6 +982,17 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
             </Badge>
           )}
 
+          {moqBounds.max > 0 &&
+            (moqRange[0] !== moqBounds.min || moqRange[1] !== moqBounds.max) && (
+              <Badge variant="secondary" className="gap-1">
+                MOQ: {moqRange[0]}-{moqRange[1]}
+                <X
+                  className="h-3 w-3 ml-1 cursor-pointer"
+                  onClick={() => setMoqRange([moqBounds.min, moqBounds.max])}
+                />
+              </Badge>
+            )}
+
           <Button
             variant="ghost"
             size="sm"
@@ -706,6 +1002,7 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
               setSelectedSupplier("");
               setSelectedLocation("");
               setPriceRange([0, 10000]);
+              setMoqRange([moqBounds.min, moqBounds.max]);
             }}
           >
             Clear all
@@ -733,6 +1030,7 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
             setSelectedSupplier("");
             setSelectedLocation("");
             setPriceRange([0, 10000]);
+            setMoqRange([moqBounds.min, moqBounds.max]);
           }}
         />
       ) : viewMode === "grid" ? (
@@ -759,6 +1057,19 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
                   ) : (
                     <Package className="h-16 w-16 text-primary/30" />
                   )}
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant={compareIds.includes(product.id) ? "default" : "secondary"}
+                    className="absolute top-3 left-3 h-8 w-8"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleCompare(product.id);
+                    }}
+                    title="Add to compare"
+                  >
+                    <Scale className="h-4 w-4" />
+                  </Button>
                   <Badge className="absolute top-3 right-3 bg-white/90 text-foreground border-0">
                     Min: {product.min_order_amount}+
                   </Badge>
@@ -791,14 +1102,32 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
                       <h3 className="font-semibold text-lg line-clamp-1">
                         {product.name}
                       </h3>
-                      <Link
-                        to={`/${config.role}${config.supplierPath}/${product.supplier_id}`}
-                        className="text-sm text-muted-foreground hover:text-primary flex items-center gap-1 mt-1"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <SupplierIcon className="h-3 w-3" />
-                        {product.supplier_name}
-                      </Link>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Link
+                          to={`/${config.role}${config.supplierPath}/${product.supplier_id}`}
+                          className="text-sm text-muted-foreground hover:text-primary flex items-center gap-1"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <SupplierIcon className="h-3 w-3" />
+                          {product.supplier_name}
+                        </Link>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          className="h-6 px-2 text-xs"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openSupplierReview(
+                              product.supplier_id,
+                              product.supplier_name,
+                            );
+                          }}
+                        >
+                          <Star className="h-3 w-3 mr-1" />
+                          Rate
+                        </Button>
+                      </div>
                     </div>
                   </div>
 
@@ -996,7 +1325,7 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
               >
                 <CardContent className="p-6">
                   <div className="flex flex-col md:flex-row gap-6">
-                    <div className="md:w-32 h-32 bg-gradient-to-br from-primary/5 to-primary/10 rounded-lg flex items-center justify-center overflow-hidden">
+                    <div className="relative md:w-32 h-32 bg-gradient-to-br from-primary/5 to-primary/10 rounded-lg flex items-center justify-center overflow-hidden">
                       {hasImages ? (
                         <img
                           src={images[0]}
@@ -1007,6 +1336,19 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
                       ) : (
                         <Package className="h-12 w-12 text-primary/30" />
                       )}
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant={compareIds.includes(product.id) ? "default" : "secondary"}
+                        className="absolute top-2 left-2 h-8 w-8"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleCompare(product.id);
+                        }}
+                        title="Add to compare"
+                      >
+                        <Scale className="h-4 w-4" />
+                      </Button>
                     </div>
 
                     <div className="flex-1">
@@ -1046,6 +1388,22 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
                             >
                               {product.supplier_name}
                             </Link>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="ghost"
+                              className="h-6 px-2 text-xs"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openSupplierReview(
+                                  product.supplier_id,
+                                  product.supplier_name,
+                                );
+                              }}
+                            >
+                              <Star className="h-3 w-3 mr-1" />
+                              Rate
+                            </Button>
                             <span className="text-xs text-muted-foreground">
                               •
                             </span>
@@ -1298,6 +1656,15 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
           onPlaceOrder={handlePlaceOrder}
           onProcessPayment={handleProcessPayment as any}
           isPlacing={orderLoading}
+        />
+      )}
+
+      {reviewSupplier && (
+        <SupplierReviewDialog
+          open={reviewOpen}
+          onOpenChange={setReviewOpen}
+          supplierId={reviewSupplier.id}
+          supplierName={reviewSupplier.name}
         />
       )}
     </div>
