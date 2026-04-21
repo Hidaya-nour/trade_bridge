@@ -39,6 +39,24 @@ class PaymentService {
     return 'mobile_banking';
   }
 
+  private toChapaPhoneNumber(phone?: string | null): string | undefined {
+    if (!phone) return undefined;
+    const digits = String(phone).replace(/\D/g, '');
+
+    // Chapa docs: if provided, must be 10 digits in 09xxxxxxxx or 07xxxxxxxx format.
+    const toLocal = (raw: string) => {
+      if (raw.length === 10 && (raw.startsWith('09') || raw.startsWith('07'))) return raw;
+      if (raw.length === 9 && (raw.startsWith('9') || raw.startsWith('7'))) return `0${raw}`;
+      if (raw.startsWith('251') && raw.length === 12) return `0${raw.slice(3)}`;
+      return raw;
+    };
+
+    const local = toLocal(digits);
+    if (local.length !== 10) return undefined;
+    if (!local.startsWith('09') && !local.startsWith('07')) return undefined;
+    return local;
+  }
+
   private async closeOrderIfPaidAndDelivered(orderId: string) {
     const order = await Order.findByPk(orderId);
     if (!order) return;
@@ -173,7 +191,11 @@ class PaymentService {
         }
 
         const txRef = `tb-${order.id.slice(0, 8)}-${Date.now()}`;
-        const [firstName, ...restNames] = buyer.full_name.split(' ');
+        const fullName = String(buyer.full_name || '').trim();
+        if (!fullName) {
+          throw new AppError('Buyer profile must include name for app payment', 400);
+        }
+        const [firstName, ...restNames] = fullName.split(' ');
         const lastName = restNames.join(' ') || firstName;
         const backendBaseUrl =
           process.env.BACKEND_URL ||
@@ -181,6 +203,13 @@ class PaymentService {
         const callbackUrl =
           process.env.CHAPA_CALLBACK_URL ||
           `${backendBaseUrl}/api/payments/chapa/callback`;
+        const frontendBaseUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+        const buyerOrdersPath =
+          buyer.role === 'distributor' ? '/distributor/purchase-orders' : '/retailer/orders';
+        const returnUrl =
+          process.env.CHAPA_RETURN_URL || `${frontendBaseUrl}${buyerOrdersPath}`;
+
+        const chapaPhone = this.toChapaPhoneNumber(buyer.phone);
 
         const initialized = await initializeChapaTransaction({
           amount: String(Number(order.total_price).toFixed(2)),
@@ -190,12 +219,21 @@ class PaymentService {
           last_name: lastName,
           tx_ref: txRef,
           callback_url: callbackUrl,
-          // Ensure payment verification runs server-side before redirecting back to the UI.
-          return_url: callbackUrl,
-          phone_number: buyer.phone || undefined,
+          return_url: returnUrl,
+          phone_number: chapaPhone,
           customization: {
             title: 'TradeBridge',
             description: `Order ${order.id.slice(0, 8)} payment`,
+          },
+          // Provide a safe meta object (Chapa checkout has been observed to be fragile if meta/customization are missing).
+          meta: {
+            order_id: order.id,
+            buyer_id: order.buyer_id,
+            supplier_id: order.supplier_id,
+            invoices: [
+              { key: 'order_id', value: order.id },
+              { key: 'amount', value: String(Number(order.total_price).toFixed(2)) },
+            ],
           },
         });
 
