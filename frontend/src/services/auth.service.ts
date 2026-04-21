@@ -107,6 +107,16 @@ export const authService = {
     return response.data;
   },
 
+  async suspendUser(userId: string) {
+    const response = await api.post(`/auth/admin/suspend/${userId}`);
+    return response.data;
+  },
+
+  async reactivateUser(userId: string) {
+    const response = await api.post(`/auth/admin/reactivate/${userId}`);
+    return response.data;
+  },
+
   async getUsers(options?: {
     limit?: number;
     offset?: number;

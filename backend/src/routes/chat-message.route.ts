@@ -23,6 +23,11 @@ router.get(
   validate(ChatMessageController.chatContactsValidation),
   chatMessageController.getChatContacts
 );
+router.get(
+  '/contacts/:userId',
+  validate(ChatMessageController.chatContactByIdValidation),
+  chatMessageController.getChatContactById
+);
 
 router.get(
   '/conversation/:userId',

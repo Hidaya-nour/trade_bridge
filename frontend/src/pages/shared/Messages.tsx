@@ -56,6 +56,8 @@ const MessagesPage: React.FC = () => {
   const [isNewChatOpen, setIsNewChatOpen] = useState(false);
   const [contactSearch, setContactSearch] = useState("");
   const [contactRole, setContactRole] = useState<string>("all");
+  const [deepLinkHandled, setDeepLinkHandled] = useState(false);
+  const [prefillApplied, setPrefillApplied] = useState(false);
 
   const currentUser = useAuthStore((state) => state.user);
   const {
@@ -80,32 +82,60 @@ const MessagesPage: React.FC = () => {
     const params = new URLSearchParams(location.search);
     const userId = params.get("supplier") || params.get("user");
     const orderId = params.get("order") || undefined;
+    const prefill = params.get("prefill") || undefined;
     return {
       userId: userId ? userId.trim() : null,
       orderId: orderId ? orderId.trim() : undefined,
+      prefill: prefill ? prefill : undefined,
     };
   }, [location.search]);
+
+  const requestedOrderId = useMemo(() => {
+    if (!requestedChat.userId) return undefined;
+    if (requestedChat.userId !== currentConversationUserId) return undefined;
+    return requestedChat.orderId;
+  }, [currentConversationUserId, requestedChat.orderId, requestedChat.userId]);
 
   useEffect(() => {
     void fetchUserMessages();
   }, [fetchUserMessages]);
 
   useEffect(() => {
-    if (!requestedChat.userId) return;
-    if (requestedChat.userId === currentConversationUserId) return;
-    void startChatWithUser(requestedChat.userId);
-  }, [currentConversationUserId, requestedChat.userId, startChatWithUser]);
+    // Reset deep-link handling when the URL target changes.
+    setDeepLinkHandled(false);
+    setPrefillApplied(false);
+  }, [requestedChat.userId, requestedChat.orderId]);
 
   useEffect(() => {
-    if (!requestedChat.userId || !requestedChat.orderId) return;
+    if (!requestedChat.userId) return;
     if (requestedChat.userId !== currentConversationUserId) return;
-    void fetchConversation(requestedChat.userId, requestedChat.orderId);
+    if (!requestedChat.prefill) return;
+    if (prefillApplied) return;
+    if (messageInput.trim().length > 0) return;
+
+    try {
+      setMessageInput(decodeURIComponent(requestedChat.prefill));
+    } catch {
+      setMessageInput(requestedChat.prefill);
+    } finally {
+      setPrefillApplied(true);
+    }
   }, [
     currentConversationUserId,
-    fetchConversation,
-    requestedChat.orderId,
+    messageInput,
+    prefillApplied,
+    requestedChat.prefill,
     requestedChat.userId,
   ]);
+
+  useEffect(() => {
+    if (!requestedChat.userId) return;
+    if (deepLinkHandled) return;
+
+    void startChatWithUser(requestedChat.userId).finally(() => {
+      setDeepLinkHandled(true);
+    });
+  }, [deepLinkHandled, requestedChat.userId, startChatWithUser]);
 
   useEffect(() => {
     // If we arrived via a deep-link (e.g. Contact Supplier), don't auto-select
@@ -124,21 +154,12 @@ const MessagesPage: React.FC = () => {
 
   useEffect(() => {
     if (currentConversationUserId) {
-      void fetchConversation(currentConversationUserId);
+      void fetchConversation(currentConversationUserId, requestedOrderId);
     }
-  }, [currentConversationUserId, fetchConversation]);
+  }, [currentConversationUserId, fetchConversation, requestedOrderId]);
 
-  useEffect(() => {
-    const intervalId = window.setInterval(() => {
-      if (document.visibilityState !== "visible") return;
-      void fetchUserMessages();
-      if (currentConversationUserId) {
-        void fetchConversation(currentConversationUserId);
-      }
-    }, 10000);
-
-    return () => window.clearInterval(intervalId);
-  }, [currentConversationUserId, fetchConversation, fetchUserMessages]);
+  // Polling is intentionally disabled to avoid UI "refresh" loops.
+  // Messages update on navigation and send; real-time can be added via websockets later.
 
   useEffect(() => {
     if (!currentUser?.id || !conversationMessages.length) return;

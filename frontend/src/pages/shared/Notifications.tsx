@@ -50,7 +50,6 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { useNotificationStore } from "@/stores/notification.store";
-import NotificationDetailDialog from "@/components/notifications/NotificationDetailDialog";
 import type { Notification } from "@/types/notification.types";
 
 const NotificationsPage: React.FC = () => {
@@ -71,16 +70,14 @@ const NotificationsPage: React.FC = () => {
   const [selectedNotification, setSelectedNotification] =
     useState<Notification | null>(null);
 
-  const openNotificationDetail = (notification: Notification) => {
-    setSelectedNotification(notification);
-    setDetailOpen(true);
-    if (!notification.is_read) {
-      markAsRead(notification.id).then(() => {
-        setSelectedNotification((prev) =>
-          prev?.id === notification.id ? { ...prev, is_read: 1 } : prev,
-        );
-      });
+  const handleMarkAsRead = async (notificationId?: string) => {
+    if (notificationId) {
+      await markAsRead(notificationId);
     }
+  };
+
+  const handleMarkAllAsRead = async () => {
+    await markAllRead();
   };
 
   // Fetch notifications on mount
@@ -289,7 +286,9 @@ const NotificationsPage: React.FC = () => {
                 onValueChange={(value) => {
                   setFilterType(value);
                   setFilters({ type: value === "all" ? undefined : value });
-                  void fetchNotifications({ type: value === "all" ? undefined : value });
+                  void fetchNotifications({
+                    type: value === "all" ? undefined : value,
+                  });
                 }}
               >
                 <SelectTrigger className="w-[180px]">
@@ -369,11 +368,11 @@ const NotificationsPage: React.FC = () => {
                         )}
                         role="button"
                         tabIndex={0}
-                        onClick={() => openNotificationDetail(notification)}
+                        onClick={() => handleMarkAsRead(notification.id)}
                         onKeyDown={(event) => {
                           if (event.key === "Enter" || event.key === " ") {
                             event.preventDefault();
-                            openNotificationDetail(notification);
+                            handleMarkAllAsRead(notification.id);
                           }
                         }}
                       >
@@ -456,7 +455,9 @@ const NotificationsPage: React.FC = () => {
                                       <DropdownMenuItem
                                         onClick={(e) => {
                                           e.stopPropagation();
-                                          void markAsRead(notification.id);
+                                          void handleMarkAsRead(
+                                            notification.id,
+                                          );
                                         }}
                                       >
                                         <Check className="h-4 w-4 mr-2" />
@@ -467,7 +468,9 @@ const NotificationsPage: React.FC = () => {
                                       className="text-destructive"
                                       onClick={(e) => {
                                         e.stopPropagation();
-                                        void deleteNotification(notification.id);
+                                        void deleteNotification(
+                                          notification.id,
+                                        );
                                       }}
                                     >
                                       <X className="h-4 w-4 mr-2" />
@@ -512,11 +515,11 @@ const NotificationsPage: React.FC = () => {
                           )}
                           role="button"
                           tabIndex={0}
-                          onClick={() => openNotificationDetail(notification)}
+                          onClick={() => handleMarkAsRead(notification.id)}
                           onKeyDown={(event) => {
                             if (event.key === "Enter" || event.key === " ") {
                               event.preventDefault();
-                              openNotificationDetail(notification);
+                              handleMarkAsRead(notification.id);
                             }
                           }}
                         >
@@ -583,41 +586,43 @@ const NotificationsPage: React.FC = () => {
                                   </Button>
                                 )} */}
 
-                                <DropdownMenu>
-                                  <DropdownMenuTrigger asChild>
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      className="h-8 w-8"
-                                      onClick={(e) => e.stopPropagation()}
-                                    >
-                                      <MoreVertical className="h-4 w-4" />
-                                    </Button>
-                                  </DropdownMenuTrigger>
-                                  <DropdownMenuContent align="end">
-                                    {!notification.is_read && (
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-8 w-8"
+                                        onClick={(e) => e.stopPropagation()}
+                                      >
+                                        <MoreVertical className="h-4 w-4" />
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                      {!notification.is_read && (
+                                        <DropdownMenuItem
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            void markAsRead(notification.id);
+                                          }}
+                                        >
+                                          <Check className="h-4 w-4 mr-2" />
+                                          Mark as Read
+                                        </DropdownMenuItem>
+                                      )}
                                       <DropdownMenuItem
+                                        className="text-destructive"
                                         onClick={(e) => {
                                           e.stopPropagation();
-                                          void markAsRead(notification.id);
+                                          void deleteNotification(
+                                            notification.id,
+                                          );
                                         }}
                                       >
-                                        <Check className="h-4 w-4 mr-2" />
-                                        Mark as Read
+                                        <X className="h-4 w-4 mr-2" />
+                                        Delete
                                       </DropdownMenuItem>
-                                    )}
-                                    <DropdownMenuItem
-                                      className="text-destructive"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        void deleteNotification(notification.id);
-                                      }}
-                                    >
-                                      <X className="h-4 w-4 mr-2" />
-                                      Delete
-                                    </DropdownMenuItem>
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
                                 </div>
                               </div>
                             </div>
@@ -641,13 +646,6 @@ const NotificationsPage: React.FC = () => {
           </Tabs>
         </CardContent>
       </Card>
-
-      <NotificationDetailDialog
-        open={detailOpen}
-        onOpenChange={setDetailOpen}
-        notification={selectedNotification}
-        onDelete={(id) => deleteNotification(id).then(() => setDetailOpen(false))}
-      />
 
       {/* Notification Preferences Summary */}
       <Card>

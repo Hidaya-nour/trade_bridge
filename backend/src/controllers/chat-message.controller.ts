@@ -145,6 +145,22 @@ export class ChatMessageController {
     }
   }
 
+  async getChatContactById(req: Request, res: Response) {
+    try {
+      const currentUserId = (req as any).user.id;
+      const { userId } = req.params;
+      const contact = await chatService.getChatContactById(currentUserId, userId);
+      res.json({ success: true, data: { contact } });
+    } catch (error) {
+      if (error instanceof AppError) {
+        res.status(error.statusCode).json({ success: false, message: error.message });
+      } else {
+        logger.error('Get chat contact by id error:', error);
+        res.status(500).json({ success: false, message: 'Internal server error' });
+      }
+    }
+  }
+
   // Validation rules
   static sendMessageValidation = [
     body('receiver_id').isUUID().withMessage('Invalid receiver ID'),
@@ -172,5 +188,9 @@ export class ChatMessageController {
       .optional()
       .isIn(['retailer', 'distributor', 'factory', 'driver', 'admin'])
       .withMessage('Invalid role filter'),
+  ];
+
+  static chatContactByIdValidation = [
+    param('userId').isUUID().withMessage('Invalid user ID'),
   ];
 }

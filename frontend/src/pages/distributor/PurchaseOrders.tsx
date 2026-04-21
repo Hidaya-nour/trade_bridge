@@ -110,9 +110,11 @@ const PurchaseOrdersPage: React.FC = () => {
   const handlePlaceOrder = async (
     paymentMethod?: string,
     deliveryOption?: string,
+    deliveryAddress?: string,
   ) => {
     const selectedDeliveryOption = deliveryOption || "standard";
     try {
+      const normalizedAddress = (deliveryAddress || "").trim();
       if (reorderItems.length === 0) {
         toast.error("No items to reorder");
         return;
@@ -134,6 +136,7 @@ const PurchaseOrdersPage: React.FC = () => {
       const orderPayload = {
         supplier_id: supplierId,
         items: itemsWithPrice,
+        ...(normalizedAddress ? { delivery_address: normalizedAddress } : {}),
         total_price: totalPrice,
         delivery_option: selectedDeliveryOption,
         ...(paymentMethod ? { payment_method: paymentMethod } : {}),

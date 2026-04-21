@@ -17,6 +17,7 @@ import {
   MessageSquare,
   User,
   AlertCircle,
+  Flag,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -65,6 +66,7 @@ import { getPaymentMethodLabel } from "@/lib/payment-method-utils";
 import { getInitials, cn } from "@/lib/utils";
 import deliveryService from "@/services/delivery.service";
 import disputeService from "@/services/dispute.service";
+import { reportService } from "@/services/report.service";
 import toast from "react-hot-toast";
 import type {
   OrderStatus,
@@ -88,6 +90,7 @@ type OrderDetailsViewProps = {
   onReorderPlaceOrder?: (
     paymentMethod?: string,
     deliveryOption?: string,
+    deliveryAddress?: string,
   ) => Promise<{
     primaryOrderId: string;
     orderIds?: string[];
@@ -134,6 +137,10 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
   const [assignLoading, setAssignLoading] = useState(false);
   const [paymentApproving, setPaymentApproving] = useState(false);
   const [disputeSubmitting, setDisputeSubmitting] = useState(false);
+  const [showReportDialog, setShowReportDialog] = useState(false);
+  const [reportReason, setReportReason] = useState<string>("fraud");
+  const [reportDescription, setReportDescription] = useState<string>("");
+  const [reportSubmitting, setReportSubmitting] = useState(false);
 
   useEffect(() => {
     setOrder(initialOrder);
@@ -246,6 +253,47 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
       );
     } finally {
       setDisputeSubmitting(false);
+    }
+  };
+
+  const handleSubmitReport = async () => {
+    if (!order?.id || !order?.party?.id) {
+      toast.error("Unable to submit report right now.");
+      return;
+    }
+
+    const reason = reportReason.trim();
+    const details = reportDescription.trim();
+
+    if (!reason) {
+      toast.error("Please select a report reason.");
+      return;
+    }
+
+    if (!details) {
+      toast.error("Please describe what happened.");
+      return;
+    }
+
+    setReportSubmitting(true);
+    try {
+      await reportService.create({
+        reported_user_id: order.party.id,
+        reason,
+        description: details,
+        order_id: order.id,
+      });
+      toast.success("Report submitted. Our team will review it.");
+      setShowReportDialog(false);
+      setReportReason("fraud");
+      setReportDescription("");
+    } catch (err: any) {
+      toast.error(
+        err?.response?.data?.message ||
+          "Failed to submit report. Please try again.",
+      );
+    } finally {
+      setReportSubmitting(false);
     }
   };
 
@@ -751,6 +799,15 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                   </Link>
                 </Button>
               )}
+
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => setShowReportDialog(true)}
+              >
+                <Flag className="h-4 w-4 mr-2" />
+                Report {partyLabel}
+              </Button>
             </CardContent>
           </Card>
 
@@ -897,6 +954,59 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Report User Dialog */}
+      <Dialog open={showReportDialog} onOpenChange={setShowReportDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Report {partyLabel}</DialogTitle>
+            <DialogDescription>
+              Submit a report so admins can investigate repeated issues and take
+              action if needed.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Reason</Label>
+              <Select value={reportReason} onValueChange={setReportReason}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select reason" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="fraud">Fraud / Scam</SelectItem>
+                  <SelectItem value="payment_issue">Payment issue</SelectItem>
+                  <SelectItem value="harassment">Harassment</SelectItem>
+                  <SelectItem value="spam">Spam</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Details</Label>
+              <Textarea
+                placeholder="Describe what happened (include dates, amounts, evidence details, etc.)"
+                value={reportDescription}
+                onChange={(e) => setReportDescription(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowReportDialog(false)}
+              disabled={reportSubmitting}
+            >
+              Cancel
+            </Button>
+            <Button onClick={() => void handleSubmitReport()} disabled={reportSubmitting}>
+              {reportSubmitting ? "Submitting..." : "Submit Report"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Raise Dispute Dialog */}
       <Dialog open={showDisputeDialog} onOpenChange={setShowDisputeDialog}>
