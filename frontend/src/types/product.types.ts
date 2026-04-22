@@ -58,6 +58,7 @@ export type CatalogRole = "retailer" | "distributor";
 export interface CatalogProduct {
   id: string;
   name: string;
+  sku?: string;
   supplier_id: string;
   supplier_name: string;
   supplier?: {
@@ -73,6 +74,7 @@ export interface CatalogProduct {
   category: string;
   subcategory?: string;
   price: number;
+  original_price?: number;
   unit: string;
   min_order_amount: number;
   max_order_amount?: number;
@@ -98,6 +100,8 @@ export interface CatalogProduct {
   delivery_pricing?: "free" | "paid";
   delivery_fee_per_km?: number | null;
   free_delivery_max_distance_km?: number | null;
+  promotion_ends_at?: string | null;
+  promotion_label?: string | null;
 }
 
 export interface CatalogConfig {
@@ -322,6 +326,9 @@ export interface ProductDetailData {
   sku: string;
   category: string;
   price: number;
+  original_price?: number;
+  promotion_label?: string | null;
+  promotion_ends_at?: string | null;
   unit_type: string;
   min_order_amount: number;
   maxOrder?: number;

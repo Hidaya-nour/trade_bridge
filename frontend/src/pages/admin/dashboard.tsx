@@ -560,19 +560,6 @@ const AdminDashboard: React.FC = () => {
                     value={livePlatformStats.orderGrowth * 4}
                     className="h-1.5"
                   />
-
-                  <div className="flex justify-between text-sm mt-3">
-                    <span className="text-muted-foreground">
-                      Platform Growth
-                    </span>
-                    <span className="font-medium text-green-600">
-                      +{livePlatformStats.platformGrowth}%
-                    </span>
-                  </div>
-                  <Progress
-                    value={livePlatformStats.platformGrowth * 5}
-                    className="h-1.5"
-                  />
                 </div>
 
                 <Separator />
@@ -594,87 +581,10 @@ const AdminDashboard: React.FC = () => {
                       {platformHealth.ordersToday.toLocaleString()}
                     </span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">
-                      Revenue Today
-                    </span>
-                    <span className="text-sm font-medium">
-                      {formatCompactPrice(platformHealth.revenueToday)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">
-                      Avg. Order Value
-                    </span>
-                    <span className="text-sm font-medium">
-                      {formatPrice(platformHealth.avgOrderValue)}
-                    </span>
-                  </div>
                 </div>
               </CardContent>
             </Card>
           </div>
-
-          {/* Quick Actions */}
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base">Quick Actions</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <Button
-                  variant="outline"
-                  className="h-auto py-4 flex-col gap-2"
-                  asChild
-                >
-                  <Link to="/admin/users">
-                    <Users className="h-5 w-5" />
-                    <span className="text-xs">Manage Users</span>
-                  </Link>
-                </Button>
-                <Button
-                  variant="outline"
-                  className="h-auto py-4 flex-col gap-2"
-                  asChild
-                >
-                  <Link to="/admin/approvals">
-                    <Shield className="h-5 w-5" />
-                    <span className="text-xs">Review Approvals</span>
-                    {livePlatformStats.pendingApprovals > 0 && (
-                      <Badge className="ml-auto bg-red-100 text-red-800">
-                        {livePlatformStats.pendingApprovals}
-                      </Badge>
-                    )}
-                  </Link>
-                </Button>
-                <Button
-                  variant="outline"
-                  className="h-auto py-4 flex-col gap-2"
-                  asChild
-                >
-                  <Link to="/admin/products">
-                    <Package className="h-5 w-5" />
-                    <span className="text-xs">Product Listings</span>
-                  </Link>
-                </Button>
-                <Button
-                  variant="outline"
-                  className="h-auto py-4 flex-col gap-2"
-                  asChild
-                >
-                  <Link to="/admin/disputes">
-                    <ShieldAlert className="h-5 w-5" />
-                    <span className="text-xs">Disputes</span>
-                    {livePlatformStats.activeDisputes > 0 && (
-                      <Badge className="ml-auto bg-red-100 text-red-800">
-                        {livePlatformStats.activeDisputes}
-                      </Badge>
-                    )}
-                  </Link>
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
         </TabsContent>
 
         {/* ===== APPROVALS TAB ===== */}

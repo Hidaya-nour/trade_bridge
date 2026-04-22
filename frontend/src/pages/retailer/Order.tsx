@@ -60,6 +60,7 @@ const OrdersPage: React.FC = () => {
     order: Order,
     paymentMethod?: string,
     deliveryOption?: string,
+    deliveryAddress?: string,
   ) => {
     const items =
       order.items?.map((item) => ({
@@ -72,6 +73,7 @@ const OrdersPage: React.FC = () => {
       items,
       ...(paymentMethod ? { payment_method: paymentMethod } : {}),
       ...(deliveryOption ? { delivery_option: deliveryOption } : {}),
+      ...(deliveryAddress ? { delivery_address: deliveryAddress } : {}),
     };
     const created = await createOrder(payload);
     if (created) {

@@ -1,28 +1,18 @@
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   ShieldAlert,
   Search,
-  Filter,
-  MoreHorizontal,
   Eye,
   CheckCircle2,
-  XCircle,
   Clock,
   AlertCircle,
   Download,
-  ArrowUpDown,
-  MessageSquare,
-  FileText,
-  User,
+  Flag,
   Store,
   Factory,
-  Calendar,
-  DollarSign,
-  Scale,
-  ThumbsUp,
-  ThumbsDown,
-  Flag,
+  Package,
+  RefreshCw,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -53,14 +43,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -68,25 +50,18 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Separator } from "@/components/ui/separator";
-import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Progress } from "@/components/ui/progress";
+import { Textarea } from "@/components/ui/textarea";
 
 import {
   StatsCard,
-  SectionHeader,
-  StatusBadge,
   EmptyState,
   PaginationBar,
+  StatusBadge,
 } from "@/components";
 import { formatPrice, formatDate, formatDateTime } from "@/lib/formatters";
 import { cn, getInitials } from "@/lib/utils";
-
-// ============================================================================
-// TYPES
-// ============================================================================
+import { useDisputeStore } from "@/stores/dispute.store";
 
 type DisputeStatus =
   | "open"
@@ -95,267 +70,151 @@ type DisputeStatus =
   | "escalated"
   | "closed";
 type DisputePriority = "high" | "medium" | "low";
-type DisputeReason =
-  | "damaged_goods"
-  | "late_delivery"
-  | "wrong_items"
-  | "missing_items"
-  | "payment_issue"
-  | "quality_issue"
-  | "other";
+type PartyRole = "retailer" | "distributor" | "factory" | "driver" | "admin";
 
-interface DisputeMessage {
+interface AdminDispute {
   id: string;
-  userId: number;
-  userName: string;
-  userRole: "retailer" | "distributor" | "factory" | "admin";
-  message: string;
-  timestamp: string;
-  attachments?: string[];
-}
-
-interface Dispute {
-  id: string;
-  disputeNumber: string;
   orderId: string;
   orderNumber: string;
   raisedBy: {
-    id: number;
+    id: string;
     name: string;
-    role: "retailer" | "distributor" | "factory";
+    role: PartyRole;
     business: string;
+    email?: string;
   };
   against: {
-    id: number;
+    id: string;
     name: string;
-    role: "retailer" | "distributor" | "factory";
+    role: PartyRole;
     business: string;
+    email?: string;
   };
-  reason: DisputeReason;
-  reasonText?: string;
+  reason: string;
   description: string;
   amount: number;
   status: DisputeStatus;
   priority: DisputePriority;
   createdAt: string;
   updatedAt: string;
-  resolvedAt?: string;
-  resolvedBy?: string;
-  resolution?: string;
-  evidence?: string[];
-  messages: DisputeMessage[];
-  assignedTo?: string;
+  resolvedAt?: string | null;
+  resolution?: string | null;
+  resolvedBy?: string | null;
 }
 
-// ============================================================================
-// MOCK DATA
-// ============================================================================
-
-const mockDisputes: Dispute[] = [
-  {
-    id: "DSP-001",
-    disputeNumber: "DSP-2026-001",
-    orderId: "ORD-2026-0245",
-    orderNumber: "ORD-2026-0245",
-    raisedBy: {
-      id: 1,
-      name: "ABC Retail Shop",
-      role: "retailer",
-      business: "ABC Retail Shop",
-    },
-    against: {
-      id: 102,
-      name: "Adama Wholesalers",
-      role: "distributor",
-      business: "Adama Wholesalers",
-    },
-    reason: "damaged_goods",
-    description:
-      "Goods arrived with damaged packaging. Several items were crushed and unusable.",
-    amount: 12500,
-    status: "open",
-    priority: "high",
-    createdAt: "2026-02-12T10:30:00",
-    updatedAt: "2026-02-12T10:30:00",
-    messages: [
-      {
-        id: "MSG-001",
-        userId: 1,
-        userName: "ABC Retail Shop",
-        userRole: "retailer",
-        message:
-          "The flour bags were torn and cement bags were broken. Please advise.",
-        timestamp: "2026-02-12T10:30:00",
-      },
-    ],
-  },
-  {
-    id: "DSP-002",
-    disputeNumber: "DSP-2026-002",
-    orderId: "ORD-2026-0238",
-    orderNumber: "ORD-2026-0238",
-    raisedBy: {
-      id: 107,
-      name: "Mekelle Steel Distributors",
-      role: "distributor",
-      business: "Mekelle Steel Distributors",
-    },
-    against: {
-      id: 107,
-      name: "Tigray Construction",
-      role: "factory",
-      business: "Tigray Construction",
-    },
-    reason: "late_delivery",
-    description: "Order was delivered 5 days late causing production delays.",
-    amount: 150000,
-    status: "investigating",
-    priority: "medium",
-    createdAt: "2026-02-10T14:15:00",
-    updatedAt: "2026-02-11T09:20:00",
-    assignedTo: "Admin User",
-    messages: [
-      {
-        id: "MSG-002",
-        userId: 107,
-        userName: "Mekelle Steel Distributors",
-        userRole: "distributor",
-        message: "We were promised delivery on Feb 9 but it arrived on Feb 14.",
-        timestamp: "2026-02-10T14:15:00",
-      },
-      {
-        id: "MSG-003",
-        userId: 999,
-        userName: "Admin User",
-        userRole: "admin",
-        message:
-          "I've contacted the supplier. They claim weather caused delays.",
-        timestamp: "2026-02-11T09:20:00",
-      },
-    ],
-  },
-  {
-    id: "DSP-003",
-    disputeNumber: "DSP-2026-003",
-    orderId: "ORD-2026-0232",
-    orderNumber: "ORD-2026-0232",
-    raisedBy: {
-      id: 5,
-      name: "Addis Mart",
-      role: "retailer",
-      business: "Addis Mart",
-    },
-    against: {
-      id: 102,
-      name: "Adama Wholesalers",
-      role: "distributor",
-      business: "Adama Wholesalers",
-    },
-    reason: "wrong_items",
-    description:
-      "Received cooking oil instead of dairy products. Order was completely wrong.",
-    amount: 11750,
-    status: "escalated",
-    priority: "high",
-    createdAt: "2026-02-09T16:30:00",
-    updatedAt: "2026-02-13T11:00:00",
-    resolvedAt: "2026-02-13T11:00:00",
-    resolvedBy: "Admin User",
-    resolution: "Refund issued to customer. Supplier penalized.",
-    messages: [
-      {
-        id: "MSG-004",
-        userId: 5,
-        userName: "Addis Mart",
-        userRole: "retailer",
-        message:
-          "The driver delivered wrong items. We need a replacement urgently.",
-        timestamp: "2026-02-09T16:30:00",
-      },
-      {
-        id: "MSG-005",
-        userId: 102,
-        userName: "Adama Wholesalers",
-        userRole: "distributor",
-        message:
-          "Our warehouse made an error. We can send correct items tomorrow.",
-        timestamp: "2026-02-10T09:00:00",
-      },
-      {
-        id: "MSG-006",
-        userId: 999,
-        userName: "Admin User",
-        userRole: "admin",
-        message:
-          "Customer requested refund instead of replacement. Processing now.",
-        timestamp: "2026-02-13T11:00:00",
-      },
-    ],
-  },
-];
-
-// ============================================================================
-// CONSTANTS
-// ============================================================================
-
-const disputeStatusColors: Record<DisputeStatus, string> = {
-  open: "bg-yellow-100 text-yellow-800 border-yellow-200",
-  investigating: "bg-blue-100 text-blue-800 border-blue-200",
-  resolved: "bg-green-100 text-green-800 border-green-200",
-  escalated: "bg-red-100 text-red-800 border-red-200",
-  closed: "bg-gray-100 text-gray-800 border-gray-200",
+const roleTone: Record<PartyRole, string> = {
+  retailer: "bg-blue-100 text-blue-700",
+  distributor: "bg-purple-100 text-purple-700",
+  factory: "bg-green-100 text-green-700",
+  driver: "bg-amber-100 text-amber-700",
+  admin: "bg-slate-100 text-slate-700",
 };
 
-const priorityColors: Record<DisputePriority, string> = {
+const priorityTone: Record<DisputePriority, string> = {
   high: "bg-red-100 text-red-800",
   medium: "bg-yellow-100 text-yellow-800",
   low: "bg-green-100 text-green-800",
 };
 
-const reasonLabels: Record<DisputeReason, string> = {
-  damaged_goods: "Damaged Goods",
-  late_delivery: "Late Delivery",
-  wrong_items: "Wrong Items",
-  missing_items: "Missing Items",
-  payment_issue: "Payment Issue",
-  quality_issue: "Quality Issue",
-  other: "Other",
+const prettifyReason = (reason?: string) =>
+  (reason || "other")
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+
+const derivePriority = (amount: number, status: string): DisputePriority => {
+  if (status === "escalated" || amount >= 100000) return "high";
+  if (status === "investigating" || amount >= 25000) return "medium";
+  return "low";
 };
 
-// ============================================================================
-// COMPONENT
-// ============================================================================
+const toOrderNumber = (orderId?: string) =>
+  orderId ? `ORD-${orderId.slice(0, 8).toUpperCase()}` : "N/A";
+
+const normalizeDispute = (dispute: any): AdminDispute => {
+  const raisedBy = dispute.raised_by || {};
+  const against = dispute.against || {};
+  const amount = Number(dispute.amount || dispute.order_total || 0);
+  const status = (dispute.status || "open") as DisputeStatus;
+
+  return {
+    id: String(dispute.id),
+    orderId: String(dispute.order_id || dispute.order?.id || ""),
+    orderNumber: toOrderNumber(dispute.order_id || dispute.order?.id),
+    raisedBy: {
+      id: String(raisedBy.id || ""),
+      name: raisedBy.business_name || raisedBy.full_name || "Unknown User",
+      role: (raisedBy.role || "retailer") as PartyRole,
+      business:
+        raisedBy.business_name || raisedBy.full_name || "Unknown Business",
+      email: raisedBy.email,
+    },
+    against: {
+      id: String(against.id || ""),
+      name: against.business_name || against.full_name || "Unknown User",
+      role: (against.role || "distributor") as PartyRole,
+      business:
+        against.business_name || against.full_name || "Unknown Business",
+      email: against.email,
+    },
+    reason: dispute.reason || "other",
+    description: dispute.description || "No description provided",
+    amount,
+    status,
+    priority: derivePriority(amount, status),
+    createdAt: dispute.created_at || new Date().toISOString(),
+    updatedAt:
+      dispute.updated_at || dispute.created_at || new Date().toISOString(),
+    resolvedAt: dispute.resolved_at || null,
+    resolution: dispute.resolution || null,
+    resolvedBy:
+      dispute.resolved_by?.business_name ||
+      dispute.resolved_by?.full_name ||
+      null,
+  };
+};
 
 export const DisputesManagementPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
-  const [selectedPriority, setSelectedPriority] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
+  const [selectedDispute, setSelectedDispute] = useState<AdminDispute | null>(
+    null,
+  );
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
-  const [selectedDispute, setSelectedDispute] = useState<Dispute | null>(null);
   const [showResolveDialog, setShowResolveDialog] = useState(false);
   const [resolution, setResolution] = useState("");
-  const [newMessage, setNewMessage] = useState("");
+
+  const { items, isLoading, error, fetchAll, update } = useDisputeStore();
   const itemsPerPage = 10;
 
-  // Filter disputes
-  const filteredDisputes = mockDisputes.filter((dispute) => {
-    const matchesSearch =
-      searchQuery === "" ||
-      dispute.disputeNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      dispute.orderNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      dispute.raisedBy.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      dispute.against.name.toLowerCase().includes(searchQuery.toLowerCase());
+  useEffect(() => {
+    fetchAll({ limit: 100 });
+  }, [fetchAll]);
 
-    const matchesStatus =
-      selectedStatus === "all" || dispute.status === selectedStatus;
-    const matchesPriority =
-      selectedPriority === "all" || dispute.priority === selectedPriority;
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, selectedStatus]);
 
-    return matchesSearch && matchesStatus && matchesPriority;
-  });
+  const disputes = useMemo(() => (items || []).map(normalizeDispute), [items]);
 
-  // Pagination
+  const filteredDisputes = useMemo(() => {
+    return disputes.filter((dispute) => {
+      const needle = searchQuery.trim().toLowerCase();
+      const matchesSearch =
+        needle === "" ||
+        dispute.id.toLowerCase().includes(needle) ||
+        dispute.orderNumber.toLowerCase().includes(needle) ||
+        dispute.raisedBy.name.toLowerCase().includes(needle) ||
+        dispute.against.name.toLowerCase().includes(needle) ||
+        dispute.description.toLowerCase().includes(needle);
+
+      const matchesStatus =
+        selectedStatus === "all" || dispute.status === selectedStatus;
+
+      return matchesSearch && matchesStatus;
+    });
+  }, [disputes, searchQuery, selectedStatus]);
+
   const totalPages = Math.ceil(filteredDisputes.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedDisputes = filteredDisputes.slice(
@@ -363,64 +222,71 @@ export const DisputesManagementPage: React.FC = () => {
     startIndex + itemsPerPage,
   );
 
-  // Stats
-  const stats = {
-    total: mockDisputes.length,
-    open: mockDisputes.filter((d) => d.status === "open").length,
-    investigating: mockDisputes.filter((d) => d.status === "investigating")
-      .length,
-    resolved: mockDisputes.filter((d) => d.status === "resolved").length,
-    escalated: mockDisputes.filter((d) => d.status === "escalated").length,
-    highPriority: mockDisputes.filter((d) => d.priority === "high").length,
-  };
+  const stats = useMemo(
+    () => ({
+      total: disputes.length,
+      open: disputes.filter((d) => d.status === "open").length,
+      investigating: disputes.filter((d) => d.status === "investigating")
+        .length,
+      escalated: disputes.filter((d) => d.status === "escalated").length,
+      resolved: disputes.filter((d) => d.status === "resolved").length,
+      highPriority: disputes.filter((d) => d.priority === "high").length,
+    }),
+    [disputes],
+  );
 
-  // Handle resolve
-  const handleResolve = () => {
-    if (selectedDispute) {
-      console.log(
-        "Resolving dispute:",
-        selectedDispute.id,
-        "Resolution:",
-        resolution,
-      );
-      setShowResolveDialog(false);
-      setShowDetailsDialog(false);
-      setResolution("");
-      // In real app, call API
+  const handleStatusUpdate = async (
+    dispute: AdminDispute,
+    status: DisputeStatus,
+    nextResolution?: string,
+  ) => {
+    await update(dispute.id, {
+      status,
+      resolution: nextResolution,
+    });
+
+    await fetchAll({ limit: 100 });
+
+    if (selectedDispute?.id === dispute.id) {
+      setSelectedDispute({
+        ...selectedDispute,
+        status,
+        resolution: nextResolution || selectedDispute.resolution,
+        resolvedAt:
+          status === "resolved"
+            ? new Date().toISOString()
+            : selectedDispute.resolvedAt,
+      });
     }
   };
 
-  // Handle send message
-  const handleSendMessage = () => {
-    if (selectedDispute && newMessage.trim()) {
-      console.log("Sending message:", newMessage);
-      setNewMessage("");
-      // In real app, call API
-    }
+  const handleResolve = async () => {
+    if (!selectedDispute || !resolution.trim()) return;
+
+    await handleStatusUpdate(selectedDispute, "resolved", resolution.trim());
+    setShowResolveDialog(false);
+    setShowDetailsDialog(false);
+    setResolution("");
   };
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">
             Disputes Management
           </h1>
-          <p className="text-muted-foreground mt-1">
-            Handle disputes between retailers, distributors, and factories
+          <p className="mt-1 text-muted-foreground">
+            Review, investigate, and resolve platform disputes from live data.
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline">
-            <Download className="h-4 w-4 mr-2" />
-            Export Report
-          </Button>
-        </div>
+        <Button variant="outline" disabled>
+          <Download className="mr-2 h-4 w-4" />
+          Export Report
+        </Button>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         <StatsCard
           title="Total Disputes"
           value={stats.total}
@@ -442,13 +308,7 @@ export const DisputesManagementPage: React.FC = () => {
           iconBg="bg-blue-100"
           iconColor="text-blue-600"
         />
-        <StatsCard
-          title="Escalated"
-          value={stats.escalated}
-          icon={Flag}
-          iconBg="bg-red-100"
-          iconColor="text-red-600"
-        />
+
         <StatsCard
           title="Resolved"
           value={stats.resolved}
@@ -456,31 +316,31 @@ export const DisputesManagementPage: React.FC = () => {
           iconBg="bg-green-100"
           iconColor="text-green-600"
         />
-        <StatsCard
-          title="High Priority"
-          value={stats.highPriority}
-          icon={AlertCircle}
-          iconBg="bg-red-100"
-          iconColor="text-red-600"
-        />
       </div>
 
-      {/* Filters */}
+      {error && (
+        <Card className="border-red-200 bg-red-50">
+          <CardContent className="p-4 text-sm text-red-700">
+            {error}
+          </CardContent>
+        </Card>
+      )}
+
       <Card>
         <CardContent className="p-4">
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <div className="flex flex-col gap-4 md:flex-row">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
-                placeholder="Search by dispute #, order #, parties..."
+                placeholder="Search by dispute, order, or party..."
                 className="pl-9"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
             <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Status" />
+              <SelectTrigger className="w-[220px]">
+                <SelectValue placeholder="All statuses" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Statuses</SelectItem>
@@ -491,30 +351,22 @@ export const DisputesManagementPage: React.FC = () => {
                 <SelectItem value="closed">Closed</SelectItem>
               </SelectContent>
             </Select>
-            <Select
-              value={selectedPriority}
-              onValueChange={setSelectedPriority}
-            >
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Priority" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Priorities</SelectItem>
-                <SelectItem value="high">High</SelectItem>
-                <SelectItem value="medium">Medium</SelectItem>
-                <SelectItem value="low">Low</SelectItem>
-              </SelectContent>
-            </Select>
           </div>
         </CardContent>
       </Card>
 
-      {/* Disputes Table */}
-      {paginatedDisputes.length === 0 ? (
+      {isLoading ? (
+        <Card>
+          <CardContent className="flex items-center justify-center py-12 text-sm text-muted-foreground">
+            <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+            Loading disputes...
+          </CardContent>
+        </Card>
+      ) : paginatedDisputes.length === 0 ? (
         <EmptyState
           icon={ShieldAlert}
           title="No disputes found"
-          description="All disputes have been resolved"
+          description="Try adjusting your filters or check back once disputes are created."
         />
       ) : (
         <Card>
@@ -522,8 +374,8 @@ export const DisputesManagementPage: React.FC = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Dispute #</TableHead>
-                  <TableHead>Order #</TableHead>
+                  <TableHead>Dispute</TableHead>
+                  <TableHead>Order</TableHead>
                   <TableHead>Raised By</TableHead>
                   <TableHead>Against</TableHead>
                   <TableHead>Reason</TableHead>
@@ -537,13 +389,8 @@ export const DisputesManagementPage: React.FC = () => {
               <TableBody>
                 {paginatedDisputes.map((dispute) => (
                   <TableRow key={dispute.id}>
-                    <TableCell>
-                      <Link
-                        to={`/admin/disputes/${dispute.id}`}
-                        className="text-sm font-medium hover:text-primary"
-                      >
-                        {dispute.disputeNumber}
-                      </Link>
+                    <TableCell className="font-medium">
+                      DSP-{dispute.id.slice(0, 8).toUpperCase()}
                     </TableCell>
                     <TableCell>
                       <Link
@@ -555,83 +402,70 @@ export const DisputesManagementPage: React.FC = () => {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <Avatar className="h-6 w-6">
+                        <Avatar className="h-7 w-7">
                           <AvatarFallback
-                            className={cn(
-                              dispute.raisedBy.role === "retailer"
-                                ? "bg-blue-100 text-blue-700"
-                                : dispute.raisedBy.role === "distributor"
-                                  ? "bg-purple-100 text-purple-700"
-                                  : "bg-green-100 text-green-700",
-                            )}
+                            className={roleTone[dispute.raisedBy.role]}
                           >
                             {getInitials(dispute.raisedBy.name)}
                           </AvatarFallback>
                         </Avatar>
                         <div>
-                          <Link
-                            to={`/admin/users/${dispute.raisedBy.id}`}
-                            className="text-sm hover:text-primary"
-                          >
+                          <div className="text-sm font-medium">
                             {dispute.raisedBy.name}
-                          </Link>
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {dispute.raisedBy.business}
+                          </div>
                         </div>
                       </div>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <Avatar className="h-6 w-6">
+                        <Avatar className="h-7 w-7">
                           <AvatarFallback
-                            className={cn(
-                              dispute.against.role === "distributor"
-                                ? "bg-purple-100 text-purple-700"
-                                : "bg-green-100 text-green-700",
-                            )}
+                            className={roleTone[dispute.against.role]}
                           >
                             {getInitials(dispute.against.name)}
                           </AvatarFallback>
                         </Avatar>
-                        <Link
-                          to={`/admin/users/${dispute.against.id}`}
-                          className="text-sm hover:text-primary"
-                        >
-                          {dispute.against.name}
-                        </Link>
+                        <div>
+                          <div className="text-sm font-medium">
+                            {dispute.against.name}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {dispute.against.business}
+                          </div>
+                        </div>
                       </div>
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline">
-                        {reasonLabels[dispute.reason]}
+                        {prettifyReason(dispute.reason)}
                       </Badge>
                     </TableCell>
                     <TableCell className="font-medium">
                       {formatPrice(dispute.amount)}
                     </TableCell>
                     <TableCell>
-                      <Badge className={disputeStatusColors[dispute.status]}>
-                        {dispute.status}
-                      </Badge>
+                      <StatusBadge status={dispute.status} />
                     </TableCell>
                     <TableCell>
-                      <Badge className={priorityColors[dispute.priority]}>
+                      <Badge className={priorityTone[dispute.priority]}>
                         {dispute.priority}
                       </Badge>
                     </TableCell>
-                    <TableCell>
-                      <div className="text-sm">
-                        {formatDate(dispute.createdAt)}
-                      </div>
-                    </TableCell>
+                    <TableCell>{formatDate(dispute.createdAt)}</TableCell>
                     <TableCell className="text-right">
                       <Button
                         size="sm"
                         variant="ghost"
                         onClick={() => {
                           setSelectedDispute(dispute);
+                          setResolution(dispute.resolution || "");
                           setShowDetailsDialog(true);
                         }}
                       >
-                        <Eye className="h-4 w-4 mr-2" />
+                        <Eye className="mr-2 h-4 w-4" />
                         View
                       </Button>
                     </TableCell>
@@ -640,11 +474,14 @@ export const DisputesManagementPage: React.FC = () => {
               </TableBody>
             </Table>
           </CardContent>
-          <CardFooter className="flex items-center justify-between p-4 border-t">
+          <CardFooter className="flex items-center justify-between border-t p-4">
             <p className="text-sm text-muted-foreground">
-              Showing {startIndex + 1}-
-              {Math.min(startIndex + itemsPerPage, filteredDisputes.length)} of{" "}
-              {filteredDisputes.length} disputes
+              Showing {filteredDisputes.length === 0 ? 0 : startIndex + 1}-
+              {Math.min(
+                startIndex + paginatedDisputes.length,
+                filteredDisputes.length,
+              )}{" "}
+              of {filteredDisputes.length} disputes
             </p>
             {totalPages > 1 && (
               <PaginationBar
@@ -657,45 +494,39 @@ export const DisputesManagementPage: React.FC = () => {
         </Card>
       )}
 
-      {/* Dispute Details Dialog */}
       <Dialog open={showDetailsDialog} onOpenChange={setShowDetailsDialog}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-3xl">
           <DialogHeader>
             <DialogTitle>Dispute Details</DialogTitle>
             <DialogDescription>
-              {selectedDispute?.disputeNumber} - {selectedDispute?.orderNumber}
+              {selectedDispute
+                ? `DSP-${selectedDispute.id.slice(0, 8).toUpperCase()}`
+                : "Selected dispute"}
             </DialogDescription>
           </DialogHeader>
 
           {selectedDispute && (
             <div className="space-y-6">
-              {/* Status and Priority */}
-              <div className="flex gap-4">
-                <Badge className={disputeStatusColors[selectedDispute.status]}>
-                  Status: {selectedDispute.status}
+              <div className="flex flex-wrap gap-2">
+                <StatusBadge status={selectedDispute.status} />
+                <Badge className={priorityTone[selectedDispute.priority]}>
+                  {selectedDispute.priority} priority
                 </Badge>
-                <Badge className={priorityColors[selectedDispute.priority]}>
-                  Priority: {selectedDispute.priority}
+                <Badge variant="outline">
+                  {prettifyReason(selectedDispute.reason)}
                 </Badge>
               </div>
 
-              {/* Parties */}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-4 md:grid-cols-2">
                 <Card>
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm">Raised By</CardTitle>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="space-y-2 text-sm">
                     <div className="flex items-center gap-3">
                       <Avatar>
                         <AvatarFallback
-                          className={cn(
-                            selectedDispute.raisedBy.role === "retailer"
-                              ? "bg-blue-100 text-blue-700"
-                              : selectedDispute.raisedBy.role === "distributor"
-                                ? "bg-purple-100 text-purple-700"
-                                : "bg-green-100 text-green-700",
-                          )}
+                          className={roleTone[selectedDispute.raisedBy.role]}
                         >
                           {getInitials(selectedDispute.raisedBy.name)}
                         </AvatarFallback>
@@ -704,27 +535,29 @@ export const DisputesManagementPage: React.FC = () => {
                         <p className="font-medium">
                           {selectedDispute.raisedBy.name}
                         </p>
-                        <p className="text-sm text-muted-foreground">
-                          {selectedDispute.raisedBy.role} •{" "}
+                        <p className="text-muted-foreground">
                           {selectedDispute.raisedBy.business}
                         </p>
                       </div>
                     </div>
+                    <StatusBadge status={selectedDispute.raisedBy.role} />
+                    {selectedDispute.raisedBy.email && (
+                      <p className="text-muted-foreground">
+                        {selectedDispute.raisedBy.email}
+                      </p>
+                    )}
                   </CardContent>
                 </Card>
+
                 <Card>
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm">Against</CardTitle>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="space-y-2 text-sm">
                     <div className="flex items-center gap-3">
                       <Avatar>
                         <AvatarFallback
-                          className={cn(
-                            selectedDispute.against.role === "distributor"
-                              ? "bg-purple-100 text-purple-700"
-                              : "bg-green-100 text-green-700",
-                          )}
+                          className={roleTone[selectedDispute.against.role]}
                         >
                           {getInitials(selectedDispute.against.name)}
                         </AvatarFallback>
@@ -733,129 +566,83 @@ export const DisputesManagementPage: React.FC = () => {
                         <p className="font-medium">
                           {selectedDispute.against.name}
                         </p>
-                        <p className="text-sm text-muted-foreground">
-                          {selectedDispute.against.role} •{" "}
+                        <p className="text-muted-foreground">
                           {selectedDispute.against.business}
                         </p>
                       </div>
                     </div>
+                    <StatusBadge status={selectedDispute.against.role} />
+                    {selectedDispute.against.email && (
+                      <p className="text-muted-foreground">
+                        {selectedDispute.against.email}
+                      </p>
+                    )}
                   </CardContent>
                 </Card>
               </div>
 
-              {/* Dispute Details */}
               <Card>
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm">Dispute Information</CardTitle>
+                  <CardDescription>
+                    Order {selectedDispute.orderNumber} filed on{" "}
+                    {formatDateTime(selectedDispute.createdAt)}
+                  </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-3">
-                  <div>
-                    <p className="text-sm font-medium">Reason</p>
-                    <Badge variant="outline" className="mt-1">
-                      {reasonLabels[selectedDispute.reason]}
-                    </Badge>
+                <CardContent className="space-y-3 text-sm">
+                  <div className="flex items-center gap-2">
+                    <Package className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-medium">
+                      Amount in dispute: {formatPrice(selectedDispute.amount)}
+                    </span>
                   </div>
-                  <div>
-                    <p className="text-sm font-medium">Description</p>
-                    <p className="text-sm mt-1 p-3 bg-muted rounded-lg">
-                      {selectedDispute.description}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium">Amount in Dispute</p>
-                    <p className="text-lg font-bold text-primary">
-                      {formatPrice(selectedDispute.amount)}
-                    </p>
+                  <div className="rounded-lg bg-muted p-3">
+                    {selectedDispute.description}
                   </div>
                   {selectedDispute.resolution && (
-                    <div>
-                      <p className="text-sm font-medium">Resolution</p>
-                      <p className="text-sm mt-1 p-3 bg-green-50 rounded-lg">
+                    <div className="rounded-lg border border-green-200 bg-green-50 p-3">
+                      <p className="font-medium text-green-800">Resolution</p>
+                      <p className="mt-1 text-green-700">
                         {selectedDispute.resolution}
                       </p>
+                      {selectedDispute.resolvedAt && (
+                        <p className="mt-2 text-xs text-green-700">
+                          Resolved {formatDateTime(selectedDispute.resolvedAt)}
+                          {selectedDispute.resolvedBy
+                            ? ` by ${selectedDispute.resolvedBy}`
+                            : ""}
+                        </p>
+                      )}
                     </div>
                   )}
                 </CardContent>
               </Card>
 
-              {/* Timeline / Messages */}
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm">
-                    Communication Timeline
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {selectedDispute.messages.map((msg) => (
-                      <div key={msg.id} className="flex gap-3">
-                        <Avatar className="h-8 w-8">
-                          <AvatarFallback
-                            className={cn(
-                              msg.userRole === "admin"
-                                ? "bg-red-100 text-red-700"
-                                : msg.userRole === "retailer"
-                                  ? "bg-blue-100 text-blue-700"
-                                  : msg.userRole === "distributor"
-                                    ? "bg-purple-100 text-purple-700"
-                                    : "bg-green-100 text-green-700",
-                            )}
-                          >
-                            {getInitials(msg.userName)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium">
-                              {msg.userName}
-                            </span>
-                            <span className="text-xs text-muted-foreground">
-                              {msg.userRole}
-                            </span>
-                            <span className="text-xs text-muted-foreground">
-                              {formatDateTime(msg.timestamp)}
-                            </span>
-                          </div>
-                          <p className="text-sm mt-1">{msg.message}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Add Message */}
-                  <div className="mt-4 pt-4 border-t">
-                    <div className="flex gap-2">
-                      <Textarea
-                        placeholder="Type your message..."
-                        value={newMessage}
-                        onChange={(e) => setNewMessage(e.target.value)}
-                        className="flex-1"
-                        rows={2}
-                      />
-                      <Button onClick={handleSendMessage} className="self-end">
-                        Send
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Action Buttons */}
               {selectedDispute.status !== "resolved" &&
                 selectedDispute.status !== "closed" && (
-                  <div className="flex justify-end gap-2">
+                  <div className="flex flex-wrap justify-end gap-2">
                     <Button
                       variant="outline"
-                      onClick={() => {
-                        setShowResolveDialog(true);
-                      }}
+                      onClick={() =>
+                        handleStatusUpdate(selectedDispute, "investigating")
+                      }
                     >
-                      <CheckCircle2 className="h-4 w-4 mr-2" />
-                      Resolve
+                      <RefreshCw className="mr-2 h-4 w-4" />
+                      Mark Investigating
                     </Button>
-                    <Button variant="destructive">
-                      <Flag className="h-4 w-4 mr-2" />
+                    <Button
+                      variant="outline"
+                      className="text-red-600"
+                      onClick={() =>
+                        handleStatusUpdate(selectedDispute, "escalated")
+                      }
+                    >
+                      <Flag className="mr-2 h-4 w-4" />
                       Escalate
+                    </Button>
+                    <Button onClick={() => setShowResolveDialog(true)}>
+                      <CheckCircle2 className="mr-2 h-4 w-4" />
+                      Resolve
                     </Button>
                   </div>
                 )}
@@ -873,42 +660,24 @@ export const DisputesManagementPage: React.FC = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Resolve Dialog */}
       <Dialog open={showResolveDialog} onOpenChange={setShowResolveDialog}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Resolve Dispute</DialogTitle>
             <DialogDescription>
-              Provide resolution details for this dispute
+              Add a clear resolution note before closing this dispute.
             </DialogDescription>
           </DialogHeader>
-
-          <div className="py-4">
+          <div className="space-y-2 py-4">
             <Label htmlFor="resolution">Resolution Details</Label>
             <Textarea
               id="resolution"
-              placeholder="e.g., Refund issued, replacement sent, etc."
               value={resolution}
               onChange={(e) => setResolution(e.target.value)}
-              className="mt-2"
-              rows={4}
+              placeholder="Describe how the dispute was resolved..."
+              rows={5}
             />
-
-            <div className="mt-4 space-y-2">
-              <Label>Resolution Type</Label>
-              <div className="flex gap-4">
-                <Button variant="outline" className="flex-1">
-                  <ThumbsUp className="h-4 w-4 mr-2" />
-                  In Favor of Buyer
-                </Button>
-                <Button variant="outline" className="flex-1">
-                  <ThumbsDown className="h-4 w-4 mr-2" />
-                  In Favor of Supplier
-                </Button>
-              </div>
-            </div>
           </div>
-
           <DialogFooter>
             <Button
               variant="outline"
@@ -925,3 +694,5 @@ export const DisputesManagementPage: React.FC = () => {
     </div>
   );
 };
+
+export default DisputesManagementPage;

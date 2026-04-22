@@ -4,6 +4,7 @@ import disputeService from '@/services/dispute.service';
 interface DisputeState {
   items: any[];
   currentItem: any | null;
+  total: number;
   isLoading: boolean;
   error: string | null;
   
@@ -18,6 +19,7 @@ interface DisputeState {
 export const useDisputeStore = create<DisputeState>((set, get) => ({
   items: [],
   currentItem: null,
+  total: 0,
   isLoading: false,
   error: null,
 
@@ -25,7 +27,11 @@ export const useDisputeStore = create<DisputeState>((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const response = await disputeService.getAll(params);
-      set({ items: response.data || response, isLoading: false });
+      set({
+        items: response.disputes || [],
+        total: response.total || 0,
+        isLoading: false,
+      });
     } catch (error: any) {
       set({
         error: error.response?.data?.message || 'Failed to fetch items',
@@ -38,8 +44,8 @@ export const useDisputeStore = create<DisputeState>((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const response = await disputeService.getById(id);
-      set({ currentItem: response.data || response, isLoading: false });
-      return response.data || response;
+      set({ currentItem: response, isLoading: false });
+      return response;
     } catch (error: any) {
       set({
         error: error.response?.data?.message || 'Failed to fetch item',
@@ -56,7 +62,7 @@ export const useDisputeStore = create<DisputeState>((set, get) => ({
       // Optional: Refresh list
       // await get().fetchAll();
       set({ isLoading: false });
-      return response.data || response;
+      return response;
     } catch (error: any) {
       set({
         error: error.response?.data?.message || 'Failed to create item',
@@ -72,11 +78,11 @@ export const useDisputeStore = create<DisputeState>((set, get) => ({
       const response = await disputeService.update(id, data);
       
       const items = get().items.map(p => 
-        p.id === id ? (response.data || response) : p
+        p.id === id ? response : p
       );
       
-      set({ items, currentItem: response.data || response, isLoading: false });
-      return response.data || response;
+      set({ items, currentItem: response, isLoading: false });
+      return response;
     } catch (error: any) {
       set({
         error: error.response?.data?.message || 'Failed to update item',

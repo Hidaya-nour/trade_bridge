@@ -4,17 +4,16 @@ import { CartItem } from "../models/cart-item.model";
 import { Product } from "../models/product.model";
 import User from "../models/user.model";
 import { CartWithItems } from "../types/cart.types";
-import { PromotionService } from "../services/promotion/promotion.service";
-import { UserRole } from "../types/auth.types";
+import { BroadcastRepository } from "./broadcast.repository";
 
 export class CartRepository extends BaseRepository<Cart> {
-  private promotionService = new PromotionService();
+  private broadcastRepo = new BroadcastRepository();
 
   constructor() {
     super(Cart);
   }
   // Find Cart with Items
-  async findCartWithItems(userId: string, userRole?: UserRole, region?: string): Promise<CartWithItems | null> {
+  async findCartWithItems(userId: string): Promise<CartWithItems | null> {
     const cart = await this.model.findOne({
       where: { user_id: userId },
       include: [
@@ -28,6 +27,7 @@ export class CartRepository extends BaseRepository<Cart> {
               attributes: [
                 'id',
                 'name',
+                'sku',
                 'price',
                 'unit_type',
                 'images',
@@ -65,25 +65,91 @@ export class CartRepository extends BaseRepository<Cart> {
     // Calculate totals
     const items = (cart as any).items || [];
     const total_items = items.reduce((sum: number, item: any) => sum + item.quantity, 0);
-    const original_total = items.reduce((sum: number, item: any) =>
-      sum + (item.product?.price || 0) * item.quantity, 0
-    );
 
+    const toNumber = (value: any, fallback = 0) => {
+      const parsed = Number(value);
+      return Number.isFinite(parsed) ? parsed : fallback;
+    };
+
+    const applyDiscountPromotion = (
+      baseUnitPrice: number,
+      quantity: number,
+      promotion: any,
+    ) => {
+      if (!promotion) return baseUnitPrice;
+      if (promotion.type !== 'discount') return baseUnitPrice;
+
+      const discountType = promotion.discount_type;
+      const discountValue = toNumber(promotion.discount_value, 0);
+      const minOrder = promotion.min_order !== null && promotion.min_order !== undefined
+        ? toNumber(promotion.min_order, 0)
+        : null;
+      const maxDiscount = promotion.max_discount !== null && promotion.max_discount !== undefined
+        ? toNumber(promotion.max_discount, 0)
+        : null;
+
+      if (minOrder !== null && minOrder > 0 && quantity < minOrder) return baseUnitPrice;
+      if (!discountType || discountValue <= 0) return baseUnitPrice;
+
+      let perUnitDiscount = 0;
+      if (discountType === 'percentage') {
+        perUnitDiscount = baseUnitPrice * Math.min(100, discountValue) / 100;
+      } else if (discountType === 'fixed') {
+        perUnitDiscount = discountValue;
+      }
+
+      let totalDiscount = perUnitDiscount * quantity;
+      if (maxDiscount !== null && maxDiscount > 0) {
+        totalDiscount = Math.min(totalDiscount, maxDiscount);
+      }
+
+      const unitPrice = baseUnitPrice - totalDiscount / Math.max(1, quantity);
+      return Math.max(0, Number(unitPrice.toFixed(2)));
+    };
+
+    let original_total = 0;
     let discount_total = 0;
-    let final_total = original_total;
-    let applied_promotions: any[] = [];
+    const applied_promotions: any[] = [];
 
-    // Apply promotions if user info is provided
-    if (userRole && region) {
-      const promotionResult = await this.promotionService.calculateCartTotalWithPromotions(
-        userRole,
-        region,
-        original_total
+    for (const item of items) {
+      const product = item?.product;
+      if (!product) continue;
+
+      const baseUnitPrice = toNumber(product.price, 0);
+      original_total += baseUnitPrice * toNumber(item.quantity, 0);
+
+      const code = String(product.sku || '').trim();
+      const supplierId = String(product.supplier_id || '').trim();
+      if (!code || !supplierId) continue;
+
+      const promotion = await this.broadcastRepo.findActiveDiscountByOwnerAndCode(
+        supplierId,
+        code,
       );
-      discount_total = promotionResult.discount_total;
-      final_total = promotionResult.final_total;
-      applied_promotions = promotionResult.applied_promotions;
+
+      const quantity = toNumber(item.quantity, 0);
+      const discountedUnitPrice = applyDiscountPromotion(baseUnitPrice, quantity, promotion);
+
+      if (discountedUnitPrice !== baseUnitPrice) {
+        // Surface original price to the client without changing the schema.
+        product.setDataValue?.('original_price', baseUnitPrice);
+        product.price = discountedUnitPrice;
+
+        discount_total += (baseUnitPrice - discountedUnitPrice) * quantity;
+
+        if (promotion) {
+          applied_promotions.push({
+            broadcast_id: promotion.id,
+            code: promotion.code,
+            discount_type: promotion.discount_type,
+            discount_value: promotion.discount_value,
+          });
+        }
+      }
     }
+
+    const final_total = Math.max(0, Number((original_total - discount_total).toFixed(2)));
+    discount_total = Math.max(0, Number(discount_total.toFixed(2)));
 
     return {
       id: cart.id,

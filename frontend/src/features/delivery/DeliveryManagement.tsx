@@ -320,7 +320,7 @@ interface DeliveryManagementProps {
 
 export const DeliveryManagement: React.FC<DeliveryManagementProps> = ({
   config,
-  initialDeliveries = deliveries,
+  initialDeliveries = [],
   initialDrivers = [],
 }) => {
   const {
@@ -334,6 +334,8 @@ export const DeliveryManagement: React.FC<DeliveryManagementProps> = ({
   } = useDriverStore();
   const [deliveryList, setDeliveryList] =
     useState<Delivery[]>(initialDeliveries);
+  const [deliveriesLoading, setDeliveriesLoading] = useState(false);
+  const [deliveriesError, setDeliveriesError] = useState<string | null>(null);
   const [driverList, setDriverList] = useState<Driver[]>(initialDrivers);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -351,6 +353,105 @@ export const DeliveryManagement: React.FC<DeliveryManagementProps> = ({
   const [currentPage, setCurrentPage] = useState(1);
   const [activeTab, setActiveTab] = useState("deliveries");
   const itemsPerPage = 5;
+
+  const mapApiStatus = (status: string) => {
+    switch (String(status || '').toLowerCase()) {
+      case 'picked_up':
+        return 'picked-up' as const;
+      case 'in_transit':
+        return 'in-transit' as const;
+      default:
+        return status as any;
+    }
+  };
+
+  const toUiDeliveries = (input: any[]): Delivery[] => {
+    return (input || []).map((row: any) => {
+      const order = row.order;
+      const buyer = order?.buyer;
+      const buyerName =
+        buyer?.business_name || buyer?.full_name || buyer?.email || 'Customer';
+
+      const createdAt = row.created_at || order?.created_at || new Date().toISOString();
+      const createdDate = new Date(createdAt);
+      const scheduledDate = Number.isNaN(createdDate.getTime())
+        ? new Date().toISOString().slice(0, 10)
+        : createdDate.toISOString().slice(0, 10);
+      const scheduledTime = Number.isNaN(createdDate.getTime())
+        ? '00:00'
+        : createdDate.toISOString().slice(11, 16);
+
+      const items = Array.isArray(order?.items)
+        ? order.items
+            .map((item: any) => ({
+              name: item?.product?.name || 'Item',
+              quantity: Number(item?.quantity || 0),
+              unit: item?.product?.unit_type || 'unit',
+            }))
+            .filter((i: any) => Boolean(i.name))
+        : [];
+
+      const totalItems = items.reduce((sum: number, i: any) => sum + (Number(i.quantity) || 0), 0);
+
+      const driverUser = row.driver?.driverUser;
+
+      const deliveryCost = config.defaultDeliveryCost || 0;
+      const deliveryType = deliveryCost > 0 ? ('paid' as const) : ('free' as const);
+
+      return {
+        id: String(row.id),
+        orderId: String(row.order_id || order?.id || ''),
+        customerId: 0,
+        customerName: buyerName,
+        customerContact: buyer?.full_name || buyerName,
+        customerPhone: buyer?.phone || '',
+        customerLocation: '',
+        deliveryAddress: String(row.dropoff_location || ''),
+        items,
+        totalItems,
+        totalWeight: '',
+        status: mapApiStatus(String(row.status || 'pending')),
+        priority: 'medium',
+        scheduledDate,
+        scheduledTime,
+        estimatedDelivery: '',
+        actualDelivery: row.completed_at ? String(row.completed_at) : undefined,
+        driverId: row.driver_id || row.driver?.id,
+        driverName: driverUser?.full_name || undefined,
+        driverPhone: driverUser?.phone || undefined,
+        vehicleType: row.driver?.vehicle_type || undefined,
+        licensePlate: row.driver?.license_plate || undefined,
+        currentLocation: '',
+        lastUpdate: row.updated_at ? String(row.updated_at) : undefined,
+        deliveryType,
+        deliveryCost,
+        paymentCollected: false,
+        customerPickedUp: false,
+      };
+    });
+  };
+
+  useEffect(() => {
+    const load = async () => {
+      setDeliveriesLoading(true);
+      setDeliveriesError(null);
+      try {
+        const response = await deliveryService.getSupplierDeliveries();
+        const apiDeliveries =
+          response?.data?.deliveries || response?.deliveries || [];
+        setDeliveryList(toUiDeliveries(apiDeliveries));
+      } catch (err: any) {
+        setDeliveryList([]);
+        setDeliveriesError(
+          err?.response?.data?.message || 'Failed to load deliveries',
+        );
+      } finally {
+        setDeliveriesLoading(false);
+      }
+    };
+
+    void load();
+  }, [config.role]);
 
   // Add Driver dialog (link a driver user to this supplier)
   const [showAddDriverDialog, setShowAddDriverDialog] = useState(false);
@@ -751,11 +852,21 @@ export const DeliveryManagement: React.FC<DeliveryManagementProps> = ({
           </div>
 
           {/* Deliveries List */}
-          {sortedDeliveries.length === 0 ? (
+          {deliveriesLoading ? (
+            <Card>
+              <CardContent className="p-6 text-sm text-muted-foreground">
+                Loading deliveries...
+              </CardContent>
+            </Card>
+          ) : sortedDeliveries.length === 0 ? (
             <EmptyState
               icon={Truck}
               title="No deliveries found"
-              description="No deliveries match your current filters"
+              description={
+                deliveriesError
+                  ? deliveriesError
+                  : "No deliveries match your current filters"
+              }
               actionLabel="Clear filters"
               onAction={() => {
                 setSearchQuery("");

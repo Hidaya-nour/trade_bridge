@@ -105,6 +105,7 @@ interface OrderListProps {
     order: Order,
     paymentMethod?: string,
     deliveryOption?: string,
+    deliveryAddress?: string,
   ) => Promise<{
     primaryOrderId: string;
     orderIds?: string[];
@@ -1131,8 +1132,13 @@ export const OrderList: React.FC<OrderListProps> = ({
             ordersPath: `/${config.role}/${config.type === "purchases" ? "purchase-orders" : "orders"}`,
             vatPercentage: config.paymentConfig?.vatPercentage,
           }}
-          onPlaceOrder={(paymentMethod, deliveryOption) =>
-            onReorderPlaceOrder(selectedOrder, paymentMethod, deliveryOption)
+          onPlaceOrder={(paymentMethod, deliveryOption, deliveryAddress) =>
+            onReorderPlaceOrder(
+              selectedOrder,
+              paymentMethod,
+              deliveryOption,
+              deliveryAddress,
+            )
           }
           onProcessPayment={onProcessPayment as any}
         />

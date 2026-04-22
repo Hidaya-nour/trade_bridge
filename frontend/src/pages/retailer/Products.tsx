@@ -4,8 +4,17 @@ import type { CatalogConfig, CatalogProduct } from "@/types/product.types";
 import { Store } from "lucide-react";
 import { useProductStore } from "@/stores/product.store";
 import { useCartStore } from "@/stores/cart.store";
+import broadcastService from "@/services/broadcast.service";
+import { ActivePromotionsPanel } from "@/components/shared/ActivePromotionsPanel";
+import type { BroadcastRecord } from "@/types/broadcast.types";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent } from "@/components/ui/card";
+import { useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import {
+  applyDiscountToUnitPrice,
+  resolveBestDiscountPromotion,
+} from "@/lib/promotion-utils";
 // import { useAuthStore } from "@/stores/auth.store";
 
 const categories = ["All Categories", "Beverages", "Food"];
@@ -20,11 +29,14 @@ const defaultLocations = [
 ];
 
 const RetailerProductsPage: React.FC = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
   const {
     products,
     isLoading: productsLoading,
     fetchProducts,
   } = useProductStore();
+  const [promotions, setPromotions] = useState<BroadcastRecord[]>([]);
 
   const {
     items: cartItems,
@@ -37,9 +49,42 @@ const RetailerProductsPage: React.FC = () => {
 
   // Fetch products and cart on mount
   useEffect(() => {
-    fetchProducts({ is_available: true });
+    const promotionSku = new URLSearchParams(location.search).get("promotion");
+    fetchProducts({
+      is_available: true,
+      ...(promotionSku ? { search: promotionSku } : {}),
+    } as any);
     fetchCart();
-  }, [fetchProducts, fetchCart]);
+  }, [fetchProducts, fetchCart, location.search]);
+
+  useEffect(() => {
+    const loadPromotions = async () => {
+      try {
+        const response = await broadcastService.getActive(["distributor"]);
+        setPromotions(response.data || []);
+      } catch (error) {
+        console.error("Failed to load retailer promotions:", error);
+        setPromotions([]);
+      }
+    };
+
+    loadPromotions();
+  }, []);
+
+  useEffect(() => {
+    const promotionSku = new URLSearchParams(location.search).get("promotion");
+    if (!promotionSku) return;
+
+    const match = products?.find(
+      (product) =>
+        String(product.sku || "").trim().toUpperCase() ===
+        promotionSku.trim().toUpperCase(),
+    );
+
+    if (match?.id) {
+      navigate(`/retailer/products/${match.id}`, { replace: true });
+    }
+  }, [location.search, navigate, products]);
 
   const addToCart = async (productId: string | number, quantity: number) => {
     try {
@@ -169,16 +214,38 @@ const RetailerProductsPage: React.FC = () => {
   const transformedProducts: CatalogProduct[] =
     products?.map((product) => {
       const supplierAddress = product.supplier?.addresses?.[0];
+      const minQty = Math.max(1, Number(product.min_order_amount || 1));
+      const bestPromotion = resolveBestDiscountPromotion(
+        promotions,
+        product.sku,
+        minQty,
+      );
+      const basePrice = Number(product.price);
+      const discountedPrice = applyDiscountToUnitPrice(
+        basePrice,
+        minQty,
+        bestPromotion,
+      );
+      const promotionLabel =
+        bestPromotion && bestPromotion.discount_type && bestPromotion.discount_value
+          ? bestPromotion.discount_type === "percentage"
+            ? `${Number(bestPromotion.discount_value)}% off`
+            : `ETB ${Number(bestPromotion.discount_value)} off`
+          : null;
+
       return {
         id: product.id,
         name: product.name,
+        sku: product.sku,
         supplier_id: product.supplier_id,
         supplier_name:
           product.supplier?.business_name ||
           product.supplier?.full_name ||
           "Unknown Supplier",
         supplier: product.supplier,
-        price: Number(product.price),
+        price: discountedPrice,
+        original_price:
+          discountedPrice < basePrice ? basePrice : undefined,
         category: product.category || "Uncategorized",
         image: product.images?.[0] || "/placeholder-product.png",
         rating: product.rating,
@@ -203,6 +270,8 @@ const RetailerProductsPage: React.FC = () => {
         free_delivery_max_distance_km: product.free_delivery_max_distance_km,
         delivery_time: "2-3 days",
         tags: [product.category].filter((tag): tag is string => Boolean(tag)),
+        promotion_label: promotionLabel,
+        promotion_ends_at: bestPromotion?.end_date || null,
       };
     }) || [];
   // Show loading state
@@ -229,16 +298,37 @@ const RetailerProductsPage: React.FC = () => {
   }
 
   return (
-    <ProductCatalog
-      config={config}
-      products={transformedProducts}
-      onAddToCart={addToCart}
-      onRemoveFromCart={removeFromCart}
-      onRemoveItemFromCart={removeItemFromCart}
-      getCartQuantity={getCartQuantity}
-      getTotalCartItems={getTotalCartItems}
-      getTotalCartValue={getTotalCartValue}
-    />
+    <div className="space-y-6">
+      {promotions.length > 0 && (
+        <ActivePromotionsPanel
+          title="Retailer Promotions"
+          description="Live promotions from distributors while you browse products."
+          items={promotions}
+          getProductLink={(promotion) => {
+            const code = promotion.code?.trim();
+            if (!code) return null;
+            const match = products?.find(
+              (product) =>
+                String(product.sku || "").trim().toUpperCase() ===
+                code.toUpperCase(),
+            );
+            return match?.id ? `/retailer/products/${match.id}` : null;
+          }}
+          emptyTitle="No active retailer promotions"
+          emptyDescription="Distributor offers will show up here when they go live."
+        />
+      )}
+      <ProductCatalog
+        config={config}
+        products={transformedProducts}
+        onAddToCart={addToCart}
+        onRemoveFromCart={removeFromCart}
+        onRemoveItemFromCart={removeItemFromCart}
+        getCartQuantity={getCartQuantity}
+        getTotalCartItems={getTotalCartItems}
+        getTotalCartValue={getTotalCartValue}
+      />
+    </div>
   );
 };
 

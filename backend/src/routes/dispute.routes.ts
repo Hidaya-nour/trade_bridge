@@ -6,6 +6,9 @@ const router = Router();
 
 router.use(authenticate);
 
+router.get('/', disputeController.listDisputes);
+router.get('/:id', disputeController.getDisputeById);
+router.put('/:id', disputeController.updateDispute);
 router.post('/', disputeController.createDispute);
 
 export default router;

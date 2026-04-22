@@ -129,6 +129,25 @@ class DeliveryController {
       return res.status(500).json({ success: false, message: 'Internal server error' });
     }
   }
+
+  async getSupplierDeliveries(req: Request, res: Response): Promise<any> {
+    try {
+      const role = (req as any).user?.role as string | undefined;
+      const supplierId = (req as any).user?.id as string | undefined;
+      if (!supplierId) {
+        return res.status(401).json({ success: false, message: 'Unauthorized' });
+      }
+      if (role && !['distributor', 'factory'].includes(role)) {
+        return res.status(403).json({ success: false, message: 'Only suppliers can view these deliveries' });
+      }
+
+      const deliveries = await deliveryService.getSupplierDeliveries(supplierId);
+      return res.json({ success: true, data: { deliveries } });
+    } catch (err) {
+      logger.error('Get supplier deliveries error', err);
+      return res.status(500).json({ success: false, message: 'Internal server error' });
+    }
+  }
 }
 
 export default new DeliveryController();

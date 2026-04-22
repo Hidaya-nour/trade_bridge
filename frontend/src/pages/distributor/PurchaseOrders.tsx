@@ -110,9 +110,11 @@ const PurchaseOrdersPage: React.FC = () => {
   const handlePlaceOrder = async (
     paymentMethod?: string,
     deliveryOption?: string,
+    deliveryAddress?: string,
   ) => {
     const selectedDeliveryOption = deliveryOption || "standard";
     try {
+      const normalizedAddress = (deliveryAddress || "").trim();
       if (reorderItems.length === 0) {
         toast.error("No items to reorder");
         return;
@@ -120,13 +122,7 @@ const PurchaseOrdersPage: React.FC = () => {
       const itemsWithPrice = reorderItems.map((item) => ({
         product_id: item.product_id,
         quantity: item.quantity,
-        unit_price: item.product?.price || 0,
       }));
-
-      const totalPrice = itemsWithPrice.reduce(
-        (sum, i) => sum + i.unit_price * i.quantity,
-        0,
-      );
 
       const supplierId = reorderItems[0].product?.supplier_id;
 
@@ -134,8 +130,7 @@ const PurchaseOrdersPage: React.FC = () => {
       const orderPayload = {
         supplier_id: supplierId,
         items: itemsWithPrice,
-        total_price: totalPrice,
-        delivery_option: selectedDeliveryOption,
+        ...(normalizedAddress ? { delivery_address: normalizedAddress } : {}),
         ...(paymentMethod ? { payment_method: paymentMethod } : {}),
       };
 
@@ -148,7 +143,7 @@ const PurchaseOrdersPage: React.FC = () => {
       toast.success("Order placed successfully!");
       return {
         primaryOrderId: order.id,
-        total: totalPrice,
+        total: order.total_price,
       };
     } catch (err) {
       console.error("Reorder failed:", err);

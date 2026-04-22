@@ -14,6 +14,7 @@ interface InitializePayload {
     title?: string;
     description?: string;
   };
+  meta?: Record<string, any>;
 }
 
 const getHeaders = () => {

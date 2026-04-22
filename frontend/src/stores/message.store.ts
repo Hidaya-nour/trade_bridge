@@ -22,6 +22,7 @@ interface MessageState {
   sendMessage: (data: SendMessageData) => Promise<Message | null>;
   markAsRead: (messageIds: string[]) => Promise<boolean>;
   fetchChatContacts: (search?: string, role?: string) => Promise<void>;
+  fetchChatContactById: (userId: string) => Promise<ChatContact | null>;
   startChatWithUser: (userId: string) => Promise<void>;
   setCurrentConversation: (userId: string | null) => void;
   clearError: () => void;
@@ -73,6 +74,33 @@ const toConversations = (messages: Message[], currentUserId: string): Conversati
   );
 };
 
+const isBadConversationName = (name: string | null | undefined) => {
+  const value = String(name || '').trim().toLowerCase();
+  return value.length === 0 || value === 'unknown user' || value === 'new chat';
+};
+
+const mergeConversations = (primary: Conversation[], fallback: Conversation[]) => {
+  const map = new Map<string, Conversation>();
+  for (const conv of primary) {
+    map.set(conv.participant_id, conv);
+  }
+  for (const conv of fallback) {
+    const existing = map.get(conv.participant_id);
+    if (!existing) {
+      map.set(conv.participant_id, conv);
+      continue;
+    }
+
+    // Prefer non-placeholder participant names when merging.
+    if (isBadConversationName(existing.participant_name) && !isBadConversationName(conv.participant_name)) {
+      existing.participant_name = conv.participant_name;
+    }
+  }
+  return Array.from(map.values()).sort(
+    (a, b) => new Date(b.last_message_time).getTime() - new Date(a.last_message_time).getTime(),
+  );
+};
+
 export const useMessageStore = create<MessageState>((set, get) => ({
   messages: [],
   conversationMessages: [],
@@ -92,10 +120,14 @@ export const useMessageStore = create<MessageState>((set, get) => ({
       const response = await messageService.getUserMessages();
       const currentUserId = useAuthStore.getState().user?.id;
       const messages = response.data || [];
+      const existingConversations = get().conversations;
 
+      const nextConversations = currentUserId ? toConversations(messages, currentUserId) : [];
       set({
         messages,
-        conversations: currentUserId ? toConversations(messages, currentUserId) : [],
+        // Preserve any locally-created placeholder conversations (e.g. deep-link "Contact Supplier")
+        // even if the backend has no messages yet for that participant.
+        conversations: mergeConversations(nextConversations, existingConversations),
         isLoading: false,
       });
     } catch (error: any) {
@@ -219,6 +251,36 @@ export const useMessageStore = create<MessageState>((set, get) => ({
     }
   },
 
+  fetchChatContactById: async (userId: string) => {
+    try {
+      const response = await messageService.getChatContactById(userId);
+      const contact = response?.data?.contact;
+      if (!contact?.id) return null;
+
+      set((state) => ({
+        contacts: state.contacts.some((c) => c.id === contact.id)
+          ? state.contacts
+          : [contact, ...state.contacts],
+        conversations: state.conversations.map((c) =>
+          c.participant_id === contact.id
+            ? {
+                ...c,
+                participant_name:
+                  contact.business_name ||
+                  contact.full_name ||
+                  contact.email ||
+                  c.participant_name,
+              }
+            : c,
+        ),
+      }));
+
+      return contact as ChatContact;
+    } catch {
+      return null;
+    }
+  },
+
   startChatWithUser: async (userId: string) => {
     const { conversations, contacts } = get();
     const alreadyExists = conversations.some((c) => c.participant_id === userId);
@@ -227,7 +289,7 @@ export const useMessageStore = create<MessageState>((set, get) => ({
       const contact = contacts.find((c) => c.id === userId);
       const placeholder: Conversation = {
         participant_id: userId,
-        participant_name: contact?.full_name || 'New chat',
+        participant_name: contact?.business_name || contact?.full_name || contact?.email || 'New chat',
         last_message: '',
         last_message_time: new Date().toISOString(),
         unread_count: 0,
@@ -243,7 +305,8 @@ export const useMessageStore = create<MessageState>((set, get) => ({
       set({ currentConversationUserId: userId });
     }
 
-    await get().fetchConversation(userId);
+    // Best-effort hydrate the conversation participant name for deep links (no prior messages).
+    void get().fetchChatContactById(userId);
   },
 
   setCurrentConversation: (userId: string | null) => set({ currentConversationUserId: userId }),

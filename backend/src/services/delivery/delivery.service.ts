@@ -5,6 +5,10 @@ import User from '../../models/user.model';
 import OrderItems from '../../models/order-item.model';
 import Product from '../../models/product.model';
 import { AppError } from '../../utils/errors';
+import { Op } from 'sequelize';
+import { User } from '../../models/user.model';
+import OrderItems from '../../models/order-item.model';
+import { Product } from '../../models/product.model';
 
 class DeliveryService {
   async getSupplierDeliveries(
@@ -329,6 +333,55 @@ class DeliveryService {
     }
     await delivery.save();
     return delivery;
+  }
+
+  async getSupplierDeliveries(supplierId: string) {
+    const deliveries = await Delivery.findAll({
+      include: [
+        {
+          model: Order,
+          as: 'order',
+          required: true,
+          where: { supplier_id: supplierId },
+          attributes: ['id', 'order_status', 'created_at', 'buyer_id'],
+          include: [
+            {
+              model: User,
+              as: 'buyer',
+              attributes: ['id', 'full_name', 'email', 'business_name', 'phone'],
+            },
+            {
+              model: OrderItems,
+              as: 'items',
+              attributes: ['id', 'quantity'],
+              include: [
+                {
+                  model: Product,
+                  as: 'product',
+                  attributes: ['id', 'name', 'unit_type'],
+                },
+              ],
+            },
+          ],
+        } as any,
+        {
+          model: Driver,
+          as: 'driver',
+          required: false,
+          attributes: ['id', 'vehicle_type', 'license_plate', 'driver_id', 'active'],
+          include: [
+            {
+              model: User,
+              as: 'driverUser',
+              attributes: ['id', 'full_name', 'email', 'phone'],
+            },
+          ],
+        } as any,
+      ],
+      order: [['updated_at', 'DESC']],
+    });
+
+    return deliveries;
   }
 }
 

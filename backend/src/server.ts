@@ -25,6 +25,23 @@ import './models/supplier-payment-method.model';
 import './models/factory-agent.model';
 import './models/rating-reviews.model';
 import './models/driver.model';
+import './models/cart.model';
+import './models/cart-item.model';
+import './models/broadcast.model';
+import './models/inventory-movement.model';
+import './models/chat-message.model';
+import './models/login-attempt.model';
+import './models/document.model';
+import './models/address.model';
+import './models/driver-location.model';
+import './models/audit-log.model';
+import './models/supplier-payment-method.model';
+import './models/factory-agent.model';
+import './models/rating-reviews.model';
+import './models/supplier-review.model';
+import UserReport from './models/user-report.model';
+import './models/driver.model';
+import './models/dispute.model';
 
 import { setupAssociations } from './models/associations';
 import productRoutes from './routes/product.routes';
@@ -35,6 +52,9 @@ import disputeRoutes from './routes/dispute.routes';
 import paymentRoutes from './routes/payment.routes';
 import deliveryRoutes from './routes/delivery.routes';
 import promotionRoutes from './routes/promotion.routes';
+import broadcastRoutes from './routes/broadcast.routes';
+import paymentRoutes from './routes/payment.routes';
+import deliveryRoutes from './routes/delivery.routes';
 import broadcastRoutes from './routes/broadcast.routes';
 import inventoryMovementRoutes from './routes/inventory-movement.routes';
 import chatMessageRoutes from './routes/chat-message.route';
@@ -50,6 +70,7 @@ import ratingReviewRoutes from './routes/rating-review.routes';
 import supplierRoutes from './routes/supplier.routes'
 import driverRoutes from './routes/driver.routes';
 import forecastRoutes from './routes/forecast.routes';
+import reportRoutes from './routes/report.routes';
 import { AppError, ValidationError } from './utils/errors';
 dotenv.config();
 
@@ -103,6 +124,10 @@ app.use('/api/payments', paymentRoutes);
 app.use('/api/deliveries', deliveryRoutes);
 app.use('/api/promotions', promotionRoutes);
 app.use('/api/broadcasts', broadcastRoutes);
+app.use('/api/disputes', disputeRoutes);
+app.use('/api/payments', paymentRoutes);
+app.use('/api/deliveries', deliveryRoutes);
+app.use('/api/broadcasts', broadcastRoutes);
 app.use('/api/inventory-movements', inventoryMovementRoutes);
 app.use('/api/messages', chatMessageRoutes);
 app.use('/api/login-attempts', loginAttemptRoutes);
@@ -118,6 +143,7 @@ app.use('/api/suppliers', supplierRoutes);
 app.use('/api/drivers', driverRoutes);
 app.use('/api/delivery', deliveryRoutes);
 app.use('/api/forecast', forecastRoutes);
+app.use('/api/reports', reportRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -200,6 +226,19 @@ const startServer = async () => {
       // This prevents hard-blocking local work due to schema drift.
     }
   }
+
+  // Ensure newly added tables exist even if alter-sync is skipped/fails (common in dev).
+  // Scoped to the user reporting feature to avoid unintended schema changes.
+  try {
+    await UserReport.sync();
+  } catch (error) {
+    logger.warn('Failed to ensure user_reports table exists', error);
+  }
+
+  app.listen(PORT, () => {
+    logger.info(`🚀 Server running on port ${PORT}`);
+  });
+};
 
 //   app.listen(PORT, () => {
 //     logger.info(`🚀 Server running on port ${PORT}`);

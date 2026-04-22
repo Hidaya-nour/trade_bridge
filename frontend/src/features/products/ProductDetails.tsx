@@ -32,6 +32,7 @@ import { formatPrice } from "@/lib/formatters";
 import { getInitials, cn } from "@/lib/utils";
 import { ProductGallery } from "@/components/product/ProductGallery";
 import { ProductSpecifications } from "@/components/product/ProductSpecifications";
+import SupplierReviewDialog from "@/components/supplier/SupplierReviewDialog";
 
 // ============================================================================
 // TYPES
@@ -130,6 +131,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
 }) => {
   const [quantity] = useState(product.min_order_amount);
   const [activeTab, setActiveTab] = useState("description");
+  const [rateSupplierOpen, setRateSupplierOpen] = useState(false);
 
   const getSupplierPath = () => {
     switch (role) {
@@ -210,10 +212,21 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
                 <span className="text-3xl font-bold text-primary">
                   {formatPrice(product.price)}
                 </span>
+                {typeof product.original_price === "number" &&
+                  product.original_price > product.price && (
+                    <span className="text-sm text-muted-foreground line-through">
+                      {formatPrice(product.original_price)}
+                    </span>
+                  )}
                 <span className="text-sm text-muted-foreground">
                   / {product.unit_type}
                 </span>
               </div>
+              {product.promotion_label && (
+                <p className="mt-1 text-sm font-medium text-emerald-700">
+                  {product.promotion_label}
+                </p>
+              )}
               <p className="text-sm text-muted-foreground mt-1">
                 Minimum order: {product.min_order_amount} {product.unit_type}
               </p>
@@ -390,20 +403,32 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
                   </div>
                 </div>
               </div>
-              <Button
-                variant="outline"
-                onClick={onViewSupplier}
-                asChild={!!onViewSupplier}
-              >
-                {onViewSupplier ? (
-                  <Link to={getSupplierPath()}>
-                    View Profile
-                    <ChevronRight className="h-4 w-4 ml-2" />
-                  </Link>
-                ) : (
-                  <span>View Profile</span>
-                )}
-              </Button>
+              <div className="flex items-center gap-2">
+                {product.supplierId ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setRateSupplierOpen(true)}
+                  >
+                    <Star className="h-4 w-4 mr-2" />
+                    Rate Supplier
+                  </Button>
+                ) : null}
+                <Button
+                  variant="outline"
+                  onClick={onViewSupplier}
+                  asChild={!!onViewSupplier}
+                >
+                  {onViewSupplier ? (
+                    <Link to={getSupplierPath()}>
+                      View Profile
+                      <ChevronRight className="h-4 w-4 ml-2" />
+                    </Link>
+                  ) : (
+                    <span>View Profile</span>
+                  )}
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -623,6 +648,15 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
           </div>
         </div>
       )}
+
+      {product.supplierId && product.supplierName ? (
+        <SupplierReviewDialog
+          open={rateSupplierOpen}
+          onOpenChange={setRateSupplierOpen}
+          supplierId={product.supplierId}
+          supplierName={product.supplierName}
+        />
+      ) : null}
     </div>
   );
 };

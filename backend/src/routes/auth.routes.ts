@@ -74,6 +74,8 @@ router.post('/logout-all', authenticate, authController.logoutAll);
 
 // Admin routes
 router.post('/admin/approve/:id', authenticate, authorize('admin'), authController.approveUser);
+router.post('/admin/suspend/:id', authenticate, authorize('admin'), authController.suspendUser);
+router.post('/admin/reactivate/:id', authenticate, authorize('admin'), authController.reactivateUser);
 router.get('/admin/users', authenticate, authorize('admin'), authController.getUsers);
 router.get('/admin/recent-users', authenticate, authorize('admin'), authController.getRecentUsers);
 

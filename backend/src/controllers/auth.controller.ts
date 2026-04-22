@@ -219,6 +219,58 @@ export class AuthController {
     }
   };
 
+  suspendUser = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const adminId = req.user?.id;
+      if (!adminId) {
+        res.status(401).json({ success: false, message: 'Authentication required' });
+        return;
+      }
+
+      const { id } = req.params;
+      const user = await this.authService.suspendUser(id);
+
+      res.json({
+        success: true,
+        message: 'User suspended successfully',
+        data: { user }
+      });
+    } catch (error) {
+      if (error instanceof AppError) {
+        res.status(error.statusCode).json({ success: false, message: error.message });
+      } else {
+        logger.error('Suspend user error:', error);
+        res.status(500).json({ success: false, message: 'Internal server error' });
+      }
+    }
+  };
+
+  reactivateUser = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const adminId = req.user?.id;
+      if (!adminId) {
+        res.status(401).json({ success: false, message: 'Authentication required' });
+        return;
+      }
+
+      const { id } = req.params;
+      const user = await this.authService.reactivateUser(id);
+
+      res.json({
+        success: true,
+        message: 'User reactivated successfully',
+        data: { user }
+      });
+    } catch (error) {
+      if (error instanceof AppError) {
+        res.status(error.statusCode).json({ success: false, message: error.message });
+      } else {
+        logger.error('Reactivate user error:', error);
+        res.status(500).json({ success: false, message: 'Internal server error' });
+      }
+    }
+  };
+
   getUsers = async (req: Request, res: Response): Promise<void> => {
     try {
       const adminId = req.user?.id;
