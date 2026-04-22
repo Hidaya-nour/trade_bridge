@@ -11,6 +11,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import ScreenWrapper from "@/components/layout/ScreenWrapper";
 import { useAuthStore } from "@/features/auth/auth.store";
+import { useRoleShell } from "@/navigation/RoleShellContext";
+import { useScrollDirection } from "@/hooks/useScrollDirection";
 
 const formatCurrency = (value: number) => {
   return new Intl.NumberFormat("en-US", {
@@ -139,8 +141,12 @@ const MOCK_SHIPMENTS = [
 
 export default function DistributorDashboardScreen() {
   const router = useRouter();
+  const { setTabBarVisible } = useRoleShell();
   const [refreshing, setRefreshing] = useState(false);
   const user = useAuthStore((state) => state.user);
+  const { onScroll } = useScrollDirection({
+    onDirectionChange: (direction) => setTabBarVisible(direction === "up"),
+  });
 
   const businessName = user?.business_name || user?.full_name || "Distributor";
 
@@ -518,6 +524,8 @@ export default function DistributorDashboardScreen() {
     <ScreenWrapper title="Dashboard" subtitle="Distributor">
       <ScrollView
         contentContainerStyle={styles.container}
+        onScroll={onScroll}
+        scrollEventThrottle={16}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }

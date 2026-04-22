@@ -14,6 +14,8 @@ import { useRouter } from "expo-router";
 import ScreenWrapper from "@/components/layout/ScreenWrapper";
 import { useOrderStore } from "@/features/orders/order.store";
 import { type Order, type OrderStatus } from "@/features/orders/order.types";
+import { useRoleShell } from "@/navigation/RoleShellContext";
+import { useScrollDirection } from "@/hooks/useScrollDirection";
 
 const formatCurrency = (value: number) => {
   return new Intl.NumberFormat("en-US", {
@@ -43,9 +45,13 @@ const STATUS_FILTERS: { label: string; value: OrderStatus | "all" }[] = [
 
 export default function RetailerOrdersScreen() {
   const router = useRouter();
+  const { setTabBarVisible } = useRoleShell();
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<OrderStatus | "all">("all");
+  const { onScroll } = useScrollDirection({
+    onDirectionChange: (direction) => setTabBarVisible(direction === "up"),
+  });
 
   const { orders, isLoading, error, fetchRecentOrders } = useOrderStore(); // Fetch all via getMyOrders
 
@@ -168,6 +174,8 @@ export default function RetailerOrdersScreen() {
     <ScreenWrapper title="My Orders" subtitle="Retailer">
       <ScrollView
         contentContainerStyle={styles.container}
+        onScroll={onScroll}
+        scrollEventThrottle={16}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
         <View style={styles.headerCard}>

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   Bell,
   CheckCheck,
@@ -211,6 +211,45 @@ const NotificationsPage: React.FC = () => {
     if (!showRead && n.is_read) return false;
     return true;
   });
+
+  const getNotificationTarget = (type: string) => {
+    if (!user) return "/notifications";
+
+    if (type === "message" || type === "message_received") {
+      return user.role === "driver" ? "/driver/messages" : "/messages";
+    }
+
+    if (
+      [
+        "delivery",
+        "delivery_assigned",
+        "delivery_in_transit",
+        "order",
+        "order_created",
+        "order_confirmed",
+        "order_processing",
+        "order_shipped",
+      ].includes(type)
+    ) {
+      if (user.role === "driver") return "/driver/deliveries";
+      if (user.role === "distributor") return "/distributor/delivery";
+      if (user.role === "factory") return "/factory/delivery";
+      if (user.role === "retailer") return "/retailer/orders";
+    }
+
+    if (type === "dispute" || type === "alert" || type === "error") {
+      return user.role === "driver" ? "/driver/issues" : "/support";
+    }
+
+    return user.role === "driver" ? "/driver/notifications" : "/notifications";
+  };
+
+  const openNotification = async (notification: (typeof notifications)[number]) => {
+    if (!notification.is_read) {
+      await markAsRead(notification.id);
+    }
+    navigate(getNotificationTarget(notification.type));
+  };
 
   return (
     <div className="space-y-6">

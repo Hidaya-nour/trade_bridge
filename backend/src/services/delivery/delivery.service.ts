@@ -1,6 +1,9 @@
 import Delivery from '../../models/delivery.model';
 import Order from '../../models/order.model';
 import Driver from '../../models/driver.model';
+import User from '../../models/user.model';
+import OrderItems from '../../models/order-item.model';
+import Product from '../../models/product.model';
 import { AppError } from '../../utils/errors';
 import { Op } from 'sequelize';
 import { User } from '../../models/user.model';
@@ -8,6 +11,142 @@ import OrderItems from '../../models/order-item.model';
 import { Product } from '../../models/product.model';
 
 class DeliveryService {
+  async getSupplierDeliveries(
+    supplierId: string,
+    params?: { limit?: number },
+  ) {
+    const limit = params?.limit && params.limit > 0 ? params.limit : undefined;
+
+    const deliveries = await Delivery.findAll({
+      include: [
+        {
+          model: Order,
+          as: 'order',
+          required: true,
+          where: { supplier_id: supplierId } as any,
+          attributes: [
+            'id',
+            'buyer_id',
+            'supplier_id',
+            'total_price',
+            'order_status',
+            'created_at',
+            'updated_at',
+          ],
+          include: [
+            {
+              model: User,
+              as: 'buyer',
+              attributes: ['id', 'full_name', 'business_name', 'phone', 'email'],
+            },
+            {
+              model: User,
+              as: 'supplier',
+              attributes: ['id', 'full_name', 'business_name', 'phone', 'email'],
+            },
+            {
+              model: OrderItems,
+              as: 'items',
+              attributes: ['id', 'product_id', 'quantity', 'unit_price'],
+              include: [
+                {
+                  model: Product,
+                  as: 'product',
+                  attributes: ['id', 'name', 'unit_type', 'category'],
+                },
+              ],
+            },
+          ],
+        },
+        {
+          model: Driver,
+          as: 'driver',
+          attributes: ['id', 'driver_id', 'vehicle_type', 'license_plate', 'driver_type'],
+          include: [
+            {
+              model: User,
+              as: 'driverUser',
+              attributes: ['id', 'full_name', 'phone', 'email'],
+            },
+          ],
+        },
+      ],
+      order: [['updated_at', 'DESC']],
+      ...(limit ? { limit } : {}),
+    });
+
+    return deliveries;
+  }
+
+  async getDeliveryById(deliveryId: string, supplierId?: string) {
+    const delivery = await Delivery.findByPk(deliveryId, {
+      include: [
+        {
+          model: Order,
+          as: 'order',
+          attributes: [
+            'id',
+            'buyer_id',
+            'supplier_id',
+            'total_price',
+            'order_status',
+            'created_at',
+            'updated_at',
+          ],
+          include: [
+            {
+              model: User,
+              as: 'buyer',
+              attributes: ['id', 'full_name', 'business_name', 'phone', 'email'],
+            },
+            {
+              model: User,
+              as: 'supplier',
+              attributes: ['id', 'full_name', 'business_name', 'phone', 'email'],
+            },
+            {
+              model: OrderItems,
+              as: 'items',
+              attributes: ['id', 'product_id', 'quantity', 'unit_price'],
+              include: [
+                {
+                  model: Product,
+                  as: 'product',
+                  attributes: ['id', 'name', 'unit_type', 'category'],
+                },
+              ],
+            },
+          ],
+        },
+        {
+          model: Driver,
+          as: 'driver',
+          attributes: ['id', 'driver_id', 'vehicle_type', 'license_plate', 'driver_type'],
+          include: [
+            {
+              model: User,
+              as: 'driverUser',
+              attributes: ['id', 'full_name', 'phone', 'email'],
+            },
+          ],
+        },
+      ],
+    });
+
+    if (!delivery) {
+      return null;
+    }
+
+    if (supplierId) {
+      const order = (delivery as any).order;
+      if (!order || order.supplier_id !== supplierId) {
+        throw new AppError('You can only access deliveries for your orders', 403);
+      }
+    }
+
+    return delivery;
+  }
+
   async getDriverDeliveries(driverUserId: string) {
     const driverRecord = await Driver.findOne({
       where: { driver_id: driverUserId, active: true },
@@ -21,15 +160,68 @@ class DeliveryService {
     const deliveries = await Delivery.findAll({
       where: {
         driver_id: driverRecord.id as any,
-        status: {
-          [Op.notIn]: ['delivered', 'failed', 'cancelled'],
-        } as any,
       },
       include: [
         {
           model: Order,
           as: 'order',
-          attributes: ['id', 'order_status', 'created_at'],
+          attributes: [
+            'id',
+            'buyer_id',
+            'supplier_id',
+            'total_price',
+            'order_status',
+            'created_at',
+            'updated_at',
+          ],
+          include: [
+            {
+              model: User,
+              as: 'buyer',
+              attributes: [
+                'id',
+                'full_name',
+                'business_name',
+                'phone',
+                'email',
+              ],
+            },
+            {
+              model: User,
+              as: 'supplier',
+              attributes: [
+                'id',
+                'full_name',
+                'business_name',
+                'phone',
+                'email',
+              ],
+            },
+            {
+              model: OrderItems,
+              as: 'items',
+              attributes: ['id', 'product_id', 'quantity', 'unit_price'],
+              include: [
+                {
+                  model: Product,
+                  as: 'product',
+                  attributes: ['id', 'name', 'unit_type', 'category'],
+                },
+              ],
+            },
+          ],
+        },
+        {
+          model: Driver,
+          as: 'driver',
+          attributes: ['id', 'driver_id', 'vehicle_type', 'license_plate', 'driver_type'],
+          include: [
+            {
+              model: User,
+              as: 'driverUser',
+              attributes: ['id', 'full_name', 'phone', 'email'],
+            },
+          ],
         },
       ],
       order: [['updated_at', 'DESC']],
@@ -39,6 +231,30 @@ class DeliveryService {
   }
 
   async createDelivery(orderId: string, pickup: string, dropoff: string) {
+    const existing = await Delivery.findOne({
+      where: { order_id: orderId } as any,
+    });
+
+    if (existing) {
+      let changed = false;
+
+      if (pickup && existing.pickup_location !== pickup) {
+        existing.pickup_location = pickup as any;
+        changed = true;
+      }
+
+      if (dropoff && existing.dropoff_location !== dropoff) {
+        existing.dropoff_location = dropoff as any;
+        changed = true;
+      }
+
+      if (changed) {
+        await existing.save();
+      }
+
+      return existing;
+    }
+
     const delivery = await Delivery.create({
       order_id: orderId,
       pickup_location: pickup,
@@ -48,9 +264,40 @@ class DeliveryService {
     return delivery;
   }
 
-  async updateDeliveryStatus(deliveryId: string, status: string) {
+  async updateDeliveryStatus(
+    deliveryId: string,
+    status: string,
+    actingUserId?: string,
+    actingUserRole?: string,
+  ) {
+    const allowedStatuses = [
+      'pending',
+      'assigned',
+      'picked_up',
+      'in_transit',
+      'delivered',
+      'failed',
+      'cancelled',
+    ];
+
+    if (!allowedStatuses.includes(status)) {
+      throw new AppError('Invalid delivery status', 400);
+    }
+
     const delivery = await Delivery.findByPk(deliveryId);
     if (!delivery) return null;
+
+    if (actingUserRole === 'driver') {
+      const driverRecord = await Driver.findOne({
+        where: { driver_id: actingUserId, active: true },
+        attributes: ['id'],
+      });
+
+      if (!driverRecord || delivery.driver_id !== (driverRecord.id as any)) {
+        throw new AppError('You can only update your assigned deliveries', 403);
+      }
+    }
+
     delivery.status = status as any;
     if (status === 'picked_up') delivery.started_at = new Date() as any;
     if (status === 'delivered') delivery.completed_at = new Date() as any;

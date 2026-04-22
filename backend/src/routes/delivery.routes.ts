@@ -6,7 +6,9 @@ const router = Router();
 
 router.use(authenticate);
 
+router.get('/', authorize('distributor', 'factory', 'driver'), deliveryController.list);
 router.get('/my-deliveries', authorize('driver'), deliveryController.getMyDeliveries);
+router.get('/:id', authorize('distributor', 'factory', 'driver'), deliveryController.getById);
 router.get(
   '/supplier-deliveries',
   authorize('distributor', 'factory'),

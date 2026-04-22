@@ -4,7 +4,24 @@
     "slug": "trade-bridge-mobile",
     "scheme": "tradebridge",
     "plugins": [
-      "expo-router"
-    ]
+      "expo-router",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Trade Bridge uses your location to show the driver's live route and share delivery progress while a trip is active."
+        }
+      ]
+    ],
+    "ios": {
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Trade Bridge uses your location to show the driver's live route and share delivery progress while a trip is active."
+      }
+    },
+    "android": {
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION"
+      ]
+    }
   }
 }

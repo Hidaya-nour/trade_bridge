@@ -622,6 +622,14 @@ function App() {
             }
           />
           <Route
+            path="/driver/messages"
+            element={
+              <DashboardLayout>
+                <MessagesPage />
+              </DashboardLayout>
+            }
+          />
+          <Route
             path="/driver/deliveries"
             element={
               <DashboardLayout>

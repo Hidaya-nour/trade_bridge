@@ -1,5 +1,6 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
+  ActivityIndicator,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -10,12 +11,36 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import ScreenWrapper from "@/components/layout/ScreenWrapper";
+import deliveryService from "@/features/driver-deliveries/delivery.service";
 import {
-  DRIVER_DELIVERIES,
   type DeliveryPriority,
   type DeliveryStatus,
   type DriverDelivery,
-} from "../driverData";
+} from "@/features/driver-deliveries/delivery.types";
+import { useRoleShell } from "@/navigation/RoleShellContext";
+import { useScrollDirection } from "@/hooks/useScrollDirection";
+
+const deliveryTabs = [
+  "pending",
+  "assigned",
+  "picked_up",
+  "delivered",
+  "cancelled",
+] as const;
+
+type DeliveryTab = (typeof deliveryTabs)[number];
+
+const matchesTab = (delivery: DriverDelivery, tab: DeliveryTab) => {
+  switch (tab) {
+    case "pending":
+    case "assigned":
+    case "delivered":
+    case "cancelled":
+      return delivery.status === tab;
+    case "picked_up":
+      return ["picked_up", "in_transit"].includes(delivery.status);
+  }
+};
 
 const formatStatus = (status: DeliveryStatus) =>
   status.replace("_", " ").replace(/\b\w/g, (char) => char.toUpperCase());
@@ -146,9 +171,9 @@ function TabBar({
   activeTab,
   onTabPress,
 }: {
-  tabs: string[];
-  activeTab: string;
-  onTabPress: (tab: string) => void;
+  tabs: readonly DeliveryTab[];
+  activeTab: DeliveryTab;
+  onTabPress: (tab: DeliveryTab) => void;
 }) {
   return (
     <View style={styles.tabBar}>
@@ -177,18 +202,59 @@ function TabBar({
 
 export default function DriverDeliveriesScreen() {
   const router = useRouter();
+  const { setTabBarVisible } = useRoleShell();
+  const [deliveries, setDeliveries] = useState<DriverDelivery[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeTab, setActiveTab] = useState("pending");
+  const [activeTab, setActiveTab] = useState<DeliveryTab>("pending");
+  const { onScroll } = useScrollDirection({
+    onDirectionChange: (direction) => setTabBarVisible(direction === "up"),
+  });
 
-  const tabs = ["pending", "assigned", "in_transit", "delivered", "cancelled"];
+  const tabs = deliveryTabs;
+  const tabLabels: Record<DeliveryTab, string> = {
+    pending: "Pending",
+    assigned: "Assigned",
+    picked_up: "Picked Up",
+    delivered: "Delivered",
+    cancelled: "Cancelled",
+  };
+
+  useEffect(() => {
+    const loadDeliveries = async () => {
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const rows = await deliveryService.getMyDeliveries();
+        setDeliveries(rows);
+
+        const defaultTab = tabs.find((tab) =>
+          rows.some((delivery) => matchesTab(delivery, tab)),
+        );
+        setActiveTab(defaultTab ?? "pending");
+      } catch (loadError: any) {
+        setError(
+          loadError?.response?.data?.message ||
+            "Failed to load deliveries from the backend.",
+        );
+        setDeliveries([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadDeliveries();
+  }, []);
 
   const filteredDeliveries = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
 
-    let deliveries = DRIVER_DELIVERIES;
+    let filtered = deliveries;
 
     if (query) {
-      deliveries = deliveries.filter((delivery) =>
+      filtered = filtered.filter((delivery) =>
         [
           delivery.orderCode,
           delivery.supplierName,
@@ -198,24 +264,31 @@ export default function DriverDeliveriesScreen() {
       );
     }
 
-    return deliveries.filter((delivery) => delivery.status === activeTab);
-  }, [searchQuery, activeTab]);
+    return filtered.filter((delivery) => matchesTab(delivery, activeTab));
+  }, [activeTab, deliveries, searchQuery]);
 
   const tabCounts = useMemo(() => {
     const counts: Record<string, number> = {};
     tabs.forEach((tab) => {
-      counts[tab] = DRIVER_DELIVERIES.filter((d) => d.status === tab).length;
+      counts[tab] = deliveries.filter((delivery) => matchesTab(delivery, tab)).length;
     });
     return counts;
-  }, []);
+  }, [deliveries]);
 
-  const nextDelivery = DRIVER_DELIVERIES.filter(
-    (delivery) => delivery.status !== "delivered" && delivery.status !== "cancelled",
+  const nextDelivery = deliveries.filter(
+    (delivery) =>
+      delivery.status !== "delivered" &&
+      delivery.status !== "failed" &&
+      delivery.status !== "cancelled",
   )[0];
 
   return (
     <ScreenWrapper title="Deliveries" subtitle="Driver delivery workspace">
-      <ScrollView contentContainerStyle={styles.container}>
+      <ScrollView
+        contentContainerStyle={styles.container}
+        onScroll={onScroll}
+        scrollEventThrottle={16}
+      >
         <View style={styles.heroCard}>
           <View>
             <Text style={styles.heroTitle}>Deliveries Overview</Text>
@@ -227,7 +300,7 @@ export default function DriverDeliveriesScreen() {
             {tabs.map((tab) => (
               <View key={tab} style={styles.heroStatChip}>
                 <Text style={styles.heroStatValue}>{tabCounts[tab]}</Text>
-                <Text style={styles.heroStatLabel}>{tab.replace("_", " ")}</Text>
+                <Text style={styles.heroStatLabel}>{tabLabels[tab]}</Text>
               </View>
             ))}
           </View>
@@ -258,11 +331,24 @@ export default function DriverDeliveriesScreen() {
         <View style={styles.sectionWrap}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>
-              {activeTab.replace("_", " ").toUpperCase()} Deliveries
+              {tabLabels[activeTab]}
             </Text>
             <Text style={styles.sectionCount}>{filteredDeliveries.length}</Text>
           </View>
-          {filteredDeliveries.length ? (
+          {isLoading ? (
+            <View style={styles.emptyState}>
+              <ActivityIndicator size="small" color="#2563eb" />
+              <Text style={styles.emptyTitle}>Loading deliveries</Text>
+              <Text style={styles.emptySubtitle}>
+                Fetching your assigned deliveries from the backend.
+              </Text>
+            </View>
+          ) : error ? (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyTitle}>Could not load deliveries</Text>
+              <Text style={styles.emptySubtitle}>{error}</Text>
+            </View>
+          ) : filteredDeliveries.length ? (
             filteredDeliveries.map((delivery) => (
               <DeliveryCard
                 key={delivery.id}
@@ -272,7 +358,9 @@ export default function DriverDeliveriesScreen() {
             ))
           ) : (
             <View style={styles.emptyState}>
-              <Text style={styles.emptyTitle}>No {activeTab} deliveries</Text>
+              <Text style={styles.emptyTitle}>
+                No {tabLabels[activeTab].toLowerCase()}
+              </Text>
               <Text style={styles.emptySubtitle}>
                 Deliveries with this status will appear here.
               </Text>
@@ -291,39 +379,44 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   heroCard: {
-    backgroundColor: "#0f172a",
+    backgroundColor: "#ffffff",
     borderRadius: 18,
     padding: 18,
     gap: 14,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
   },
   heroTitle: {
-    color: "#ffffff",
+    color: "#0f172a",
     fontSize: 22,
     fontWeight: "800",
   },
   heroSubtitle: {
-    color: "#cbd5e1",
+    color: "#64748b",
     fontSize: 13,
     marginTop: 4,
     lineHeight: 19,
   },
   heroStatsRow: {
     flexDirection: "row",
+    flexWrap: "wrap",
     gap: 10,
   },
   heroStatChip: {
-    flex: 1,
-    backgroundColor: "rgba(255, 255, 255, 0.08)",
+    width: "31%",
+    backgroundColor: "#f8fafc",
     borderRadius: 14,
     padding: 12,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
   },
   heroStatValue: {
-    color: "#ffffff",
+    color: "#0f172a",
     fontSize: 22,
     fontWeight: "800",
   },
   heroStatLabel: {
-    color: "#cbd5e1",
+    color: "#64748b",
     fontSize: 12,
     marginTop: 4,
   },
@@ -369,6 +462,7 @@ const styles = StyleSheet.create({
   },
   tabBar: {
     flexDirection: "row",
+    flexWrap: "wrap",
     backgroundColor: "#ffffff",
     borderRadius: 14,
     borderWidth: 1,
@@ -376,7 +470,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   tab: {
-    flex: 1,
+    width: "50%",
     paddingVertical: 12,
     alignItems: "center",
   },

@@ -1,4 +1,5 @@
-import { type UserRole } from "@/features/auth/auth.types";
+import type { UserRole } from "@/features/auth/auth.types";
+import { roleNavigationConfig } from "./navigationConfig";
 
 export interface SidebarNavItem {
   label: string;
@@ -15,58 +16,28 @@ export const roleDefaultRoute: Record<UserRole, string> = {
   driver: "/driver/dashboard",
 };
 
-// Backward-compatible export used in existing code.
 export const roleNavigation = roleDefaultRoute;
 
 export const roleSidebarNavigation: Record<UserRole, SidebarNavItem[]> = {
   admin: [
-    { label: "Dashboard", href: "/admin/dashboard", icon: "grid-outline" },
-    { label: "Users", href: "/admin/users", icon: "people-outline" },
-    { label: "Products", href: "/admin/products", icon: "cube-outline" },
+    ...roleNavigationConfig.admin.tabs.map((item) => ({ ...item, section: "Primary" })),
+    ...roleNavigationConfig.admin.drawer.map((item) => ({ ...item, section: "More" })),
   ],
   retailer: [
-    { label: "Dashboard", href: "/retailer/dashboard", icon: "grid-outline" },
-    { label: "Browse Products", href: "/retailer/products", icon: "storefront-outline" },
-    { label: "Browse Suppliers", href: "/retailer/suppliers", icon: "trending-up-outline" },
-    { label: "My Orders", href: "/retailer/orders", icon: "cube-outline" },
-    { label: "Shopping Cart", href: "/retailer/cart", icon: "cart-outline" },
-    { label: "Analytics", href: "/retailer/analytics", icon: "bar-chart-outline" },
+    ...roleNavigationConfig.retailer.tabs.map((item) => ({ ...item, section: "Primary" })),
+    ...roleNavigationConfig.retailer.drawer.map((item) => ({ ...item, section: "More" })),
   ],
   distributor: [
-    // Main
-    { section: "Main Menu", label: "Dashboard", href: "/distributor/dashboard", icon: "grid-outline" },
-    { section: "Main Menu", label: "Manage Products", href: "/distributor/products", icon: "cube-outline" },
-    { section: "Main Menu", label: "Inventory", href: "/distributor/inventory", icon: "home-outline" },
-
-    // Retail Operations
-    { section: "Retail Operations", label: "Retailer Orders", href: "/distributor/orders", icon: "cart-outline" },
-    { section: "Retail Operations", label: "Delivery Management", href: "/distributor/delivery", icon: "car-outline" },
-    { section: "Retail Operations", label: "Broadcast Promotions", href: "/distributor/promotions", icon: "trending-up-outline" },
-
-    // Purchasing
-    { section: "Purchasing", label: "Purchase Products", href: "/distributor/browse-products", icon: "business-outline" },
-    { section: "Purchasing", label: "Purchase Cart", href: "/distributor/cart", icon: "cart-outline" },
-    { section: "Purchasing", label: "Purchase Orders", href: "/distributor/purchase-orders", icon: "document-text-outline" },
-
-    // Analytics
-    { section: "Analytics", label: "Sales Analytics", href: "/distributor/analytics", icon: "bar-chart-outline" },
-    { section: "Analytics", label: "Supplier Partnerships", href: "/distributor/partners", icon: "people-outline" },
+    ...roleNavigationConfig.distributor.tabs.map((item) => ({ ...item, section: "Primary" })),
+    ...roleNavigationConfig.distributor.drawer.map((item) => ({ ...item, section: "More" })),
   ],
   factory: [
-    { label: "Dashboard", href: "/factory/dashboard", icon: "grid-outline" },
+    ...roleNavigationConfig.factory.tabs.map((item) => ({ ...item, section: "Primary" })),
+    ...roleNavigationConfig.factory.drawer.map((item) => ({ ...item, section: "More" })),
   ],
   driver: [
-    { section: "Main Menu", label: "Dashboard", href: "/driver/dashboard", icon: "grid-outline" },
-    { section: "Delivery", label: "Deliveries", href: "/driver/deliveries", icon: "car-outline" },
-    { section: "Delivery", label: "Live Tracking", href: "/driver/tracking", icon: "navigate-outline" },
-    { section: "Delivery", label: "Delivery History", href: "/driver/history", icon: "time-outline" },
-    { section: "Delivery", label: "Report Issue", href: "/driver/issues", icon: "alert-circle-outline" },
-    { section: "Delivery", label: "Notifications", href: "/driver/notifications", icon: "notifications-outline" },
-    { section: "Account", label: "Driver Profile", href: "/driver/profile", icon: "person-outline" },
-    { section: "Support", label: "Help & Support", href: "/support", icon: "help-circle-outline" },
-    { section: "Support", label: "Settings", href: "/driver/settings", icon: "settings-outline" },
-    { section: "Support", label: "Notifications", href: "/driver/notifications", icon: "notifications-outline" },
-    { section: "Support", label: "Messages", href: "/driver/messages", icon: "chatbubble-ellipses-outline" },
+    ...roleNavigationConfig.driver.tabs.map((item) => ({ ...item, section: "Primary" })),
+    ...roleNavigationConfig.driver.drawer.map((item) => ({ ...item, section: "More" })),
   ],
 };
 
@@ -88,7 +59,19 @@ export const getRouteTitle = (pathname: string) => {
     if (segment === "compare") return "Compare Suppliers";
     if (segment === "deliveries") return "Deliveries";
     if (segment === "tracking") return "Tracking";
+    if (segment === "notifications") return "Notifications";
+    if (segment === "messages") return "Messages";
+    if (segment === "profile") return "Profile";
+    if (segment === "support") return "Help & Support";
+    if (segment === "settings") return "Settings";
     if (segment === "users") return "Users";
+    if (segment === "agents") return "Agents";
+    if (segment === "marketplace") return "Purchase Products";
+    if (segment === "delivery") return "Delivery";
+    if (segment === "forecast") return "Forecast";
+    if (segment === "promotions") return "Promotions";
+    if (segment === "purchase-orders") return "Purchase Orders";
+    if (segment === "announcements") return "Announcements";
   }
 
   return parts[parts.length - 1]

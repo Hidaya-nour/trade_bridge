@@ -3,7 +3,12 @@ import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import { API_BASE_URL } from "@/lib/api";
 import { authService } from "./auth.service";
-import { type Tokens, type User } from "./auth.types";
+import {
+  type ChangePasswordPayload,
+  type Tokens,
+  type UpdateProfilePayload,
+  type User,
+} from "./auth.types";
 
 const getReadableAuthError = (error: any) => {
   if (error?.code === "ECONNABORTED") {
@@ -26,6 +31,9 @@ interface AuthState {
   error: string | null;
   login: (email: string, password: string) => Promise<{ user: User; tokens: Tokens }>;
   initialize: () => Promise<void>;
+  fetchUser: () => Promise<void>;
+  updateProfile: (payload: UpdateProfilePayload) => Promise<void>;
+  changePassword: (payload: ChangePasswordPayload) => Promise<void>;
   clearError: () => void;
   logout: () => Promise<void>;
 }
@@ -73,12 +81,49 @@ export const useAuthStore = create<AuthState>()(
         }
 
         try {
-          const response = await authService.getCurrentUser();
-          const user = response.data.user;
-          set({ user, isInitialized: true, error: null });
+          await useAuthStore.getState().fetchUser();
+          set({ isInitialized: true, error: null });
         } catch {
           await useAuthStore.getState().logout();
           set({ isInitialized: true });
+        }
+      },
+
+      fetchUser: async () => {
+        const response = await authService.getCurrentUser();
+        const user = response.data.user;
+        set({ user, error: null });
+      },
+
+      updateProfile: async (payload) => {
+        set({ isLoading: true, error: null });
+
+        try {
+          const response = await authService.updateProfile(payload);
+          set({
+            user: response.data.user,
+            isLoading: false,
+            error: null,
+          });
+        } catch (error: any) {
+          const message =
+            error?.response?.data?.message ?? error?.message ?? "Failed to update profile";
+          set({ isLoading: false, error: message });
+          throw new Error(message);
+        }
+      },
+
+      changePassword: async (payload) => {
+        set({ isLoading: true, error: null });
+
+        try {
+          await authService.changePassword(payload);
+          set({ isLoading: false, error: null });
+        } catch (error: any) {
+          const message =
+            error?.response?.data?.message ?? error?.message ?? "Failed to change password";
+          set({ isLoading: false, error: message });
+          throw new Error(message);
         }
       },
 
