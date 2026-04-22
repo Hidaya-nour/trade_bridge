@@ -22,11 +22,7 @@ const Login = () => {
     clearError();
   }, [clearError]);
 
-  const handleLogin = async (data: {
-    email: string;
-    password: string;
-    rememberMe: boolean;
-  }) => {
+  const handleLogin = async (data: { email: string; password: string }) => {
     clearError();
     if (!data.email || !data.password) return;
 

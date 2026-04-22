@@ -72,7 +72,6 @@ const EyeIcon = ({ isOpen }: { isOpen: boolean }) => (
 interface LoginFormData {
   email: string;
   password: string;
-  rememberMe: boolean;
 }
 
 interface LoginFormProps {
@@ -85,7 +84,6 @@ const LoginForm = ({ onSubmit, isLoading = false, error }: LoginFormProps) => {
   const [formData, setFormData] = useState<LoginFormData>({
     email: "",
     password: "",
-    rememberMe: false,
   });
   const [showPassword, setShowPassword] = useState(false);
 
@@ -153,13 +151,6 @@ const LoginForm = ({ onSubmit, isLoading = false, error }: LoginFormProps) => {
           </Link>
         </div>
       </div>
-
-      <LandingCheckbox
-        name="rememberMe"
-        checked={formData.rememberMe}
-        onChange={handleChange}
-        label="Remember me"
-      />
 
       <div className="space-y-3">
         <LandingButton

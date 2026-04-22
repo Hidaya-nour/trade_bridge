@@ -49,17 +49,13 @@ import {
 } from "@/components/ui/tooltip";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ScrollArea } from "@/components/ui/scroll-area";
 
+import type { Notification } from "@/types/notification.types";
+import { m } from "framer-motion";
 import { useAuthStore } from "@/stores/auth.store";
 import { useNotificationStore } from "@/stores/notification.store";
 import { useMessageStore } from "@/stores/message.store";
-import { ScrollArea } from "@/components/ui/scroll-area";
-
-import { useAuthStore } from "@/stores/auth.store";
-import { useNotificationStore } from "@/stores/notification.store";
-import type { Notification } from "@/types/notification.types";
-import { m } from "framer-motion";
+import { ScrollArea } from "../ui/scroll-area";
 
 // Keep messages mock for now (you can replace with real message store later)
 const messages = [
@@ -266,7 +262,8 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ onMenuClick }) => {
     );
   }
 
-  const messagesHref = user.role === "driver" ? "/driver/messages" : "/messages";
+  const messagesHref =
+    user.role === "driver" ? "/driver/messages" : "/messages";
   const notificationsHref =
     user.role === "driver" ? "/driver/notifications" : "/notifications";
 
@@ -423,8 +420,15 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ onMenuClick }) => {
                 <SheetDescription className="sr-only">
                   View and manage your notifications
                 </SheetDescription>
-                <Button variant="link" className="h-auto w-fit p-0 text-xs" asChild>
-                  <Link to={notificationsHref} onClick={() => setShowNotificationSheet(false)}>
+                <Button
+                  variant="link"
+                  className="h-auto w-fit p-0 text-xs"
+                  asChild
+                >
+                  <Link
+                    to={notificationsHref}
+                    onClick={() => setShowNotificationSheet(false)}
+                  >
                     Open full notifications
                   </Link>
                 </Button>
