@@ -54,6 +54,40 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAuthStore } from "@/stores/auth.store";
 import { useNotificationStore } from "@/stores/notification.store";
 import { useMessageStore } from "@/stores/message.store";
+import { ScrollArea } from "@/components/ui/scroll-area";
+
+import { useAuthStore } from "@/stores/auth.store";
+import { useNotificationStore } from "@/stores/notification.store";
+import type { Notification } from "@/types/notification.types";
+import { m } from "framer-motion";
+
+// Keep messages mock for now (you can replace with real message store later)
+const messages = [
+  {
+    id: 1,
+    sender: "Ethiopia Coffee Export",
+    avatar: "",
+    message: "Your order of 50kg Yirgacheffe is ready for pickup",
+    time: "10:30 AM",
+    unread: true,
+  },
+  {
+    id: 2,
+    sender: "Adama Wholesalers",
+    avatar: "",
+    message: "New prices available for bulk orders",
+    time: "Yesterday",
+    unread: true,
+  },
+  {
+    id: 3,
+    sender: "Support Team",
+    avatar: "",
+    message: "Your ticket #TB-789 has been resolved",
+    time: "Yesterday",
+    unread: false,
+  },
+];
 
 interface DashboardHeaderProps {
   onMenuClick?: () => void;
@@ -61,10 +95,13 @@ interface DashboardHeaderProps {
 
 const DashboardHeader: React.FC<DashboardHeaderProps> = ({ onMenuClick }) => {
   const { user, logout } = useAuthStore();
+  const location = useLocation();
   const navigate = useNavigate();
 
   const [searchQuery, setSearchQuery] = useState("");
+  const [isDarkMode, setIsDarkMode] = useState(false);
   const [showNotificationSheet, setShowNotificationSheet] = useState(false);
+  useState<Notification | null>(null);
 
   // Get notifications from store
   const {

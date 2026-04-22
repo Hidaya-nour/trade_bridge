@@ -407,6 +407,7 @@ const FactoryBroadcastPage: React.FC = () => {
     });
     fetchProducts(
       {
+        supplier_id: authUser?.id,
         sortBy: "created_at",
         sortOrder: "DESC",
         limit: 50,
@@ -415,7 +416,7 @@ const FactoryBroadcastPage: React.FC = () => {
         replace: true,
       },
     );
-  }, [fetchMine, fetchOrdersAsSupplier, fetchProducts]);
+  }, [authUser?.id, fetchMine, fetchOrdersAsSupplier, fetchProducts]);
 
   const segments = useMemo(() => getAudienceSegments(orders), [orders]);
 
@@ -461,6 +462,11 @@ const FactoryBroadcastPage: React.FC = () => {
       items={announcements}
       segments={segments}
       stats={stats}
+      productsForLink={(products || []).map((product) => ({
+        id: product.id,
+        name: product.name,
+        sku: product.sku,
+      }))}
       onCreateItem={async (item) => {
         const createdBy =
           authUser?.full_name || authUser?.business_name || "Factory team";

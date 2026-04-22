@@ -12,6 +12,7 @@ import HelpSupportPage from "./pages/shared/HelpSupport";
 import SettingsPage from "./pages/shared/Settings";
 import NotificationsPage from "./pages/shared/Notifications";
 import MessagesPage from "./pages/shared/Messages";
+import MyDisputesPage from "./pages/shared/MyDisputes";
 import CompareSuppliersPage from "./pages/retailer/CompareSuppliers";
 import SupplierDirectoryPage from "./pages/retailer/SupplierDirectory";
 import DistributorDashboard from "./pages/distributor/Dashboard";
@@ -29,9 +30,11 @@ import ProductionAnalyticsPage from "./pages/factory/ProductionAnalytics";
 import FactoryForecastPage from "./pages/factory/Forecast";
 import AdminDashboard from "./pages/admin/dashboard";
 import UserManagementPage from "./pages/admin/UserManagementPage";
+import ProductListingsPage from "./pages/admin/ProductListingsPage";
 import { VerificationsPage } from "./pages/admin/VerificationsPage";
 import { DisputesManagementPage } from "./pages/admin/DisputesManagementPage";
 import { ReportsPage } from "./pages/admin/ReportsPage";
+import UserReportsManagementPage from "./pages/admin/UserReportsManagementPage";
 import { DriverDashboard } from "./pages/driver/DashboardPage";
 import PaymentsPage from "./features/payment/Payments";
 import DistributorOrderDetailsPage from "./pages/distributor/DistributorOrderDetails";
@@ -42,6 +45,7 @@ import SupplierProfilePage from "./pages/retailer/SupplierProfile";
 import { Toaster } from "react-hot-toast";
 import DistributorProductDetailPage from "./pages/distributor/ProductDetails";
 import DistributorMyProductDetailPage from "./pages/distributor/MyProductDetails";
+import DistributorFactoryProfilePage from "./pages/distributor/FactoryProfile";
 import FactoryMyProductDetailPage from "./pages/factory/ProductDetails";
 import AgentsPage from "./pages/factory/Agents";
 import LandingLayout from "./components/landing/layout/LandingLayout";
@@ -58,6 +62,7 @@ import DriverHistoryPage from "./pages/driver/DriverHistoryPage";
 import ActiveDeliveriesPage from "./pages/driver/ActiveDeliveriesPage";
 import OrderReceiptPage from "./pages/shared/OrderReceipt";
 import VerifyReceiptPage from "./pages/shared/VerifyReceipt";
+import ExportReportsPage from "./pages/shared/ExportReports";
 
 function App() {
   return (
@@ -171,10 +176,26 @@ function App() {
             }
           />
           <Route
+            path="/retailer/suppliers/:id"
+            element={
+              <DashboardLayout>
+                <SupplierProfilePage />
+              </DashboardLayout>
+            }
+          />
+          <Route
             path="/retailer/payments"
             element={
               <DashboardLayout>
                 <PaymentsPage role="retailer" />
+              </DashboardLayout>
+            }
+          />
+          <Route
+            path="/retailer/disputes"
+            element={
+              <DashboardLayout>
+                <MyDisputesPage role="retailer" />
               </DashboardLayout>
             }
           />
@@ -326,6 +347,14 @@ function App() {
             }
           />
           <Route
+            path="/distributor/factories/:id"
+            element={
+              <DashboardLayout>
+                <DistributorFactoryProfilePage />
+              </DashboardLayout>
+            }
+          />
+          <Route
             path="/distributor/analytics"
             element={
               <DashboardLayout>
@@ -334,10 +363,26 @@ function App() {
             }
           />
           <Route
+            path="/distributor/reports"
+            element={
+              <DashboardLayout>
+                <ExportReportsPage role="distributor" />
+              </DashboardLayout>
+            }
+          />
+          <Route
             path="/distributor/payments"
             element={
               <DashboardLayout>
                 <PaymentsPage role="distributor" />
+              </DashboardLayout>
+            }
+          />
+          <Route
+            path="/distributor/disputes"
+            element={
+              <DashboardLayout>
+                <MyDisputesPage role="distributor" />
               </DashboardLayout>
             }
           />
@@ -439,6 +484,14 @@ function App() {
             }
           />
           <Route
+            path="/factory/reports"
+            element={
+              <DashboardLayout>
+                <ExportReportsPage role="factory" />
+              </DashboardLayout>
+            }
+          />
+          <Route
             path="/factory/my-products/:id"
             element={
               <DashboardLayout>
@@ -451,6 +504,14 @@ function App() {
             element={
               <DashboardLayout>
                 <AgentsPage />
+              </DashboardLayout>
+            }
+          />
+          <Route
+            path="/factory/disputes"
+            element={
+              <DashboardLayout>
+                <MyDisputesPage role="factory" />
               </DashboardLayout>
             }
           />
@@ -472,6 +533,14 @@ function App() {
             }
           />
           <Route
+            path="/admin/products"
+            element={
+              <DashboardLayout>
+                <ProductListingsPage />
+              </DashboardLayout>
+            }
+          />
+          <Route
             path="/admin/verifications"
             element={
               <DashboardLayout>
@@ -488,10 +557,34 @@ function App() {
             }
           />
           <Route
+            path="/admin/disputes"
+            element={
+              <DashboardLayout>
+                <DisputesManagementPage />
+              </DashboardLayout>
+            }
+          />
+          <Route
             path="/admin/dispute"
             element={
               <DashboardLayout>
                 <DisputesManagementPage />
+              </DashboardLayout>
+            }
+          />
+          <Route
+            path="/admin/analytics"
+            element={
+              <DashboardLayout>
+                <ReportsPage />
+              </DashboardLayout>
+            }
+          />
+          <Route
+            path="/admin/user-reports"
+            element={
+              <DashboardLayout>
+                <UserReportsManagementPage />
               </DashboardLayout>
             }
           />

@@ -86,4 +86,24 @@ export class ChatMessageService {
         profile_image: user.profile_image,
       }));
   }
+
+  async getChatContactById(currentUserId: string, userId: string): Promise<IChatContact> {
+    if (currentUserId === userId) {
+      throw new AppError('You cannot start a chat with yourself', 400);
+    }
+
+    const user = await this.userRepo.findById(userId);
+    if (!user || user.deleted_at || user.status !== 'active') {
+      throw new AppError('User not found', 404);
+    }
+
+    return {
+      id: user.id,
+      full_name: user.full_name,
+      email: user.email,
+      role: user.role,
+      business_name: (user as any).business_name,
+      profile_image: (user as any).profile_image,
+    };
+  }
 }

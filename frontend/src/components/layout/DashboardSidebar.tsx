@@ -64,6 +64,11 @@ const roleNavigation = {
       href: "/retailer/cart",
       icon: ShoppingCart,
     },
+    {
+      name: "My Disputes",
+      href: "/retailer/disputes",
+      icon: AlertCircle,
+    },
   ],
 
   distributor: {
@@ -96,6 +101,11 @@ const roleNavigation = {
         href: "/distributor/promotions",
         icon: TrendingUp,
       },
+      {
+        name: "My Disputes",
+        href: "/distributor/disputes",
+        icon: AlertCircle,
+      },
     ],
     purchasing: [
       {
@@ -120,6 +130,11 @@ const roleNavigation = {
         href: "/distributor/analytics",
         icon: BarChart3,
       },
+      {
+        name: "Export Reports",
+        href: "/distributor/reports",
+        icon: FileText,
+      },
     ],
   },
 
@@ -136,11 +151,17 @@ const roleNavigation = {
       icon: Package,
     },
     {
+      name: "My Disputes",
+      href: "/factory/disputes",
+      icon: AlertCircle,
+    },
+    {
       name: "Agents",
       href: "/factory/agents",
       icon: Warehouse,
     },
-    { name: "Sales Reports", href: "/factory/sales", icon: BarChart3 },
+    { name: "Production Analytics", href: "/factory/analytics", icon: BarChart3 },
+    { name: "Export Reports", href: "/factory/reports", icon: FileText },
     { name: "Inventory", href: "/factory/inventory", icon: FileText },
     {
       name: "Broadcast Announcements",
@@ -169,6 +190,11 @@ const roleNavigation = {
       name: "Dispute Management",
       href: "/admin/disputes",
       icon: HelpCircle,
+    },
+    {
+      name: "User Reports",
+      href: "/admin/user-reports",
+      icon: AlertCircle,
     },
     { name: "Platform Analytics", href: "/admin/analytics", icon: BarChart3 },
   ],

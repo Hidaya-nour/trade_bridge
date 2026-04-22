@@ -51,6 +51,11 @@ class MessageService {
     });
     return response.data;
   }
+
+  async getChatContactById(userId: string): Promise<any> {
+    const response = await api.get(`/messages/contacts/${userId}`);
+    return response.data;
+  }
 }
 
 export default new MessageService();

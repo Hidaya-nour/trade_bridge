@@ -396,6 +396,7 @@ const DistributorBroadcastPage: React.FC = () => {
     });
     fetchProducts(
       {
+        supplier_id: authUser?.id,
         sortBy: "created_at",
         sortOrder: "DESC",
         limit: 50,
@@ -404,7 +405,7 @@ const DistributorBroadcastPage: React.FC = () => {
         replace: true,
       },
     );
-  }, [fetchMine, fetchOrdersAsSupplier, fetchProducts]);
+  }, [authUser?.id, fetchMine, fetchOrdersAsSupplier, fetchProducts]);
 
   const segments = useMemo(() => getAudienceSegments(orders), [orders]);
 
@@ -448,6 +449,11 @@ const DistributorBroadcastPage: React.FC = () => {
       items={promotions}
       segments={segments}
       stats={stats}
+      productsForLink={(products || []).map((product) => ({
+        id: product.id,
+        name: product.name,
+        sku: product.sku,
+      }))}
       onCreateItem={async (item) => {
         const createdBy =
           authUser?.full_name || authUser?.business_name || "Distributor team";

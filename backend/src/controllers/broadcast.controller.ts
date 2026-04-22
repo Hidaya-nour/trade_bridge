@@ -21,6 +21,36 @@ const ensureOwnerRole = (role?: string): BroadcastOwnerRole => {
 };
 
 export class BroadcastController {
+  async getActiveBroadcasts(req: Request, res: Response) {
+    try {
+      const excludeOwnerId = req.user?.id;
+      const ownerRolesParam = String(req.query.ownerRoles || '')
+        .split(',')
+        .map((value) => value.trim())
+        .filter(Boolean)
+        .filter((value): value is BroadcastOwnerRole =>
+          ['factory', 'distributor', 'admin'].includes(value),
+        );
+
+      const broadcasts = await broadcastService.getActiveBroadcasts({
+        ownerRoles: ownerRolesParam.length > 0 ? ownerRolesParam : undefined,
+        excludeOwnerId,
+      });
+
+      res.json({
+        success: true,
+        data: broadcasts,
+      });
+    } catch (error) {
+      if (error instanceof AppError) {
+        res.status(error.statusCode).json({ success: false, message: error.message });
+      } else {
+        logger.error('Get active broadcasts error:', error);
+        res.status(500).json({ success: false, message: 'Internal server error' });
+      }
+    }
+  }
+
   async createBroadcast(req: Request, res: Response) {
     try {
       const ownerId = req.user?.id;

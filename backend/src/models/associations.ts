@@ -15,6 +15,9 @@ import ChatMessage from './chat-message.model';
 import Document from './document.model';
 import Address from './address.model';
 import Review from './rating-reviews.model';
+import Dispute from './dispute.model';
+import SupplierReview from './supplier-review.model';
+import UserReport from './user-report.model';
 
 // This function must be called AFTER all models are imported
 export const setupAssociations = () => {
@@ -246,6 +249,47 @@ export const setupAssociations = () => {
     as: 'chatMessages',
   });
 
+  // Disputes
+  Dispute.belongsTo(Order, {
+    foreignKey: 'order_id',
+    as: 'order',
+  });
+
+  Order.hasMany(Dispute, {
+    foreignKey: 'order_id',
+    as: 'disputes',
+  });
+
+  Dispute.belongsTo(User, {
+    foreignKey: 'raised_by',
+    as: 'raisedByUser',
+  });
+
+  User.hasMany(Dispute, {
+    foreignKey: 'raised_by',
+    as: 'raisedDisputes',
+  });
+
+  Dispute.belongsTo(User, {
+    foreignKey: 'against_user',
+    as: 'againstUser',
+  });
+
+  User.hasMany(Dispute, {
+    foreignKey: 'against_user',
+    as: 'receivedDisputes',
+  });
+
+  Dispute.belongsTo(User, {
+    foreignKey: 'resolved_by',
+    as: 'resolvedByUser',
+  });
+
+  User.hasMany(Dispute, {
+    foreignKey: 'resolved_by',
+    as: 'resolvedDisputes',
+  });
+
   // Documents
   Document.belongsTo(User, {
     foreignKey: 'user_id',
@@ -288,6 +332,63 @@ export const setupAssociations = () => {
   User.hasMany(Review, {
     foreignKey: 'user_id',
     as: 'reviews',
+  });
+
+  // Supplier Reviews (User -> SupplierReview with two roles)
+  User.hasMany(SupplierReview, {
+    foreignKey: 'supplier_id',
+    as: 'supplierReviewsReceived',
+    onDelete: 'CASCADE',
+  });
+
+  User.hasMany(SupplierReview, {
+    foreignKey: 'user_id',
+    as: 'supplierReviewsWritten',
+    onDelete: 'CASCADE',
+  });
+
+  SupplierReview.belongsTo(User, {
+    foreignKey: 'supplier_id',
+    as: 'supplier',
+  });
+
+  SupplierReview.belongsTo(User, {
+    foreignKey: 'user_id',
+    as: 'reviewer',
+  });
+
+  // User Reports
+  User.hasMany(UserReport, {
+    foreignKey: 'reporter_id',
+    as: 'reportsMade',
+    onDelete: 'CASCADE',
+  });
+
+  User.hasMany(UserReport, {
+    foreignKey: 'reported_user_id',
+    as: 'reportsReceived',
+    onDelete: 'CASCADE',
+  });
+
+  UserReport.belongsTo(User, {
+    foreignKey: 'reporter_id',
+    as: 'reporter',
+  });
+
+  UserReport.belongsTo(User, {
+    foreignKey: 'reported_user_id',
+    as: 'reportedUser',
+  });
+
+  Order.hasMany(UserReport, {
+    foreignKey: 'order_id',
+    as: 'reports',
+    onDelete: 'SET NULL',
+  });
+
+  UserReport.belongsTo(Order, {
+    foreignKey: 'order_id',
+    as: 'order',
   });
 
   // Driver relationships

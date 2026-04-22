@@ -127,9 +127,11 @@ export const CartPage: React.FC<CartPageProps> = ({ config }) => {
   const handlePlaceOrder = async (
     paymentMethod?: string,
     deliveryOption?: string,
+    deliveryAddress?: string,
   ) => {
     const selectedDeliveryOption = deliveryOption || "supplier_policy";
     try {
+      const normalizedAddress = (deliveryAddress || "").trim();
       const supplierIds = selectedItems
         .map((item) => item.product?.supplier_id)
         .filter(Boolean) as string[];
@@ -200,14 +202,14 @@ export const CartPage: React.FC<CartPageProps> = ({ config }) => {
         return;
       }
 
-      const blockedSuppliers = Object.values(ordersBySupplier)
+      const noDeliverySuppliers = Object.values(ordersBySupplier)
         .filter((supplierOrder: any) => supplierOrder.hasNoDeliveryItem)
         .map((supplierOrder: any) => supplierOrder.supplier_name);
-      if (blockedSuppliers.length > 0) {
-        toast.error(
-          `Cannot place order. No-delivery items found for: ${blockedSuppliers.join(", ")}`,
+      if (noDeliverySuppliers.length > 0) {
+        toast(
+          `Some suppliers do not provide delivery for selected items: ${noDeliverySuppliers.join(", ")}. You can request an independent driver after ordering.`,
+          { icon: "ℹ️" } as any,
         );
-        return;
       }
 
       // Create separate orders for each supplier
@@ -228,20 +230,11 @@ export const CartPage: React.FC<CartPageProps> = ({ config }) => {
           items: orderData.items.map((item: any) => ({
             product_id: item.product_id,
             quantity: item.quantity,
-            unit_price: item.unit_price,
           })),
-          total_price: Number(
-            (
-              supplierSubtotal +
-              supplierShipping +
-              supplierTax -
-              supplierDiscount
-            ).toFixed(2),
-          ),
-          shipping_cost: supplierShipping,
-          tax_amount: Number(supplierTax.toFixed(2)),
-          discount_amount: Number(supplierDiscount.toFixed(2)),
-          delivery_option: selectedDeliveryOption,
+          // Only request supplier delivery when all selected items for that supplier support delivery.
+          ...(normalizedAddress && !orderData.hasNoDeliveryItem
+            ? { delivery_address: normalizedAddress }
+            : {}),
           notes: "",
           ...(paymentMethod ? { payment_method: paymentMethod } : {}),
         };
@@ -293,8 +286,7 @@ export const CartPage: React.FC<CartPageProps> = ({ config }) => {
 
       const result = await paymentService.submitByOrder(orderId, {
         payment_method: paymentMethod as any,
-        amount_paid:
-          paymentMethod === "app_payment" ? undefined : total,
+        amount_paid: paymentMethod === "app_payment" ? undefined : total,
         proof_document_id: proofDocumentId,
         notes: paymentDetails?.notes,
         payment_details: paymentDetails,

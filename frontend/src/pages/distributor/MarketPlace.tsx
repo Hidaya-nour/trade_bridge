@@ -6,6 +6,9 @@ import { Factory } from "lucide-react";
 import toast from "react-hot-toast";
 import { useAuthStore } from "@/stores/auth.store";
 import type { CatalogConfig } from "@/types/product.types";
+import broadcastService from "@/services/broadcast.service";
+import { ActivePromotionsPanel } from "@/components/shared/ActivePromotionsPanel";
+import type { BroadcastRecord } from "@/types/broadcast.types";
 
 const categories = ["Beverages", "Foods"];
 
@@ -21,6 +24,7 @@ const locations = [
 
 const DistributorMarketplacePage: React.FC = () => {
   const [localProducts, setLocalProducts] = useState<any[]>([]);
+  const [promotions, setPromotions] = useState<BroadcastRecord[]>([]);
   const user = useAuthStore((state) => state.user);
 
   const {
@@ -53,6 +57,26 @@ const DistributorMarketplacePage: React.FC = () => {
     fetchCart();
   }, [fetchProducts, fetchCart, user?.id]);
 
+  useEffect(() => {
+    const loadPromotions = async () => {
+      try {
+        const response = await broadcastService.getActive([
+          "factory",
+          "distributor",
+        ]);
+        setPromotions(response.data || []);
+      } catch (error) {
+        console.error(
+          "Failed to load distributor marketplace promotions:",
+          error,
+        );
+        setPromotions([]);
+      }
+    };
+
+    loadPromotions();
+  }, []);
+
   // Transform store products to match ProductCatalog expected format
   useEffect(() => {
     if (storeProducts && storeProducts.length > 0) {
@@ -78,7 +102,9 @@ const DistributorMarketplacePage: React.FC = () => {
         latitude: Number.isFinite(Number(p.supplier?.addresses?.[0]?.latitude))
           ? Number(p.supplier?.addresses?.[0]?.latitude)
           : null,
-        longitude: Number.isFinite(Number(p.supplier?.addresses?.[0]?.longitude))
+        longitude: Number.isFinite(
+          Number(p.supplier?.addresses?.[0]?.longitude),
+        )
           ? Number(p.supplier?.addresses?.[0]?.longitude)
           : null,
         deliveryTime: p.delivery_time || "2-3 days",
@@ -249,16 +275,27 @@ const DistributorMarketplacePage: React.FC = () => {
   };
 
   return (
-    <ProductCatalog
-      config={config}
-      products={localProducts}
-      onAddToCart={handleAddToCart}
-      onRemoveFromCart={handleRemoveFromCart}
-      onRemoveItemFromCart={handleRemoveItemFromCart}
-      getCartQuantity={getCartQuantity}
-      getTotalCartItems={getTotalCartItems}
-      getTotalCartValue={getTotalCartValue}
-    />
+    <div className="space-y-6">
+      {promotions.length > 0 && (
+        <ActivePromotionsPanel
+          title="Marketplace Promotions"
+          description="Active offers from factories and other distributors while you source inventory."
+          items={promotions}
+          emptyTitle="No active marketplace promotions"
+          emptyDescription="Factory and distributor offers will show up here when they go live."
+        />
+      )}
+      <ProductCatalog
+        config={config}
+        products={localProducts}
+        onAddToCart={handleAddToCart}
+        onRemoveFromCart={handleRemoveFromCart}
+        onRemoveItemFromCart={handleRemoveItemFromCart}
+        getCartQuantity={getCartQuantity}
+        getTotalCartItems={getTotalCartItems}
+        getTotalCartValue={getTotalCartValue}
+      />
+    </div>
   );
 };
 

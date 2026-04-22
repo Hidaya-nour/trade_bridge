@@ -2,12 +2,27 @@
 import { UserRepository } from '../../repositories/user.repository';
 import { AppError } from '../../utils/errors';
 import { Op } from 'sequelize';
+import Order from '../../models/order.model';
+import supplierReviewRepository from '../../repositories/supplier-review.repository';
 
 export class SupplierService {
   private userRepo: UserRepository;
 
   constructor() {
     this.userRepo = new UserRepository();
+  }
+
+  async canUserReviewSupplier(userId: string, supplierId: string) {
+    const order = await Order.findOne({
+      where: {
+        buyer_id: userId,
+        supplier_id: supplierId,
+        order_status: { [Op.in]: ['delivered', 'closed'] },
+      },
+      attributes: ['id'],
+    });
+
+    return Boolean(order);
   }
 
   async getSuppliersByIds(supplierIds: string[]) {
@@ -91,12 +106,9 @@ export class SupplierService {
           'business_name', 
           'full_name', 
           'verified', 
-        //   'rating', 
           'profile_image',
-          '',
           'created_at'
         ],
-        // order: [['rating', 'DESC']],
         limit: 50
       });
 
@@ -145,8 +157,7 @@ export class SupplierService {
         status: 'active',
         [Op.or]: [
           { business_name: { [Op.like]: `%${query}%` } },
-          { full_name: { [Op.like]: `%${query}%` } },
-          { description: { [Op.like]: `%${query}%` } }
+          { full_name: { [Op.like]: `%${query}%` } }
         ]
       };
 
@@ -171,5 +182,90 @@ export class SupplierService {
       console.error('Error searching suppliers:', error);
       throw new AppError('Failed to search suppliers', 500);
     }
+  }
+
+  async getSupplierReviews(
+    supplierId: string,
+    params: { page?: number; limit?: number; rating?: number; sort_by?: 'date' | 'rating' | 'helpful' } = {},
+  ) {
+    const supplier = await this.getSupplierById(supplierId);
+    if (!supplier) throw new AppError('Supplier not found', 404);
+
+    const fallbackPage = params.page && params.page > 0 ? params.page : 1;
+
+    try {
+      const { reviews, total, page, limit } = await supplierReviewRepository.findAndCountBySupplier(
+        supplierId,
+        params,
+      );
+      const summary = await supplierReviewRepository.getSummaryBySupplier(supplierId);
+
+      return {
+        reviews: reviews.map((review: any) => ({
+          id: review.id,
+          user_id: review.user_id,
+          user_name:
+            review.reviewer?.business_name ||
+            review.reviewer?.full_name ||
+            'Buyer',
+          rating: review.rating,
+          comment: review.comment,
+          date: review.created_at,
+          helpful_count: review.helpful_count || 0,
+          verified_purchase: review.verified_purchase === true,
+        })),
+        total,
+        page,
+        totalPages: Math.max(1, Math.ceil(total / limit)),
+        average_rating: summary.average_rating,
+        total_reviews: summary.total_reviews,
+      };
+    } catch (error: any) {
+      const dbCode = error?.original?.code || error?.parent?.code;
+
+      // If the DB schema is missing the supplier review table/columns (common in older envs),
+      // avoid breaking supplier profile pages. Log and return empty review data.
+      if (dbCode === 'ER_NO_SUCH_TABLE' || dbCode === 'ER_BAD_FIELD_ERROR') {
+        console.error('Supplier reviews query failed due to schema mismatch', error);
+        return {
+          reviews: [],
+          total: 0,
+          page: fallbackPage,
+          totalPages: 1,
+          average_rating: 0,
+          total_reviews: 0,
+        };
+      }
+
+      throw error;
+    }
+  }
+
+  async submitSupplierReview(userId: string, supplierId: string, data: { rating: number; comment?: string }) {
+    if (userId === supplierId) throw new AppError('You cannot review yourself', 400);
+
+    const supplier = await this.getSupplierById(supplierId);
+    if (!supplier) throw new AppError('Supplier not found', 404);
+
+    const eligible = await this.canUserReviewSupplier(userId, supplierId);
+    if (!eligible) throw new AppError('You can only rate suppliers you have ordered from', 403);
+
+    const existing = await supplierReviewRepository.findBySupplierAndReviewer(supplierId, userId);
+    if (existing) throw new AppError('You already reviewed this supplier', 409);
+
+    const rating = Number(data.rating);
+    if (!Number.isFinite(rating) || rating < 1 || rating > 5) {
+      throw new AppError('Rating must be between 1 and 5', 400);
+    }
+
+    const created = await supplierReviewRepository.create({
+      supplier_id: supplierId,
+      user_id: userId,
+      rating,
+      comment: data.comment?.trim() || null,
+      verified_purchase: true,
+    } as any);
+
+    return created;
   }
 }

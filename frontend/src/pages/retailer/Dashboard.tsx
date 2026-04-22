@@ -38,6 +38,7 @@ import {
   WelcomeHeader,
   OrderSummaryCard,
 } from "@/components";
+import { ActivePromotionsPanel } from "@/components/shared/ActivePromotionsPanel";
 import { formatPrice, formatDate } from "@/lib/formatters";
 import { getInitials } from "@/lib/utils";
 import { useAuthStore } from "@/stores/auth.store";
@@ -45,6 +46,8 @@ import { useOrderStore } from "@/stores/order.store";
 import { useSupplierStore } from "@/stores/supplier.store";
 import { useProductStore } from "@/stores/product.store";
 import orderService from "@/services/order.service";
+import broadcastService from "@/services/broadcast.service";
+import type { BroadcastRecord } from "@/types/broadcast.types";
 
 const RetailerDashboard: React.FC = () => {
   const authUser = useAuthStore((state) => state.user);
@@ -53,6 +56,7 @@ const RetailerDashboard: React.FC = () => {
   const { products, fetchProducts } = useProductStore();
   const [recentOrders, setRecentOrders] = useState<any[]>([]);
   const [recommendedSuppliers, setRecommendedSuppliers] = useState<any[]>([]);
+  const [promotions, setPromotions] = useState<BroadcastRecord[]>([]);
 
   // Fetch stats on component mount
   useEffect(() => {
@@ -60,9 +64,12 @@ const RetailerDashboard: React.FC = () => {
   }, [fetchOrderStats]);
 
   useEffect(() => {
-    fetchProducts({ limit: 8, sortBy: "created_at", sortOrder: "DESC" } as any, {
-      replace: true,
-    });
+    fetchProducts(
+      { limit: 8, sortBy: "created_at", sortOrder: "DESC" } as any,
+      {
+        replace: true,
+      },
+    );
   }, [fetchProducts]);
 
   useEffect(() => {
@@ -77,7 +84,9 @@ const RetailerDashboard: React.FC = () => {
         deliveryTime: "2-5 days",
         price: "$$",
         match: `${Math.min(99, 80 + (supplier.total_products || 0))}%`,
-        avatar: getInitials(supplier.business_name || supplier.full_name || "SP"),
+        avatar: getInitials(
+          supplier.business_name || supplier.full_name || "SP",
+        ),
         verified: supplier.is_verified,
       }));
       setRecommendedSuppliers(normalized);
@@ -85,6 +94,20 @@ const RetailerDashboard: React.FC = () => {
 
     loadTopSuppliers();
   }, [getTopSuppliers]);
+
+  useEffect(() => {
+    const loadPromotions = async () => {
+      try {
+        const response = await broadcastService.getActive(["distributor"]);
+        setPromotions(response.data || []);
+      } catch (error) {
+        console.error("Failed to load dashboard promotions:", error);
+        setPromotions([]);
+      }
+    };
+
+    loadPromotions();
+  }, []);
 
   useEffect(() => {
     const fetchOrders = async () => {
@@ -218,6 +241,27 @@ const RetailerDashboard: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Column - 2 cols */}
         <div className="lg:col-span-2 space-y-6">
+          {promotions.length > 0 && (
+            <ActivePromotionsPanel
+              title="Offers For You"
+              description="Current distributor promotions matched to retailer buying activity."
+              items={promotions.slice(0, 4)}
+              getProductLink={(promotion) => {
+                const code = promotion.code?.trim();
+                if (!code) return null;
+                const match = products?.find(
+                  (product) =>
+                    String((product as any).sku || "")
+                      .trim()
+                      .toUpperCase() === code.toUpperCase(),
+                );
+                return match?.id ? `/retailer/products/${match.id}` : null;
+              }}
+              compact
+              emptyTitle="No active offers right now"
+              emptyDescription="Distributor promotions will appear here when they go live."
+            />
+          )}
           {/* Recent Orders Card */}
           <Card>
             <CardHeader className="pb-2">

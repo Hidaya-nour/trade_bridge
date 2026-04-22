@@ -29,6 +29,34 @@ export interface ChangePasswordData {
   newPassword: string;
 }
 
+const unwrapApiData = <T>(payload: any): T => {
+  if (payload?.data !== undefined) {
+    return payload.data as T;
+  }
+
+  return payload as T;
+};
+
+const normalizeUserListResponse = (
+  payload: any,
+): { users: any[]; total: number } => {
+  const data = unwrapApiData<any>(payload);
+
+  if (Array.isArray(data)) {
+    return { users: data, total: data.length };
+  }
+
+  if (Array.isArray(data?.users)) {
+    return {
+      users: data.users,
+      total:
+        typeof data.total === "number" ? data.total : data.users.length,
+    };
+  }
+
+  return { users: [], total: 0 };
+};
+
 export const authService = {
   async login(credentials: LoginCredentials) {
     const response = await api.post('/auth/login', credentials);
@@ -79,6 +107,16 @@ export const authService = {
     return response.data;
   },
 
+  async suspendUser(userId: string) {
+    const response = await api.post(`/auth/admin/suspend/${userId}`);
+    return response.data;
+  },
+
+  async reactivateUser(userId: string) {
+    const response = await api.post(`/auth/admin/reactivate/${userId}`);
+    return response.data;
+  },
+
   async getUsers(options?: {
     limit?: number;
     offset?: number;
@@ -100,12 +138,12 @@ export const authService = {
     const queryString = params.toString();
     const url = queryString ? `/auth/admin/users?${queryString}` : '/auth/admin/users';
     const response = await api.get(url);
-    return response.data.data;
+    return normalizeUserListResponse(response.data);
   },
 
   async getRecentUsers(limit?: number) {
     const url = limit ? `/auth/admin/recent-users?limit=${limit}` : '/auth/admin/recent-users';
     const response = await api.get(url);
-    return response.data.data;
+    return normalizeUserListResponse(response.data);
   }
 };

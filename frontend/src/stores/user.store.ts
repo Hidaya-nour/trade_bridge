@@ -80,7 +80,24 @@ export const useUserStore = create<UserState & UserActions>((set, get) => ({
         offset,
       });
 
-      const { users, total } = response;
+      let users = Array.isArray(response?.users) ? response.users : [];
+      let total = typeof response?.total === "number" ? response.total : users.length;
+
+      // Fallback to recent users when the paged endpoint comes back empty unexpectedly.
+      if (
+        users.length === 0 &&
+        !currentFilters.role &&
+        !currentFilters.status &&
+        !currentFilters.search &&
+        currentPagination.page === 1
+      ) {
+        const fallback = await authService.getRecentUsers(currentPagination.limit);
+        users = Array.isArray(fallback?.users) ? fallback.users : [];
+        total =
+          typeof fallback?.total === "number" && fallback.total > 0
+            ? fallback.total
+            : users.length;
+      }
 
       set({
         users,
@@ -92,7 +109,10 @@ export const useUserStore = create<UserState & UserActions>((set, get) => ({
     } catch (error: any) {
       set({
         loading: false,
-        error: error.message || "Failed to fetch users",
+        error:
+          error?.response?.data?.message ||
+          error.message ||
+          "Failed to fetch users",
       });
     }
   },
@@ -103,7 +123,12 @@ export const useUserStore = create<UserState & UserActions>((set, get) => ({
       const users = response?.users || [];
       return users;
     } catch (error: any) {
-      set({ error: error.message || "Failed to fetch recent users" });
+      set({
+        error:
+          error?.response?.data?.message ||
+          error.message ||
+          "Failed to fetch recent users",
+      });
       return [];
     }
   },

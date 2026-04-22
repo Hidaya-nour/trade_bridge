@@ -62,7 +62,7 @@ export interface CartWithItems {
   original_total: number;
   discount_total: number;
   final_total: number;
-  applied_promotions?: any[]; // Will be defined when promotions are implemented
+  applied_promotions?: any[];
   created_at: Date;
   updated_at: Date;
 }

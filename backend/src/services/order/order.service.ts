@@ -1,6 +1,7 @@
 import { OrderRepository } from '../../repositories/order.repository';
 import { ProductRepository } from '../../repositories/product.repository';
 import { UserRepository } from '../../repositories/user.repository';
+import { BroadcastRepository } from '../../repositories/broadcast.repository';
 import { SupplierPaymentMethodService } from '../supplier-payment-method/supplier-payment-method.service';
 import { AppError } from '../../utils/errors';
 import { 
@@ -15,6 +16,8 @@ import {
 import logger from '../../utils/logger';
 import notificationService from '../../services/notification/notification.service';
 import Payment from '../../models/payment.model';
+import { User } from '../../models/user.model';
+import { Op } from 'sequelize';
 
 const DEFAULT_VAT_RATE = 0.15;
 
@@ -32,6 +35,7 @@ export class OrderService {
   private orderRepo = new OrderRepository();
   private productRepo = new ProductRepository();
   private userRepo = new UserRepository();
+  private broadcastRepo = new BroadcastRepository();
   private supplierPaymentMethodService = new SupplierPaymentMethodService();
 
   // ========================================================================
@@ -129,6 +133,47 @@ export class OrderService {
     let subtotal = 0;
     const orderItems = [];
 
+    const toNumber = (value: any, fallback = 0) => {
+      const parsed = Number(value);
+      return Number.isFinite(parsed) ? parsed : fallback;
+    };
+
+    const applyDiscountPromotion = (
+      baseUnitPrice: number,
+      quantity: number,
+      promotion: any,
+    ) => {
+      if (!promotion) return baseUnitPrice;
+      if (promotion.type !== 'discount') return baseUnitPrice;
+
+      const discountType = promotion.discount_type;
+      const discountValue = toNumber(promotion.discount_value, 0);
+      const minOrder = promotion.min_order !== null && promotion.min_order !== undefined
+        ? toNumber(promotion.min_order, 0)
+        : null;
+      const maxDiscount = promotion.max_discount !== null && promotion.max_discount !== undefined
+        ? toNumber(promotion.max_discount, 0)
+        : null;
+
+      if (minOrder !== null && minOrder > 0 && quantity < minOrder) return baseUnitPrice;
+      if (!discountType || discountValue <= 0) return baseUnitPrice;
+
+      let perUnitDiscount = 0;
+      if (discountType === 'percentage') {
+        perUnitDiscount = baseUnitPrice * Math.min(100, discountValue) / 100;
+      } else if (discountType === 'fixed') {
+        perUnitDiscount = discountValue;
+      }
+
+      let totalDiscount = perUnitDiscount * quantity;
+      if (maxDiscount !== null && maxDiscount > 0) {
+        totalDiscount = Math.min(totalDiscount, maxDiscount);
+      }
+
+      const unitPrice = baseUnitPrice - totalDiscount / Math.max(1, quantity);
+      return Math.max(0, Number(unitPrice.toFixed(2)));
+    };
+
     for (const item of items) {
       const product = await this.productRepo.findById(item.product_id);
       
@@ -152,13 +197,19 @@ export class OrderService {
         throw new AppError(`Minimum order for ${product.name} is ${product.min_order_amount}`, 400);
       }
 
-      const itemTotal = product.price * item.quantity;
+      const promotion = await this.broadcastRepo.findActiveDiscountByOwnerAndCode(
+        supplier_id,
+        product.sku,
+      );
+
+      const unitPrice = applyDiscountPromotion(toNumber(product.price, 0), item.quantity, promotion);
+      const itemTotal = unitPrice * item.quantity;
       subtotal += itemTotal;
 
       orderItems.push({
         product_id: product.id,
         quantity: item.quantity,
-        unit_price: product.price
+        unit_price: unitPrice,
       });
 
       // Reserve stock
@@ -402,9 +453,72 @@ export class OrderService {
   // ========================================================================
 
   async getOrderStats(userId?: string, userRole?: string) {
-    return this.orderRepo.getOrderStats(
-      userRole === 'supplier' ? userId : undefined
+    const isAdmin = userRole === 'admin';
+
+    const stats = await this.orderRepo.getOrderStats(
+      isAdmin ? undefined : userId ? { userId } : undefined,
     );
+
+    if (!isAdmin) {
+      return {
+        ...stats,
+        total_spent: stats.total_value,
+        spent_growth: stats.value_growth,
+      };
+    }
+
+    const [activeUsers, totalSuppliers] = await Promise.all([
+      User.count({
+        where: {
+          deleted_at: null,
+          status: 'active',
+        } as any,
+      }),
+      User.count({
+        where: {
+          deleted_at: null,
+          status: 'active',
+          role: { [Op.in]: ['factory', 'distributor'] },
+        } as any,
+      }),
+    ]);
+
+    const now = new Date();
+    const startCurrent = new Date(now);
+    startCurrent.setDate(startCurrent.getDate() - 30);
+    const startPrev = new Date(now);
+    startPrev.setDate(startPrev.getDate() - 60);
+
+    const currentUsers = await User.count({
+      where: {
+        deleted_at: null,
+        created_at: { [Op.gte]: startCurrent },
+      } as any,
+    });
+    const prevUsers = await User.count({
+      where: {
+        deleted_at: null,
+        created_at: { [Op.gte]: startPrev, [Op.lt]: startCurrent },
+      } as any,
+    });
+
+    const pct = (current: number, previous: number) => {
+      if (previous <= 0) return current > 0 ? 100 : 0;
+      return Number((((current - previous) / previous) * 100).toFixed(2));
+    };
+
+    const user_growth = pct(currentUsers, prevUsers);
+
+    return {
+      ...stats,
+      total_revenue: stats.total_value,
+      revenue_today: stats.value_today,
+      orders_today: stats.orders_today,
+      active_users: activeUsers,
+      total_suppliers: totalSuppliers,
+      user_growth,
+      platform_growth: Number(((stats.order_growth + user_growth) / 2).toFixed(2)),
+    };
   }
 
   async getOrderSummary(orderId: string, userId: string, userRole: string) {

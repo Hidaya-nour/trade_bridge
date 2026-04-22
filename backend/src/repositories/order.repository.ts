@@ -262,20 +262,100 @@ export class OrderRepository extends BaseRepository<Order> {
   }
 
   // Order Stats
-  async getOrderStats(supplierId?: string) {
-    const where: any = {};
-    if (supplierId) {
-      where.supplier_id = supplierId;
+  async getOrderStats(options?: { userId?: string }) {
+    const baseWhere: any = {};
+    if (options?.userId) {
+      baseWhere[Op.or] = [
+        { buyer_id: options.userId },
+        { supplier_id: options.userId },
+      ];
     }
 
-    return this.model.findAll({
-      where,
+    const hasBase =
+      Object.keys(baseWhere).length > 0 || Object.getOwnPropertySymbols(baseWhere).length > 0;
+
+    const withWhere = (extra: any) =>
+      hasBase ? ({ [Op.and]: [baseWhere, extra] } as any) : extra;
+
+    const rows = (await this.model.findAll({
+      where: baseWhere,
       attributes: [
         'order_status',
         [sequelize.fn('COUNT', sequelize.col('id')), 'count'],
-        [sequelize.fn('SUM', sequelize.col('total_price')), 'total']
+        [sequelize.fn('SUM', sequelize.col('total_price')), 'total'],
       ],
-      group: ['order_status']
+      group: ['order_status'],
+      raw: true,
+    })) as Array<any>;
+
+    const counts: Record<string, number> = {};
+    const totals: Record<string, number> = {};
+
+    for (const row of rows) {
+      const status = String(row.order_status || '');
+      counts[status] = Number(row.count || 0);
+      totals[status] = Number(row.total || 0);
+    }
+
+    const total_orders = Object.values(counts).reduce((sum, v) => sum + v, 0);
+    const total_value = Object.values(totals).reduce((sum, v) => sum + v, 0);
+
+    const now = new Date();
+    const startCurrent = new Date(now);
+    startCurrent.setDate(startCurrent.getDate() - 30);
+    const startPrev = new Date(now);
+    startPrev.setDate(startPrev.getDate() - 60);
+
+    const currentWhere = withWhere({
+      created_at: { [Op.gte]: startCurrent },
     });
+    const prevWhere = withWhere({
+      created_at: { [Op.gte]: startPrev, [Op.lt]: startCurrent },
+    });
+
+    const [currentOrders, prevOrders] = await Promise.all([
+      this.model.count({ where: currentWhere }),
+      this.model.count({ where: prevWhere }),
+    ]);
+
+    const currentValueRaw = await this.model.sum('total_price' as any, { where: currentWhere });
+    const prevValueRaw = await this.model.sum('total_price' as any, { where: prevWhere });
+    const currentValue = Number(currentValueRaw || 0);
+    const prevValue = Number(prevValueRaw || 0);
+
+    const pct = (current: number, previous: number) => {
+      if (previous <= 0) return current > 0 ? 100 : 0;
+      return Number((((current - previous) / previous) * 100).toFixed(2));
+    };
+
+    const order_growth = pct(currentOrders, prevOrders);
+    const value_growth = pct(currentValue, prevValue);
+
+    const today = new Date(now);
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const todayWhere = withWhere({
+      created_at: { [Op.gte]: today, [Op.lt]: tomorrow },
+    });
+    const orders_today = await this.model.count({ where: todayWhere });
+    const value_today_raw = await this.model.sum('total_price' as any, { where: todayWhere });
+    const value_today = Number(value_today_raw || 0);
+
+    return {
+      total_orders,
+      total_value: Number(total_value.toFixed(2)),
+      order_growth,
+      value_growth,
+      orders_today,
+      value_today: Number(value_today.toFixed(2)),
+      pending_count: counts.pending || 0,
+      approved_count: counts.approved || 0,
+      processing_count: counts.processing || 0,
+      shipped_count: counts.shipped || 0,
+      delivered_count: counts.delivered || 0,
+      closed_count: counts.closed || 0,
+      cancelled_count: counts.cancelled || 0,
+    };
   }
 }

@@ -1,6 +1,5 @@
 import { CartRepository, CartItemRepository } from '../../repositories/cart.repository';
 import { ProductRepository } from '../../repositories/product.repository';
-import { UserRepository } from '../../repositories/user.repository';
 import { AppError } from '../../utils/errors';
 import { AddToCartDTO, CartWithItems } from '../../types/cart.types';
 import logger from '../../utils/logger';
@@ -9,24 +8,10 @@ export class CartService {
   private cartRepo = new CartRepository();
   private cartItemRepo = new CartItemRepository();
   private productRepo = new ProductRepository();
-  private userRepo = new UserRepository();
-
-  // HELPER: Get User Info
-  private async getUserInfo(userId: string) {
-    const user = await this.userRepo.findById(userId);
-    if (!user) {
-      throw new AppError('User not found', 404);
-    }
-    return {
-      role: user.role,
-      region: 'all'
-    };
-  }
 
   // GET CART
   async getCart(userId: string): Promise<CartWithItems | null> {
-    const { role, region } = await this.getUserInfo(userId);
-    return this.cartRepo.findCartWithItems(userId, role, region);
+    return this.cartRepo.findCartWithItems(userId);
   }
 
   // ADD TO CART
@@ -79,8 +64,7 @@ export class CartService {
     logger.info(`User ${userId} added ${quantity} of product ${product_id} to cart`);
 
     // Return updated cart
-    const { role, region } = await this.getUserInfo(userId);
-    const updatedCart = await this.cartRepo.findCartWithItems(userId, role, region);
+    const updatedCart = await this.cartRepo.findCartWithItems(userId);
     if (!updatedCart) {
       throw new AppError('Failed to retrieve updated cart', 500);
     }
@@ -120,8 +104,7 @@ export class CartService {
     logger.info(`User ${userId} removed product ${itemId} from cart`);
 
     // Return updated cart
-    const { role, region } = await this.getUserInfo(userId);
-    const updatedCart = await this.cartRepo.findCartWithItems(userId, role, region);
+    const updatedCart = await this.cartRepo.findCartWithItems(userId);
     if (!updatedCart) {
       throw new AppError('Failed to retrieve updated cart', 500);
     }
@@ -150,8 +133,7 @@ export class CartService {
     issues: string[];
     cart: CartWithItems;
   }> {
-    const { role, region } = await this.getUserInfo(userId);
-    const cart = await this.cartRepo.findCartWithItems(userId, role, region);
+    const cart = await this.cartRepo.findCartWithItems(userId);
     if (!cart || cart.items.length === 0) {
       return {
         valid: false,

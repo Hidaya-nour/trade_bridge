@@ -1,4 +1,6 @@
 import Broadcast from '../../models/broadcast.model';
+import Notification from '../../models/notification.model';
+import User from '../../models/user.model';
 import { BroadcastRepository } from '../../repositories/broadcast.repository';
 import {
   BroadcastOwnerRole,
@@ -10,6 +12,7 @@ import {
 } from '../../types/broadcast.types';
 import { AppError } from '../../utils/errors';
 import logger from '../../utils/logger';
+import { Op } from 'sequelize';
 
 const VALID_STATUSES: BroadcastStatus[] = [
   'draft',
@@ -137,6 +140,35 @@ export class BroadcastService {
 
     logger.info(`Broadcast created: ${broadcast.id}`);
 
+    // Lightweight "promotions" notifications for buyers.
+    // Buyers (retailers + distributors) see these in the Notifications UI.
+    try {
+      if (broadcast.status === 'active') {
+        const recipients = await User.findAll({
+          where: {
+            id: { [Op.ne]: ownerId },
+            role: { [Op.in]: ['retailer', 'distributor'] },
+            status: 'active',
+          },
+          attributes: ['id'],
+        });
+
+        if (recipients.length > 0) {
+          await Notification.bulkCreate(
+            recipients.map((user) => ({
+              user_id: (user as any).id,
+              type: 'promotion',
+              title: broadcast.title || 'New Promotion',
+              message: broadcast.summary || broadcast.description || 'A new promotion is now available.',
+              is_read: 0,
+            })) as any,
+          );
+        }
+      }
+    } catch (error) {
+      logger.warn('Failed to create promotion notifications', error);
+    }
+
     return broadcast;
   }
 
@@ -145,7 +177,17 @@ export class BroadcastService {
     ownerRole?: BroadcastOwnerRole,
   ): Promise<IBroadcast[]> {
     await this.ensureTableReady();
+    await this.broadcastRepo.refreshTimeBasedStatuses();
     return this.broadcastRepo.findByOwner(ownerId, ownerRole);
+  }
+
+  async getActiveBroadcasts(options?: {
+    ownerRoles?: BroadcastOwnerRole[];
+    excludeOwnerId?: string;
+  }): Promise<IBroadcast[]> {
+    await this.ensureTableReady();
+    await this.broadcastRepo.refreshTimeBasedStatuses();
+    return this.broadcastRepo.findActive(options);
   }
 
   async getBroadcastById(

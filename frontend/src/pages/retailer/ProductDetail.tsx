@@ -1,17 +1,24 @@
 import { ProductDetail } from "@/features/products/ProductDetails";
 import { useCartStore } from "@/stores/cart.store";
 import { useProductStore } from "@/stores/product.store";
-import React, { useEffect } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { WithAsync } from "@/components/shared/WithAsync";
 import type { ProductDetailData } from "@/types/product.types";
 import toast from "react-hot-toast";
+import broadcastService from "@/services/broadcast.service";
+import type { BroadcastRecord } from "@/types/broadcast.types";
+import {
+  applyDiscountToUnitPrice,
+  resolveBestDiscountPromotion,
+} from "@/lib/promotion-utils";
 
 const RetailerProductDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { product, fetchProductById, isLoading } = useProductStore();
   const { addToCart, updateQuantity, removeFromCart, items } = useCartStore();
   const navigate = useNavigate();
+  const [promotions, setPromotions] = useState<BroadcastRecord[]>([]);
 
   const currentCartItem = product
     ? items.find((item) => item.product_id === product.id) || null
@@ -66,14 +73,55 @@ const RetailerProductDetailPage: React.FC = () => {
     if (id) {
       fetchProductById(id);
     }
-  }, [id]);
+  }, [id, fetchProductById]);
+
+  useEffect(() => {
+    const loadPromotions = async () => {
+      try {
+        const response = await broadcastService.getActive([
+          "distributor",
+          "factory",
+        ]);
+        setPromotions(response.data || []);
+      } catch (error) {
+        setPromotions([]);
+      }
+    };
+
+    loadPromotions();
+  }, []);
 
   const resolvedError = !isLoading && !product ? "Product not found" : null;
 
   // Transform product to match ProductDetail expected props
-  const productForDetail: ProductDetailData | null = product
-    ? {
+  const productForDetail: ProductDetailData | null = useMemo(() => {
+    if (!product) return null;
+
+    const minQty = Math.max(1, Number(product.min_order_amount || 1));
+    const bestPromotion = resolveBestDiscountPromotion(
+      promotions,
+      product.sku,
+      minQty,
+    );
+    const basePrice = Number(product.price);
+    const discountedPrice = applyDiscountToUnitPrice(
+      basePrice,
+      minQty,
+      bestPromotion,
+    );
+    const promotionLabel =
+      bestPromotion && bestPromotion.discount_type && bestPromotion.discount_value
+        ? bestPromotion.discount_type === "percentage"
+          ? `${Number(bestPromotion.discount_value)}% off`
+          : `ETB ${Number(bestPromotion.discount_value)} off`
+        : null;
+
+    return {
         ...product,
+        price: discountedPrice,
+        original_price: discountedPrice < basePrice ? basePrice : undefined,
+        promotion_label: promotionLabel,
+        promotion_ends_at: bestPromotion?.end_date || null,
         review_count: product.review_count || 0,
         maxOrder: product.stock_quantity,
         reserved: 0,
@@ -96,8 +144,8 @@ const RetailerProductDetailPage: React.FC = () => {
             comment: r.comment || "",
             date: new Date(r.created_at).toISOString(),
           })) || [],
-      }
-    : null;
+      };
+  }, [product, promotions]);
 
   return (
     <WithAsync

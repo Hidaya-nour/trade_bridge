@@ -16,6 +16,8 @@ import {
   RotateCcw,
   MessageSquare,
   User,
+  AlertCircle,
+  Flag,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -63,12 +65,15 @@ import { formatPrice, formatDate, formatDateTime } from "@/lib/formatters";
 import { getPaymentMethodLabel } from "@/lib/payment-method-utils";
 import { getInitials, cn } from "@/lib/utils";
 import deliveryService from "@/services/delivery.service";
+import disputeService from "@/services/dispute.service";
+import { reportService } from "@/services/report.service";
 import toast from "react-hot-toast";
 import type {
   OrderStatus,
   OrderDetailsData,
   OrderDetailsLinks,
 } from "@/types/order.types";
+import { Textarea } from "@/components/ui/textarea";
 
 type OrderDetailsViewProps = {
   initialOrder: OrderDetailsData;
@@ -85,6 +90,7 @@ type OrderDetailsViewProps = {
   onReorderPlaceOrder?: (
     paymentMethod?: string,
     deliveryOption?: string,
+    deliveryAddress?: string,
   ) => Promise<{
     primaryOrderId: string;
     orderIds?: string[];
@@ -121,12 +127,20 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
   const [showAssignDialog, setShowAssignDialog] = useState(false);
   const [showReviewDialog, setShowReviewDialog] = useState(false);
   const [showReorderDialog, setShowReorderDialog] = useState(false);
+  const [showDisputeDialog, setShowDisputeDialog] = useState(false);
   const [selectedDriver, setSelectedDriver] = useState("");
   const [cancellationReason, setCancellationReason] = useState("");
   const [rating, setRating] = useState(5);
   const [review, setReview] = useState("");
+  const [disputeReason, setDisputeReason] = useState<string>("late_delivery");
+  const [disputeDescription, setDisputeDescription] = useState<string>("");
   const [assignLoading, setAssignLoading] = useState(false);
   const [paymentApproving, setPaymentApproving] = useState(false);
+  const [disputeSubmitting, setDisputeSubmitting] = useState(false);
+  const [showReportDialog, setShowReportDialog] = useState(false);
+  const [reportReason, setReportReason] = useState<string>("fraud");
+  const [reportDescription, setReportDescription] = useState<string>("");
+  const [reportSubmitting, setReportSubmitting] = useState(false);
 
   useEffect(() => {
     setOrder(initialOrder);
@@ -204,6 +218,82 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
       }));
     } finally {
       setPaymentApproving(false);
+    }
+  };
+
+  const handleRaiseDispute = async () => {
+    if (!order?.id || !order?.party?.id) {
+      toast.error("Unable to raise dispute for this order.");
+      return;
+    }
+
+    const reason = disputeReason.trim();
+    const details = disputeDescription.trim();
+    if (!details) {
+      toast.error("Please describe the issue.");
+      return;
+    }
+
+    setDisputeSubmitting(true);
+    try {
+      await disputeService.create({
+        order_id: order.id,
+        against_user: order.party.id,
+        reason,
+        description: details,
+      });
+      toast.success("Dispute raised. Our team will review it.");
+      setShowDisputeDialog(false);
+      setDisputeReason("late_delivery");
+      setDisputeDescription("");
+    } catch (err: any) {
+      toast.error(
+        err?.response?.data?.message ||
+          "Failed to raise dispute. Please try again.",
+      );
+    } finally {
+      setDisputeSubmitting(false);
+    }
+  };
+
+  const handleSubmitReport = async () => {
+    if (!order?.id || !order?.party?.id) {
+      toast.error("Unable to submit report right now.");
+      return;
+    }
+
+    const reason = reportReason.trim();
+    const details = reportDescription.trim();
+
+    if (!reason) {
+      toast.error("Please select a report reason.");
+      return;
+    }
+
+    if (!details) {
+      toast.error("Please describe what happened.");
+      return;
+    }
+
+    setReportSubmitting(true);
+    try {
+      await reportService.create({
+        reported_user_id: order.party.id,
+        reason,
+        description: details,
+        order_id: order.id,
+      });
+      toast.success("Report submitted. Our team will review it.");
+      setShowReportDialog(false);
+      setReportReason("fraud");
+      setReportDescription("");
+    } catch (err: any) {
+      toast.error(
+        err?.response?.data?.message ||
+          "Failed to submit report. Please try again.",
+      );
+    } finally {
+      setReportSubmitting(false);
     }
   };
 
@@ -712,6 +802,15 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                   </Link>
                 </Button>
               )}
+
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => setShowReportDialog(true)}
+              >
+                <Flag className="h-4 w-4 mr-2" />
+                Report {partyLabel}
+              </Button>
             </CardContent>
           </Card>
 
@@ -767,7 +866,22 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                   </Button>
                 )}
 
-              <Button variant="outline" className="w-full justify-start" asChild>
+              {mode === "outgoing" && (
+                <Button
+                  variant="outline"
+                  className="w-full justify-start"
+                  onClick={() => setShowDisputeDialog(true)}
+                >
+                  <AlertCircle className="mr-2 h-4 w-4" />
+                  Raise Dispute
+                </Button>
+              )}
+
+              <Button
+                variant="outline"
+                className="w-full justify-start"
+                asChild
+              >
                 <Link to={receiptUrl}>
                   <Download className="mr-2 h-4 w-4" />
                   Download Receipt
@@ -843,6 +957,114 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Report User Dialog */}
+      <Dialog open={showReportDialog} onOpenChange={setShowReportDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Report {partyLabel}</DialogTitle>
+            <DialogDescription>
+              Submit a report so admins can investigate repeated issues and take
+              action if needed.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Reason</Label>
+              <Select value={reportReason} onValueChange={setReportReason}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select reason" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="fraud">Fraud / Scam</SelectItem>
+                  <SelectItem value="payment_issue">Payment issue</SelectItem>
+                  <SelectItem value="harassment">Harassment</SelectItem>
+                  <SelectItem value="spam">Spam</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Details</Label>
+              <Textarea
+                placeholder="Describe what happened (include dates, amounts, evidence details, etc.)"
+                value={reportDescription}
+                onChange={(e) => setReportDescription(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowReportDialog(false)}
+              disabled={reportSubmitting}
+            >
+              Cancel
+            </Button>
+            <Button onClick={() => void handleSubmitReport()} disabled={reportSubmitting}>
+              {reportSubmitting ? "Submitting..." : "Submit Report"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Raise Dispute Dialog */}
+      <Dialog open={showDisputeDialog} onOpenChange={setShowDisputeDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Raise a Dispute</DialogTitle>
+            <DialogDescription>
+              Tell us what went wrong so we can help resolve it quickly.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Reason</Label>
+              <Select value={disputeReason} onValueChange={setDisputeReason}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select reason" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="late_delivery">Late delivery</SelectItem>
+                  <SelectItem value="damaged_items">Damaged items</SelectItem>
+                  <SelectItem value="wrong_items">Wrong items</SelectItem>
+                  <SelectItem value="missing_items">Missing items</SelectItem>
+                  <SelectItem value="quality_issue">Quality issue</SelectItem>
+                  <SelectItem value="payment_issue">Payment issue</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Description</Label>
+              <Textarea
+                value={disputeDescription}
+                onChange={(e) => setDisputeDescription(e.target.value)}
+                placeholder="Describe the issue (include item names, quantities, and any evidence you have)."
+                rows={5}
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              disabled={disputeSubmitting}
+              onClick={() => setShowDisputeDialog(false)}
+            >
+              Cancel
+            </Button>
+            <Button disabled={disputeSubmitting} onClick={handleRaiseDispute}>
+              Submit Dispute
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Assign Driver Dialog */}
       <Dialog open={showAssignDialog} onOpenChange={setShowAssignDialog}>
@@ -993,7 +1215,6 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
           onProcessPayment={onProcessPayment as any}
         />
       )}
-
     </div>
   );
 };
