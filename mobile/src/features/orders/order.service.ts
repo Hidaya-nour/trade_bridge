@@ -33,6 +33,13 @@ const orderService = {
     return response.data;
   },
 
+  async getOrdersAsSupplier(params?: OrderFilters) {
+    const response = await api.get<ApiResponse<MyOrdersResult>>("/orders/as-supplier", {
+      params: buildOrderParams(params),
+    });
+    return response.data;
+  },
+
   async getOrderById(id: string) {
     const response = await api.get<ApiResponse<{ order: Order }>>(`/orders/${id}`);
     return response.data;

@@ -42,19 +42,25 @@ export default function DashboardTopBar({
         </View>
       </View>
 
-      <View style={styles.actions}>
-        <Pressable style={styles.iconButton} onPress={onNotificationsPress}>
-          <Ionicons name="notifications-outline" size={20} color="#0f172a" />
-          {notificationCount > 0 ? (
-            <View style={styles.countBadge}>
-              <Text style={styles.countText}>{notificationCount > 9 ? "9+" : notificationCount}</Text>
-            </View>
+      {onNotificationsPress || onCartPress ? (
+        <View style={styles.actions}>
+          {onNotificationsPress ? (
+            <Pressable style={styles.iconButton} onPress={onNotificationsPress}>
+              <Ionicons name="notifications-outline" size={20} color="#0f172a" />
+              {notificationCount > 0 ? (
+                <View style={styles.countBadge}>
+                  <Text style={styles.countText}>{notificationCount > 9 ? "9+" : notificationCount}</Text>
+                </View>
+              ) : null}
+            </Pressable>
           ) : null}
-        </Pressable>
-        <Pressable style={styles.iconButton} onPress={onCartPress}>
-          <Ionicons name="cart-outline" size={20} color="#0f172a" />
-        </Pressable>
-      </View>
+          {onCartPress ? (
+            <Pressable style={styles.iconButton} onPress={onCartPress}>
+              <Ionicons name="cart-outline" size={20} color="#0f172a" />
+            </Pressable>
+          ) : null}
+        </View>
+      ) : null}
     </View>
   );
 }

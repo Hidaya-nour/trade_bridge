@@ -19,6 +19,7 @@ interface OrderState {
   fetchOrderStats: () => Promise<void>;
   fetchRecentOrders: () => Promise<void>;
   fetchOrdersAsBuyer: (filters?: OrderFilters) => Promise<void>;
+  fetchOrdersAsSupplier: (filters?: OrderFilters) => Promise<void>;
   fetchOrderById: (id: string) => Promise<Order | null>;
   createOrder: (payload: CreateOrderPayload) => Promise<Order | null>;
   cancelOrder: (id: string, reason?: string) => Promise<boolean>;
@@ -80,6 +81,23 @@ export const useOrderStore = create<OrderState>((set) => ({
 
     try {
       const response = await orderService.getOrdersAsBuyer(filters);
+      set({
+        orders: response.data.orders,
+        totalOrders: response.data.total,
+        currentPage: response.data.page,
+        totalPages: response.data.totalPages,
+        isLoading: false,
+      });
+    } catch (error: any) {
+      set({ error: getOrderErrorMessage(error), isLoading: false });
+    }
+  },
+
+  fetchOrdersAsSupplier: async (filters) => {
+    set({ isLoading: true, error: null });
+
+    try {
+      const response = await orderService.getOrdersAsSupplier(filters);
       set({
         orders: response.data.orders,
         totalOrders: response.data.total,
