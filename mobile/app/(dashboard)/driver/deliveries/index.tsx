@@ -17,6 +17,30 @@ import {
   type DeliveryStatus,
   type DriverDelivery,
 } from "@/features/driver-deliveries/delivery.types";
+import { useRoleShell } from "@/navigation/RoleShellContext";
+import { useScrollDirection } from "@/hooks/useScrollDirection";
+
+const deliveryTabs = [
+  "pending",
+  "assigned",
+  "picked_up",
+  "delivered",
+  "cancelled",
+] as const;
+
+type DeliveryTab = (typeof deliveryTabs)[number];
+
+const matchesTab = (delivery: DriverDelivery, tab: DeliveryTab) => {
+  switch (tab) {
+    case "pending":
+    case "assigned":
+    case "delivered":
+    case "cancelled":
+      return delivery.status === tab;
+    case "picked_up":
+      return ["picked_up", "in_transit"].includes(delivery.status);
+  }
+};
 
 const formatStatus = (status: DeliveryStatus) =>
   status.replace("_", " ").replace(/\b\w/g, (char) => char.toUpperCase());
@@ -147,9 +171,9 @@ function TabBar({
   activeTab,
   onTabPress,
 }: {
-  tabs: string[];
-  activeTab: string;
-  onTabPress: (tab: string) => void;
+  tabs: readonly DeliveryTab[];
+  activeTab: DeliveryTab;
+  onTabPress: (tab: DeliveryTab) => void;
 }) {
   return (
     <View style={styles.tabBar}>
@@ -178,13 +202,24 @@ function TabBar({
 
 export default function DriverDeliveriesScreen() {
   const router = useRouter();
+  const { setTabBarVisible } = useRoleShell();
   const [deliveries, setDeliveries] = useState<DriverDelivery[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeTab, setActiveTab] = useState("pending");
+  const [activeTab, setActiveTab] = useState<DeliveryTab>("pending");
+  const { onScroll } = useScrollDirection({
+    onDirectionChange: (direction) => setTabBarVisible(direction === "up"),
+  });
 
-  const tabs = ["pending", "assigned", "in_transit", "delivered", "failed", "cancelled"];
+  const tabs = deliveryTabs;
+  const tabLabels: Record<DeliveryTab, string> = {
+    pending: "Pending",
+    assigned: "Assigned",
+    picked_up: "Picked Up",
+    delivered: "Delivered",
+    cancelled: "Cancelled",
+  };
 
   useEffect(() => {
     const loadDeliveries = async () => {
@@ -196,11 +231,7 @@ export default function DriverDeliveriesScreen() {
         setDeliveries(rows);
 
         const defaultTab = tabs.find((tab) =>
-          rows.some((delivery) =>
-            tab === "assigned"
-              ? delivery.status === "assigned" || delivery.status === "picked_up"
-              : delivery.status === tab,
-          ),
+          rows.some((delivery) => matchesTab(delivery, tab)),
         );
         setActiveTab(defaultTab ?? "pending");
       } catch (loadError: any) {
@@ -233,21 +264,13 @@ export default function DriverDeliveriesScreen() {
       );
     }
 
-    return filtered.filter((delivery) =>
-      activeTab === "assigned"
-        ? delivery.status === "assigned" || delivery.status === "picked_up"
-        : delivery.status === activeTab,
-    );
+    return filtered.filter((delivery) => matchesTab(delivery, activeTab));
   }, [activeTab, deliveries, searchQuery]);
 
   const tabCounts = useMemo(() => {
     const counts: Record<string, number> = {};
     tabs.forEach((tab) => {
-      counts[tab] = deliveries.filter((delivery) =>
-        tab === "assigned"
-          ? delivery.status === "assigned" || delivery.status === "picked_up"
-          : delivery.status === tab,
-      ).length;
+      counts[tab] = deliveries.filter((delivery) => matchesTab(delivery, tab)).length;
     });
     return counts;
   }, [deliveries]);
@@ -261,7 +284,11 @@ export default function DriverDeliveriesScreen() {
 
   return (
     <ScreenWrapper title="Deliveries" subtitle="Driver delivery workspace">
-      <ScrollView contentContainerStyle={styles.container}>
+      <ScrollView
+        contentContainerStyle={styles.container}
+        onScroll={onScroll}
+        scrollEventThrottle={16}
+      >
         <View style={styles.heroCard}>
           <View>
             <Text style={styles.heroTitle}>Deliveries Overview</Text>
@@ -273,7 +300,7 @@ export default function DriverDeliveriesScreen() {
             {tabs.map((tab) => (
               <View key={tab} style={styles.heroStatChip}>
                 <Text style={styles.heroStatValue}>{tabCounts[tab]}</Text>
-                <Text style={styles.heroStatLabel}>{tab.replace("_", " ")}</Text>
+                <Text style={styles.heroStatLabel}>{tabLabels[tab]}</Text>
               </View>
             ))}
           </View>
@@ -304,7 +331,7 @@ export default function DriverDeliveriesScreen() {
         <View style={styles.sectionWrap}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>
-              {activeTab.replace("_", " ").toUpperCase()} Deliveries
+              {tabLabels[activeTab]}
             </Text>
             <Text style={styles.sectionCount}>{filteredDeliveries.length}</Text>
           </View>
@@ -331,7 +358,9 @@ export default function DriverDeliveriesScreen() {
             ))
           ) : (
             <View style={styles.emptyState}>
-              <Text style={styles.emptyTitle}>No {activeTab} deliveries</Text>
+              <Text style={styles.emptyTitle}>
+                No {tabLabels[activeTab].toLowerCase()}
+              </Text>
               <Text style={styles.emptySubtitle}>
                 Deliveries with this status will appear here.
               </Text>
@@ -441,7 +470,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   tab: {
-    width: "33.33%",
+    width: "50%",
     paddingVertical: 12,
     alignItems: "center",
   },

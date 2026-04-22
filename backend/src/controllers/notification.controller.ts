@@ -9,25 +9,36 @@ export class NotificationController {
       const userId = req.user?.id as string;
       const page = req.query.page ? Number(req.query.page) : 1;
       const limit = req.query.limit ? Number(req.query.limit) : 20;
+      const type = typeof req.query.type === 'string' ? req.query.type : undefined;
+      const is_read =
+        typeof req.query.is_read === 'string'
+          ? (Number(req.query.is_read) as 0 | 1)
+          : undefined;
 
-      const result = await notificationService.getUserNotifications(userId, page, limit);
+      const result = await notificationService.getUserNotifications(userId, {
+        page,
+        limit,
+        type,
+        is_read,
+      });
       res.json({ success: true, data: result });
     } catch (error) {
       logger.error('Get notifications error:', error);
       res.status(500).json({ success: false, message: 'Internal server error' });
     }
-  };
- async getNotificationCounts(req: Request, res: Response) {
-  try {
-    const userId = req.user?.id as string;
-    const counts = await notificationService.getNotificationCounts(userId);
-    res.json({ success: true, data: counts });
-    console.log("Notification counts:", counts);
-  } catch (error) {
-    logger.error('Get notification counts error:', error);
-    res.status(500).json({ success: false, message: 'Internal server error' });
   }
-};
+
+  async getNotificationCounts(req: Request, res: Response) {
+    try {
+      const userId = req.user?.id as string;
+      const counts = await notificationService.getNotificationCounts(userId);
+      res.json({ success: true, data: counts });
+    } catch (error) {
+      logger.error('Get notification counts error:', error);
+      res.status(500).json({ success: false, message: 'Internal server error' });
+    }
+  }
+
   async createNotification(req: Request, res: Response) {
     try {
       const payload = req.body;
@@ -69,7 +80,8 @@ export class NotificationController {
   async deleteNotification(req: Request, res: Response) {
     try {
       const { id } = req.params;
-      const ok = await notificationService.deleteNotification(id);
+      const userId = req.user?.id as string;
+      const ok = await notificationService.deleteNotification(id, userId);
       if (!ok) throw new AppError('Not found or no permission', 404);
       res.json({ success: true, message: 'Notification deleted' });
     } catch (error) {
@@ -79,6 +91,17 @@ export class NotificationController {
         logger.error('Delete notification error:', error);
         res.status(500).json({ success: false, message: 'Internal server error' });
       }
+    }
+  }
+
+  async clearAll(req: Request, res: Response) {
+    try {
+      const userId = req.user?.id as string;
+      await notificationService.clearAll(userId);
+      res.json({ success: true, message: 'Notifications cleared' });
+    } catch (error) {
+      logger.error('Clear notifications error:', error);
+      res.status(500).json({ success: false, message: 'Internal server error' });
     }
   }
 }

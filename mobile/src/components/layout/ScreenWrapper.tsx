@@ -4,6 +4,7 @@ import { usePathname } from "expo-router";
 import AppHeader from "./AppHeader";
 import DrawerContent from "../../navigation/DrawerContent";
 import { getRouteTitle } from "../../navigation/roleNavigation";
+import { useRoleShell } from "../../navigation/RoleShellContext";
 
 interface ScreenWrapperProps extends PropsWithChildren {
   title?: string;
@@ -13,6 +14,7 @@ interface ScreenWrapperProps extends PropsWithChildren {
 export default function ScreenWrapper({ children, title, subtitle }: ScreenWrapperProps) {
   const pathname = usePathname();
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const { openDrawer, tabBarInset, hasRoleShell } = useRoleShell();
 
   const resolvedTitle = useMemo(() => {
     return title || getRouteTitle(pathname);
@@ -23,22 +25,26 @@ export default function ScreenWrapper({ children, title, subtitle }: ScreenWrapp
       <AppHeader
         title={resolvedTitle}
         subtitle={subtitle}
-        onMenuPress={() => setIsDrawerOpen(true)}
+        onMenuPress={hasRoleShell ? openDrawer : () => setIsDrawerOpen(true)}
       />
 
-      <View style={styles.content}>{children}</View>
+      <View style={[styles.content, tabBarInset > 0 && { paddingBottom: tabBarInset }]}>
+        {children}
+      </View>
 
-      <Modal
-        animationType="slide"
-        transparent
-        visible={isDrawerOpen}
-        onRequestClose={() => setIsDrawerOpen(false)}
-      >
-        <View style={styles.modalRoot}>
-          <DrawerContent currentPath={pathname} onClose={() => setIsDrawerOpen(false)} />
-          <Pressable style={styles.overlay} onPress={() => setIsDrawerOpen(false)} />
-        </View>
-      </Modal>
+      {!hasRoleShell ? (
+        <Modal
+          animationType="slide"
+          transparent
+          visible={isDrawerOpen}
+          onRequestClose={() => setIsDrawerOpen(false)}
+        >
+          <View style={styles.modalRoot}>
+            <DrawerContent currentPath={pathname} onClose={() => setIsDrawerOpen(false)} />
+            <Pressable style={styles.overlay} onPress={() => setIsDrawerOpen(false)} />
+          </View>
+        </Modal>
+      ) : null}
     </SafeAreaView>
   );
 }

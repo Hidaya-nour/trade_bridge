@@ -15,6 +15,8 @@ export interface User {
   business_name?: string;
   business_address?: string;
   tin_number?: string;
+  is_vat_registered?: boolean;
+  vat_rate?: number;
   profile_image?: string;
   verified: boolean;
   created_at: string;
@@ -29,6 +31,21 @@ export interface Tokens {
 export interface LoginPayload {
   email: string;
   password: string;
+}
+
+export interface UpdateProfilePayload {
+  full_name?: string;
+  phone?: string;
+  business_name?: string;
+  tin_number?: string;
+  is_vat_registered?: boolean;
+  vat_rate?: number;
+  profile_image?: string;
+}
+
+export interface ChangePasswordPayload {
+  currentPassword: string;
+  newPassword: string;
 }
 
 export interface AuthResponseData {

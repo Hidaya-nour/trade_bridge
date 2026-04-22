@@ -15,6 +15,8 @@ import ScreenWrapper from "@/components/layout/ScreenWrapper";
 import { useProductStore } from "@/features/products/product.store";
 import { useCartStore } from "@/features/cart/cart.store";
 import { type Product } from "@/features/products/product.types";
+import { useRoleShell } from "@/navigation/RoleShellContext";
+import { useScrollDirection } from "@/hooks/useScrollDirection";
 
 const ITEMS_PER_PAGE = 8;
 const DEFAULT_MAX_PRICE = 10000;
@@ -40,6 +42,7 @@ type SortKey = (typeof sortOptions)[number]["key"];
 
 export default function RetailerProductsScreen() {
   const router = useRouter();
+  const { setTabBarVisible } = useRoleShell();
   const [refreshing, setRefreshing] = useState(false);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [searchQuery, setSearchQuery] = useState("");
@@ -52,6 +55,9 @@ export default function RetailerProductsScreen() {
   const [minPriceInput, setMinPriceInput] = useState("0");
   const [maxPriceInput, setMaxPriceInput] = useState(String(DEFAULT_MAX_PRICE));
   const [manualInputValue, setManualInputValue] = useState<Record<string, string>>({});
+  const { onScroll } = useScrollDirection({
+    onDirectionChange: (direction) => setTabBarVisible(direction === "up"),
+  });
 
   const {
     products,
@@ -351,6 +357,8 @@ export default function RetailerProductsScreen() {
     <ScreenWrapper title="Browse Products" subtitle="Retailer">
       <ScrollView
         contentContainerStyle={styles.container}
+        onScroll={onScroll}
+        scrollEventThrottle={16}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
         <View style={styles.headerCard}>

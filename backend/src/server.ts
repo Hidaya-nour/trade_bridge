@@ -19,6 +19,7 @@ import './models/login-attempt.model';
 import './models/document.model';
 import './models/address.model';
 import './models/driver-location.model';
+import './models/driver-issue-report.model';
 import './models/audit-log.model';
 import './models/supplier-payment-method.model';
 import './models/factory-agent.model';
@@ -41,6 +42,7 @@ import loginAttemptRoutes from './routes/login-attempt.routes';
 import documentRoutes from './routes/document.routes';
 import addressRoutes from './routes/address.routes';
 import driverLocationRoutes from './routes/driver-location.routes';
+import driverIssueReportRoutes from './routes/driver-issue-report.routes';
 import auditLogRoutes from './routes/audit-log.routes';
 import supplierPaymentMethodRoutes from './routes/supplier-payment-method.routes';
 import factoryAgentRoutes from './routes/factory-agent.routes';
@@ -107,6 +109,7 @@ app.use('/api/login-attempts', loginAttemptRoutes);
 app.use('/api/documents', documentRoutes);
 app.use('/api/addresses', addressRoutes);
 app.use('/api/driver-locations', driverLocationRoutes);
+app.use('/api/driver-issues', driverIssueReportRoutes);
 app.use('/api/audit-logs', auditLogRoutes);
 app.use('/api/supplier-payment-methods', supplierPaymentMethodRoutes);
 app.use('/api/factory-agents', factoryAgentRoutes);
@@ -198,9 +201,11 @@ const startServer = async () => {
     }
   }
 
-  app.listen(PORT, () => {
-    logger.info(`🚀 Server running on port ${PORT}`);
-  });
+//   app.listen(PORT, () => {
+//     logger.info(`🚀 Server running on port ${PORT}`);
+//   });
 };
-
+app.listen(5000, "0.0.0.0", () => {
+  console.log("Server running");
+});
 startServer();

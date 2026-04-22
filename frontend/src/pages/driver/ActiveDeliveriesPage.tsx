@@ -30,17 +30,15 @@ import {
 type DeliveryTab =
   | "pending"
   | "assigned"
-  | "in_transit"
+  | "picked_up"
   | "delivered"
-  | "failed"
   | "cancelled";
 
 const deliveryTabs: DeliveryTab[] = [
   "pending",
   "assigned",
-  "in_transit",
+  "picked_up",
   "delivered",
-  "failed",
   "cancelled",
 ];
 
@@ -63,12 +61,17 @@ const priorityColorMap: Record<DeliveryPriority, string> = {
   fragile: "bg-orange-100 text-orange-700",
 };
 
-const matchesTab = (delivery: DriverDelivery, tab: DeliveryTab) => {
-  if (tab === "assigned") {
-    return delivery.status === "assigned" || delivery.status === "picked_up";
-  }
+const matchesTab = (delivery: DriverDelivery, tab: DeliveryTab) =>
+  tab === "picked_up"
+    ? ["picked_up", "in_transit"].includes(delivery.status)
+    : delivery.status === tab;
 
-  return delivery.status === tab;
+const tabLabels: Record<DeliveryTab, string> = {
+  pending: "Pending",
+  assigned: "Assigned",
+  picked_up: "Picked Up",
+  delivered: "Delivered",
+  cancelled: "Cancelled",
 };
 
 const getLoadTotal = (delivery: DriverDelivery) =>
@@ -180,7 +183,7 @@ export const ActiveDeliveriesPage: React.FC = () => {
               </p>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
               {deliveryTabs.map((tab) => (
                 <div
                   key={tab}
@@ -188,7 +191,7 @@ export const ActiveDeliveriesPage: React.FC = () => {
                 >
                   <p className="text-2xl font-bold">{tabCounts[tab]}</p>
                   <p className="mt-1 text-xs uppercase tracking-wide text-slate-500">
-                    {tab.replace("_", " ")}
+                    {tabLabels[tab]}
                   </p>
                 </div>
               ))}
@@ -262,7 +265,7 @@ export const ActiveDeliveriesPage: React.FC = () => {
                   value={tab}
                   className="h-10 min-w-[120px] rounded-xl px-4 data-[state=active]:bg-slate-950 data-[state=active]:text-white"
                 >
-                  <span>{formatStatus(tab)}</span>
+                  <span>{tabLabels[tab]}</span>
                   <span
                     className={cn(
                       "ml-2 rounded-full px-2 py-0.5 text-xs",
@@ -284,7 +287,7 @@ export const ActiveDeliveriesPage: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-lg font-semibold text-slate-950">
-                  {formatStatus(activeTab)} Deliveries
+                  {tabLabels[activeTab]}
                 </h2>
                 <p className="text-sm text-slate-500">
                   {filteredDeliveries.length} delivery
@@ -429,7 +432,7 @@ export const ActiveDeliveriesPage: React.FC = () => {
                 <CardContent className="flex min-h-60 flex-col items-center justify-center px-6 py-12 text-center">
                   <Package2 className="h-10 w-10 text-slate-300" />
                   <h3 className="mt-4 text-lg font-semibold text-slate-900">
-                    No {formatStatus(activeTab).toLowerCase()} deliveries
+                    No {tabLabels[activeTab].toLowerCase()}
                   </h3>
                   <p className="mt-2 max-w-sm text-sm text-slate-500">
                     Deliveries with this status will appear here after they are
@@ -668,7 +671,7 @@ export const ActiveDeliveriesPage: React.FC = () => {
                           variant="outline"
                           className="h-11 rounded-2xl border-slate-200"
                         >
-                          <Link to="/driver/issues">
+                          <Link to={`/driver/issues?deliveryId=${selectedDelivery.id}`}>
                             <AlertTriangle className="mr-2 h-4 w-4" />
                             {selectedDelivery.issueReported ? "View issue log" : "Report issue"}
                           </Link>

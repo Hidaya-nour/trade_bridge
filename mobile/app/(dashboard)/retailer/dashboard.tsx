@@ -14,6 +14,8 @@ import { useAuthStore } from "@/features/auth/auth.store";
 import { useOrderStore } from "@/features/orders/order.store";
 import ScreenWrapper from "@/components/layout/ScreenWrapper";
 import { type Order, type OrderStats, type OrderStatus } from "@/features/orders/order.types";
+import { useRoleShell } from "@/navigation/RoleShellContext";
+import { useScrollDirection } from "@/hooks/useScrollDirection";
 
 const recommendedSuppliers = [
   {
@@ -211,9 +213,13 @@ const RecentOrderItem = ({
 
 export default function RetailerDashboardScreen() {
   const router = useRouter();
+  const { setTabBarVisible } = useRoleShell();
   const [refreshing, setRefreshing] = useState(false);
   const user = useAuthStore((state) => state.user);
   const { stats, orders, isLoading, error, fetchOrderStats, fetchRecentOrders } = useOrderStore();
+  const { onScroll } = useScrollDirection({
+    onDirectionChange: (direction) => setTabBarVisible(direction === "up"),
+  });
 
   const orderSummary = useMemo(() => {
     const s = (stats || {}) as Partial<OrderStats>;
@@ -277,6 +283,8 @@ export default function RetailerDashboardScreen() {
     <ScreenWrapper title="Retailer Dashboard" subtitle={user.business_name || "Retailer"}>
       <ScrollView
         contentContainerStyle={styles.container}
+        onScroll={onScroll}
+        scrollEventThrottle={16}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
         <View style={styles.welcomeCard}>

@@ -53,34 +53,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 
 import { useAuthStore } from "@/stores/auth.store";
 import { useNotificationStore } from "@/stores/notification.store";
-
-// Keep messages mock for now (you can replace with real message store later)
-const messages = [
-  {
-    id: 1,
-    sender: "Ethiopia Coffee Export",
-    avatar: "",
-    message: "Your order of 50kg Yirgacheffe is ready for pickup",
-    time: "10:30 AM",
-    unread: true,
-  },
-  {
-    id: 2,
-    sender: "Adama Wholesalers",
-    avatar: "",
-    message: "New prices available for bulk orders",
-    time: "Yesterday",
-    unread: true,
-  },
-  {
-    id: 3,
-    sender: "Support Team",
-    avatar: "",
-    message: "Your ticket #TB-789 has been resolved",
-    time: "Yesterday",
-    unread: false,
-  },
-];
+import { useMessageStore } from "@/stores/message.store";
 
 interface DashboardHeaderProps {
   onMenuClick?: () => void;
@@ -88,11 +61,9 @@ interface DashboardHeaderProps {
 
 const DashboardHeader: React.FC<DashboardHeaderProps> = ({ onMenuClick }) => {
   const { user, logout } = useAuthStore();
-  const location = useLocation();
   const navigate = useNavigate();
 
   const [searchQuery, setSearchQuery] = useState("");
-  const [isDarkMode, setIsDarkMode] = useState(false);
   const [showNotificationSheet, setShowNotificationSheet] = useState(false);
 
   // Get notifications from store
@@ -105,19 +76,21 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ onMenuClick }) => {
     markAllRead,
     isLoading,
   } = useNotificationStore();
+  const { unreadCount, fetchUnreadCount } = useMessageStore();
 
   // Fetch notifications on mount
   useEffect(() => {
     fetchNotifications();
-    fetchCounts(); // Add this to fetch counts
+    fetchCounts();
+    fetchUnreadCount();
 
-    // Optional: Poll for count updates every 30 seconds
     const interval = setInterval(() => {
       fetchCounts();
+      fetchUnreadCount();
     }, 30000);
 
     return () => clearInterval(interval);
-  }, [fetchNotifications, fetchCounts]);
+  }, [fetchNotifications, fetchCounts, fetchUnreadCount]);
 
   // Function to get icon based on notification type
   const getIconForType = (type: string) => {
@@ -234,11 +207,6 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ onMenuClick }) => {
     // Implement search
   };
 
-  const toggleTheme = () => {
-    setIsDarkMode(!isDarkMode);
-    document.documentElement.classList.toggle("dark");
-  };
-
   const handleMarkAsRead = async (notificationId?: string) => {
     if (notificationId) {
       await markAsRead(notificationId);
@@ -248,8 +216,6 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ onMenuClick }) => {
   const handleMarkAllAsRead = async () => {
     await markAllRead();
   };
-
-  const unreadMessages = messages.filter((m) => m.unread).length;
 
   if (!user) {
     return (
@@ -262,6 +228,10 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ onMenuClick }) => {
       </div>
     );
   }
+
+  const messagesHref = user.role === "driver" ? "/driver/messages" : "/messages";
+  const notificationsHref =
+    user.role === "driver" ? "/driver/notifications" : "/notifications";
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-border/40 bg-sidebar/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -351,6 +321,31 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ onMenuClick }) => {
             />
           </div>
 
+          <TooltipProvider>
+            <Tooltip delayDuration={300}>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="relative h-9 w-9 text-muted-foreground hover:text-foreground hover:bg-accent/50"
+                  asChild
+                >
+                  <Link to={messagesHref}>
+                    <MessageSquare className="h-5 w-5" />
+                    {unreadCount > 0 && (
+                      <Badge className="absolute -top-1 -right-1 h-5 min-w-[1.25rem] px-1 flex items-center justify-center bg-primary text-[10px] font-medium text-primary-foreground ring-2 ring-background">
+                        {unreadCount}
+                      </Badge>
+                    )}
+                  </Link>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="text-xs">
+                Open Messages
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+
           {/* Notifications Sheet */}
           <Sheet
             open={showNotificationSheet}
@@ -391,6 +386,11 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ onMenuClick }) => {
                 <SheetDescription className="sr-only">
                   View and manage your notifications
                 </SheetDescription>
+                <Button variant="link" className="h-auto w-fit p-0 text-xs" asChild>
+                  <Link to={notificationsHref} onClick={() => setShowNotificationSheet(false)}>
+                    Open full notifications
+                  </Link>
+                </Button>
               </SheetHeader>
               <Tabs defaultValue="all" className="flex-1">
                 <div className="px-6 pt-4">

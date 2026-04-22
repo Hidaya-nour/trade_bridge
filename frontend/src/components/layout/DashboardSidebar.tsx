@@ -153,7 +153,6 @@ const roleNavigation = {
     { name: "Dashboard", href: "/driver/dashboard", icon: LayoutDashboard },
     { name: "Deliveries", href: "/driver/deliveries", icon: TrendingUp },
     { name: "Live Tracking", href: "/driver/tracking", icon: Navigation },
-    { name: "Delivery History", href: "/driver/history", icon: Package },
     { name: "Report Issues", href: "/driver/issues", icon: AlertCircle },
   ],
 
@@ -193,19 +192,21 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
   const [isProfileOpen, setIsProfileOpen] = useState(false);
 
   const { fetchCounts, counts } = useNotificationStore();
-  const { fetchUserMessages, unreadCount } = useMessageStore();
+  const { fetchUserMessages, fetchUnreadCount, unreadCount } = useMessageStore();
 
   // Fetch notifications on mount
   useEffect(() => {
     fetchCounts();
     fetchUserMessages();
+    fetchUnreadCount();
 
     const interval = setInterval(() => {
       fetchCounts();
+      fetchUnreadCount();
     }, 300000);
 
     return () => clearInterval(interval);
-  }, [fetchCounts, fetchUserMessages]);
+  }, [fetchCounts, fetchUnreadCount, fetchUserMessages]);
 
   if (!user) {
     return (
@@ -221,13 +222,13 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
   const secondaryNavigation = [
     {
       name: "Messages",
-      href: "/messages",
+      href: userRole === "driver" ? "/driver/messages" : "/messages",
       icon: MessageSquare,
-      badge: counts.unread > 0 ? unreadCount.toString() : "0",
+      badge: unreadCount > 0 ? unreadCount.toString() : undefined,
     },
     {
       name: "Notifications",
-      href: "/notifications",
+      href: userRole === "driver" ? "/driver/notifications" : "/notifications",
       icon: Bell,
       badge: counts.unread > 0 ? counts.unread.toString() : undefined,
     },

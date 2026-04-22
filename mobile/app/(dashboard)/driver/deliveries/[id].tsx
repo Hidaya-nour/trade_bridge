@@ -285,7 +285,9 @@ export default function DriverDeliveryDetailScreen() {
           ) : null}
           <Pressable
             style={styles.secondaryButton}
-            onPress={() => router.push("/driver/issues" as never)}
+            onPress={() =>
+              router.push(`/driver/issues?deliveryId=${delivery.id}` as never)
+            }
           >
             <Ionicons name="alert-circle-outline" size={16} color="#334155" />
             <Text style={styles.secondaryButtonText}>

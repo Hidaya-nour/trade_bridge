@@ -1,5 +1,12 @@
 import api from "@/lib/api";
-import { type ApiResponse, type AuthResponseData, type LoginPayload, type User } from "./auth.types";
+import {
+  type ApiResponse,
+  type AuthResponseData,
+  type ChangePasswordPayload,
+  type LoginPayload,
+  type UpdateProfilePayload,
+  type User,
+} from "./auth.types";
 
 export const authService = {
   async login(payload: LoginPayload) {
@@ -9,6 +16,16 @@ export const authService = {
 
   async getCurrentUser() {
     const response = await api.get<ApiResponse<{ user: User }>>("/auth/me");
+    return response.data;
+  },
+
+  async updateProfile(payload: UpdateProfilePayload) {
+    const response = await api.patch<ApiResponse<{ user: User }>>("/auth/me", payload);
+    return response.data;
+  },
+
+  async changePassword(payload: ChangePasswordPayload) {
+    const response = await api.patch<ApiResponse<null>>("/auth/change-password", payload);
     return response.data;
   },
 
