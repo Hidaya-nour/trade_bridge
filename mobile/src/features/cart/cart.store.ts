@@ -10,9 +10,10 @@ interface CartStoreState {
   isLoading: boolean;
   error: string | null;
   fetchCart: () => Promise<void>;
-  addToCart: (productId: string, quantity: number) => Promise<void>;
-  updateQuantity: (itemId: string, quantity: number) => Promise<void>;
-  removeFromCart: (itemId: string) => Promise<void>;
+  addToCart: (productId: string, quantity: number) => Promise<boolean>;
+  updateQuantity: (itemId: string, quantity: number) => Promise<boolean>;
+  removeFromCart: (itemId: string) => Promise<boolean>;
+  clearCart: () => Promise<boolean>;
   clearError: () => void;
 }
 
@@ -70,11 +71,13 @@ export const useCartStore = create<CartStoreState>((set, get) => ({
       await cartService.addToCart(productId, quantity);
       await get().fetchCart();
       set({ isLoading: false });
+      return true;
     } catch (error: any) {
       set({
         error: getCartErrorMessage(error),
         isLoading: false,
       });
+      return false;
     }
   },
 
@@ -84,11 +87,13 @@ export const useCartStore = create<CartStoreState>((set, get) => ({
       await cartService.updateCartItem(itemId, quantity);
       await get().fetchCart();
       set({ isLoading: false });
+      return true;
     } catch (error: any) {
       set({
         error: getCartErrorMessage(error),
         isLoading: false,
       });
+      return false;
     }
   },
 
@@ -98,11 +103,29 @@ export const useCartStore = create<CartStoreState>((set, get) => ({
       await cartService.removeFromCart(itemId);
       await get().fetchCart();
       set({ isLoading: false });
+      return true;
     } catch (error: any) {
       set({
         error: getCartErrorMessage(error),
         isLoading: false,
       });
+      return false;
+    }
+  },
+
+  clearCart: async () => {
+    set({ isLoading: true, error: null });
+    try {
+      await cartService.clearCart();
+      await get().fetchCart();
+      set({ isLoading: false });
+      return true;
+    } catch (error: any) {
+      set({
+        error: getCartErrorMessage(error),
+        isLoading: false,
+      });
+      return false;
     }
   },
 
