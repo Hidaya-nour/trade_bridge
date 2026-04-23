@@ -28,6 +28,11 @@ const cartService = {
     const response = await api.delete<ApiResponse<Cart>>(`/cart/${itemId}`);
     return response.data;
   },
+
+  async clearCart() {
+    const response = await api.delete<ApiResponse<{ success: boolean }>>("/cart");
+    return response.data;
+  },
 };
 
 export default cartService;

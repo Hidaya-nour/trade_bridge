@@ -6,7 +6,22 @@ export interface ProductSupplier {
   phone?: string;
   rating?: number;
   is_verified?: boolean;
+  verified?: boolean;
   created_at?: string;
+  role?: "factory" | "distributor";
+  profile_image?: string;
+  total_products?: number;
+  total_orders?: number;
+  is_vat_registered?: boolean;
+  vat_rate?: number;
+  addresses?: Array<{
+    id?: string;
+    region?: string;
+    city?: string;
+    subcity?: string;
+    latitude?: number | null;
+    longitude?: number | null;
+  }>;
 }
 
 export interface ProductReview {
@@ -36,6 +51,10 @@ export interface Product {
   rating?: number;
   review_count?: number;
   reviews?: ProductReview[];
+  delivery_available?: boolean;
+  delivery_pricing?: "free" | "paid";
+  delivery_fee_per_km?: number | null;
+  free_delivery_max_distance_km?: number | null;
   created_at: string;
   updated_at: string;
   supplier?: ProductSupplier;
