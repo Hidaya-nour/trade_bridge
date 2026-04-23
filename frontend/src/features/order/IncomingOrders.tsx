@@ -298,9 +298,7 @@ export const IncomingOrders: React.FC<IncomingOrdersProps> = ({
         };
         const created = await deliveryService.create(createPayload);
         deliveryId =
-          created?.data?.delivery?.id ||
-          created?.data?.id ||
-          created?.id;
+          created?.data?.delivery?.id || created?.data?.id || created?.id;
       }
 
       if (!deliveryId) {
@@ -323,11 +321,7 @@ export const IncomingOrders: React.FC<IncomingOrdersProps> = ({
         ),
       );
       if (onAssignDriver) {
-        await onAssignDriver(
-          assigningOrder.id,
-          deliveryId,
-          selectedDriver,
-        );
+        await onAssignDriver(assigningOrder.id, deliveryId, selectedDriver);
       }
       toast.success(`Driver ${driver.name} assigned.`);
       setShowAssignDialog(false);
@@ -343,13 +337,6 @@ export const IncomingOrders: React.FC<IncomingOrdersProps> = ({
   };
 
   const statsData = [
-    {
-      title: "Total Revenue",
-      value: formatPrice(config.stats.totalRevenue),
-      icon: DollarSign,
-      iconBg: "bg-green-100",
-      iconColor: "text-green-600",
-    },
     {
       title: "Pending",
       value: config.stats.pending,
@@ -392,16 +379,10 @@ export const IncomingOrders: React.FC<IncomingOrdersProps> = ({
           </div>
           <p className="text-muted-foreground mt-1">{config.description}</p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm">
-            <Download className="h-4 w-4 mr-2" />
-            Export
-          </Button>
-        </div>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
         {statsData.map((stat, index) => (
           <StatsCard key={index} {...stat} />
         ))}

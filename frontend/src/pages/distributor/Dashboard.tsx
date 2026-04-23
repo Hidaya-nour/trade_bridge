@@ -608,44 +608,6 @@ const DistributorDashboard: React.FC = () => {
               </Button>
             </CardContent>
           </Card>
-
-          {/* Upcoming Deliveries */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">Today's Schedule</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div className="flex items-center gap-3 p-2 bg-blue-50 rounded-lg">
-                  <div className="h-8 w-8 bg-blue-100 rounded-full flex items-center justify-center">
-                    <Truck className="h-4 w-4 text-blue-600" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-xs font-medium">
-                      {todaySchedule.scheduled} deliveries scheduled
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {todaySchedule.remaining} remaining
-                    </p>
-                  </div>
-                  <Badge>Today</Badge>
-                </div>
-                <div className="flex items-center gap-3 p-2 bg-amber-50 rounded-lg">
-                  <div className="h-8 w-8 bg-amber-100 rounded-full flex items-center justify-center">
-                    <Clock className="h-4 w-4 text-amber-600" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-xs font-medium">
-                      {todaySchedule.pendingPickups} pending pickups
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Awaiting driver assignment
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
         </div>
       </div>
     </div>
