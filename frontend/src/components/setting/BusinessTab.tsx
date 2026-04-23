@@ -307,6 +307,160 @@ const BusinessTab: React.FC<BusinessTabProps> = ({
           </div>
 
           {isSupplier && (
+            <div className="rounded-lg border border-slate-200 bg-white p-5 space-y-4">
+              <div>
+                <h4 className="text-sm font-semibold text-slate-900">
+                  Business Address
+                </h4>
+                <p className="text-xs text-slate-500 mt-1">
+                  Keep your address and location details up to date.
+                </p>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="businessRegion">Region</Label>
+                  <Input
+                    id="businessRegion"
+                    label="Region"
+                    value={addressForm.region}
+                    onChange={(e) =>
+                      setAddressForm((prev) => ({
+                        ...prev,
+                        region: e.target.value,
+                      }))
+                    }
+                    placeholder="e.g. Oromia"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="businessCity">City</Label>
+                  <Input
+                    id="businessCity"
+                    label="City"
+                    value={addressForm.city}
+                    onChange={(e) =>
+                      setAddressForm((prev) => ({
+                        ...prev,
+                        city: e.target.value,
+                      }))
+                    }
+                    placeholder="e.g. Adama"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="businessSubcity">Subcity</Label>
+                  <Input
+                    id="businessSubcity"
+                    label="Subcity"
+                    value={addressForm.subcity}
+                    onChange={(e) =>
+                      setAddressForm((prev) => ({
+                        ...prev,
+                        subcity: e.target.value,
+                      }))
+                    }
+                    placeholder="e.g. Bole"
+                  />
+                </div>
+                <div className="space-y-2 md:col-span-2">
+                  <div className="flex items-center justify-between gap-3">
+                    <Label htmlFor="businessMap">
+                      Business location (optional)
+                    </Label>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={handleUseCurrentLocation}
+                        disabled={isLocating}
+                      >
+                        {isLocating ? "Locating..." : "Use my current location"}
+                      </Button>
+                      {hasCoordinates && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() =>
+                            setAddressForm((prev) => ({
+                              ...prev,
+                              latitude: "",
+                              longitude: "",
+                            }))
+                          }
+                        >
+                          Clear location
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                  <div className="rounded-lg border overflow-hidden">
+                    <MapContainer
+                      id="businessMap"
+                      center={mapCenter}
+                      zoom={13}
+                      scrollWheelZoom
+                      className="h-64 w-full"
+                    >
+                      <TileLayer
+                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                      />
+                      <MapCenterUpdater center={mapCenter} />
+                      <MapClickHandler
+                        onPick={(lat, lng) =>
+                          setAddressForm((prev) => ({
+                            ...prev,
+                            latitude: lat.toFixed(6),
+                            longitude: lng.toFixed(6),
+                          }))
+                        }
+                      />
+                      {hasCoordinates && (
+                        <Marker position={mapCenter} icon={mapMarkerIcon} />
+                      )}
+                    </MapContainer>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Click the map to drop a pin. We will use this to help locate
+                    your business.
+                  </p>
+                  {locationMessage && (
+                    <p className="text-xs text-muted-foreground">
+                      {locationMessage}
+                    </p>
+                  )}
+                  {hasCoordinates && !locationMessage && (
+                    <p className="text-xs text-muted-foreground">
+                      Location selected.
+                    </p>
+                  )}
+                  <div className="flex items-center justify-between gap-2">
+                    {addressMessage && (
+                      <p className="text-xs text-muted-foreground">
+                        {addressMessage}
+                      </p>
+                    )}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => void saveAddress(true)}
+                      disabled={addressesLoading}
+                    >
+                      {addressesLoading ? "Saving..." : "Save Address"}
+                    </Button>
+                  </div>
+                  {addressesError && (
+                    <p className="text-xs text-red-600">{addressesError}</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {isSupplier && (
             <div
               className={
                 isBusinessVerified
@@ -731,160 +885,6 @@ const BusinessTab: React.FC<BusinessTabProps> = ({
                   </div>
                 </>
               )}
-            </div>
-          )}
-
-          {isSupplier && (
-            <div className="rounded-lg border border-slate-200 bg-white p-5 space-y-4">
-              <div>
-                <h4 className="text-sm font-semibold text-slate-900">
-                  Business Address
-                </h4>
-                <p className="text-xs text-slate-500 mt-1">
-                  Keep your address and location details up to date.
-                </p>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="businessRegion">Region</Label>
-                  <Input
-                    id="businessRegion"
-                    label="Region"
-                    value={addressForm.region}
-                    onChange={(e) =>
-                      setAddressForm((prev) => ({
-                        ...prev,
-                        region: e.target.value,
-                      }))
-                    }
-                    placeholder="e.g. Oromia"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="businessCity">City</Label>
-                  <Input
-                    id="businessCity"
-                    label="City"
-                    value={addressForm.city}
-                    onChange={(e) =>
-                      setAddressForm((prev) => ({
-                        ...prev,
-                        city: e.target.value,
-                      }))
-                    }
-                    placeholder="e.g. Adama"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="businessSubcity">Subcity</Label>
-                  <Input
-                    id="businessSubcity"
-                    label="Subcity"
-                    value={addressForm.subcity}
-                    onChange={(e) =>
-                      setAddressForm((prev) => ({
-                        ...prev,
-                        subcity: e.target.value,
-                      }))
-                    }
-                    placeholder="e.g. Bole"
-                  />
-                </div>
-                <div className="space-y-2 md:col-span-2">
-                  <div className="flex items-center justify-between gap-3">
-                    <Label htmlFor="businessMap">
-                      Business location (optional)
-                    </Label>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={handleUseCurrentLocation}
-                        disabled={isLocating}
-                      >
-                        {isLocating ? "Locating..." : "Use my current location"}
-                      </Button>
-                      {hasCoordinates && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() =>
-                            setAddressForm((prev) => ({
-                              ...prev,
-                              latitude: "",
-                              longitude: "",
-                            }))
-                          }
-                        >
-                          Clear location
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                  <div className="rounded-lg border overflow-hidden">
-                    <MapContainer
-                      id="businessMap"
-                      center={mapCenter}
-                      zoom={13}
-                      scrollWheelZoom
-                      className="h-64 w-full"
-                    >
-                      <TileLayer
-                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                      />
-                      <MapCenterUpdater center={mapCenter} />
-                      <MapClickHandler
-                        onPick={(lat, lng) =>
-                          setAddressForm((prev) => ({
-                            ...prev,
-                            latitude: lat.toFixed(6),
-                            longitude: lng.toFixed(6),
-                          }))
-                        }
-                      />
-                      {hasCoordinates && (
-                        <Marker position={mapCenter} icon={mapMarkerIcon} />
-                      )}
-                    </MapContainer>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Click the map to drop a pin. We will use this to help locate
-                    your business.
-                  </p>
-                  {locationMessage && (
-                    <p className="text-xs text-muted-foreground">
-                      {locationMessage}
-                    </p>
-                  )}
-                  {hasCoordinates && !locationMessage && (
-                    <p className="text-xs text-muted-foreground">
-                      Location selected.
-                    </p>
-                  )}
-                  <div className="flex items-center justify-between gap-2">
-                    {addressMessage && (
-                      <p className="text-xs text-muted-foreground">
-                        {addressMessage}
-                      </p>
-                    )}
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => void saveAddress(true)}
-                      disabled={addressesLoading}
-                    >
-                      {addressesLoading ? "Saving..." : "Save Address"}
-                    </Button>
-                  </div>
-                  {addressesError && (
-                    <p className="text-xs text-red-600">{addressesError}</p>
-                  )}
-                </div>
-              </div>
             </div>
           )}
         </CardContent>
