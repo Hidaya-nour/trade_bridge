@@ -16,20 +16,29 @@ export const RegisterPage: React.FC = () => {
   const [formData, setFormData] = useState({
     email: "",
     password: "",
+    confirmPassword: "",
     full_name: "",
     role: "retailer",
     phone: "",
     business_name: "",
   });
+  const [confirmError, setConfirmError] = useState<string | null>(null);
   const { register, isLoading, error, clearError } = useAuthStore();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     clearError();
+    setConfirmError(null);
+
+    if (formData.password !== formData.confirmPassword) {
+      setConfirmError("Passwords do not match.");
+      return;
+    }
 
     try {
-      await register(formData);
+      const { confirmPassword: _confirmPassword, ...payload } = formData;
+      await register(payload);
       const needsApproval =
         formData.role === "factory" || formData.role === "distributor";
       navigate("/login", {
@@ -55,6 +64,11 @@ export const RegisterPage: React.FC = () => {
             {error && (
               <div className="bg-red-50 text-red-600 p-3 rounded-md text-sm">
                 {error}
+              </div>
+            )}
+            {confirmError && (
+              <div className="bg-red-50 text-red-600 p-3 rounded-md text-sm">
+                {confirmError}
               </div>
             )}
 
@@ -96,6 +110,22 @@ export const RegisterPage: React.FC = () => {
                 required
                 disabled={isLoading}
                 placeholder="Min. 8 characters with uppercase, number & special char"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                Confirm Password
+              </label>
+              <Input
+                type="password"
+                value={formData.confirmPassword}
+                onChange={(e) => {
+                  setConfirmError(null);
+                  setFormData({ ...formData, confirmPassword: e.target.value });
+                }}
+                required
+                disabled={isLoading}
               />
             </div>
 
@@ -163,3 +193,5 @@ export const RegisterPage: React.FC = () => {
     </div>
   );
 };
+
+export default RegisterPage;
