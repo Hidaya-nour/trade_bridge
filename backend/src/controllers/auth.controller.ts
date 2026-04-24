@@ -2,9 +2,19 @@ import { Request, Response } from 'express';
 import { AuthService } from '../services/auth/auth.service';
 import { AppError } from '../utils/errors';
 import logger from '../utils/logger';
+import User from '../models/user.model';
+import SuspensionAppeal from '../models/suspension-appeal.model';
 
 export class AuthController {
   private authService = new AuthService();
+  private ensureAppealsTableReady: Promise<void> | null = null;
+
+  private async ensureAppealsTable() {
+    if (!this.ensureAppealsTableReady) {
+      this.ensureAppealsTableReady = SuspensionAppeal.sync().then(() => undefined);
+    }
+    await this.ensureAppealsTableReady;
+  }
 
   register = async (req: Request, res: Response): Promise<void> => {
     try {
@@ -252,6 +262,58 @@ export class AuthController {
         logger.error('Approve user error:', error);
         res.status(500).json({ success: false, message: 'Internal server error' });
       }
+    }
+  };
+
+  appealSuspension = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const email = String(req.body?.email || '').trim().toLowerCase();
+      const message = String(req.body?.message || '').trim();
+
+      if (!email) {
+        res.status(400).json({ success: false, message: 'email is required' });
+        return;
+      }
+      if (!message) {
+        res.status(400).json({ success: false, message: 'message is required' });
+        return;
+      }
+
+      const user = await User.findOne({ where: { email } as any });
+      if (!user) {
+        res.status(404).json({ success: false, message: 'Account not found' });
+        return;
+      }
+
+      if ((user as any).deleted_at) {
+        res.status(404).json({ success: false, message: 'Account not found' });
+        return;
+      }
+
+      if (user.status !== 'suspended') {
+        res.status(400).json({ success: false, message: 'This account is not suspended' });
+        return;
+      }
+
+      await this.ensureAppealsTable();
+
+      const existing = await SuspensionAppeal.findOne({
+        where: { user_id: user.id, status: 'open' } as any,
+        order: [['created_at', 'DESC']],
+      });
+
+      const appeal = existing
+        ? await existing.update({ message, updated_at: new Date() } as any)
+        : await SuspensionAppeal.create({ user_id: user.id, message, status: 'open' } as any);
+
+      res.status(201).json({
+        success: true,
+        message: 'Appeal submitted successfully',
+        data: { appeal },
+      });
+    } catch (error) {
+      logger.error('Suspension appeal error:', error);
+      res.status(500).json({ success: false, message: 'Failed to submit appeal' });
     }
   };
 

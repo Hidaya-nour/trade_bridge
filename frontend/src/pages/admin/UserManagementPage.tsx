@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import {
   Users,
   Search,
@@ -155,6 +155,7 @@ const statusColors: Record<UserStatus, string> = {
 // ============================================================================
 
 export const UserManagementPage: React.FC = () => {
+  const [searchParams] = useSearchParams();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedRole, setSelectedRole] = useState<string>("all");
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
@@ -177,6 +178,13 @@ export const UserManagementPage: React.FC = () => {
     useUserStore();
 
   const itemsPerPage = 10;
+
+  useEffect(() => {
+    const initialSearch = searchParams.get("search");
+    if (initialSearch && !searchQuery) {
+      setSearchQuery(initialSearch);
+    }
+  }, [searchParams, searchQuery]);
 
   // Load users on component mount and when filters change
   useEffect(() => {

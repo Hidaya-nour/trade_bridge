@@ -76,6 +76,9 @@ interface AdminDispute {
   id: string;
   orderId: string;
   orderNumber: string;
+  orderPlacedAt?: string | null;
+  orderUpdatedAt?: string | null;
+  orderStatus?: string | null;
   raisedBy: {
     id: string;
     name: string;
@@ -135,11 +138,15 @@ const normalizeDispute = (dispute: any): AdminDispute => {
   const against = dispute.against || {};
   const amount = Number(dispute.amount || dispute.order_total || 0);
   const status = (dispute.status || "open") as DisputeStatus;
+  const order = dispute.order || null;
 
   return {
     id: String(dispute.id),
     orderId: String(dispute.order_id || dispute.order?.id || ""),
     orderNumber: toOrderNumber(dispute.order_id || dispute.order?.id),
+    orderPlacedAt: order?.created_at || null,
+    orderUpdatedAt: order?.updated_at || null,
+    orderStatus: order?.order_status || null,
     raisedBy: {
       id: String(raisedBy.id || ""),
       name: raisedBy.business_name || raisedBy.full_name || "Unknown User",
@@ -585,11 +592,30 @@ export const DisputesManagementPage: React.FC = () => {
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm">Dispute Information</CardTitle>
                   <CardDescription>
-                    Order {selectedDispute.orderNumber} filed on{" "}
-                    {formatDateTime(selectedDispute.createdAt)}
+                    Dispute opened {formatDateTime(selectedDispute.createdAt)}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3 text-sm">
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <div>
+                      <p className="text-xs font-semibold text-muted-foreground">
+                        Order Placed
+                      </p>
+                      <p className="font-medium">
+                        {selectedDispute.orderPlacedAt
+                          ? formatDateTime(selectedDispute.orderPlacedAt)
+                          : "N/A"}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold text-muted-foreground">
+                        Order Status
+                      </p>
+                      <p className="font-medium capitalize">
+                        {selectedDispute.orderStatus || "N/A"}
+                      </p>
+                    </div>
+                  </div>
                   <div className="flex items-center gap-2">
                     <Package className="h-4 w-4 text-muted-foreground" />
                     <span className="font-medium">
@@ -615,6 +641,41 @@ export const DisputesManagementPage: React.FC = () => {
                       )}
                     </div>
                   )}
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm">Investigation Shortcuts</CardTitle>
+                  <CardDescription>
+                    Jump into the supplier profile, catalog, and order context.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="flex flex-wrap gap-2">
+                  {selectedDispute.orderId ? (
+                    <Button size="sm" variant="outline" asChild>
+                      <Link to={`/admin/orders/${selectedDispute.orderId}`}>
+                        <Eye className="mr-2 h-4 w-4" />
+                        View Order
+                      </Link>
+                    </Button>
+                  ) : null}
+                  {selectedDispute.against?.id ? (
+                    <Button size="sm" variant="outline" asChild>
+                      <Link to={`/admin/users?search=${selectedDispute.against.id}`}>
+                        <Store className="mr-2 h-4 w-4" />
+                        Supplier Profile
+                      </Link>
+                    </Button>
+                  ) : null}
+                  {selectedDispute.against?.id ? (
+                    <Button size="sm" variant="outline" asChild>
+                      <Link to={`/admin/products?supplier_id=${selectedDispute.against.id}`}>
+                        <Package className="mr-2 h-4 w-4" />
+                        Supplier Products
+                      </Link>
+                    </Button>
+                  ) : null}
                 </CardContent>
               </Card>
 

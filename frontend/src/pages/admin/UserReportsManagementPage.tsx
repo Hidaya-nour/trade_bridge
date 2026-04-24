@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { Ban, RefreshCw, ShieldAlert, Eye } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -31,6 +32,12 @@ type SummaryRow = {
   total_reports: number;
   open_reports: number;
   last_reported_at?: string;
+  open_appeal?: {
+    id: string;
+    user_id: string;
+    message: string;
+    created_at: string;
+  } | null;
   user?: {
     id: string;
     full_name?: string;
@@ -58,7 +65,9 @@ const UserReportsManagementPage: React.FC = () => {
       const summary = response?.data?.summary || [];
       setItems(Array.isArray(summary) ? summary : []);
     } catch (err: any) {
-      toast.error(err?.response?.data?.message || "Failed to load user reports");
+      toast.error(
+        err?.response?.data?.message || "Failed to load user reports",
+      );
       setItems([]);
     } finally {
       setLoading(false);
@@ -70,7 +79,12 @@ const UserReportsManagementPage: React.FC = () => {
   }, []);
 
   const sorted = useMemo(() => {
-    return [...items].sort((a, b) => (b.open_reports || 0) - (a.open_reports || 0));
+    return [...items].sort((a, b) => {
+      const appealA = a.open_appeal ? 1 : 0;
+      const appealB = b.open_appeal ? 1 : 0;
+      if (appealB !== appealA) return appealB - appealA;
+      return (b.open_reports || 0) - (a.open_reports || 0);
+    });
   }, [items]);
 
   const openDetails = async (row: SummaryRow) => {
@@ -78,10 +92,13 @@ const UserReportsManagementPage: React.FC = () => {
     setDetailOpen(true);
     setDetailLoading(true);
     try {
-      const response = await reportService.getAdminReportsForUser(row.reported_user_id, {
-        page: 1,
-        limit: 50,
-      });
+      const response = await reportService.getAdminReportsForUser(
+        row.reported_user_id,
+        {
+          page: 1,
+          limit: 50,
+        },
+      );
       setSelectedReports(response?.data?.reports || []);
     } catch {
       setSelectedReports([]);
@@ -116,7 +133,11 @@ const UserReportsManagementPage: React.FC = () => {
             Review repeated reports and take action when needed.
           </p>
         </div>
-        <Button variant="outline" onClick={() => void load()} disabled={loading}>
+        <Button
+          variant="outline"
+          onClick={() => void load()}
+          disabled={loading}
+        >
           <RefreshCw className="h-4 w-4 mr-2" />
           Refresh
         </Button>
@@ -143,8 +164,12 @@ const UserReportsManagementPage: React.FC = () => {
             sorted.map((row) => {
               const user = row.user;
               const displayName =
-                user?.business_name || user?.full_name || user?.email || row.reported_user_id;
+                user?.business_name ||
+                user?.full_name ||
+                user?.email ||
+                row.reported_user_id;
               const suspended = user?.status === "suspended";
+              const appeal = row.open_appeal;
 
               return (
                 <div
@@ -162,6 +187,9 @@ const UserReportsManagementPage: React.FC = () => {
                       {suspended && (
                         <Badge className="bg-red-600">Suspended</Badge>
                       )}
+                      {appeal ? (
+                        <Badge className="bg-amber-500">Appeal</Badge>
+                      ) : null}
                     </div>
                     <div className="text-xs text-muted-foreground mt-1">
                       Total: {row.total_reports} • Open: {row.open_reports}
@@ -169,10 +197,27 @@ const UserReportsManagementPage: React.FC = () => {
                         ? ` • Last: ${formatDate(row.last_reported_at)}`
                         : ""}
                     </div>
+                    {appeal?.message ? (
+                      <div className="mt-2 rounded-lg border bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                        <div className="font-semibold">
+                          Suspension appeal{" "}
+                          {appeal.created_at
+                            ? `(${formatDate(appeal.created_at)})`
+                            : ""}
+                        </div>
+                        <div className="mt-1 whitespace-pre-wrap">
+                          {appeal.message}
+                        </div>
+                      </div>
+                    ) : null}
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm" onClick={() => void openDetails(row)}>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => void openDetails(row)}
+                    >
                       <Eye className="h-4 w-4 mr-2" />
                       View
                     </Button>
@@ -209,6 +254,53 @@ const UserReportsManagementPage: React.FC = () => {
 
           <Separator />
 
+          {selected?.reported_user_id ? (
+            <div className="flex flex-wrap gap-2">
+              <Button size="sm" variant="outline" asChild>
+                <Link to={`/admin/users?search=${selected.reported_user_id}`}>
+                  View Profile
+                </Link>
+              </Button>
+              <Button size="sm" variant="outline" asChild>
+                <Link
+                  to={`/admin/products?supplier_id=${selected.reported_user_id}`}
+                >
+                  View Products
+                </Link>
+              </Button>
+            </div>
+          ) : null}
+
+          {selected?.open_appeal ? (
+            <div className="rounded-lg border bg-amber-50 p-3 text-sm text-amber-900">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="font-semibold">Open suspension appeal</p>
+                  <p className="text-xs text-amber-800 mt-1">
+                    {selected.open_appeal.created_at
+                      ? formatDate(selected.open_appeal.created_at)
+                      : ""}
+                  </p>
+                </div>
+                {selected?.user?.status === "suspended" &&
+                selected?.user?.id ? (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => void toggleSuspend(selected)}
+                  >
+                    Reactivate
+                  </Button>
+                ) : null}
+              </div>
+              {selected.open_appeal.message ? (
+                <p className="mt-2 whitespace-pre-wrap text-amber-900">
+                  {selected.open_appeal.message}
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+
           <ScrollArea className="max-h-[60vh] pr-4">
             {detailLoading ? (
               <div className="py-6 text-sm text-muted-foreground">
@@ -221,14 +313,19 @@ const UserReportsManagementPage: React.FC = () => {
             ) : (
               <div className="space-y-3 py-1">
                 {selectedReports.map((report: any) => (
-                  <div key={report.id} className="rounded-lg border p-3 space-y-2">
+                  <div
+                    key={report.id}
+                    className="rounded-lg border p-3 space-y-2"
+                  >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <p className="text-sm font-medium truncate">
                           {report.reason}
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          {report.created_at ? formatDate(report.created_at) : ""}
+                          {report.created_at
+                            ? formatDate(report.created_at)
+                            : ""}
                           {report.reporter?.full_name
                             ? ` • by ${report.reporter.full_name}`
                             : ""}
@@ -266,4 +363,3 @@ const UserReportsManagementPage: React.FC = () => {
 };
 
 export default UserReportsManagementPage;
-
