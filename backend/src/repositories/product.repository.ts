@@ -7,6 +7,7 @@ import { Product } from '../models/product.model';
 import { User } from '../models/user.model';
 import Review from '../models/rating-reviews.model';
 import Address from '../models/address.model';
+import SupplierPaymentMethod from '../models/supplier-payment-method.model';
 
 export class ProductRepository extends BaseRepository<Product> {
   constructor() {
@@ -97,22 +98,36 @@ if (filters.supplier_id) {
       order.push(['created_at', 'DESC']);
     }
 
+    const supplierInclude: any[] = [
+      {
+        model: Address,
+        as: 'addresses',
+        attributes: ['id', 'region', 'city', 'subcity', 'common_name', 'latitude', 'longitude'],
+      },
+    ];
+
+    // When browsing available products (no supplier_id filter), hide suppliers that have no active payment methods.
+    if (!filters.supplier_id && filters.is_available === true) {
+      supplierInclude.push({
+        model: SupplierPaymentMethod,
+        as: 'paymentMethods',
+        attributes: ['id'],
+        where: { is_active: true },
+        required: true,
+      });
+    }
+
     const { count, rows } = await this.model.findAndCountAll({
       where,
       limit,
       offset,
       order,
+      distinct: true,
       include: [{
         model: User,
         as: 'supplier',
         attributes: ['id', 'full_name', 'business_name', 'email', 'phone', 'is_vat_registered', 'vat_rate'],
-        include: [
-          {
-            model: Address,
-            as: 'addresses',
-            attributes: ['id', 'region', 'city', 'subcity', 'common_name', 'latitude', 'longitude']
-          }
-        ]
+        include: supplierInclude,
       }]
     });
 

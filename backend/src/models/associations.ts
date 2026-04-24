@@ -20,6 +20,7 @@ import SupplierReview from './supplier-review.model';
 import UserReport from './user-report.model';
 import DriverIssueReport from './driver-issue-report.model';
 import FactoryAgent from './factory-agent.model';
+import SupplierPaymentMethod from './supplier-payment-method.model';
 
 // This function must be called AFTER all models are imported
 export const setupAssociations = () => {
@@ -45,6 +46,18 @@ export const setupAssociations = () => {
   });
 
   Product.belongsTo(User, {
+    foreignKey: 'supplier_id',
+    as: 'supplier',
+  });
+
+  // User - SupplierPaymentMethod (Supplier)
+  User.hasMany(SupplierPaymentMethod, {
+    foreignKey: 'supplier_id',
+    as: 'paymentMethods',
+    onDelete: 'CASCADE',
+  });
+
+  SupplierPaymentMethod.belongsTo(User, {
     foreignKey: 'supplier_id',
     as: 'supplier',
   });

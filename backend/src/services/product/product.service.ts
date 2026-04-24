@@ -1,5 +1,6 @@
 import { ProductRepository } from '../../repositories/product.repository';
 import { UserRepository } from '../../repositories/user.repository';
+import { SupplierPaymentMethodService } from '../supplier-payment-method/supplier-payment-method.service';
 import { AppError } from '../../utils/errors';
 import { IProductFilters } from '../../types/product.types';
 import logger from '../../utils/logger';
@@ -9,6 +10,24 @@ import Address from '../../models/address.model';
 export class ProductService {
   private productRepo = new ProductRepository();
   private userRepo = new UserRepository();
+  private supplierPaymentMethodService = new SupplierPaymentMethodService();
+
+  private parseBoolean(input: any): boolean | undefined {
+    if (input === undefined || input === null) return undefined;
+    if (typeof input === 'boolean') return input;
+    if (typeof input === 'number') {
+      if (input === 1) return true;
+      if (input === 0) return false;
+      return undefined;
+    }
+    if (typeof input === 'string') {
+      const normalized = input.trim().toLowerCase();
+      if (normalized === 'true' || normalized === '1') return true;
+      if (normalized === 'false' || normalized === '0') return false;
+      return undefined;
+    }
+    return undefined;
+  }
 
   private async resolveSupplierDefaultPickupLocation(userId: string) {
     const address = await Address.findOne({
@@ -85,7 +104,7 @@ export class ProductService {
       throw new AppError('Missing required fields: name, category, price, unit_type', 400);
     }
 
-    const deliveryAvailable = productData.delivery_available !== false;
+    const deliveryAvailable = this.parseBoolean(productData.delivery_available) ?? true;
     const deliveryPricing =
       productData.delivery_pricing === 'paid' ? 'paid' : 'free';
     const deliveryFeePerKm =
@@ -111,6 +130,18 @@ export class ProductService {
       throw new AppError('free_delivery_max_distance_km cannot be negative', 400);
     }
 
+    let isAvailable = this.parseBoolean(productData.is_available) ?? true;
+    if (isAvailable) {
+      const activeMethods =
+        await this.supplierPaymentMethodService.getActiveSupplierPaymentMethods(
+          userId,
+        );
+      if (!Array.isArray(activeMethods) || activeMethods.length === 0) {
+        // Suppliers without payment methods can still create products, but they cannot make them visible to buyers yet.
+        isAvailable = false;
+      }
+    }
+
     const product = await this.productRepo.createProduct({
       supplier_id: userId,
       name: productData.name,
@@ -125,7 +156,7 @@ export class ProductService {
       min_order_amount: productData.min_order_amount || 1,
       unit_type: productData.unit_type,
       images: productData.images || [],
-      is_available: productData.is_available !== undefined ? productData.is_available : 1,
+      is_available: isAvailable,
       delivery_available: deliveryAvailable,
       delivery_pricing: deliveryPricing,
       delivery_fee_per_km: deliveryFeePerKm,
@@ -147,6 +178,29 @@ export class ProductService {
   if (product.supplier_id !== userId) {
     const user = await this.userRepo.findById(userId);
     if (user?.role !== 'admin') throw new AppError('You can only update your own products', 403);
+  }
+
+  const parsedDeliveryAvailable = this.parseBoolean(updateData.delivery_available);
+  if (parsedDeliveryAvailable !== undefined) {
+    updateData.delivery_available = parsedDeliveryAvailable;
+  }
+
+  const parsedIsAvailable = this.parseBoolean(updateData.is_available);
+  if (parsedIsAvailable !== undefined) {
+    updateData.is_available = parsedIsAvailable;
+  }
+
+  if (updateData.is_available === true) {
+    const activeMethods =
+      await this.supplierPaymentMethodService.getActiveSupplierPaymentMethods(
+        product.supplier_id,
+      );
+    if (!Array.isArray(activeMethods) || activeMethods.length === 0) {
+      throw new AppError(
+        'You must set at least one active payment method before activating products.',
+        400,
+      );
+    }
   }
 
   if (updateData.delivery_fee_per_km !== undefined && Number(updateData.delivery_fee_per_km) < 0) {
@@ -300,6 +354,20 @@ export class ProductService {
       const user = await this.userRepo.findById(userId);
       if (user?.role !== 'admin') {
         throw new AppError('You can only toggle availability for your own products', 403);
+      }
+    }
+
+    const willEnable = product.is_available !== true;
+    if (willEnable) {
+      const activeMethods =
+        await this.supplierPaymentMethodService.getActiveSupplierPaymentMethods(
+          product.supplier_id,
+        );
+      if (!Array.isArray(activeMethods) || activeMethods.length === 0) {
+        throw new AppError(
+          'You must set at least one active payment method before activating products.',
+          400,
+        );
       }
     }
 

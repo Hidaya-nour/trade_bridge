@@ -52,6 +52,7 @@ import {
 } from "@/components/ui/table";
 import { EmptyState, PaginationBar } from "@/components";
 import { formatPrice } from "@/lib/formatters";
+import { resolveBoolean } from "@/lib/coerce";
 import { useOrderStore } from "@/stores/order.store";
 import toast from "react-hot-toast";
 import { PlaceOrderDialog } from "@/components/order/PlaceOrderDialog";
@@ -105,7 +106,7 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
   };
   const resolveProductShipping = (product?: Partial<CatalogProduct> | null) => {
     if (!product) return { shipping: 0, blocked: false };
-    const deliveryAvailable = product.delivery_available !== false;
+    const deliveryAvailable = resolveBoolean(product.delivery_available, true);
     if (!deliveryAvailable) return { shipping: 0, blocked: true };
 
     const feePerKm = Number(product.delivery_fee_per_km || 0);
@@ -405,7 +406,7 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
         toast.success("Order placed successfully!");
         return {
           primaryOrderId: order.id,
-          total: order.total_price,
+          total: Number(order.total_price),
         };
       } else {
         toast.error("Failed to place order");
@@ -651,7 +652,7 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
                             </TableCell>
                             {comparedProducts.map((product) => (
                               <TableCell key={product.id}>
-                                {product.delivery_available === false
+                                {!resolveBoolean(product.delivery_available, true)
                                   ? "Not available"
                                   : product.delivery_pricing === "paid"
                                     ? "Paid"
