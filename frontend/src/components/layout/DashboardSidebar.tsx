@@ -126,11 +126,6 @@ const roleNavigation = {
     ],
     analytics: [
       {
-        name: "Sales Analytics",
-        href: "/distributor/analytics",
-        icon: BarChart3,
-      },
-      {
         name: "Export Reports",
         href: "/distributor/reports",
         icon: FileText,
@@ -160,7 +155,11 @@ const roleNavigation = {
       href: "/factory/agents",
       icon: Warehouse,
     },
-    { name: "Production Analytics", href: "/factory/analytics", icon: BarChart3 },
+    {
+      name: "Production Analytics",
+      href: "/factory/analytics",
+      icon: BarChart3,
+    },
     { name: "Export Reports", href: "/factory/reports", icon: FileText },
     { name: "Inventory", href: "/factory/inventory", icon: FileText },
     {
@@ -218,7 +217,8 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
   const [isProfileOpen, setIsProfileOpen] = useState(false);
 
   const { fetchCounts, counts } = useNotificationStore();
-  const { fetchUserMessages, fetchUnreadCount, unreadCount } = useMessageStore();
+  const { fetchUserMessages, fetchUnreadCount, unreadCount } =
+    useMessageStore();
 
   // Fetch notifications on mount
   useEffect(() => {
@@ -274,7 +274,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
               Main Menu
             </p>
           )}
-          {nav.main.map((item) => (
+          {nav.main.map((item) =>
             (() => {
               const badge = (item as any).badge;
 
@@ -321,7 +321,9 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
                           <span
                             className={cn(
                               "text-sm transition-colors",
-                              isActive(item.href) ? "font-medium" : "font-normal",
+                              isActive(item.href)
+                                ? "font-medium"
+                                : "font-normal",
                             )}
                           >
                             {item.name}
@@ -330,7 +332,9 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
                       </div>
                       {!collapsed && badge && (
                         <Badge
-                          variant={isActive(item.href) ? "default" : "secondary"}
+                          variant={
+                            isActive(item.href) ? "default" : "secondary"
+                          }
                           className={cn(
                             "ml-auto text-[10px] px-1.5 py-0.5 font-medium",
                             badge === "Low Stock" &&
@@ -344,8 +348,8 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
                   </Link>
                 </Button>
               );
-            })()
-          ))}
+            })(),
+          )}
         </div>
 
         <Separator className="bg-border/50" />

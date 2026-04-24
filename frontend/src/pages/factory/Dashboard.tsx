@@ -351,15 +351,6 @@ const FactoryDashboard: React.FC = () => {
 
   const statsData = [
     {
-      title: "Monthly Revenue",
-      value: formatCompactPrice(factoryStats.monthlyRevenue),
-      change: `${recentOrders.length} orders`,
-      trend: "up" as const,
-      icon: DollarSign,
-      iconColor: "text-green-600",
-      iconBg: "bg-green-100",
-    },
-    {
       title: "Total Orders",
       value: factoryStats.totalOrders.toString(),
       subtext: `${factoryStats.activeDistributors} active distributors`,
@@ -378,18 +369,18 @@ const FactoryDashboard: React.FC = () => {
     {
       title: "Active Production",
       value: factoryStats.activeProduction.toString(),
-      subtext: `${factoryStats.productionCapacity}% capacity`,
+      subtext: `${factoryStats.productionCapacity}% capacity used`,
       icon: Activity,
-      iconColor: "text-indigo-600",
-      iconBg: "bg-indigo-100",
-    },
-    {
-      title: "Quality Rate",
-      value: `${factoryStats.qualityRate}%`,
-      subtext: "Live estimate",
-      icon: Target,
       iconColor: "text-emerald-600",
       iconBg: "bg-emerald-100",
+    },
+    {
+      title: "Inventory Alerts",
+      value: factoryStats.inventoryAlerts.toString(),
+      subtext: "Low stock items",
+      icon: AlertTriangle,
+      iconColor: "text-rose-600",
+      iconBg: "bg-rose-100",
     },
   ];
 
@@ -399,7 +390,7 @@ const FactoryDashboard: React.FC = () => {
       <WelcomeHeader user={user} />
 
       {/* Stats Grid - Using shared StatsCard */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {statsData.map((stat, index) => (
           <StatsCard key={index} {...stat} />
         ))}

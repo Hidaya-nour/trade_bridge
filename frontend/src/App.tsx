@@ -1,4 +1,9 @@
-import { BrowserRouter as Router, Navigate, Route, Routes } from "react-router-dom";
+import {
+  BrowserRouter as Router,
+  Navigate,
+  Route,
+  Routes,
+} from "react-router-dom";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import HomePage from "./pages/Home";
 import AboutPage from "./pages/About";
@@ -33,7 +38,7 @@ import UserManagementPage from "./pages/admin/UserManagementPage";
 import ProductListingsPage from "./pages/admin/ProductListingsPage";
 import { VerificationsPage } from "./pages/admin/VerificationsPage";
 import { DisputesManagementPage } from "./pages/admin/DisputesManagementPage";
-import { ReportsPage } from "./pages/admin/ReportsPage";
+import { ReportsPage } from "./pages/admin/AnalyticsPage";
 import UserReportsManagementPage from "./pages/admin/UserReportsManagementPage";
 import AdminOrderDetailsPage from "./pages/admin/AdminOrderDetailsPage";
 import { DriverDashboard } from "./pages/driver/DashboardPage";
@@ -90,6 +95,7 @@ function App() {
             path="/verify/receipt/:receiptNumber"
             element={<VerifyReceiptPage />}
           />
+
           {/* Dashboard Routes */}
           <Route
             path="/retailer/dashboard"

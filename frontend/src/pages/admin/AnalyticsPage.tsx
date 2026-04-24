@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
-  BarChart3,
   Download,
   Calendar,
   Users,
@@ -9,14 +8,12 @@ import {
   Factory,
   Store,
   Truck,
-  Activity,
   Clock,
   AlertCircle,
   UserCheck,
   UserX,
   Shield,
   DollarSign,
-  BadgeCheck,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -94,17 +91,10 @@ export const ReportsPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState("overview");
   const [documents, setDocuments] = useState<any[]>([]);
 
-  const {
-    users,
-    total: totalUsers,
-    fetchUsers,
-  } = useUserStore();
+  const { users, total: totalUsers, fetchUsers } = useUserStore();
   const { stats: orderStats, fetchOrderStats } = useOrderStore();
   const { items: disputeItems, fetchAll: fetchDisputes } = useDisputeStore();
-  const {
-    products,
-    fetchProducts,
-  } = useProductStore();
+  const { products, fetchProducts } = useProductStore();
 
   useEffect(() => {
     fetchUsers({}, { page: 1, limit: 500 });
@@ -129,12 +119,16 @@ export const ReportsPage: React.FC = () => {
   }, []);
 
   const activeUsers = users.filter((user) => user.status === "active").length;
-  const suspendedUsers = users.filter((user) => user.status === "suspended").length;
+  const suspendedUsers = users.filter(
+    (user) => user.status === "suspended",
+  ).length;
   const pendingUsers = users.filter((user) => user.status === "pending").length;
   const activeDisputes = disputeItems.filter(
     (item: any) => item.status !== "resolved",
   ).length;
-  const activeProducts = products.filter((product) => product.is_available).length;
+  const activeProducts = products.filter(
+    (product) => product.is_available,
+  ).length;
   const lowStockProducts = products.filter(
     (product) => product.stock_quantity <= product.min_order_amount,
   ).length;
@@ -155,7 +149,8 @@ export const ReportsPage: React.FC = () => {
         total: matching.length,
         active: matching.filter((user) => user.status === "active").length,
         pending: matching.filter((user) => user.status === "pending").length,
-        suspended: matching.filter((user) => user.status === "suspended").length,
+        suspended: matching.filter((user) => user.status === "suspended")
+          .length,
         icon: roleIcons[role],
       };
     });
@@ -175,9 +170,12 @@ export const ReportsPage: React.FC = () => {
       const docs = grouped.get(role) || [];
       return {
         role: roleLabels[role],
-        pending: docs.filter((doc) => doc.verification_status === "pending").length,
-        verified: docs.filter((doc) => doc.verification_status === "verified").length,
-        rejected: docs.filter((doc) => doc.verification_status === "rejected").length,
+        pending: docs.filter((doc) => doc.verification_status === "pending")
+          .length,
+        verified: docs.filter((doc) => doc.verification_status === "verified")
+          .length,
+        rejected: docs.filter((doc) => doc.verification_status === "rejected")
+          .length,
         icon: roleIcons[role],
       };
     });
@@ -256,11 +254,15 @@ export const ReportsPage: React.FC = () => {
             Platform Analytics
           </h1>
           <p className="mt-1 text-muted-foreground">
-            Live visibility into users, commerce activity, catalog health, and verification load.
+            Live visibility into users, commerce activity, catalog health, and
+            verification load.
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Select value={timeRange} onValueChange={(value) => setTimeRange(value as TimeRange)}>
+          <Select
+            value={timeRange}
+            onValueChange={(value) => setTimeRange(value as TimeRange)}
+          >
             <SelectTrigger className="w-[180px]">
               <Calendar className="mr-2 h-4 w-4" />
               <SelectValue placeholder="Select range" />
@@ -298,10 +300,9 @@ export const ReportsPage: React.FC = () => {
         onValueChange={setActiveTab}
         className="space-y-4"
       >
-        <TabsList className="grid w-full grid-cols-4 lg:w-[520px]">
+        <TabsList className="grid w-full grid-cols-3 lg:w-[520px]">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="users">Users</TabsTrigger>
-          <TabsTrigger value="commerce">Commerce</TabsTrigger>
           <TabsTrigger value="verifications">Verifications</TabsTrigger>
         </TabsList>
 
@@ -310,18 +311,24 @@ export const ReportsPage: React.FC = () => {
             <Card>
               <CardHeader>
                 <CardTitle>Platform Health</CardTitle>
-                <CardDescription>Operational snapshot for the selected range</CardDescription>
+                <CardDescription>
+                  Operational snapshot for the selected range
+                </CardDescription>
               </CardHeader>
               <CardContent className="grid grid-cols-2 gap-4">
                 <div className="rounded-lg bg-blue-50 p-4">
                   <UserCheck className="mb-2 h-5 w-5 text-blue-600" />
                   <p className="text-xs text-muted-foreground">Active Users</p>
-                  <p className="text-2xl font-bold text-blue-700">{activeUsers}</p>
+                  <p className="text-2xl font-bold text-blue-700">
+                    {activeUsers}
+                  </p>
                 </div>
                 <div className="rounded-lg bg-yellow-50 p-4">
                   <Clock className="mb-2 h-5 w-5 text-yellow-600" />
                   <p className="text-xs text-muted-foreground">Pending Users</p>
-                  <p className="text-2xl font-bold text-yellow-700">{pendingUsers}</p>
+                  <p className="text-2xl font-bold text-yellow-700">
+                    {pendingUsers}
+                  </p>
                 </div>
                 <div className="rounded-lg bg-green-50 p-4">
                   <DollarSign className="mb-2 h-5 w-5 text-green-600" />
@@ -332,8 +339,12 @@ export const ReportsPage: React.FC = () => {
                 </div>
                 <div className="rounded-lg bg-red-50 p-4">
                   <UserX className="mb-2 h-5 w-5 text-red-600" />
-                  <p className="text-xs text-muted-foreground">Suspended Users</p>
-                  <p className="text-2xl font-bold text-red-700">{suspendedUsers}</p>
+                  <p className="text-xs text-muted-foreground">
+                    Suspended Users
+                  </p>
+                  <p className="text-2xl font-bold text-red-700">
+                    {suspendedUsers}
+                  </p>
                 </div>
               </CardContent>
             </Card>
@@ -341,7 +352,9 @@ export const ReportsPage: React.FC = () => {
             <Card>
               <CardHeader>
                 <CardTitle>Catalog Health</CardTitle>
-                <CardDescription>Availability and inventory quality</CardDescription>
+                <CardDescription>
+                  Availability and inventory quality
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
@@ -352,7 +365,11 @@ export const ReportsPage: React.FC = () => {
                     </span>
                   </div>
                   <Progress
-                    value={products.length === 0 ? 0 : (activeProducts / products.length) * 100}
+                    value={
+                      products.length === 0
+                        ? 0
+                        : (activeProducts / products.length) * 100
+                    }
                     className="h-2"
                   />
                 </div>
@@ -362,7 +379,11 @@ export const ReportsPage: React.FC = () => {
                     <span className="font-medium">{lowStockProducts}</span>
                   </div>
                   <Progress
-                    value={products.length === 0 ? 0 : (lowStockProducts / products.length) * 100}
+                    value={
+                      products.length === 0
+                        ? 0
+                        : (lowStockProducts / products.length) * 100
+                    }
                     className="h-2"
                   />
                 </div>
@@ -374,9 +395,15 @@ export const ReportsPage: React.FC = () => {
                     </p>
                   </div>
                   <div className="rounded-lg border p-3">
-                    <p className="text-xs text-muted-foreground">Orders Today</p>
+                    <p className="text-xs text-muted-foreground">
+                      Orders Today
+                    </p>
                     <p className="text-xl font-bold">
-                      {Number(orderStats?.orders_today || orderStats?.today_orders || 0)}
+                      {Number(
+                        orderStats?.orders_today ||
+                          orderStats?.today_orders ||
+                          0,
+                      )}
                     </p>
                   </div>
                 </div>
@@ -388,7 +415,9 @@ export const ReportsPage: React.FC = () => {
             <Card>
               <CardHeader>
                 <CardTitle>Top Product Categories</CardTitle>
-                <CardDescription>Most populated catalog segments</CardDescription>
+                <CardDescription>
+                  Most populated catalog segments
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 {categoryMetrics.length === 0 ? (
@@ -406,7 +435,13 @@ export const ReportsPage: React.FC = () => {
                           <span className="font-medium">{metric.count}</span>
                         </div>
                         <Progress
-                          value={(metric.count / Math.max(...categoryMetrics.map((item) => item.count))) * 100}
+                          value={
+                            (metric.count /
+                              Math.max(
+                                ...categoryMetrics.map((item) => item.count),
+                              )) *
+                            100
+                          }
                           className="h-2"
                         />
                       </div>
@@ -419,7 +454,9 @@ export const ReportsPage: React.FC = () => {
             <Card>
               <CardHeader>
                 <CardTitle>Top Suppliers By Listings</CardTitle>
-                <CardDescription>Suppliers with the largest product footprint</CardDescription>
+                <CardDescription>
+                  Suppliers with the largest product footprint
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 {topSuppliers.length === 0 ? (
@@ -437,9 +474,13 @@ export const ReportsPage: React.FC = () => {
                       >
                         <div className="flex items-center gap-2">
                           <Store className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-sm font-medium">{supplier.name}</span>
+                          <span className="text-sm font-medium">
+                            {supplier.name}
+                          </span>
                         </div>
-                        <Badge variant="outline">{supplier.count} products</Badge>
+                        <Badge variant="outline">
+                          {supplier.count} products
+                        </Badge>
                       </div>
                     ))}
                   </div>
@@ -453,7 +494,9 @@ export const ReportsPage: React.FC = () => {
           <Card>
             <CardHeader>
               <CardTitle>User Composition</CardTitle>
-              <CardDescription>Distribution by role and account status</CardDescription>
+              <CardDescription>
+                Distribution by role and account status
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-5">
               {userRoleMetrics.map((metric) => {
@@ -462,11 +505,18 @@ export const ReportsPage: React.FC = () => {
                   <div key={metric.role} className="space-y-2">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <div className={cn("rounded-lg p-2", roleTone[metric.role])}>
+                        <div
+                          className={cn(
+                            "rounded-lg p-2",
+                            roleTone[metric.role],
+                          )}
+                        >
                           <Icon className="h-4 w-4" />
                         </div>
                         <div>
-                          <p className="font-medium">{roleLabels[metric.role]}</p>
+                          <p className="font-medium">
+                            {roleLabels[metric.role]}
+                          </p>
                           <p className="text-sm text-muted-foreground">
                             {metric.total} total accounts
                           </p>
@@ -488,14 +538,20 @@ export const ReportsPage: React.FC = () => {
                         </p>
                       </div>
                       <div className="rounded-lg bg-red-50 p-3">
-                        <p className="text-xs text-muted-foreground">Suspended</p>
+                        <p className="text-xs text-muted-foreground">
+                          Suspended
+                        </p>
                         <p className="text-lg font-semibold text-red-700">
                           {metric.suspended}
                         </p>
                       </div>
                     </div>
                     <Progress
-                      value={metric.total === 0 ? 0 : (metric.active / metric.total) * 100}
+                      value={
+                        metric.total === 0
+                          ? 0
+                          : (metric.active / metric.total) * 100
+                      }
                       className="ml-14 h-2"
                     />
                   </div>
@@ -503,96 +559,6 @@ export const ReportsPage: React.FC = () => {
               })}
             </CardContent>
           </Card>
-        </TabsContent>
-
-        <TabsContent value="commerce" className="space-y-4">
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-            <Card>
-              <CardHeader>
-                <CardTitle>Order Performance</CardTitle>
-                <CardDescription>Live commerce indicators</CardDescription>
-              </CardHeader>
-              <CardContent className="grid grid-cols-2 gap-4">
-                <div className="rounded-lg border p-4">
-                  <p className="text-xs text-muted-foreground">Total Orders</p>
-                  <p className="text-2xl font-bold">
-                    {Number(orderStats?.total_orders || 0)}
-                  </p>
-                </div>
-                <div className="rounded-lg border p-4">
-                  <p className="text-xs text-muted-foreground">Orders Today</p>
-                  <p className="text-2xl font-bold">
-                    {Number(orderStats?.orders_today || orderStats?.today_orders || 0)}
-                  </p>
-                </div>
-                <div className="rounded-lg border p-4">
-                  <p className="text-xs text-muted-foreground">Total Revenue</p>
-                  <p className="text-2xl font-bold">
-                    {formatPrice(Number(orderStats?.total_revenue || 0))}
-                  </p>
-                </div>
-                <div className="rounded-lg border p-4">
-                  <p className="text-xs text-muted-foreground">Revenue Today</p>
-                  <p className="text-2xl font-bold">
-                    {formatPrice(
-                      Number(orderStats?.revenue_today || orderStats?.today_revenue || 0),
-                    )}
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Disputes And Catalog Risk</CardTitle>
-                <CardDescription>Operational pressure points to watch</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between rounded-lg bg-red-50 p-4">
-                  <div className="flex items-center gap-3">
-                    <AlertCircle className="h-5 w-5 text-red-600" />
-                    <div>
-                      <p className="font-medium">Active Disputes</p>
-                      <p className="text-sm text-muted-foreground">
-                        Cases not yet resolved
-                      </p>
-                    </div>
-                  </div>
-                  <span className="text-2xl font-bold text-red-700">
-                    {activeDisputes}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between rounded-lg bg-amber-50 p-4">
-                  <div className="flex items-center gap-3">
-                    <Activity className="h-5 w-5 text-amber-600" />
-                    <div>
-                      <p className="font-medium">Low Stock Products</p>
-                      <p className="text-sm text-muted-foreground">
-                        Listings at or below minimum order threshold
-                      </p>
-                    </div>
-                  </div>
-                  <span className="text-2xl font-bold text-amber-700">
-                    {lowStockProducts}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between rounded-lg bg-green-50 p-4">
-                  <div className="flex items-center gap-3">
-                    <BadgeCheck className="h-5 w-5 text-green-600" />
-                    <div>
-                      <p className="font-medium">Active Products</p>
-                      <p className="text-sm text-muted-foreground">
-                        Listings currently visible to buyers
-                      </p>
-                    </div>
-                  </div>
-                  <span className="text-2xl font-bold text-green-700">
-                    {activeProducts}
-                  </span>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
         </TabsContent>
 
         <TabsContent value="verifications" className="space-y-4">
@@ -613,7 +579,8 @@ export const ReportsPage: React.FC = () => {
               ) : (
                 verificationMetrics.map((metric) => {
                   const Icon = metric.icon;
-                  const total = metric.pending + metric.verified + metric.rejected;
+                  const total =
+                    metric.pending + metric.verified + metric.rejected;
                   return (
                     <div key={metric.role} className="rounded-lg border p-4">
                       <div className="mb-3 flex items-center justify-between">
@@ -630,19 +597,25 @@ export const ReportsPage: React.FC = () => {
                       </div>
                       <div className="grid grid-cols-3 gap-3">
                         <div className="rounded-lg bg-yellow-50 p-3">
-                          <p className="text-xs text-muted-foreground">Pending</p>
+                          <p className="text-xs text-muted-foreground">
+                            Pending
+                          </p>
                           <p className="text-xl font-bold text-yellow-700">
                             {metric.pending}
                           </p>
                         </div>
                         <div className="rounded-lg bg-green-50 p-3">
-                          <p className="text-xs text-muted-foreground">Verified</p>
+                          <p className="text-xs text-muted-foreground">
+                            Verified
+                          </p>
                           <p className="text-xl font-bold text-green-700">
                             {metric.verified}
                           </p>
                         </div>
                         <div className="rounded-lg bg-red-50 p-3">
-                          <p className="text-xs text-muted-foreground">Rejected</p>
+                          <p className="text-xs text-muted-foreground">
+                            Rejected
+                          </p>
                           <p className="text-xl font-bold text-red-700">
                             {metric.rejected}
                           </p>

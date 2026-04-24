@@ -114,19 +114,6 @@ export const RegisterPage: React.FC = () => {
 
             <div>
               <label className="block text-sm font-medium mb-1">
-                Business Name (Optional)
-              </label>
-              <Input
-                value={formData.business_name}
-                onChange={(e) =>
-                  setFormData({ ...formData, business_name: e.target.value })
-                }
-                disabled={isLoading}
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-1">
                 Account Type
               </label>
               <Select
@@ -146,7 +133,20 @@ export const RegisterPage: React.FC = () => {
                 </SelectContent>
               </Select>
             </div>
-
+            {formData.role !== "driver" && (
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Business Name (Optional)
+                </label>
+                <Input
+                  value={formData.business_name}
+                  onChange={(e) =>
+                    setFormData({ ...formData, business_name: e.target.value })
+                  }
+                  disabled={isLoading}
+                />
+              </div>
+            )}
             <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading ? "Creating account..." : "Register"}
             </Button>
