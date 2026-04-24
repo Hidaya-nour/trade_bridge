@@ -20,7 +20,11 @@ export class AuthController {
       });
     } catch (error) {
       if (error instanceof AppError) {
-        res.status(error.statusCode).json({ success: false, message: error.message });
+        res.status(error.statusCode).json({
+          success: false,
+          ...(error.code ? { code: error.code } : {}),
+          message: error.message
+        });
       } else {
         logger.error('Registration error:', error);
         res.status(500).json({ success: false, message: 'Internal server error' });
@@ -48,7 +52,11 @@ export class AuthController {
       });
     } catch (error) {
       if (error instanceof AppError) {
-        res.status(error.statusCode).json({ success: false, message: error.message });
+        res.status(error.statusCode).json({
+          success: false,
+          ...(error.code ? { code: error.code } : {}),
+          message: error.message
+        });
       } else {
         logger.error('Login error:', error);
         res.status(500).json({ success: false, message: 'Internal server error' });
@@ -67,7 +75,11 @@ export class AuthController {
       });
     } catch (error) {
       if (error instanceof AppError) {
-        res.status(error.statusCode).json({ success: false, message: error.message });
+        res.status(error.statusCode).json({
+          success: false,
+          ...(error.code ? { code: error.code } : {}),
+          message: error.message
+        });
       } else {
         logger.error('Refresh token error:', error);
         res.status(500).json({ success: false, message: 'Internal server error' });
@@ -90,7 +102,11 @@ export class AuthController {
       });
     } catch (error) {
       if (error instanceof AppError) {
-        res.status(error.statusCode).json({ success: false, message: error.message });
+        res.status(error.statusCode).json({
+          success: false,
+          ...(error.code ? { code: error.code } : {}),
+          message: error.message
+        });
       } else {
         logger.error('Logout error:', error);
         res.status(500).json({ success: false, message: 'Internal server error' });
@@ -112,7 +128,11 @@ export class AuthController {
       });
     } catch (error) {
       if (error instanceof AppError) {
-        res.status(error.statusCode).json({ success: false, message: error.message });
+        res.status(error.statusCode).json({
+          success: false,
+          ...(error.code ? { code: error.code } : {}),
+          message: error.message
+        });
       } else {
         logger.error('Logout all error:', error);
         res.status(500).json({ success: false, message: 'Internal server error' });
@@ -136,7 +156,11 @@ export class AuthController {
       });
     } catch (error) {
       if (error instanceof AppError) {
-        res.status(error.statusCode).json({ success: false, message: error.message });
+        res.status(error.statusCode).json({
+          success: false,
+          ...(error.code ? { code: error.code } : {}),
+          message: error.message
+        });
       } else {
         logger.error('Get me error:', error);
         res.status(500).json({ success: false, message: 'Internal server error' });
@@ -160,7 +184,11 @@ export class AuthController {
       });
     } catch (error) {
       if (error instanceof AppError) {
-        res.status(error.statusCode).json({ success: false, message: error.message });
+        res.status(error.statusCode).json({
+          success: false,
+          ...(error.code ? { code: error.code } : {}),
+          message: error.message
+        });
       } else {
         logger.error('Update profile error:', error);
         res.status(500).json({ success: false, message: 'Internal server error' });
@@ -185,7 +213,11 @@ export class AuthController {
       });
     } catch (error) {
       if (error instanceof AppError) {
-        res.status(error.statusCode).json({ success: false, message: error.message });
+        res.status(error.statusCode).json({
+          success: false,
+          ...(error.code ? { code: error.code } : {}),
+          message: error.message
+        });
       } else {
         logger.error('Change password error:', error);
         res.status(500).json({ success: false, message: 'Internal server error' });
@@ -211,7 +243,11 @@ export class AuthController {
       });
     } catch (error) {
       if (error instanceof AppError) {
-        res.status(error.statusCode).json({ success: false, message: error.message });
+        res.status(error.statusCode).json({
+          success: false,
+          ...(error.code ? { code: error.code } : {}),
+          message: error.message
+        });
       } else {
         logger.error('Approve user error:', error);
         res.status(500).json({ success: false, message: 'Internal server error' });
@@ -237,7 +273,11 @@ export class AuthController {
       });
     } catch (error) {
       if (error instanceof AppError) {
-        res.status(error.statusCode).json({ success: false, message: error.message });
+        res.status(error.statusCode).json({
+          success: false,
+          ...(error.code ? { code: error.code } : {}),
+          message: error.message
+        });
       } else {
         logger.error('Suspend user error:', error);
         res.status(500).json({ success: false, message: 'Internal server error' });
@@ -263,7 +303,11 @@ export class AuthController {
       });
     } catch (error) {
       if (error instanceof AppError) {
-        res.status(error.statusCode).json({ success: false, message: error.message });
+        res.status(error.statusCode).json({
+          success: false,
+          ...(error.code ? { code: error.code } : {}),
+          message: error.message
+        });
       } else {
         logger.error('Reactivate user error:', error);
         res.status(500).json({ success: false, message: 'Internal server error' });
@@ -307,7 +351,11 @@ export class AuthController {
       });
     } catch (error) {
       if (error instanceof AppError) {
-        res.status(error.statusCode).json({ success: false, message: error.message });
+        res.status(error.statusCode).json({
+          success: false,
+          ...(error.code ? { code: error.code } : {}),
+          message: error.message
+        });
       } else {
         logger.error('Get users error:', error);
         res.status(500).json({ success: false, message: 'Internal server error' });
@@ -332,7 +380,11 @@ export class AuthController {
       });
     } catch (error) {
       if (error instanceof AppError) {
-        res.status(error.statusCode).json({ success: false, message: error.message });
+        res.status(error.statusCode).json({
+          success: false,
+          ...(error.code ? { code: error.code } : {}),
+          message: error.message
+        });
       } else {
         logger.error('Get recent users error:', error);
         res.status(500).json({ success: false, message: 'Internal server error' });
@@ -357,7 +409,11 @@ export class AuthController {
       });
     } catch (error) {
       if (error instanceof AppError) {
-        res.status(error.statusCode).json({ success: false, message: error.message });
+        res.status(error.statusCode).json({
+          success: false,
+          ...(error.code ? { code: error.code } : {}),
+          message: error.message
+        });
       } else {
         logger.error('Upload profile image error:', error);
         res.status(500).json({ success: false, message: 'Internal server error' });
@@ -376,7 +432,11 @@ export class AuthController {
       });
     } catch (error) {
       if (error instanceof AppError) {
-        res.status(error.statusCode).json({ success: false, message: error.message });
+        res.status(error.statusCode).json({
+          success: false,
+          ...(error.code ? { code: error.code } : {}),
+          message: error.message
+        });
       } else {
         logger.error('Password reset request error:', error);
         res.status(500).json({ success: false, message: 'Internal server error' });
@@ -395,7 +455,11 @@ export class AuthController {
       });
     } catch (error) {
       if (error instanceof AppError) {
-        res.status(error.statusCode).json({ success: false, message: error.message });
+        res.status(error.statusCode).json({
+          success: false,
+          ...(error.code ? { code: error.code } : {}),
+          message: error.message
+        });
       } else {
         logger.error('Password reset error:', error);
         res.status(500).json({ success: false, message: 'Internal server error' });

@@ -352,7 +352,7 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
   // Handle direct order
   const handleDirectOrder = (product: CatalogProduct) => {
     setSelectedProduct(product);
-    setOrderQuantity(product.min_order_amount);
+    setOrderQuantity(Math.max(1, Number(product.min_order_amount || 1)));
     setOrderDialogOpen(true);
   };
 

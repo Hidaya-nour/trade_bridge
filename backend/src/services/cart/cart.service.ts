@@ -73,20 +73,43 @@ export class CartService {
   }
 
   // UPDATE CART ITEM 
-  async updateCartItemById(itemId: string, quantity: number) {
+  async updateCartItemById(userId: string, itemId: string, quantity: number): Promise<CartWithItems | null> {
     const cartItem = await this.cartItemRepo.findById(itemId);
-
     if (!cartItem) return null;
+
+    const cart = await this.cartRepo.getOrCreateCart(userId);
+    if (cartItem.cart_id !== cart.id) {
+      throw new AppError('You do not have permission to update this cart item', 403);
+    }
 
     if (quantity <= 0) {
       await cartItem.destroy();
-      return null;
+      await cart.update({ updated_at: new Date() });
+      return this.cartRepo.findCartWithItems(userId);
+    }
+
+    const product = await this.productRepo.findById(cartItem.product_id);
+    if (!product) {
+      throw new AppError('Product not found', 404);
+    }
+
+    if (!product.is_available) {
+      throw new AppError('Product is not available', 400);
+    }
+
+    if (quantity < product.min_order_amount) {
+      throw new AppError(`Minimum order quantity is ${product.min_order_amount}`, 400);
+    }
+
+    if (quantity > product.stock_quantity) {
+      throw new AppError('Insufficient stock', 400);
     }
 
     await cartItem.update({ quantity });
+    await cart.update({ updated_at: new Date() });
 
-    return cartItem;
-}
+    return this.cartRepo.findCartWithItems(userId);
+  }
   // REMOVE FROM CART
   async removeFromCart(userId: string, itemId: string): Promise<CartWithItems> {
     // Get cart

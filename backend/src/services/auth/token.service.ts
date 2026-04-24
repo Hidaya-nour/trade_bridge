@@ -43,8 +43,21 @@ export class TokenService {
 
     // ✅ FIX 2: Check user properties safely
     const userData = user.toJSON() as any;
-    if (userData.deleted_at || !['active', 'pending'].includes(userData.status)) {
-      throw new AppError('User account is not active', 403);
+    if (userData.deleted_at) {
+      throw new AppError('Account not found', 404);
+    }
+
+    if (userData.status === 'suspended') {
+      throw new AppError(
+        'Your account has been suspended. Please contact the admin to appeal.',
+        403,
+        true,
+        'ACCOUNT_SUSPENDED',
+      );
+    }
+
+    if (!['active', 'pending'].includes(userData.status)) {
+      throw new AppError('User account is not active', 403, true, 'ACCOUNT_INACTIVE');
     }
 
     const accessToken = generateAccessToken({

@@ -153,6 +153,15 @@ async register(data: RegisterDTO): Promise<{ user: SafeUser }> {
       throw new AuthError('Invalid email or password');
     }
 
+    if (user.status === 'suspended') {
+      throw new AppError(
+        'Your account has been suspended. Please contact the admin to appeal.',
+        403,
+        true,
+        'ACCOUNT_SUSPENDED',
+      );
+    }
+
     // Update last login
     await this.userRepo.updateLastLogin(user.id);
 

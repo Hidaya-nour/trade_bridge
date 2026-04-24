@@ -42,7 +42,21 @@ export const authenticate = async (
     // Directly check database
     const dbUser = await userRepo.findById(decoded.id);
     
-    if (!dbUser || dbUser.deleted_at || dbUser.status !== 'active') {
+    if (!dbUser || dbUser.deleted_at) {
+      res.status(401).json({ success: false, message: 'User not found or inactive' });
+      return;
+    }
+
+    if (dbUser.status === 'suspended') {
+      res.status(403).json({
+        success: false,
+        code: 'ACCOUNT_SUSPENDED',
+        message: 'Your account has been suspended. Please contact the admin to appeal.',
+      });
+      return;
+    }
+
+    if (dbUser.status !== 'active') {
       res.status(401).json({ success: false, message: 'User not found or inactive' });
       return;
     }
@@ -112,6 +126,14 @@ export const authenticateAllowPending = async (
 
     // Allow active or pending users only.
     if (!['active', 'pending'].includes(dbUser.status)) {
+      if (dbUser.status === 'suspended') {
+        res.status(403).json({
+          success: false,
+          code: 'ACCOUNT_SUSPENDED',
+          message: 'Your account has been suspended. Please contact the admin to appeal.',
+        });
+        return;
+      }
       res.status(403).json({ success: false, message: 'Account is not allowed to perform this action' });
       return;
     }

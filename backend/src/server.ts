@@ -41,6 +41,7 @@ import './models/supplier-review.model';
 import UserReport from './models/user-report.model';
 import './models/driver.model';
 import './models/dispute.model';
+import './models/payment.model';
 
 import { setupAssociations } from './models/associations';
 import productRoutes from './routes/product.routes';
@@ -48,6 +49,8 @@ import orderRoutes from './routes/order.routes';
 import cartRoutes from './routes/cart.routes';
 import notificationRoutes from './routes/notification.routes';
 import disputeRoutes from './routes/dispute.routes';
+import broadcastRoutes from './routes/broadcast.routes';
+import paymentRoutes from './routes/payment.routes';
 import inventoryMovementRoutes from './routes/inventory-movement.routes';
 import chatMessageRoutes from './routes/chat-message.route';
 import loginAttemptRoutes from './routes/login-attempt.routes';
@@ -61,6 +64,7 @@ import factoryAgentRoutes from './routes/factory-agent.routes';
 import ratingReviewRoutes from './routes/rating-review.routes';
 import supplierRoutes from './routes/supplier.routes'
 import driverRoutes from './routes/driver.routes';
+import deliveryRoutes from './routes/delivery.routes';
 import forecastRoutes from './routes/forecast.routes';
 import reportRoutes from './routes/report.routes';
 import { AppError, ValidationError } from './utils/errors';
@@ -110,6 +114,8 @@ app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/cart', cartRoutes);
+app.use('/api/broadcasts', broadcastRoutes);
+app.use('/api/payments', paymentRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/disputes', disputeRoutes);
 app.use('/api/inventory-movements', inventoryMovementRoutes);
@@ -125,6 +131,7 @@ app.use('/api/factory-agents', factoryAgentRoutes);
 app.use('/api/reviews', ratingReviewRoutes);
 app.use('/api/suppliers', supplierRoutes);
 app.use('/api/drivers', driverRoutes);
+app.use('/api/deliveries', deliveryRoutes);
 app.use('/api/forecast', forecastRoutes);
 app.use('/api/reports', reportRoutes);
 
@@ -227,7 +234,4 @@ const startServer = async () => {
 //     logger.info(`🚀 Server running on port ${PORT}`);
 //   });
 // };
-app.listen(5000, "0.0.0.0", () => {
-  console.log("Server running");
-});
 startServer();

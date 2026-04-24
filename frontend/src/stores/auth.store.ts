@@ -47,6 +47,11 @@ interface Tokens {
   refreshToken: string;
 }
 
+export type AccountBlock = {
+  code: "ACCOUNT_SUSPENDED" | "ACCOUNT_INACTIVE";
+  message: string;
+};
+
 /* =========================
    Auth State Interface
 ========================= */
@@ -55,6 +60,7 @@ interface AuthState {
   user: User | null;
   accessToken: string | null;
   refreshToken: string | null;
+  accountBlocked: AccountBlock | null;
   isLoading: boolean;
   error: string | null;
 
@@ -70,6 +76,7 @@ interface AuthState {
   updateProfile: (data: UpdateProfileData) => Promise<void>;
   changePassword: (data: ChangePasswordData) => Promise<void>;
   clearError: () => void;
+  setAccountBlocked: (blocked: AccountBlock | null) => void;
 }
 
 /* =========================
@@ -82,6 +89,7 @@ export const useAuthStore = create<AuthState>()(
       user: null,
       accessToken: null,
       refreshToken: null,
+      accountBlocked: null,
       isLoading: false,
       error: null,
 
@@ -103,6 +111,7 @@ export const useAuthStore = create<AuthState>()(
             accessToken: tokens.accessToken,
             refreshToken: tokens.refreshToken,
             isLoading: false,
+            accountBlocked: null,
           });
 
           return { user, tokens };
@@ -154,6 +163,7 @@ export const useAuthStore = create<AuthState>()(
           user: null,
           accessToken: null,
           refreshToken: null,
+          accountBlocked: null,
         });
       },
 
@@ -227,6 +237,7 @@ export const useAuthStore = create<AuthState>()(
       /* ================= CLEAR ERROR ================= */
 
       clearError: () => set({ error: null }),
+      setAccountBlocked: (blocked) => set({ accountBlocked: blocked }),
     }),
     {
       name: "auth-storage",
@@ -236,6 +247,7 @@ export const useAuthStore = create<AuthState>()(
         user: state.user,
         accessToken: state.accessToken,
         refreshToken: state.refreshToken,
+        accountBlocked: state.accountBlocked,
       }),
     }
   )
