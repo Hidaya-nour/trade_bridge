@@ -112,6 +112,7 @@ export type OrderDelivery = {
   carrier?: string | null;
   status?: DeliveryStatus | string | null;
   driverId?: number | string | null;
+  driverUserId?: number | string | null;
   driverName?: string | null;
   driverPhone?: string | null;
 };

@@ -28,6 +28,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 
 import { formatPrice } from "@/lib/formatters";
+import { resolveBoolean } from "@/lib/coerce";
 import toast from "react-hot-toast";
 import type { OrderItem } from "@/types/order.types";
 import { PaymentDialog } from "../payment/PaymentDialog";
@@ -127,7 +128,7 @@ export const PlaceOrderDialog: React.FC<PlaceOrderDialogProps> = ({
         const product = item.product as any;
         if (!product) return null;
 
-        const deliveryAvailable = product.delivery_available !== false;
+        const deliveryAvailable = resolveBoolean(product.delivery_available, true);
         const rawDeliveryPricing = String(
           product.delivery_pricing || "",
         ).toLowerCase();

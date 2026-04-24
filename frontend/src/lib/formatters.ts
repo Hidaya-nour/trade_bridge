@@ -5,8 +5,9 @@ import autoTable from 'jspdf-autotable';
 /**
  * Format price in ETB
  */
-export const formatPrice = (price: number | null | undefined): string => {
-  const safePrice = Number.isFinite(price) ? Number(price) : 0;
+export const formatPrice = (price: number | string | null | undefined): string => {
+  const parsed = typeof price === "string" ? Number(price) : price;
+  const safePrice = Number.isFinite(parsed as number) ? Number(parsed) : 0;
 
   return `ETB ${safePrice.toLocaleString(undefined, {
     minimumFractionDigits: 2,

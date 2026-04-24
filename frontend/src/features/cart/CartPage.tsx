@@ -38,6 +38,7 @@ import { useCartStore } from "@/stores/cart.store";
 import { useSupplierStore } from "@/stores/supplier.store";
 import { useOrderStore } from "@/stores/order.store";
 import { formatPrice } from "@/lib/formatters";
+import { resolveBoolean } from "@/lib/coerce";
 import { getInitials } from "@/lib/utils";
 import { PlaceOrderDialog } from "../../components/order/PlaceOrderDialog";
 import toast from "react-hot-toast";
@@ -99,7 +100,7 @@ export const CartPage: React.FC<CartPageProps> = ({ config }) => {
     return DEFAULT_VAT_RATE;
   };
   const resolveProductShipping = (product?: any) => {
-    const deliveryAvailable = product?.delivery_available !== false;
+    const deliveryAvailable = resolveBoolean(product?.delivery_available, true);
     if (!deliveryAvailable) return { shipping: 0, blocked: true };
 
     const feePerKm = Number(product?.delivery_fee_per_km || 0);
