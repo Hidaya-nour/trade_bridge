@@ -5,6 +5,7 @@ export interface IProduct {
   category: string;
   sku: string;
   description: string;
+  pickup_location: string;
   specifications?: Record<string, string> | null;
   price: number;
   stock_quantity: number;
@@ -44,6 +45,7 @@ export interface IProductResponse {
   category: string;
   sku: string;
   description: string;
+  pickup_location: string;
   specifications?: Record<string, string> | null;
   price: number;
   stock_quantity: number;

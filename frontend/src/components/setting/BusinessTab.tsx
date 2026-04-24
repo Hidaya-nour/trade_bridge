@@ -50,6 +50,7 @@ type AddressForm = {
   region: string;
   city: string;
   subcity: string;
+  commonName: string;
   latitude: string;
   longitude: string;
 };
@@ -361,6 +362,25 @@ const BusinessTab: React.FC<BusinessTabProps> = ({
                     }
                     placeholder="e.g. Bole"
                   />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="businessCommonName">
+                    Area / Common Name (optional)
+                  </Label>
+                  <Input
+                    id="businessCommonName"
+                    value={addressForm.commonName}
+                    onChange={(e) =>
+                      setAddressForm((prev) => ({
+                        ...prev,
+                        commonName: e.target.value,
+                      }))
+                    }
+                    placeholder="e.g. Near Edna Mall"
+                  />
+                  <p className="text-[11px] text-muted-foreground">
+                    Used as your pickup location for deliveries (shown to buyers and drivers).
+                  </p>
                 </div>
                 <div className="space-y-2 md:col-span-2">
                   <div className="flex items-center justify-between gap-3">

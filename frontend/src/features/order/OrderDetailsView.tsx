@@ -72,6 +72,7 @@ import type {
   OrderStatus,
   OrderDetailsData,
   OrderDetailsLinks,
+  DeliveryStatus,
 } from "@/types/order.types";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -141,10 +142,59 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
   const [reportReason, setReportReason] = useState<string>("fraud");
   const [reportDescription, setReportDescription] = useState<string>("");
   const [reportSubmitting, setReportSubmitting] = useState(false);
+  const [deliveryRecord, setDeliveryRecord] = useState<any | null>(null);
+  const [deliveryFetching, setDeliveryFetching] = useState(false);
 
   useEffect(() => {
     setOrder(initialOrder);
   }, [initialOrder]);
+
+  useEffect(() => {
+    const deliveryId = order.delivery?.deliveryId;
+    if (!deliveryId) {
+      setDeliveryRecord(null);
+      return;
+    }
+
+    let cancelled = false;
+    setDeliveryFetching(true);
+    (async () => {
+      try {
+        const res = await deliveryService.getById(String(deliveryId));
+        const nextDelivery =
+          res?.data?.delivery || res?.data || res?.delivery || null;
+        if (!cancelled) setDeliveryRecord(nextDelivery);
+      } catch {
+        if (!cancelled) setDeliveryRecord(null);
+      } finally {
+        if (!cancelled) setDeliveryFetching(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [order.delivery?.deliveryId]);
+
+  const getDeliveryStatusBadge = (status?: DeliveryStatus | string | null) => {
+    const raw = String(status || "").trim().toLowerCase();
+    if (!raw) return <StatusBadge status={"pending" as any} />;
+
+    const normalized = raw.replace(/_/g, "-");
+    return <StatusBadge status={normalized as any} />;
+  };
+
+  const normalizeTel = (value?: string | null) => {
+    const raw = String(value || "").trim();
+    if (!raw) return null;
+    return raw;
+  };
+
+  const normalizeWhatsapp = (value?: string | null) => {
+    const raw = String(value || "");
+    const digits = raw.replace(/[^\d]/g, "");
+    return digits ? digits : null;
+  };
 
   const getStatusProgress = (status: OrderStatus): number => {
     switch (status) {
@@ -309,13 +359,11 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
           const createPayload: any = {
             order_id: order.id,
             dropoff_location: order.delivery?.address || "Not provided",
-            pickup_location: "Not provided",
+            pickup_location: "",
           };
           const created = await deliveryService.create(createPayload);
           deliveryId =
-            created?.data?.delivery?.id ||
-            created?.data?.id ||
-            created?.id;
+            created?.data?.delivery?.id || created?.data?.id || created?.id;
         }
 
         if (!deliveryId) {
@@ -401,6 +449,25 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
       className: "text-green-600",
     },
   ].filter((item) => Boolean(item.value));
+
+  const effectivePickupLocation =
+    deliveryRecord?.pickup_location ||
+    (order.delivery as any)?.pickupLocation ||
+    "Not provided";
+  const effectiveDeliveryStatus =
+    deliveryRecord?.status || (order.delivery as any)?.status || "pending";
+  const effectiveDriverName =
+    deliveryRecord?.driver?.driverUser?.full_name ||
+    deliveryRecord?.driver?.full_name ||
+    order.delivery?.driverName ||
+    null;
+  const effectiveDriverPhone =
+    deliveryRecord?.driver?.driverUser?.phone ||
+    deliveryRecord?.driver?.phone ||
+    order.delivery?.driverPhone ||
+    null;
+  const telPhone = normalizeTel(effectiveDriverPhone);
+  const waPhone = normalizeWhatsapp(effectiveDriverPhone);
 
   return (
     <div className="space-y-6">
@@ -527,12 +594,29 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
+                  <p className="text-xs text-muted-foreground">Pickup Location</p>
+                  <div className="flex items-start gap-2">
+                    <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
+                    <p className="text-sm">{effectivePickupLocation}</p>
+                  </div>
+                </div>
+                <div className="space-y-2">
                   <p className="text-xs text-muted-foreground">
                     Delivery Address
                   </p>
                   <div className="flex items-start gap-2">
                     <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
                     <p className="text-sm">{order.delivery.address}</p>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <p className="text-xs text-muted-foreground">Delivery Status</p>
+                  <div className="flex items-center gap-2">
+                    {deliveryFetching ? (
+                      <Badge variant="outline">Loading...</Badge>
+                    ) : (
+                      getDeliveryStatusBadge(effectiveDeliveryStatus)
+                    )}
                   </div>
                 </div>
                 <div className="space-y-2">
@@ -580,18 +664,66 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                 </Button>
               )}
 
-              {order.delivery.driverName && (
-                <div className="bg-blue-50 border border-blue-100 rounded-lg p-3">
-                  <div className="flex items-center gap-2">
-                    <User className="h-4 w-4 text-blue-600" />
-                    <div>
-                      <p className="text-xs font-medium text-blue-800">
-                        Delivery Driver
-                      </p>
-                      <p className="text-xs text-blue-700">
-                        {order.delivery.driverName} -{" "}
-                        {order.delivery.driverPhone}
-                      </p>
+              {effectiveDriverName && (
+                <div className="bg-blue-50 border border-blue-100 rounded-lg p-3 space-y-2">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-2">
+                      <User className="h-4 w-4 text-blue-600 mt-0.5" />
+                      <div>
+                        <p className="text-xs font-medium text-blue-800">
+                          Delivery Driver
+                        </p>
+                        <p className="text-xs text-blue-700">
+                          {effectiveDriverName}
+                          {effectiveDriverPhone ? ` - ${effectiveDriverPhone}` : ""}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2 justify-end">
+                      {telPhone && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 text-xs bg-white"
+                          asChild
+                        >
+                          <a href={`tel:${telPhone}`}>
+                            <Phone className="h-3.5 w-3.5 mr-1.5" />
+                            Call
+                          </a>
+                        </Button>
+                      )}
+                      {telPhone && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 text-xs bg-white"
+                          asChild
+                        >
+                          <a href={`sms:${telPhone}`}>
+                            <MessageSquare className="h-3.5 w-3.5 mr-1.5" />
+                            SMS
+                          </a>
+                        </Button>
+                      )}
+                      {waPhone && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 text-xs bg-white"
+                          asChild
+                        >
+                          <a
+                            href={`https://wa.me/${waPhone}`}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            <MessageSquare className="h-3.5 w-3.5 mr-1.5" />
+                            WhatsApp
+                          </a>
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -880,17 +1012,6 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
               <Button
                 variant="outline"
                 className="w-full justify-start"
-                asChild
-              >
-                <Link to={receiptUrl}>
-                  <Download className="mr-2 h-4 w-4" />
-                  Download Receipt
-                </Link>
-              </Button>
-
-              <Button
-                variant="outline"
-                className="w-full justify-start"
                 onClick={() => navigate(`${receiptUrl}?print=1`)}
               >
                 <Printer className="mr-2 h-4 w-4" />
@@ -1004,7 +1125,10 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
             >
               Cancel
             </Button>
-            <Button onClick={() => void handleSubmitReport()} disabled={reportSubmitting}>
+            <Button
+              onClick={() => void handleSubmitReport()}
+              disabled={reportSubmitting}
+            >
               {reportSubmitting ? "Submitting..." : "Submit Report"}
             </Button>
           </DialogFooter>

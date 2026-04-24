@@ -102,6 +102,9 @@ const mapOrderToDetails = (order: Order): OrderDetailsData => {
     items,
     timeline: buildTimeline(order),
     delivery: {
+      deliveryId: order.delivery?.id,
+      pickupLocation: order.delivery?.pickup_location,
+      status: order.delivery?.status,
       address: order.delivery?.dropoff_location || "Not provided",
       recipient: recipientName,
       phone: "N/A",

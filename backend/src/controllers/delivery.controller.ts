@@ -167,7 +167,7 @@ class DeliveryController {
       }
 
       const { orderId } = req.params;
-      const { driver_id, pickup_location, dropoff_location } = req.body;
+      const { driver_id, dropoff_location } = req.body;
       if (!driver_id) {
         return res.status(400).json({ success: false, message: 'driver_id is required' });
       }
@@ -176,7 +176,6 @@ class DeliveryController {
         orderId,
         buyerId,
         driverRecordId: String(driver_id || ''),
-        pickup_location,
         dropoff_location,
       });
 

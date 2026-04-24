@@ -336,9 +336,6 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ onMenuClick }) => {
                     >
                       <Link to={`/${user.role}/cart`}>
                         <ShoppingCart className="h-5 w-5" />
-                        <Badge className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center bg-primary text-[10px] font-medium text-primary-foreground ring-2 ring-background">
-                          3
-                        </Badge>
                       </Link>
                     </Button>
                   </TooltipTrigger>

@@ -294,7 +294,7 @@ export const IncomingOrders: React.FC<IncomingOrdersProps> = ({
         const createPayload: any = {
           order_id: assigningOrder.id,
           dropoff_location: assigningOrder.customerLocation || "Not provided",
-          pickup_location: "Not provided",
+          pickup_location: "",
         };
         const created = await deliveryService.create(createPayload);
         deliveryId =

@@ -235,7 +235,7 @@ export class OrderService {
 
     if (availablePaymentMethods.length === 0) {
       throw new AppError(
-        'Supplier has no active payment methods. Please ask supplier to add one before placing orders.',
+        'This supplier has no active payment methods set up, so you cannot place an order right now. Please contact the supplier or choose another supplier.',
         400,
       );
     }

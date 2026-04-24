@@ -147,7 +147,11 @@ const PurchaseOrdersPage: React.FC = () => {
       };
     } catch (err) {
       console.error("Reorder failed:", err);
-      toast.error("Failed to place order");
+      const message =
+        (err as any)?.response?.data?.message ||
+        (err as any)?.message ||
+        "Failed to place order";
+      toast.error(message);
       return;
     }
   };

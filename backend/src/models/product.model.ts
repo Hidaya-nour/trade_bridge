@@ -25,6 +25,7 @@ export class Product extends Model<IProduct, ProductCreationAttributes> implemen
   public category!: string;
   public sku!: string;
   public description!: string;
+  public pickup_location!: string;
   public specifications?: Record<string, string> | null;
   public price!: number;
   public stock_quantity!: number;
@@ -82,6 +83,11 @@ Product.init(
     description: {
       type: DataTypes.TEXT,
       allowNull: true,
+    },
+    pickup_location: {
+      type: DataTypes.STRING(255),
+      allowNull: false,
+      defaultValue: '',
     },
     specifications: {
       type: DataTypes.JSON,

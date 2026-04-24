@@ -74,6 +74,7 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
     min_order_amount: "",
     stock_quantity: "",
     description: "",
+    pickup_location: "",
     is_available: true,
     delivery_available: true,
     delivery_pricing: "free" as "free" | "paid",
@@ -102,6 +103,7 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
         min_order_amount: product.min_order_amount?.toString() || "",
         stock_quantity: product.stock_quantity?.toString() || "",
         description: product.description || "",
+        pickup_location: (product as any).pickup_location || "",
         is_available: product.is_available ?? true,
         delivery_available: product.delivery_available ?? true,
         delivery_pricing: product.delivery_pricing || "free",
@@ -406,6 +408,26 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
                   required
                 />
               </div>
+            </div>
+
+            {/* Pickup Location */}
+            <div className="space-y-2">
+              <Label htmlFor="pickup_location">Pickup Location</Label>
+              <Textarea
+                id="pickup_location"
+                placeholder="Optional. Leave empty to use your account address."
+                rows={2}
+                value={(formData as any).pickup_location}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    pickup_location: e.target.value,
+                  } as any)
+                }
+              />
+              <p className="text-xs text-muted-foreground">
+                Buyers will see this as the pickup point for drivers.
+              </p>
             </div>
 
             {/* Description */}

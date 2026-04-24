@@ -121,6 +121,8 @@ const mapOrderToDetails = (
     timeline: buildTimeline(order),
     delivery: {
       deliveryId: order.delivery?.id,
+      pickupLocation: (order.delivery as any)?.pickup_location,
+      status: (order.delivery as any)?.status,
       address,
       recipient: recipientName,
       phone: "N/A",

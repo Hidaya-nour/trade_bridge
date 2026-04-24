@@ -1,7 +1,7 @@
 // components/shared/PlaceOrderDialog.tsx
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { CreditCard, Smartphone, Truck } from "lucide-react";
+import { CreditCard, Smartphone, Truck, Plus, Minus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -25,6 +25,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 
 import { formatPrice } from "@/lib/formatters";
 import toast from "react-hot-toast";
@@ -73,6 +74,7 @@ export interface PlaceOrderDialogProps {
     paymentDetails?: PaymentDetails,
     documents?: File[],
   ) => Promise<boolean>;
+  onUpdateItemQuantity?: (productId: string, nextQuantity: number) => void;
   isPlacing?: boolean;
 }
 
@@ -102,6 +104,7 @@ export const PlaceOrderDialog: React.FC<PlaceOrderDialogProps> = ({
   supplierPaymentMethods,
   onPlaceOrder,
   onProcessPayment,
+  onUpdateItemQuantity,
   isPlacing: externalIsPlacing,
 }) => {
   const navigate = useNavigate();
@@ -270,14 +273,113 @@ export const PlaceOrderDialog: React.FC<PlaceOrderDialogProps> = ({
               </div>
               <div className="space-y-3">
                 {items.map((item) => (
-                  <div key={item.id} className="flex justify-between text-sm">
-                    <div>
+                  <div key={item.id} className="flex justify-between gap-4 text-sm">
+                    <div className="min-w-0">
                       <span className="font-medium">{item.product?.name}</span>
-                      <span className="text-muted-foreground ml-2">
-                        x{item.quantity} {item.product?.unit_type}
-                      </span>
+                      {onUpdateItemQuantity ? (
+                        <div className="mt-1 flex items-center gap-2">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            className="h-7 w-7 p-0"
+                            disabled={
+                              isPlacing ||
+                              item.quantity <=
+                                Math.max(
+                                  1,
+                                  Number(
+                                    (item.product as any)?.min_order_amount ||
+                                      1,
+                                  ),
+                                )
+                            }
+                            onClick={() => {
+                              const productId = String(
+                                item.product_id ||
+                                  (item.product as any)?.id ||
+                                  item.id,
+                              );
+                              const min = Math.max(
+                                1,
+                                Number(
+                                  (item.product as any)?.min_order_amount || 1,
+                                ),
+                              );
+                              onUpdateItemQuantity(
+                                productId,
+                                Math.max(min, item.quantity - 1),
+                              );
+                            }}
+                          >
+                            <Minus className="h-3 w-3" />
+                          </Button>
+
+                          <Input
+                            type="number"
+                            min={Math.max(
+                              1,
+                              Number((item.product as any)?.min_order_amount || 1),
+                            )}
+                            value={item.quantity}
+                            disabled={isPlacing}
+                            onChange={(e) => {
+                              const productId = String(
+                                item.product_id ||
+                                  (item.product as any)?.id ||
+                                  item.id,
+                              );
+                              const min = Math.max(
+                                1,
+                                Number(
+                                  (item.product as any)?.min_order_amount || 1,
+                                ),
+                              );
+                              const parsed = parseInt(e.target.value, 10);
+                              if (!Number.isFinite(parsed)) return;
+                              onUpdateItemQuantity(productId, Math.max(min, parsed));
+                            }}
+                            className="h-7 w-20 text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                          />
+
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            className="h-7 w-7 p-0"
+                            disabled={isPlacing}
+                            onClick={() => {
+                              const productId = String(
+                                item.product_id ||
+                                  (item.product as any)?.id ||
+                                  item.id,
+                              );
+                              const min = Math.max(
+                                1,
+                                Number(
+                                  (item.product as any)?.min_order_amount || 1,
+                                ),
+                              );
+                              onUpdateItemQuantity(
+                                productId,
+                                Math.max(min, item.quantity + 1),
+                              );
+                            }}
+                          >
+                            <Plus className="h-3 w-3" />
+                          </Button>
+
+                          <span className="text-xs text-muted-foreground truncate">
+                            {item.product?.unit_type}
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground ml-2">
+                          x{item.quantity} {item.product?.unit_type}
+                        </span>
+                      )}
                     </div>
-                    <span>
+                    <span className="shrink-0">
                       {formatPrice((item.product?.price || 0) * item.quantity)}
                     </span>
                   </div>

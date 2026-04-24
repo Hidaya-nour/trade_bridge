@@ -5,9 +5,93 @@ import Driver from '../../models/driver.model';
 import User from '../../models/user.model';
 import OrderItems from '../../models/order-item.model';
 import Product from '../../models/product.model';
+import Address from '../../models/address.model';
 import { AppError } from '../../utils/errors';
 
 class DeliveryService {
+  private validateStatusTransition(current: string, next: string) {
+    const transitions: Record<string, string[]> = {
+      pending: ['assigned', 'cancelled'],
+      assigned: ['picked_up', 'cancelled'],
+      picked_up: ['in_transit', 'failed', 'cancelled'],
+      in_transit: ['delivered', 'failed', 'cancelled'],
+      delivered: [],
+      failed: [],
+      cancelled: [],
+    };
+
+    const allowed = transitions[current] || [];
+    if (!allowed.includes(next)) {
+      throw new AppError(`Cannot transition delivery from ${current} to ${next}`, 400);
+    }
+  }
+
+  private isBlankLocation(value: any) {
+    const raw = String(value || '').trim().toLowerCase();
+    return !raw || raw === 'not provided' || raw === 'n/a';
+  }
+
+  private async resolveOrderPickupLocation(orderId: string) {
+    const order = await Order.findByPk(orderId, {
+      attributes: ['id', 'supplier_id'],
+    });
+    if (!order) return '';
+
+    const address = await Address.findOne({
+      where: { user_id: (order as any).supplier_id } as any,
+      order: [['created_at', 'DESC']],
+      attributes: ['city', 'subcity', 'common_name'],
+    });
+
+    const city = String((address as any)?.city || '').trim();
+    const subcity = String((address as any)?.subcity || '').trim();
+    const commonName = String((address as any)?.common_name || '').trim();
+    const addressPickup = [commonName, subcity, city]
+      .filter(Boolean)
+      .filter((value, index, all) => all.findIndex((v) => v.toLowerCase() === value.toLowerCase()) === index)
+      .join(', ');
+
+    // Prefer explicit product pickup location if available (orders are per supplier),
+    // but never fallback to supplier name (we want geographic pickup, not identity).
+    try {
+      const sampleItem = await OrderItems.findOne({
+        where: { order_id: orderId } as any,
+        include: [
+          {
+            model: Product,
+            as: 'product',
+            attributes: ['pickup_location'],
+            required: false,
+          } as any,
+        ],
+      });
+
+      const productPickupRaw = String(
+        (sampleItem as any)?.product?.pickup_location || '',
+      ).trim();
+
+      if (!this.isBlankLocation(productPickupRaw)) {
+        // Avoid showing supplier/business names as pickup locations.
+        const supplier = await User.findByPk((order as any).supplier_id, {
+          attributes: ['business_name', 'full_name'],
+        });
+        const businessName = String((supplier as any)?.business_name || '').trim();
+        const fullName = String((supplier as any)?.full_name || '').trim();
+        const isSupplierName =
+          (businessName &&
+            productPickupRaw.toLowerCase() === businessName.toLowerCase()) ||
+          (fullName && productPickupRaw.toLowerCase() === fullName.toLowerCase());
+
+        if (isSupplierName) return addressPickup || '';
+        return productPickupRaw;
+      }
+    } catch {
+      // ignore lookup failures; fallback to address pickup
+    }
+
+    return addressPickup || '';
+  }
+
   async getSupplierDeliveries(
     supplierId: string,
     params?: { limit?: number },
@@ -228,6 +312,11 @@ class DeliveryService {
   }
 
   async createDelivery(orderId: string, pickup: string, dropoff: string) {
+    const pickupValue = this.isBlankLocation(pickup)
+      ? await this.resolveOrderPickupLocation(orderId)
+      : String(pickup || '').trim();
+
+    const dropoffValue = String(dropoff || '').trim();
     const existing = await Delivery.findOne({
       where: { order_id: orderId } as any,
     });
@@ -235,13 +324,17 @@ class DeliveryService {
     if (existing) {
       let changed = false;
 
-      if (pickup && existing.pickup_location !== pickup) {
-        existing.pickup_location = pickup as any;
+      if (
+        pickupValue &&
+        (this.isBlankLocation(existing.pickup_location) ||
+          existing.pickup_location !== pickupValue)
+      ) {
+        existing.pickup_location = pickupValue as any;
         changed = true;
       }
 
-      if (dropoff && existing.dropoff_location !== dropoff) {
-        existing.dropoff_location = dropoff as any;
+      if (dropoffValue && existing.dropoff_location !== dropoffValue) {
+        existing.dropoff_location = dropoffValue as any;
         changed = true;
       }
 
@@ -254,8 +347,8 @@ class DeliveryService {
 
     const delivery = await Delivery.create({
       order_id: orderId,
-      pickup_location: pickup,
-      dropoff_location: dropoff,
+      pickup_location: pickupValue,
+      dropoff_location: dropoffValue,
       status: 'pending'
     } as any);
     return delivery;
@@ -284,7 +377,31 @@ class DeliveryService {
     const delivery = await Delivery.findByPk(deliveryId);
     if (!delivery) return null;
 
-    if (actingUserRole === 'driver') {
+    const current = String(delivery.status || 'pending');
+    this.validateStatusTransition(current, status);
+
+    // Only drivers can move deliveries forward (accept/pickup/transit/deliver).
+    // Non-driver actors may only cancel deliveries they are involved in (buyer/supplier/admin).
+    if (actingUserRole !== 'driver') {
+      if (status !== 'cancelled') {
+        throw new AppError('Only the assigned driver can update delivery status', 403);
+      }
+
+      const order = await Order.findByPk(delivery.order_id, {
+        attributes: ['id', 'buyer_id', 'supplier_id'],
+      });
+      if (!order) {
+        throw new AppError('Order not found for delivery', 404);
+      }
+
+      const allowedCanceller =
+        actingUserRole === 'admin' ||
+        (actingUserId && (order.buyer_id === actingUserId || order.supplier_id === actingUserId));
+
+      if (!allowedCanceller) {
+        throw new AppError('You cannot cancel this delivery', 403);
+      }
+    } else {
       const driverRecord = await Driver.findOne({
         where: { driver_id: actingUserId, active: true },
         attributes: ['id'],
@@ -325,9 +442,6 @@ class DeliveryService {
     }
 
     delivery.driver_id = driverId as any;
-    if (delivery.status === 'pending') {
-      delivery.status = 'assigned' as any;
-    }
     await delivery.save();
     return delivery;
   }
@@ -367,20 +481,17 @@ class DeliveryService {
     if (!delivery) {
       delivery = await this.createDelivery(
         params.orderId,
-        String(params.pickup_location || ''),
+        '',
         dropoff,
       );
     } else {
-      if (params.pickup_location !== undefined) {
-        delivery.pickup_location = String(params.pickup_location || '');
+      if (this.isBlankLocation(delivery.pickup_location)) {
+        delivery.pickup_location = await this.resolveOrderPickupLocation(params.orderId);
       }
       delivery.dropoff_location = dropoff;
     }
 
     delivery.driver_id = params.driverRecordId as any;
-    if (delivery.status === 'pending') {
-      delivery.status = 'assigned' as any;
-    }
     await delivery.save();
 
     return delivery;
@@ -437,54 +548,6 @@ class DeliveryService {
     return (rows as any[]).map((r) => (typeof r.get === 'function' ? r.get({ plain: true }) : r));
   }
 
-  async getSupplierDeliveries(supplierId: string) {
-    const deliveries = await Delivery.findAll({
-      include: [
-        {
-          model: Order,
-          as: 'order',
-          required: true,
-          where: { supplier_id: supplierId },
-          attributes: ['id', 'order_status', 'created_at', 'buyer_id'],
-          include: [
-            {
-              model: User,
-              as: 'buyer',
-              attributes: ['id', 'full_name', 'email', 'business_name', 'phone'],
-            },
-            {
-              model: OrderItems,
-              as: 'items',
-              attributes: ['id', 'quantity'],
-              include: [
-                {
-                  model: Product,
-                  as: 'product',
-                  attributes: ['id', 'name', 'unit_type'],
-                },
-              ],
-            },
-          ],
-        } as any,
-        {
-          model: Driver,
-          as: 'driver',
-          required: false,
-          attributes: ['id', 'vehicle_type', 'license_plate', 'driver_id', 'active'],
-          include: [
-            {
-              model: User,
-              as: 'driverUser',
-              attributes: ['id', 'full_name', 'email', 'phone'],
-            },
-          ],
-        } as any,
-      ],
-      order: [['updated_at', 'DESC']],
-    });
-
-    return deliveries;
-  }
 }
 
 export default new DeliveryService();

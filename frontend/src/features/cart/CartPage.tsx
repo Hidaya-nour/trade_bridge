@@ -266,7 +266,11 @@ export const CartPage: React.FC<CartPageProps> = ({ config }) => {
       }
     } catch (error) {
       console.error("Order placement error:", error);
-      toast.error("Failed to place order: " + (error as Error).message);
+      const message =
+        (error as any)?.response?.data?.message ||
+        (error as any)?.message ||
+        "Failed to place order";
+      toast.error(message);
       return;
     }
   };

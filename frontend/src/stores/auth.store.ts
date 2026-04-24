@@ -116,12 +116,20 @@ export const useAuthStore = create<AuthState>()(
 
           return { user, tokens };
         } catch (error: any) {
+          const code = error.response?.data?.code as
+            | "ACCOUNT_SUSPENDED"
+            | "ACCOUNT_INACTIVE"
+            | undefined;
           const message =
             error.response?.data?.message ||
             error.message ||
             "Login failed";
 
-          set({ error: message, isLoading: false });
+          set({
+            error: message,
+            isLoading: false,
+            accountBlocked: code ? { code, message } : null,
+          });
           throw new Error(message);
         }
       },

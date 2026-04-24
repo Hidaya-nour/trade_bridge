@@ -35,6 +35,7 @@ import { VerificationsPage } from "./pages/admin/VerificationsPage";
 import { DisputesManagementPage } from "./pages/admin/DisputesManagementPage";
 import { ReportsPage } from "./pages/admin/ReportsPage";
 import UserReportsManagementPage from "./pages/admin/UserReportsManagementPage";
+import AdminOrderDetailsPage from "./pages/admin/AdminOrderDetailsPage";
 import { DriverDashboard } from "./pages/driver/DashboardPage";
 import PaymentsPage from "./features/payment/Payments";
 import DistributorOrderDetailsPage from "./pages/distributor/DistributorOrderDetails";
@@ -564,6 +565,14 @@ function App() {
             element={
               <DashboardLayout>
                 <ProductListingsPage />
+              </DashboardLayout>
+            }
+          />
+          <Route
+            path="/admin/orders/:id"
+            element={
+              <DashboardLayout>
+                <AdminOrderDetailsPage />
               </DashboardLayout>
             }
           />

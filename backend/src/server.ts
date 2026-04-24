@@ -39,6 +39,7 @@ import './models/factory-agent.model';
 import './models/rating-reviews.model';
 import './models/supplier-review.model';
 import UserReport from './models/user-report.model';
+import SuspensionAppeal from './models/suspension-appeal.model';
 import './models/driver.model';
 import './models/dispute.model';
 import './models/payment.model';
@@ -223,6 +224,14 @@ const startServer = async () => {
     await UserReport.sync();
   } catch (error) {
     logger.warn('Failed to ensure user_reports table exists', error);
+  }
+
+  // Suspension appeals are intentionally kept in a small, isolated table so
+  // suspended users can submit an appeal without needing access to protected APIs.
+  try {
+    await SuspensionAppeal.sync();
+  } catch (error) {
+    logger.warn('Failed to ensure suspension_appeals table exists', error);
   }
 
   app.listen(PORT, () => {

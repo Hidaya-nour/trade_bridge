@@ -53,6 +53,7 @@ import deliveryService from "@/services/delivery.service";
 // ============================================================================
 
 type DeliveryStatus =
+  | "pending"
   | "assigned"
   | "picked_up"
   | "in_transit"
@@ -102,7 +103,7 @@ interface DriverStats {
 }
 
 const mapApiDelivery = (delivery: any): Delivery => {
-  const status = (delivery?.status || "assigned") as DeliveryStatus;
+  const status = (delivery?.status || "pending") as DeliveryStatus;
   const items = Array.isArray(delivery?.order?.items)
     ? delivery.order.items.map((item: any) => ({
         name: item?.product?.name || "Item",
@@ -152,6 +153,7 @@ const mapApiDelivery = (delivery: any): Delivery => {
 // ============================================================================
 
 const statusColors: Record<DeliveryStatus, string> = {
+  pending: "bg-yellow-100 text-yellow-800 border-yellow-200",
   assigned: "bg-blue-100 text-blue-800 border-blue-200",
   picked_up: "bg-purple-100 text-purple-800 border-purple-200",
   in_transit: "bg-indigo-100 text-indigo-800 border-indigo-200",
@@ -161,6 +163,7 @@ const statusColors: Record<DeliveryStatus, string> = {
 };
 
 const statusIcons: Record<DeliveryStatus, React.ElementType> = {
+  pending: Clock,
   assigned: Clock,
   picked_up: Package,
   in_transit: Truck,
@@ -170,6 +173,7 @@ const statusIcons: Record<DeliveryStatus, React.ElementType> = {
 };
 
 const statusLabels: Record<DeliveryStatus, string> = {
+  pending: "Pending Acceptance",
   assigned: "Assigned",
   picked_up: "Picked Up",
   in_transit: "In Transit",
@@ -272,6 +276,8 @@ export const DriverDashboard: React.FC = () => {
             : delivery,
         ),
       );
+    } catch (error) {
+      console.error("Failed to update delivery status:", error);
     } finally {
       setShowStatusDialog(false);
       setSelectedDelivery(null);
@@ -513,6 +519,21 @@ export const DriverDashboard: React.FC = () => {
                           <Eye className="h-4 w-4 mr-2" />
                           Details
                         </Button>
+
+                        {delivery.status === "pending" && (
+                          <Button
+                            size="sm"
+                            className="w-full bg-blue-600 hover:bg-blue-700"
+                            onClick={() => {
+                              setSelectedDelivery(delivery);
+                              setNewStatus("assigned");
+                              setShowStatusDialog(true);
+                            }}
+                          >
+                            <CheckCircle2 className="h-4 w-4 mr-2" />
+                            Accept
+                          </Button>
+                        )}
 
                         {delivery.status === "assigned" && (
                           <Button

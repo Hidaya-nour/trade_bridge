@@ -11,6 +11,7 @@ export class Address extends Model<IAddress, AddressCreationAttributes> implemen
   public region!: string;
   public city!: string;
   public subcity?: string | null;
+  public common_name?: string | null;
   public latitude?: number | null;
   public longitude?: number | null;
   public created_at?: Date;
@@ -27,6 +28,7 @@ Address.init(
     region: { type: DataTypes.STRING(100), allowNull: false },
     city: { type: DataTypes.STRING(100), allowNull: false },
     subcity: { type: DataTypes.STRING(100), allowNull: true },
+    common_name: { type: DataTypes.STRING(120), allowNull: true },
     latitude: { type: DataTypes.DECIMAL(9,6), allowNull: true },
     longitude: { type: DataTypes.DECIMAL(9,6), allowNull: true },
     created_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },

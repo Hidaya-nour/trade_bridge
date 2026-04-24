@@ -105,7 +105,17 @@ const Login = () => {
 
             {displayError && (
               <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                {displayError}
+                <div>{displayError}</div>
+                {displayError.toLowerCase().includes("suspended") ? (
+                  <div className="mt-2">
+                    <Link
+                      to="/account-suspended"
+                      className="font-medium text-blue-700 hover:text-blue-900"
+                    >
+                      Submit an appeal
+                    </Link>
+                  </div>
+                ) : null}
               </div>
             )}
 

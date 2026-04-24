@@ -59,6 +59,7 @@ export interface ProductDetailProps {
     images?: string[];
     created_at: string;
     updated_at: string;
+    pickup_location?: string;
     // Supplier info
     supplierId?: string;
     supplierName?: string;
@@ -231,6 +232,14 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
                 Minimum order: {product.min_order_amount} {product.unit_type}
               </p>
             </div>
+
+            {/* Pickup location */}
+            {product.pickup_location ? (
+              <div className="mt-3 flex items-center text-sm text-muted-foreground">
+                <MapPin className="h-4 w-4 mr-2" />
+                Pickup: <span className="ml-1 text-foreground font-medium">{product.pickup_location}</span>
+              </div>
+            ) : null}
 
             {/* Stock Status */}
             <div className="mt-4">

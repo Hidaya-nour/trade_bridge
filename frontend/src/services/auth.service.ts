@@ -63,6 +63,11 @@ export const authService = {
     return response.data;
   },
 
+  async appealSuspension(payload: { email: string; message: string }) {
+    const response = await api.post('/auth/appeal-suspension', payload);
+    return response.data;
+  },
+
   async register(data: RegisterData) {
     const response = await api.post('/auth/register', data);
     return response.data;

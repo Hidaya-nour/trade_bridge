@@ -49,7 +49,7 @@ class DeliveryService {
     return response.data;
   }
 
-  async assignDriverForBuyer(orderId: string, payload: { driver_id: string; pickup_location?: string; dropoff_location: string }) {
+  async assignDriverForBuyer(orderId: string, payload: { driver_id: string; dropoff_location: string }) {
     const response = await api.post(`${this.BASE}/order/${orderId}/assign-driver`, payload);
     return response.data;
   }

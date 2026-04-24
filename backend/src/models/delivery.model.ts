@@ -126,23 +126,39 @@ Delivery.init(
             if (!order) return;
 
             if (
-              status === 'assigned' ||
-              status === 'picked_up' ||
-              status === 'in_transit'
+              status === 'assigned'
             ) {
               await Notification.create({
                 user_id: order.buyer_id,
                 type: 'delivery',
-                title: 'Delivery Started',
-                message: `Delivery for order ${order.id} has started.`,
+                title: 'Driver Accepted',
+                message: `A driver has accepted delivery for order ${order.id}.`,
                 is_read: 0,
               } as any);
 
               await Notification.create({
                 user_id: order.supplier_id,
                 type: 'delivery',
-                title: 'Delivery Started',
-                message: `Delivery for order ${order.id} has started.`,
+                title: 'Driver Accepted',
+                message: `A driver has accepted delivery for order ${order.id}.`,
+                is_read: 0,
+              } as any);
+            }
+
+            if (status === 'picked_up' || status === 'in_transit') {
+              await Notification.create({
+                user_id: order.buyer_id,
+                type: 'delivery',
+                title: 'Delivery In Progress',
+                message: `Delivery for order ${order.id} is in progress.`,
+                is_read: 0,
+              } as any);
+
+              await Notification.create({
+                user_id: order.supplier_id,
+                type: 'delivery',
+                title: 'Delivery In Progress',
+                message: `Delivery for order ${order.id} is in progress.`,
                 is_read: 0,
               } as any);
             }

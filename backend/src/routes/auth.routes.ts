@@ -52,6 +52,7 @@ router.post(
 );
 
 router.post('/logout', authController.logout);
+router.post('/appeal-suspension', authController.appealSuspension);
 
 // router.post(
 //   '/password-reset-request',

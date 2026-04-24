@@ -73,6 +73,8 @@ export class AddressController {
   static createValidation = [
     body('region').isString().notEmpty(),
     body('city').isString().notEmpty(),
+    body('subcity').optional().isString(),
+    body('common_name').optional().isString(),
     body('latitude').optional().isDecimal(),
     body('longitude').optional().isDecimal()
   ];

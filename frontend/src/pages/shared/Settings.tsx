@@ -287,6 +287,7 @@ const SettingsPage: React.FC = () => {
     region: "",
     city: "",
     subcity: "",
+    commonName: "",
     latitude: "",
     longitude: "",
   });
@@ -475,6 +476,11 @@ const SettingsPage: React.FC = () => {
       region: prev.region || latestAddress.region || "",
       city: prev.city || latestAddress.city || "",
       subcity: prev.subcity || latestAddress.subcity || "",
+      commonName:
+        prev.commonName ||
+        (latestAddress as any).commonName ||
+        (latestAddress as any).common_name ||
+        "",
       latitude:
         prev.latitude ||
         (latestAddress.latitude !== null && latestAddress.latitude !== undefined
@@ -504,6 +510,7 @@ const SettingsPage: React.FC = () => {
         region: addressForm.region.trim(),
         city: addressForm.city.trim(),
         subcity: addressForm.subcity?.trim() || undefined,
+        common_name: addressForm.commonName?.trim() || undefined,
       };
       if (addressForm.latitude) addressPayload.latitude = addressForm.latitude;
       if (addressForm.longitude)

@@ -4,10 +4,48 @@ import { AppError } from '../../utils/errors';
 import { IProductFilters } from '../../types/product.types';
 import logger from '../../utils/logger';
 import { isCloudinaryConfigured, uploadBufferToCloudinary } from '../../config/cloudinary';
+import Address from '../../models/address.model';
 
 export class ProductService {
   private productRepo = new ProductRepository();
   private userRepo = new UserRepository();
+
+  private async resolveSupplierDefaultPickupLocation(userId: string) {
+    const address = await Address.findOne({
+      where: { user_id: userId } as any,
+      order: [['created_at', 'DESC']],
+      attributes: ['city', 'subcity', 'common_name'],
+    });
+
+    if (address) {
+      const city = String((address as any).city || '').trim();
+      const subcity = String((address as any).subcity || '').trim();
+      const commonName = String((address as any).common_name || '').trim();
+      const parts = [commonName, subcity, city]
+        .filter(Boolean)
+        .filter((value, index, all) => all.findIndex((v) => v.toLowerCase() === value.toLowerCase()) === index);
+      if (parts.length) return parts.join(', ');
+    }
+
+    return '';
+  }
+
+  private async ensurePickupLocation(product: any) {
+    const current = String(product?.pickup_location || '').trim();
+    if (current) return product;
+
+    const fallback = await this.resolveSupplierDefaultPickupLocation(String(product?.supplier_id || ''));
+    if (!fallback) return product;
+
+    try {
+      await product.update({ pickup_location: fallback } as any);
+    } catch {
+      // ignore persistence issues; caller can still compute fallback if needed
+      (product as any).pickup_location = fallback;
+    }
+
+    return product;
+  }
 
   async getAllProducts(filters: IProductFilters) {
     return this.productRepo.findAllWithFilters(filters);
@@ -18,6 +56,7 @@ export class ProductService {
     if (!product || product.deleted_at) {
       throw new AppError('Product not found', 404);
     }
+    await this.ensurePickupLocation(product);
     return product;
   }
 
@@ -27,7 +66,11 @@ export class ProductService {
       throw new AppError('Supplier not found', 404);
     }
 
-    return this.productRepo.findBySupplier(supplierId);
+    const products = await this.productRepo.findBySupplier(supplierId);
+    for (const product of products as any[]) {
+      await this.ensurePickupLocation(product);
+    }
+    return products;
   }
 
   async createProduct(userId: string, productData: any) {
@@ -73,6 +116,10 @@ export class ProductService {
       name: productData.name,
       category: productData.category,
       description: productData.description || '',
+      pickup_location:
+        typeof productData.pickup_location === 'string' && productData.pickup_location.trim().length > 0
+          ? productData.pickup_location.trim()
+          : await this.resolveSupplierDefaultPickupLocation(userId),
       price: productData.price,
       stock_quantity: productData.stock_quantity || 0,
       min_order_amount: productData.min_order_amount || 1,
@@ -134,6 +181,11 @@ export class ProductService {
   delete updateData.id;
   delete updateData.supplier_id;
   delete updateData.created_at;
+
+  if (updateData.pickup_location !== undefined) {
+    const nextPickup = String(updateData.pickup_location || '').trim();
+    updateData.pickup_location = nextPickup || (await this.resolveSupplierDefaultPickupLocation(product.supplier_id));
+  }
 
   const updated = await this.productRepo.updateProduct(productId, updateData);
   if (!updated) throw new AppError('Failed to update product', 500);

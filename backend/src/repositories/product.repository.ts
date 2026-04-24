@@ -13,6 +13,17 @@ export class ProductRepository extends BaseRepository<Product> {
     super(Product);
   }
 
+  private readonly allowedSortColumns = new Set([
+    'created_at',
+    'updated_at',
+    'price',
+    'name',
+    'category',
+    'stock_quantity',
+    'rating',
+    'review_count',
+  ]);
+
   async findById(id: string): Promise<Product | null> {
     return this.model.findByPk(id, {
       include: [
@@ -31,11 +42,11 @@ export class ProductRepository extends BaseRepository<Product> {
       model: User,
       as: 'supplier',
       attributes: ['id', 'full_name', 'business_name', 'is_vat_registered', 'vat_rate'],
-      include: [
+          include: [
         {
           model: Address,
           as: 'addresses',
-          attributes: ['id', 'region', 'city', 'subcity', 'latitude', 'longitude']
+          attributes: ['id', 'region', 'city', 'subcity', 'common_name', 'latitude', 'longitude']
         }
       ]
     }
@@ -77,8 +88,11 @@ if (filters.supplier_id) {
     }
 
     const order: any = [];
-    if (filters.sortBy) {
-      order.push([filters.sortBy, filters.sortOrder || 'ASC']);
+    const sortBy = filters.sortBy && this.allowedSortColumns.has(filters.sortBy) ? filters.sortBy : undefined;
+    const sortOrder = filters.sortOrder === 'DESC' ? 'DESC' : 'ASC';
+
+    if (sortBy) {
+      order.push([sortBy, sortOrder]);
     } else {
       order.push(['created_at', 'DESC']);
     }
@@ -96,7 +110,7 @@ if (filters.supplier_id) {
           {
             model: Address,
             as: 'addresses',
-            attributes: ['id', 'region', 'city', 'subcity', 'latitude', 'longitude']
+            attributes: ['id', 'region', 'city', 'subcity', 'common_name', 'latitude', 'longitude']
           }
         ]
       }]

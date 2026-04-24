@@ -11,6 +11,7 @@ export interface Product {
   category: string;
   sku:string;
   description: string;
+  pickup_location?: string;
   specifications?: Record<string, string> | null;
   price: number;
   stock_quantity: number;
@@ -340,6 +341,7 @@ export interface ProductDetailData {
   images?: string[];
   created_at: string;
   updated_at: string;
+  pickup_location?: string;
   supplierId?: string;
   supplierName?: string;
   supplierType?: "factory" | "distributor";

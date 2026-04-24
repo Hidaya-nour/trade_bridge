@@ -23,7 +23,7 @@ export class DocumentRepository extends BaseRepository<Document> {
             {
               model: Address,
               as: 'addresses',
-              attributes: ['id', 'region', 'city', 'subcity', 'latitude', 'longitude', 'created_at', 'updated_at'],
+              attributes: ['id', 'region', 'city', 'subcity', 'common_name', 'latitude', 'longitude', 'created_at', 'updated_at'],
             },
           ],
         },

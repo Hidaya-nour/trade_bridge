@@ -14,6 +14,7 @@ const productValidation = [
   body('category').notEmpty().withMessage('Category is required'),
   body('price').isNumeric().withMessage('Price must be a number').custom(value => value >= 0),
   body('unit_type').notEmpty().withMessage('Unit type is required'),
+  body('pickup_location').optional().isString().withMessage('pickup_location must be a string'),
   body('min_order_amount').optional().isInt({ min: 1 }).withMessage('Min order must be at least 1'),
   body('stock_quantity').optional().isInt({ min: 0 }).withMessage('Stock quantity must be 0 or more'),
   body('is_available').optional().isBoolean().withMessage('is_available must be true or false'),

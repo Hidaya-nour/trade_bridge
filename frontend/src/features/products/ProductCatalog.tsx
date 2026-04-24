@@ -413,7 +413,11 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
       }
     } catch (error) {
       console.error("Order placement error:", error);
-      toast.error("Failed to place order: " + (error as Error).message);
+      const message =
+        (error as any)?.response?.data?.message ||
+        (error as any)?.message ||
+        "Failed to place order";
+      toast.error(message);
       return;
     }
   };
@@ -1666,6 +1670,7 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
           supplierPaymentMethods={supplierPaymentMethods}
           onPlaceOrder={handlePlaceOrder}
           onProcessPayment={handleProcessPayment as any}
+          onUpdateItemQuantity={(_, nextQuantity) => setOrderQuantity(nextQuantity)}
           isPlacing={orderLoading}
         />
       )}

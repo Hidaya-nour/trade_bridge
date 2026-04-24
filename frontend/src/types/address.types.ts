@@ -8,6 +8,7 @@ export interface Address {
   region: string;
   city: string;
   subcity?: string | null;
+  common_name?: string | null;
   latitude?: number | null;
   longitude?: number | null;
   created_at?: string | Date;

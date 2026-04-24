@@ -101,6 +101,7 @@ export type OrderDriver = {
 export type OrderDelivery = {
   deliveryId?: string;
   address: string;
+  pickupLocation?: string;
   recipient: string;
   phone: string;
   requestedDate?: string;
@@ -108,6 +109,7 @@ export type OrderDelivery = {
   actualDate?: string;
   trackingNumber?: string | null;
   carrier?: string | null;
+  status?: DeliveryStatus | string | null;
   driverId?: number | string | null;
   driverName?: string | null;
   driverPhone?: string | null;

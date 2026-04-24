@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   Package,
   Search,
@@ -62,6 +63,7 @@ import { useProductStore } from "@/stores/product.store";
 import type { Product } from "@/types/product.types";
 
 const ProductListingsPage: React.FC = () => {
+  const [searchParams] = useSearchParams();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedStatus, setSelectedStatus] = useState("all");
@@ -91,6 +93,15 @@ const ProductListingsPage: React.FC = () => {
   }, [fetchProducts, fetchCategories]);
 
   useEffect(() => {
+    const supplierId = searchParams.get("supplier_id");
+    const initialSearch = searchParams.get("search");
+    const desired = supplierId || initialSearch;
+    if (desired && !searchQuery) {
+      setSearchQuery(desired);
+    }
+  }, [searchParams, searchQuery]);
+
+  useEffect(() => {
     if (error) {
       toast.error(error);
       clearError();
@@ -113,7 +124,8 @@ const ProductListingsPage: React.FC = () => {
         search === "" ||
         product.name.toLowerCase().includes(search) ||
         product.category.toLowerCase().includes(search) ||
-        supplierName.toLowerCase().includes(search);
+        supplierName.toLowerCase().includes(search) ||
+        String(product.supplier_id || "").toLowerCase().includes(search);
 
       const matchesCategory =
         selectedCategory === "all" || product.category === selectedCategory;

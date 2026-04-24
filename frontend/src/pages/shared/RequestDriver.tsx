@@ -51,7 +51,6 @@ const RequestDriverPage: React.FC = () => {
   const [drivers, setDrivers] = useState<MarketplaceDriver[]>([]);
   const [driversLoading, setDriversLoading] = useState(false);
   const [selectedDriverId, setSelectedDriverId] = useState<string>("");
-  const [pickupLocation, setPickupLocation] = useState("");
   const [dropoffLocation, setDropoffLocation] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -98,7 +97,6 @@ const RequestDriverPage: React.FC = () => {
     try {
       await deliveryService.assignDriverForBuyer(orderId, {
         driver_id: selectedDriverId,
-        pickup_location: pickupLocation.trim() || undefined,
         dropoff_location: dropoffLocation.trim(),
       });
       toast.success("Driver assigned successfully.");
@@ -141,19 +139,12 @@ const RequestDriverPage: React.FC = () => {
         <CardHeader>
           <CardTitle>Delivery Details</CardTitle>
         </CardHeader>
-        <CardContent className="grid gap-4 md:grid-cols-2">
+        <CardContent className="space-y-2">
+          <p className="text-sm text-muted-foreground">
+            Pickup is automatically set to the supplier pickup location (or the supplier address).
+          </p>
           <div className="space-y-2">
-            <Label htmlFor="pickup">Pickup location (optional)</Label>
-            <Textarea
-              id="pickup"
-              value={pickupLocation}
-              onChange={(e) => setPickupLocation(e.target.value)}
-              placeholder="e.g., Supplier warehouse, Industrial area..."
-              rows={3}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="dropoff">Drop-off location</Label>
+            <Label htmlFor="dropoff">Destination (drop-off location)</Label>
             <Textarea
               id="dropoff"
               value={dropoffLocation}
