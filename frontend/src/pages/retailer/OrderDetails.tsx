@@ -76,9 +76,14 @@ const mapOrderToDetails = (order: Order): OrderDetailsData => {
 
   const supplierName =
     order.supplier?.business_name || order.supplier?.full_name || "Supplier";
+  const supplierPhone =
+    (order.supplier as any)?.phone || (order.supplier as any)?.user?.phone;
+  const supplierEmail =
+    (order.supplier as any)?.email || (order.supplier as any)?.user?.email;
 
   const recipientName =
     order.buyer?.business_name || order.buyer?.full_name || "Recipient";
+  const recipientPhone = (order.buyer as any)?.phone || undefined;
 
   return {
     id: order.id,
@@ -107,19 +112,28 @@ const mapOrderToDetails = (order: Order): OrderDetailsData => {
       status: order.delivery?.status,
       address: order.delivery?.dropoff_location || "Not provided",
       recipient: recipientName,
-      phone: "N/A",
+      phone: recipientPhone || "N/A",
       requestedDate: undefined,
       estimatedDate: undefined,
       actualDate: order.delivery?.completed_at,
       trackingNumber: undefined,
       carrier: undefined,
-      driverName: order.delivery?.driver?.full_name,
-      driverPhone: order.delivery?.driver?.phone,
+      driverUserId: (order.delivery as any)?.driver?.driverUser?.id || null,
+      driverName:
+        (order.delivery as any)?.driver?.driverUser?.full_name ||
+        (order.delivery as any)?.driver?.full_name ||
+        null,
+      driverPhone:
+        (order.delivery as any)?.driver?.driverUser?.phone ||
+        (order.delivery as any)?.driver?.phone ||
+        null,
     },
     party: {
       id: order.supplier_id,
       name: supplierName,
       contact: order.supplier?.full_name,
+      phone: supplierPhone,
+      email: supplierEmail,
     },
     canReview: order.order_status == "closed" ? true : false,
     canReorder: true,
@@ -223,7 +237,15 @@ const OrderDetailsPage: React.FC = () => {
         <div className="p-6 text-sm text-muted-foreground">{resolvedError}</div>
       }
     >
-      {currentOrder && !currentOrder.products?.delivery_available ? (
+      {currentOrder &&
+      Array.isArray(currentOrder.products) &&
+      currentOrder.products.some((product: any) => {
+        const raw = (product as any)?.delivery_available;
+        if (raw === false || raw === 0) return true;
+        if (typeof raw === "string" && raw.trim().toLowerCase() === "false")
+          return true;
+        return false;
+      }) ? (
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-lg border bg-muted/30 p-3">
           <div className="text-sm text-muted-foreground">
             This supplier did not provide delivery for this order. You can

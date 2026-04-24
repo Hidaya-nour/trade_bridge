@@ -76,9 +76,14 @@ const DistributorManageProductsPage: React.FC = () => {
         min_order_amount: parseInt(productData.min_order_amount),
         stock_quantity: parseInt(productData.stock_quantity),
         description: productData.description,
+        pickup_location: productData.pickup_location,
         images: productData.images,
         specifications: productData.specifications,
         is_available: productData.is_available,
+        delivery_available: productData.delivery_available,
+        delivery_pricing: productData.delivery_pricing,
+        delivery_fee_per_km: productData.delivery_fee_per_km,
+        free_delivery_max_distance_km: productData.free_delivery_max_distance_km,
       });
 
       if (newProduct) {
@@ -111,7 +116,7 @@ const DistributorManageProductsPage: React.FC = () => {
                   Add Payment Method
                 </button>
               </div>
-            ));
+            ), { duration: Infinity });
           }
         } catch (error) {
           console.error("Unable to check supplier payment methods", error);
@@ -133,9 +138,14 @@ const DistributorManageProductsPage: React.FC = () => {
         price: parseFloat(productData.price),
         stock_quantity: parseInt(productData.stock_quantity),
         description: productData.description,
+        pickup_location: productData.pickup_location,
         images: productData.images,
         specifications: productData.specifications,
         is_available: productData.is_available,
+        delivery_available: productData.delivery_available,
+        delivery_pricing: productData.delivery_pricing,
+        delivery_fee_per_km: productData.delivery_fee_per_km,
+        free_delivery_max_distance_km: productData.free_delivery_max_distance_km,
       });
 
       if (updated) {

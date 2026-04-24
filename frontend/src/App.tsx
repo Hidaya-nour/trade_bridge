@@ -25,6 +25,7 @@ import ManageProductsPage from "./pages/distributor/ManageProducts";
 import IncomingOrdersPage from "./pages/distributor/IncomingOrders";
 import FactoryIncomingOrdersPage from "./pages/factory/IncomingOrders";
 import DeliveryManagementPage from "./pages/distributor/DeliveryManagement";
+import FactoryDeliveryPage from "./pages/factory/DeliveryManagement";
 import SalesAnalyticsPage from "./pages/distributor/SalesAnalytics";
 import FactoryDashboard from "./pages/factory/Dashboard";
 import BroadcastPromotionsPage from "./pages/distributor/BroadcastPromotions";
@@ -32,6 +33,7 @@ import BroadcastAnnouncementsPage from "./pages/factory/BroadcastAnnouncements";
 import PurchaseOrdersPage from "./pages/distributor/PurchaseOrders";
 import MarketPlace from "./pages/distributor/MarketPlace";
 import FactoryForecastPage from "./pages/factory/Forecast";
+import FactoryDistributorProfilePage from "./pages/factory/DistributorProfile";
 import AdminDashboard from "./pages/admin/Dashboard";
 import UserManagementPage from "./pages/admin/UserManagementPage";
 import AdminUserDetailsPage from "./pages/admin/UserDetailsPage";
@@ -486,6 +488,14 @@ function App() {
             }
           />
           <Route
+            path="/factory/distributors/:id"
+            element={
+              <DashboardLayout>
+                <FactoryDistributorProfilePage />
+              </DashboardLayout>
+            }
+          />
+          <Route
             path="/factory/orders/:id/receipt"
             element={
               <DashboardLayout>
@@ -505,7 +515,7 @@ function App() {
             path="/factory/delivery"
             element={
               <DashboardLayout>
-                <DeliveryManagementPage />
+                <FactoryDeliveryPage />
               </DashboardLayout>
             }
           />

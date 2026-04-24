@@ -89,6 +89,12 @@ const mapOrderToDetails = (
     order.supplier?.business_name || order.supplier?.full_name || "Supplier";
   const buyerName =
     order.buyer?.business_name || order.buyer?.full_name || "Customer";
+  const buyerPhone = (order.buyer as any)?.phone || undefined;
+  const buyerEmail = (order.buyer as any)?.email || undefined;
+  const supplierPhone =
+    (order.supplier as any)?.phone || (order.supplier as any)?.user?.phone;
+  const supplierEmail =
+    (order.supplier as any)?.email || (order.supplier as any)?.user?.email;
 
   const party =
     mode === "incoming"
@@ -96,11 +102,15 @@ const mapOrderToDetails = (
           id: order.buyer_id,
           name: buyerName,
           contact: order.buyer?.full_name,
+          phone: buyerPhone,
+          email: buyerEmail,
         }
       : {
           id: order.supplier_id,
           name: supplierName,
           contact: order.supplier?.full_name,
+          phone: supplierPhone,
+          email: supplierEmail,
         };
 
   const recipientName =
@@ -140,12 +150,13 @@ const mapOrderToDetails = (
       status: (order.delivery as any)?.status,
       address,
       recipient: recipientName,
-      phone: "N/A",
+      phone: buyerPhone || "N/A",
       requestedDate: undefined,
       estimatedDate: undefined,
       actualDate: order.delivery?.completed_at,
       trackingNumber: undefined,
       carrier: undefined,
+      driverUserId: (order.delivery as any)?.driver?.driverUser?.id || null,
       driverName:
         (order.delivery as any)?.driver?.full_name ||
         (order.delivery as any)?.driver?.driverUser?.full_name,

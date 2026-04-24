@@ -143,7 +143,7 @@ const PurchaseOrdersPage: React.FC = () => {
       toast.success("Order placed successfully!");
       return {
         primaryOrderId: order.id,
-        total: order.total_price,
+        total: Number(order.total_price),
       };
     } catch (err) {
       console.error("Reorder failed:", err);

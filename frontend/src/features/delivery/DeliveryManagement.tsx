@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import {
   Truck,
   Package,
@@ -352,7 +352,17 @@ export const DeliveryManagement: React.FC<DeliveryManagementProps> = ({
   const [isFreeDelivery, setIsFreeDelivery] = useState<boolean>(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [activeTab, setActiveTab] = useState("deliveries");
+  const location = useLocation();
   const itemsPerPage = 5;
+
+  useEffect(() => {
+    const tab = new URLSearchParams(location.search).get("tab");
+    if (tab === "drivers" && config.hasDrivers) {
+      setActiveTab("drivers");
+    } else if (tab === "deliveries") {
+      setActiveTab("deliveries");
+    }
+  }, [location.search, config.hasDrivers]);
 
   const mapApiStatus = (status: string) => {
     switch (String(status || '').toLowerCase()) {
