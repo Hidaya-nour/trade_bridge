@@ -43,6 +43,17 @@ class DeliveryService {
     return response.data;
   }
 
+  async getAvailableDrivers(search?: string) {
+    const params = search ? { search: search.trim() } : {};
+    const response = await api.get(`${this.BASE}/available-drivers`, { params });
+    return response.data;
+  }
+
+  async assignDriverForBuyer(orderId: string, payload: { driver_id: string; pickup_location?: string; dropoff_location: string }) {
+    const response = await api.post(`${this.BASE}/order/${orderId}/assign-driver`, payload);
+    return response.data;
+  }
+
   async updateStatus(deliveryId: string, status: string) {
     const response = await api.patch(`${this.BASE}/${deliveryId}/status`, { status });
     return response.data;

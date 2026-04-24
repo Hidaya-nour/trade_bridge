@@ -2,6 +2,8 @@ import { DriverLocationRepository } from '../../repositories/driver-location.rep
 import { AppError } from '../../utils/errors';
 import { IDriverLocation, CreateDriverLocationDTO, UpdateDriverLocationDTO } from '../../types/driver-location.types';
 import logger from '../../utils/logger';
+import Driver from '../../models/driver.model';
+import { User } from '../../models/user.model';
 
 export class DriverLocationService {
   private driverLocationRepo = new DriverLocationRepository();
@@ -54,5 +56,56 @@ export class DriverLocationService {
     const deleted = await this.driverLocationRepo.delete(id);
     logger.info(`Driver location ${id} deleted`);
     return deleted;
+  }
+
+  async getDriversWithLatestLocations(params?: { limit?: number }) {
+    const limit = params?.limit && params.limit > 0 ? params.limit : 30;
+
+    const driverRecords = await Driver.findAll({
+      where: { active: true } as any,
+      include: [
+        {
+          model: User,
+          as: 'driverUser',
+          attributes: ['id', 'full_name', 'phone', 'email', 'role', 'status'],
+          required: false,
+        },
+      ],
+      limit,
+      order: [['updated_at', 'DESC']],
+    });
+
+    const results = await Promise.all(
+      driverRecords.map(async (driver: any) => {
+        const location = await this.driverLocationRepo.findLatestByDriver(driver.driver_id);
+        if (!location) return null;
+
+        const driverUser = driver.driverUser;
+        return {
+          id: driver.id,
+          driver_user_id: driver.driver_id,
+          driver_type: driver.driver_type,
+          vehicle_type: driver.vehicle_type,
+          license_plate: driver.license_plate,
+          active: driver.active,
+          driver_user: driverUser
+            ? {
+                id: driverUser.id,
+                full_name: driverUser.full_name,
+                phone: driverUser.phone,
+                email: driverUser.email,
+              }
+            : null,
+          last_location: {
+            id: location.id,
+            latitude: Number(location.latitude),
+            longitude: Number(location.longitude),
+            recorded_at: (location as any).recorded_at,
+          },
+        };
+      }),
+    );
+
+    return results.filter(Boolean);
   }
 }

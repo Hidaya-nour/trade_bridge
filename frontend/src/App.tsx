@@ -53,6 +53,7 @@ import About from "./pages/landing/About";
 import HowItWorks from "./pages/landing/HowItWorks";
 import { LoginPage } from "./pages/auth/Login";
 import { RegisterPage } from "./pages/auth/Register";
+import { AccountSuspendedPage } from "./pages/auth/AccountSuspended";
 import OrderTrackingPage from "./pages/shared/OrderTracking";
 import DriverLiveTrackingPage from "./pages/driver/LiveTrackingPage";
 import DriverNotificationsPage from "./pages/driver/DriverNotificationsPage";
@@ -63,6 +64,7 @@ import ActiveDeliveriesPage from "./pages/driver/ActiveDeliveriesPage";
 import OrderReceiptPage from "./pages/shared/OrderReceipt";
 import VerifyReceiptPage from "./pages/shared/VerifyReceipt";
 import ExportReportsPage from "./pages/shared/ExportReports";
+import RequestDriverPage from "./pages/shared/RequestDriver";
 
 function App() {
   return (
@@ -82,6 +84,7 @@ function App() {
           {/* Public Auth Routes */}
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
+          <Route path="/account-suspended" element={<AccountSuspendedPage />} />
           <Route
             path="/verify/receipt/:receiptNumber"
             element={<VerifyReceiptPage />}
@@ -124,6 +127,14 @@ function App() {
             element={
               <DashboardLayout>
                 <OrderDetailsPage />
+              </DashboardLayout>
+            }
+          />
+          <Route
+            path="/retailer/orders/:id/request-driver"
+            element={
+              <DashboardLayout>
+                <RequestDriverPage />
               </DashboardLayout>
             }
           />
@@ -291,6 +302,14 @@ function App() {
             }
           />
           <Route
+            path="/distributor/orders/:id/request-driver"
+            element={
+              <DashboardLayout>
+                <RequestDriverPage />
+              </DashboardLayout>
+            }
+          />
+          <Route
             path="/distributor/orders/:id/receipt"
             element={
               <DashboardLayout>
@@ -319,6 +338,14 @@ function App() {
             element={
               <DashboardLayout>
                 <DistributorOrderDetailsPage />
+              </DashboardLayout>
+            }
+          />
+          <Route
+            path="/distributor/purchase-orders/:id/request-driver"
+            element={
+              <DashboardLayout>
+                <RequestDriverPage />
               </DashboardLayout>
             }
           />

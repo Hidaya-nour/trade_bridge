@@ -1,3 +1,4 @@
+import { Op } from 'sequelize';
 import Delivery from '../../models/delivery.model';
 import Order from '../../models/order.model';
 import Driver from '../../models/driver.model';
@@ -5,10 +6,6 @@ import User from '../../models/user.model';
 import OrderItems from '../../models/order-item.model';
 import Product from '../../models/product.model';
 import { AppError } from '../../utils/errors';
-import { Op } from 'sequelize';
-import { User } from '../../models/user.model';
-import OrderItems from '../../models/order-item.model';
-import { Product } from '../../models/product.model';
 
 class DeliveryService {
   async getSupplierDeliveries(
@@ -333,6 +330,111 @@ class DeliveryService {
     }
     await delivery.save();
     return delivery;
+  }
+
+  async assignDriverForBuyer(params: {
+    orderId: string;
+    buyerId: string;
+    driverRecordId: string;
+    pickup_location?: string;
+    dropoff_location: string;
+  }) {
+    const order = await Order.findByPk(params.orderId);
+    if (!order) {
+      throw new AppError('Order not found', 404);
+    }
+    if (order.buyer_id !== params.buyerId) {
+      throw new AppError('You can only request drivers for your orders', 403);
+    }
+
+    const dropoff = String(params.dropoff_location || '').trim();
+    if (!dropoff) {
+      throw new AppError('dropoff_location is required', 400);
+    }
+
+    const driver = await Driver.findByPk(params.driverRecordId);
+    if (!driver) {
+      throw new AppError('Driver not found', 404);
+    }
+    if (driver.active === false) {
+      throw new AppError('Driver is inactive', 400);
+    }
+
+    let delivery = await Delivery.findOne({
+      where: { order_id: params.orderId, deleted_at: null } as any,
+    });
+
+    if (!delivery) {
+      delivery = await this.createDelivery(
+        params.orderId,
+        String(params.pickup_location || ''),
+        dropoff,
+      );
+    } else {
+      if (params.pickup_location !== undefined) {
+        delivery.pickup_location = String(params.pickup_location || '');
+      }
+      delivery.dropoff_location = dropoff;
+    }
+
+    delivery.driver_id = params.driverRecordId as any;
+    if (delivery.status === 'pending') {
+      delivery.status = 'assigned' as any;
+    }
+    await delivery.save();
+
+    return delivery;
+  }
+
+  async listMarketplaceDrivers(search?: string) {
+    const term = String(search || '').trim();
+
+    const where: any = {
+      deleted_at: null,
+      active: true,
+    };
+
+    if (term) {
+      where[Op.or] = [
+        { license_plate: { [Op.like]: `%${term}%` } },
+        { vehicle_type: { [Op.like]: `%${term}%` } },
+      ];
+    }
+
+    const driverUserInclude: any = {
+      model: User,
+      as: 'driverUser',
+      attributes: ['id', 'full_name', 'email', 'phone'],
+      required: false,
+    };
+
+    if (term) {
+      driverUserInclude.where = {
+        [Op.or]: [
+          { full_name: { [Op.like]: `%${term}%` } },
+          { email: { [Op.like]: `%${term}%` } },
+          { phone: { [Op.like]: `%${term}%` } },
+        ],
+      };
+      driverUserInclude.required = true;
+    }
+
+    const rows = await Driver.findAll({
+      where,
+      include: [
+        driverUserInclude,
+        {
+          model: User,
+          as: 'supplier',
+          attributes: ['id', 'full_name', 'business_name', 'phone'],
+          required: false,
+        },
+      ],
+      order: [['updated_at', 'DESC']],
+      limit: 50,
+    });
+
+    return (rows as any[]).map((r) => (typeof r.get === 'function' ? r.get({ plain: true }) : r));
   }
 
   async getSupplierDeliveries(supplierId: string) {

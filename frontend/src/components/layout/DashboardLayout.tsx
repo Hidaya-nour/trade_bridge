@@ -3,6 +3,7 @@ import DashboardHeader from "./DashboardHeader";
 import DashboardSidebar from "./DashboardSidebar";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/auth.store";
+import { AccountSuspendedNotice } from "@/components/auth/AccountSuspendedNotice";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -11,7 +12,7 @@ interface DashboardLayoutProps {
 const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-  const { user, fetchUser } = useAuthStore();
+  const { user, fetchUser, accountBlocked } = useAuthStore();
 
   useEffect(() => {
     if (!user) return;
@@ -32,6 +33,14 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
       window.clearInterval(interval);
     };
   }, [user?.id, fetchUser]);
+
+  if (accountBlocked?.code === "ACCOUNT_SUSPENDED") {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <AccountSuspendedNotice />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">

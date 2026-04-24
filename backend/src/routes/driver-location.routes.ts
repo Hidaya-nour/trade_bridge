@@ -9,6 +9,9 @@ const driverLocationController = new DriverLocationController();
 // All routes require authentication
 router.use(authenticate);
 
+// Buyers can browse available independent drivers with their latest locations.
+router.get('/nearby', driverLocationController.getNearbyDrivers);
+
 // Driver location routes
 router.post('/', authorize('driver'), validate(DriverLocationController.createValidation), driverLocationController.create);
 router.get('/', authorize('driver'), driverLocationController.getDriverLocations);

@@ -55,6 +55,7 @@ const RetailerDashboard: React.FC = () => {
   const { getTopSuppliers } = useSupplierStore();
   const { products, fetchProducts } = useProductStore();
   const [recentOrders, setRecentOrders] = useState<any[]>([]);
+  const [buyerOrders, setBuyerOrders] = useState<any[]>([]);
   const [recommendedSuppliers, setRecommendedSuppliers] = useState<any[]>([]);
   const [promotions, setPromotions] = useState<BroadcastRecord[]>([]);
 
@@ -150,6 +151,24 @@ const RetailerDashboard: React.FC = () => {
     fetchOrders();
   }, []);
 
+  useEffect(() => {
+    const fetchBuyerOrders = async () => {
+      try {
+        const response = await orderService.getOrdersAsBuyer({
+          limit: 100,
+          sortBy: "created_at",
+          sortOrder: "DESC",
+        } as any);
+        setBuyerOrders(response?.data?.orders ?? []);
+      } catch (error) {
+        console.error("Failed to fetch buyer orders:", error);
+        setBuyerOrders([]);
+      }
+    };
+
+    fetchBuyerOrders();
+  }, []);
+
   // Calculate stats cards data from real order stats
   const statsCards = [
     {
@@ -199,6 +218,86 @@ const RetailerDashboard: React.FC = () => {
   };
 
   const frequentProducts = useMemo(() => {
+    const counts = new Map<
+      string,
+      {
+        id: string;
+        name: string;
+        supplier: string;
+        supplierId?: string;
+        price: number;
+        unit: string;
+        orders: number;
+        quantity: number;
+      }
+    >();
+
+    for (const order of buyerOrders) {
+      const supplierObj =
+        order && typeof order.supplier === "object" ? order.supplier : null;
+      const supplierName =
+        order.supplier_name ||
+        supplierObj?.business_name ||
+        supplierObj?.full_name ||
+        "Supplier";
+      const supplierId = order.supplier_id || supplierObj?.id;
+
+      const orderItems = Array.isArray(order.items) ? order.items : [];
+      const seen = new Set<string>();
+      for (const item of orderItems) {
+        const productObj =
+          item && typeof item.product === "object" ? item.product : null;
+        const productId = String(item.product_id || productObj?.id || "");
+        if (!productId) continue;
+
+        const existing =
+          counts.get(productId) ||
+          ({
+            id: productId,
+            name: productObj?.name || "Product",
+            supplier: supplierName,
+            supplierId,
+            price: Number(item.unit_price || 0),
+            unit: productObj?.unit_type || "unit",
+            orders: 0,
+            quantity: 0,
+          } as any);
+
+        existing.quantity += Number(item.quantity || 0);
+        if (!seen.has(productId)) {
+          existing.orders += 1;
+          seen.add(productId);
+        }
+
+        if ((!existing.name || existing.name === "Product") && productObj?.name) {
+          existing.name = productObj.name;
+        }
+        if ((!existing.unit || existing.unit === "unit") && productObj?.unit_type) {
+          existing.unit = productObj.unit_type;
+        }
+        if ((!existing.supplier || existing.supplier === "Supplier") && supplierName) {
+          existing.supplier = supplierName;
+        }
+        if (!existing.supplierId && supplierId) {
+          existing.supplierId = supplierId;
+        }
+        if (!existing.price && item.unit_price) {
+          existing.price = Number(item.unit_price || 0);
+        }
+
+        counts.set(productId, existing);
+      }
+    }
+
+    const ranked = Array.from(counts.values()).sort((a, b) => {
+      if (b.orders !== a.orders) return b.orders - a.orders;
+      if (b.quantity !== a.quantity) return b.quantity - a.quantity;
+      return a.name.localeCompare(b.name);
+    });
+
+    if (ranked.length > 0) return ranked.slice(0, 4);
+
+    // Fallback to latest products if there is no order history yet.
     return products.slice(0, 4).map((product: any) => ({
       id: product.id,
       name: product.name,
@@ -210,8 +309,9 @@ const RetailerDashboard: React.FC = () => {
       price: Number(product.price || 0),
       unit: product.unit_type || "unit",
       orders: Number(product.order_count || 0),
+      quantity: 0,
     }));
-  }, [products]);
+  }, [buyerOrders, products]);
 
   // Order summary data
   const orderSummary = useMemo(

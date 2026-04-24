@@ -4,6 +4,31 @@ import logger from '../utils/logger';
 import { AppError } from '../utils/errors';
 
 class DeliveryController {
+  async getAvailableDriversForBuyer(req: Request, res: Response): Promise<any> {
+    try {
+      const userId = (req as any).user?.id as string | undefined;
+      const userRole = (req as any).user?.role as string | undefined;
+
+      if (!userId || !userRole) {
+        return res.status(401).json({ success: false, message: 'Unauthorized' });
+      }
+
+      if (!['retailer', 'distributor'].includes(userRole)) {
+        return res.status(403).json({ success: false, message: 'Only buyers can browse drivers' });
+      }
+
+      const search = (req.query.search as string) || '';
+      const drivers = await deliveryService.listMarketplaceDrivers(search);
+      return res.json({ success: true, data: { drivers } });
+    } catch (err) {
+      if (err instanceof AppError) {
+        return res.status(err.statusCode).json({ success: false, message: err.message });
+      }
+      logger.error('List available drivers (buyer) error', err);
+      return res.status(500).json({ success: false, message: 'Internal server error' });
+    }
+  }
+
   async list(req: Request, res: Response): Promise<any> {
     try {
       const userId = (req as any).user?.id as string | undefined;
@@ -126,6 +151,41 @@ class DeliveryController {
         return res.status(err.statusCode).json({ success: false, message: err.message });
       }
       logger.error('Assign driver error', err);
+      return res.status(500).json({ success: false, message: 'Internal server error' });
+    }
+  }
+
+  async assignDriverForBuyer(req: Request, res: Response): Promise<any> {
+    try {
+      const buyerId = (req as any).user?.id as string | undefined;
+      const role = (req as any).user?.role as string | undefined;
+      if (!buyerId) {
+        return res.status(401).json({ success: false, message: 'Unauthorized' });
+      }
+      if (role && !['retailer', 'distributor'].includes(role)) {
+        return res.status(403).json({ success: false, message: 'Only buyers can request drivers' });
+      }
+
+      const { orderId } = req.params;
+      const { driver_id, pickup_location, dropoff_location } = req.body;
+      if (!driver_id) {
+        return res.status(400).json({ success: false, message: 'driver_id is required' });
+      }
+
+      const delivery = await deliveryService.assignDriverForBuyer({
+        orderId,
+        buyerId,
+        driverRecordId: String(driver_id || ''),
+        pickup_location,
+        dropoff_location,
+      });
+
+      return res.json({ success: true, data: { delivery } });
+    } catch (err) {
+      if (err instanceof AppError) {
+        return res.status(err.statusCode).json({ success: false, message: err.message });
+      }
+      logger.error('Assign driver (buyer) error', err);
       return res.status(500).json({ success: false, message: 'Internal server error' });
     }
   }

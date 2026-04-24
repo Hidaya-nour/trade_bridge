@@ -71,6 +71,35 @@ export class DriverLocationController {
     }
   }
 
+  async getNearbyDrivers(req: Request, res: Response): Promise<void> {
+    try {
+      const role = String((req as any).user?.role || '').toLowerCase();
+      if (!role) {
+        res.status(401).json({ success: false, message: 'Authentication required' });
+        return;
+      }
+
+      // Allow buyer roles + admins to browse drivers.
+      if (!['retailer', 'distributor', 'admin'].includes(role)) {
+        res.status(403).json({ success: false, message: 'Access denied' });
+        return;
+      }
+
+      const limitRaw = typeof req.query.limit === 'string' ? parseInt(req.query.limit, 10) : 30;
+      const limit = Number.isFinite(limitRaw) ? Math.min(Math.max(limitRaw, 1), 100) : 30;
+
+      const drivers = await driverLocationService.getDriversWithLatestLocations({ limit });
+      res.json({ success: true, data: { drivers } });
+    } catch (error) {
+      if (error instanceof AppError) {
+        res.status(error.statusCode).json({ success: false, message: error.message });
+      } else {
+        logger.error('Get nearby drivers error:', error);
+        res.status(500).json({ success: false, message: 'Internal server error' });
+      }
+    }
+  }
+
   async getLocationsInTimeRange(req: Request, res: Response): Promise<void> {
     try {
       const driverId = (req as any).user.id;
