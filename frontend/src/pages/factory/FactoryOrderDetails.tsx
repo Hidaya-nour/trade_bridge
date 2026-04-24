@@ -89,6 +89,8 @@ const mapOrderToDetails = (
     id: order.buyer_id,
     name: buyerName,
     contact: order.buyer?.full_name,
+    phone: (order.buyer as any)?.phone || undefined,
+    email: (order.buyer as any)?.email || undefined,
   };
 
   const recipientName = buyerName;
@@ -125,12 +127,13 @@ const mapOrderToDetails = (
       status: (order.delivery as any)?.status,
       address,
       recipient: recipientName,
-      phone: "N/A",
+      phone: ((order.buyer as any)?.phone || undefined) || "N/A",
       requestedDate: undefined,
       estimatedDate: undefined,
       actualDate: order.delivery?.completed_at,
       trackingNumber: undefined,
       carrier: undefined,
+      driverUserId: (order.delivery as any)?.driver?.driverUser?.id || null,
       driverName:
         (order.delivery as any)?.driver?.full_name ||
         (order.delivery as any)?.driver?.driverUser?.full_name,

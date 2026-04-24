@@ -149,6 +149,10 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
   const [driverIssueLoading, setDriverIssueLoading] = useState(false);
   const [driverIssueError, setDriverIssueError] = useState<string | null>(null);
 
+  const availableDrivers = (order.drivers || []).filter(
+    (d) => d && d.available !== false,
+  );
+
   useEffect(() => {
     setOrder(initialOrder);
   }, [initialOrder]);
@@ -509,8 +513,13 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
     deliveryRecord?.driver?.phone ||
     order.delivery?.driverPhone ||
     null;
+  const effectiveDriverUserId =
+    deliveryRecord?.driver?.driverUser?.id || order.delivery?.driverUserId || null;
   const telPhone = normalizeTel(effectiveDriverPhone);
   const waPhone = normalizeWhatsapp(effectiveDriverPhone);
+  const driverChatLink = effectiveDriverUserId
+    ? `/messages?user=${encodeURIComponent(String(effectiveDriverUserId))}&order=${encodeURIComponent(order.id)}`
+    : null;
 
   return (
     <div className="space-y-6">
@@ -713,7 +722,7 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                 </Button>
               )}
 
-              {effectiveDriverName && (
+              {(effectiveDriverName || effectiveDriverPhone) && (
                 <div className="bg-blue-50 border border-blue-100 rounded-lg p-3 space-y-2">
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-start gap-2">
@@ -723,30 +732,44 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                           Delivery Driver
                         </p>
                         <p className="text-xs text-blue-700">
-                          {effectiveDriverName}
-                          {effectiveDriverPhone
-                            ? ` - ${effectiveDriverPhone}`
-                            : ""}
+                          {[effectiveDriverName, effectiveDriverPhone]
+                            .filter(Boolean)
+                            .join(" - ")}
                         </p>
                       </div>
                     </div>
 
                     <div className="flex flex-wrap gap-2 justify-end">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-7 text-xs bg-white"
-                        asChild
-                      >
-                        <a
-                          href={`https://wa.me/${waPhone}`}
-                          target="_blank"
-                          rel="noreferrer"
+                      {driverChatLink ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 text-xs bg-white"
+                          asChild
                         >
-                          <MessageSquare className="h-3.5 w-3.5 mr-1.5" />
-                          contact
-                        </a>
-                      </Button>
+                          <Link to={driverChatLink}>
+                            <MessageSquare className="h-3.5 w-3.5 mr-1.5" />
+                            Message
+                          </Link>
+                        </Button>
+                      ) : null}
+                      {waPhone ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 text-xs bg-white"
+                          asChild
+                        >
+                          <a
+                            href={`https://wa.me/${waPhone}`}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            <MessageSquare className="h-3.5 w-3.5 mr-1.5" />
+                            WhatsApp
+                          </a>
+                        </Button>
+                      ) : null}
                     </div>
                   </div>
                 </div>
@@ -1304,27 +1327,40 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>Available Drivers</Label>
-              <Select value={selectedDriver} onValueChange={setSelectedDriver}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Choose a driver" />
-                </SelectTrigger>
-                <SelectContent>
-                  {order.drivers
-                    ?.filter((d) => d.available !== false)
-                    .map((driver) => (
+          {availableDrivers.length === 0 &&
+          (role === "distributor" || role === "factory") ? (
+            <div className="space-y-3 py-4">
+              <div className="flex items-start gap-2 rounded-md border bg-muted/30 p-3 text-sm">
+                <AlertCircle className="mt-0.5 h-4 w-4 text-muted-foreground" />
+                <div>
+                  <div className="font-medium">No drivers available</div>
+                  <div className="text-muted-foreground">
+                    Add or link at least one driver before assigning deliveries.
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label>Available Drivers</Label>
+                <Select value={selectedDriver} onValueChange={setSelectedDriver}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Choose a driver" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableDrivers.map((driver) => (
                       <SelectItem key={driver.id} value={driver.id.toString()}>
                         {driver.name}
                         {driver.vehicle ? ` - ${driver.vehicle}` : ""}
                         {driver.phone ? ` - ${driver.phone}` : ""}
                       </SelectItem>
                     ))}
-                </SelectContent>
-              </Select>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-          </div>
+          )}
 
           <DialogFooter>
             <Button
@@ -1333,12 +1369,24 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
             >
               Cancel
             </Button>
-            <Button
-              onClick={assignDriver}
-              disabled={!selectedDriver || assignLoading}
-            >
-              Assign Driver
-            </Button>
+            {availableDrivers.length === 0 &&
+            (role === "distributor" || role === "factory") ? (
+              <Button
+                onClick={() => {
+                  setShowAssignDialog(false);
+                  navigate(`/${role}/delivery?tab=drivers`);
+                }}
+              >
+                Manage Drivers
+              </Button>
+            ) : (
+              <Button
+                onClick={assignDriver}
+                disabled={!selectedDriver || assignLoading}
+              >
+                Assign Driver
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>

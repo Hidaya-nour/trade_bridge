@@ -35,7 +35,8 @@ const getReturnPath = (pathname: string, orderId: string) => {
   const role = pathname.split("/")[1];
   if (role === "retailer") return `/retailer/orders/${orderId}`;
   if (role === "distributor") {
-    if (pathname.includes("/purchase-orders/")) return `/distributor/purchase-orders/${orderId}`;
+    if (pathname.includes("/purchase-orders/"))
+      return `/distributor/purchase-orders/${orderId}`;
     return `/distributor/orders/${orderId}`;
   }
   return `/retailer/orders/${orderId}`;
@@ -45,7 +46,11 @@ const RequestDriverPage: React.FC = () => {
   const { id: orderId } = useParams<{ id: string }>();
   const location = useLocation();
   const navigate = useNavigate();
-  const { currentOrder, fetchOrderById, isLoading: orderLoading } = useOrderStore();
+  const {
+    currentOrder,
+    fetchOrderById,
+    isLoading: orderLoading,
+  } = useOrderStore();
 
   const [search, setSearch] = useState("");
   const [drivers, setDrivers] = useState<MarketplaceDriver[]>([]);
@@ -69,7 +74,9 @@ const RequestDriverPage: React.FC = () => {
     try {
       const response = await deliveryService.getAvailableDrivers(query);
       const data = unwrap(response);
-      const rows = (data?.drivers ?? data?.data?.drivers ?? []) as MarketplaceDriver[];
+      const rows = (data?.drivers ??
+        data?.data?.drivers ??
+        []) as MarketplaceDriver[];
       setDrivers(rows);
     } catch (err: any) {
       toast.error(err?.response?.data?.message || "Failed to load drivers.");
@@ -126,7 +133,8 @@ const RequestDriverPage: React.FC = () => {
           </p>
           {deliveryAlreadyExists ? (
             <p className="mt-1 text-sm text-muted-foreground">
-              A delivery record already exists for this order. Assigning a driver here will update it.
+              A delivery record already exists for this order. Assigning a
+              driver here will update it.
             </p>
           ) : null}
         </div>
@@ -141,7 +149,8 @@ const RequestDriverPage: React.FC = () => {
         </CardHeader>
         <CardContent className="space-y-2">
           <p className="text-sm text-muted-foreground">
-            Pickup is automatically set to the supplier pickup location (or the supplier address).
+            Pickup is automatically set to the supplier pickup location (or the
+            supplier address).
           </p>
           <div className="space-y-2">
             <Label htmlFor="dropoff">Destination (drop-off location)</Label>
@@ -177,7 +186,9 @@ const RequestDriverPage: React.FC = () => {
           </div>
 
           {driversLoading ? (
-            <div className="text-sm text-muted-foreground">Loading drivers...</div>
+            <div className="text-sm text-muted-foreground">
+              Loading drivers...
+            </div>
           ) : drivers.length === 0 ? (
             <div className="text-sm text-muted-foreground">
               No drivers found. Try a different search.
@@ -190,7 +201,9 @@ const RequestDriverPage: React.FC = () => {
                 const vehicle = driver.vehicle_type || "Vehicle not specified";
                 const plate = driver.license_plate || "Plate not specified";
                 const supplier =
-                  driver.supplier?.business_name || driver.supplier?.full_name || "Supplier";
+                  driver.supplier?.business_name ||
+                  driver.supplier?.full_name ||
+                  "Supplier";
                 const selected = selectedDriverId === driver.id;
 
                 return (
@@ -200,7 +213,9 @@ const RequestDriverPage: React.FC = () => {
                     onClick={() => setSelectedDriverId(driver.id)}
                     className={cn(
                       "text-left rounded-lg border p-3 transition-colors",
-                      selected ? "border-primary bg-primary/5" : "hover:bg-muted",
+                      selected
+                        ? "border-primary bg-primary/5"
+                        : "hover:bg-muted",
                     )}
                   >
                     <div className="flex items-start justify-between gap-3">
@@ -210,13 +225,16 @@ const RequestDriverPage: React.FC = () => {
                           {vehicle} • {plate}
                         </div>
                         <div className="text-xs text-muted-foreground">
-                          {phone ? `Phone: ${phone}` : "Phone: N/A"} • From: {supplier}
+                          {phone ? `Phone: ${phone}` : "Phone: N/A"} • From:{" "}
+                          {supplier}
                         </div>
                       </div>
                       <div
                         className={cn(
                           "h-4 w-4 rounded-full border",
-                          selected ? "border-primary bg-primary" : "border-muted-foreground/40",
+                          selected
+                            ? "border-primary bg-primary"
+                            : "border-muted-foreground/40",
                         )}
                       />
                     </div>
@@ -228,7 +246,9 @@ const RequestDriverPage: React.FC = () => {
 
           <div className="flex flex-wrap gap-2">
             <Button
-              disabled={submitting || driversLoading || orderLoading || !orderId}
+              disabled={
+                submitting || driversLoading || orderLoading || !orderId
+              }
               onClick={() => void handleAssign()}
             >
               {submitting ? "Assigning..." : "Assign Driver"}
