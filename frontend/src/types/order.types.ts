@@ -74,6 +74,7 @@ export interface Order {
   payment?: Payment;
   delivery?: Delivery;
   driver?: OrderDriver;
+  products?: Product[];
 }
 
 export interface OrderItem {

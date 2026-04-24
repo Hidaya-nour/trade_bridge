@@ -19,6 +19,7 @@ import Dispute from './dispute.model';
 import SupplierReview from './supplier-review.model';
 import UserReport from './user-report.model';
 import DriverIssueReport from './driver-issue-report.model';
+import FactoryAgent from './factory-agent.model';
 
 // This function must be called AFTER all models are imported
 export const setupAssociations = () => {
@@ -399,6 +400,18 @@ export const setupAssociations = () => {
 
   User.hasMany(Driver, { foreignKey: 'supplier_id', as: 'supplierDrivers' });
   User.hasMany(Driver, { foreignKey: 'driver_id', as: 'assignedDrivers' });
+
+  // Factory Agent relationships
+  FactoryAgent.belongsTo(User, { foreignKey: 'factory_id', as: 'factory' });
+  FactoryAgent.belongsTo(User, { foreignKey: 'agent_id', as: 'agent' });
+  FactoryAgent.belongsTo(User, { foreignKey: 'created_by', as: 'creator' });
+  FactoryAgent.belongsTo(Document, {
+    foreignKey: 'contract_document_id',
+    as: 'contractDocument',
+  });
+
+  User.hasMany(FactoryAgent, { foreignKey: 'factory_id', as: 'factoryAgents' });
+  User.hasMany(FactoryAgent, { foreignKey: 'agent_id', as: 'agentContracts' });
 
   // Driver Issue Reports
   DriverIssueReport.belongsTo(User, { foreignKey: 'driver_id', as: 'driverUser' });

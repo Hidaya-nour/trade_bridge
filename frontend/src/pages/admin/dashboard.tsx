@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import toast from "react-hot-toast";
 import {
   Users,
   Store,
@@ -658,8 +659,7 @@ const AdminDashboard: React.FC = () => {
                       </div>
                       <div className="flex items-center gap-2">
                         <Button size="sm" variant="outline">
-                          <FileText className="h-4 w-4 mr-2" />
-                          Review Docs
+                          <FileText className="h-4 w-4 mr-2" />x Review Docs
                         </Button>
                         <Button
                           size="sm"

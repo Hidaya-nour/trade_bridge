@@ -194,7 +194,9 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
     (async () => {
       try {
         const res = await driverIssueService.getForOrder(String(order.id));
-        const reports = Array.isArray(res?.data?.reports) ? res.data.reports : [];
+        const reports = Array.isArray(res?.data?.reports)
+          ? res.data.reports
+          : [];
         if (!cancelled) setDriverIssueReports(reports);
       } catch (err: any) {
         const message =
@@ -216,7 +218,9 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
   }, [order?.id]);
 
   const getDeliveryStatusBadge = (status?: DeliveryStatus | string | null) => {
-    const raw = String(status || "").trim().toLowerCase();
+    const raw = String(status || "")
+      .trim()
+      .toLowerCase();
     if (!raw) return <StatusBadge status={"pending" as any} />;
 
     const normalized = raw.replace(/_/g, "-");
@@ -633,7 +637,9 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <p className="text-xs text-muted-foreground">Pickup Location</p>
+                  <p className="text-xs text-muted-foreground">
+                    Pickup Location
+                  </p>
                   <div className="flex items-start gap-2">
                     <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
                     <p className="text-sm">{effectivePickupLocation}</p>
@@ -649,7 +655,9 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <p className="text-xs text-muted-foreground">Delivery Status</p>
+                  <p className="text-xs text-muted-foreground">
+                    Delivery Status
+                  </p>
                   <div className="flex items-center gap-2">
                     {deliveryFetching ? (
                       <Badge variant="outline">Loading...</Badge>
@@ -658,17 +666,19 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                     )}
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <p className="text-xs text-muted-foreground">Recipient</p>
-                  <div className="flex items-center gap-2">
-                    <User className="h-4 w-4 text-muted-foreground" />
-                    <p className="text-sm">{order.delivery.recipient}</p>
+                {mode === "incoming" && (
+                  <div className="space-y-2">
+                    <p className="text-xs text-muted-foreground">Recipient</p>
+                    <div className="flex items-center gap-2">
+                      <User className="h-4 w-4 text-muted-foreground" />
+                      <p className="text-sm">{order.delivery.recipient}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Phone className="h-4 w-4 text-muted-foreground" />
+                      <p className="text-sm">{order.delivery.phone}</p>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Phone className="h-4 w-4 text-muted-foreground" />
-                    <p className="text-sm">{order.delivery.phone}</p>
-                  </div>
-                </div>
+                )}
               </div>
 
               <Separator />
@@ -714,55 +724,29 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                         </p>
                         <p className="text-xs text-blue-700">
                           {effectiveDriverName}
-                          {effectiveDriverPhone ? ` - ${effectiveDriverPhone}` : ""}
+                          {effectiveDriverPhone
+                            ? ` - ${effectiveDriverPhone}`
+                            : ""}
                         </p>
                       </div>
                     </div>
 
                     <div className="flex flex-wrap gap-2 justify-end">
-                      {telPhone && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="h-7 text-xs bg-white"
-                          asChild
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 text-xs bg-white"
+                        asChild
+                      >
+                        <a
+                          href={`https://wa.me/${waPhone}`}
+                          target="_blank"
+                          rel="noreferrer"
                         >
-                          <a href={`tel:${telPhone}`}>
-                            <Phone className="h-3.5 w-3.5 mr-1.5" />
-                            Call
-                          </a>
-                        </Button>
-                      )}
-                      {telPhone && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="h-7 text-xs bg-white"
-                          asChild
-                        >
-                          <a href={`sms:${telPhone}`}>
-                            <MessageSquare className="h-3.5 w-3.5 mr-1.5" />
-                            SMS
-                          </a>
-                        </Button>
-                      )}
-                      {waPhone && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="h-7 text-xs bg-white"
-                          asChild
-                        >
-                          <a
-                            href={`https://wa.me/${waPhone}`}
-                            target="_blank"
-                            rel="noreferrer"
-                          >
-                            <MessageSquare className="h-3.5 w-3.5 mr-1.5" />
-                            WhatsApp
-                          </a>
-                        </Button>
-                      )}
+                          <MessageSquare className="h-3.5 w-3.5 mr-1.5" />
+                          contact
+                        </a>
+                      </Button>
                     </div>
                   </div>
                 </div>
@@ -840,7 +824,9 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                         </div>
                       ) : null}
                       {report.description ? (
-                        <div className="text-sm">{String(report.description)}</div>
+                        <div className="text-sm">
+                          {String(report.description)}
+                        </div>
                       ) : null}
                     </div>
                   </div>
@@ -1332,6 +1318,7 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                       <SelectItem key={driver.id} value={driver.id.toString()}>
                         {driver.name}
                         {driver.vehicle ? ` - ${driver.vehicle}` : ""}
+                        {driver.phone ? ` - ${driver.phone}` : ""}
                       </SelectItem>
                     ))}
                 </SelectContent>

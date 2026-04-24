@@ -9,8 +9,14 @@ const factoryAgentService = new FactoryAgentService();
 export class FactoryAgentController {
   async create(req: Request, res: Response) {
     try {
-      const data = req.body;
       const createdBy = (req as any).user.id;
+      const role = (req as any).user.role as string | undefined;
+      const data = { ...(req.body || {}) };
+
+      // Security: factories can only create contracts for themselves.
+      if (role === 'factory') {
+        data.factory_id = createdBy;
+      }
 
       const factoryAgent = await factoryAgentService.createFactoryAgent(data, createdBy);
       res.status(201).json({ success: true, data: factoryAgent });
@@ -78,6 +84,21 @@ export class FactoryAgentController {
         res.status(error.statusCode).json({ success: false, message: error.message });
       } else {
         logger.error('Get expiring contracts error:', error);
+        res.status(500).json({ success: false, message: 'Internal server error' });
+      }
+    }
+  }
+
+  async getAvailableAgents(req: Request, res: Response) {
+    try {
+      const search = String(req.query.search || '').trim();
+      const agents = await factoryAgentService.getAvailableAgents(search || undefined);
+      res.json({ success: true, data: agents });
+    } catch (error) {
+      if (error instanceof AppError) {
+        res.status(error.statusCode).json({ success: false, message: error.message });
+      } else {
+        logger.error('Get available agents error:', error);
         res.status(500).json({ success: false, message: 'Internal server error' });
       }
     }
@@ -152,9 +173,12 @@ export class FactoryAgentController {
   }
 
   static createValidation = [
-    body('factory_id').isUUID(),
+    body('factory_id').optional().isUUID(),
     body('agent_id').isUUID(),
     body('contract_number').isString().notEmpty(),
+    body('contract_document_id').optional().isUUID(),
+    body('contract_document_url').isString().notEmpty(),
+    body('contract_document_name').optional().isString().isLength({ max: 255 }),
     body('contract_type').isIn(['exclusive', 'non_exclusive', 'temporary', 'permanent']),
     body('commission_rate').isFloat({ min: 0 }),
     body('commission_type').isIn(['percentage', 'fixed_amount', 'tiered']),

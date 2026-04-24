@@ -248,7 +248,6 @@ export const PaymentDialog: React.FC<PaymentDialogProps> = ({
                 <p className="text-sm text-muted-foreground">Amount due</p>
                 <p className="text-2xl font-semibold">{formatPrice(amount)}</p>
               </div>
-              <Badge variant="secondary">2 payment methods enabled</Badge>
             </div>
           </div>
 

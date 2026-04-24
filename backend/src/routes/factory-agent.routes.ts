@@ -14,6 +14,7 @@ router.post('/', authorize('factory', 'admin'), validate(FactoryAgentController.
 
 // Factory-specific routes
 router.get('/factory', authorize('factory', 'admin'), factoryAgentController.getFactoryAgents);
+router.get('/available-agents', authorize('factory', 'admin'), factoryAgentController.getAvailableAgents);
 
 // Agent-specific routes
 router.get('/agent', authorize('distributor', 'admin'), factoryAgentController.getAgentContracts);

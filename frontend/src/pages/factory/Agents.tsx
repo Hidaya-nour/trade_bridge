@@ -1,914 +1,743 @@
-// pages/factory/Agents.tsx
-
-import React, { useState, useEffect } from "react";
+import React from "react";
+import toast from "react-hot-toast";
 import {
-  Search,
-  Filter,
-  Plus,
-  Star,
-  AlertCircle,
-  ChevronDown,
-  Download,
-  Upload,
-  MoreVertical,
-  Clock,
-  MapPin,
   FileText,
-  TrendingUp,
+  Plus,
+  RefreshCw,
+  Search,
+  ShieldAlert,
+  Trash2,
+  UserPlus,
 } from "lucide-react";
 
-interface Agent {
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+
+import { cn } from "@/lib/utils";
+import { formatDate } from "@/lib/formatters";
+import factoryAgentService from "@/services/factory-agent.service";
+import documentService from "@/services/document.service";
+import { useAuthStore } from "@/stores/auth.store";
+import { EmptyState } from "@/components/shared/EmptyState";
+
+type ContractType = "exclusive" | "non_exclusive" | "temporary" | "permanent";
+type CommissionType = "percentage" | "fixed_amount" | "tiered";
+type PaymentTerms = "monthly" | "quarterly" | "annually" | "upon_sale";
+
+type AgentUser = {
   id: string;
-  businessName: string;
-  contactPerson: string;
-  email: string;
-  phone: string;
-  territory: string;
-  contractNumber: string;
-  contractStart: string;
-  contractEnd: string;
-  contractDocument: string;
-  earlyAccessDays: number;
-  priorityLevel: 1 | 2 | 3 | 4 | 5;
-  specialDiscount: number;
-  commissionRate: number;
-  paymentTerms: string;
-  status: "active" | "inactive" | "pending" | "expired";
-  performance: {
-    lastOrder: string;
-    orderCount: number;
-    totalValue: number;
-    fulfillmentRate: number;
-    rating: number;
-  };
-}
+  full_name?: string;
+  business_name?: string;
+  email?: string;
+  phone?: string;
+  status?: string;
+  role?: string;
+};
 
-interface EarlyAccessProduct {
+type ContractDocument = {
   id: string;
-  name: string;
-  category: string;
-  releaseDate: string;
-  image: string;
-  agentPrice: number;
-  regularPrice: number;
-}
+  file_secure_url?: string;
+  original_file_name?: string;
+  verification_status?: "pending" | "verified" | "rejected";
+  reviewed_at?: string | Date | null;
+};
 
-const AgentsPage: React.FC = () => {
-  const [agents, setAgents] = useState<Agent[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [showContractModal, setShowContractModal] = useState(false);
-  const [earlyAccessProducts, setEarlyAccessProducts] = useState<
-    EarlyAccessProduct[]
-  >([
-    {
-      id: "1",
-      name: "Premium Soda",
-      category: "Beverages",
-      releaseDate: "2025-12-15",
-      image: "/products/soda.jpg",
-      agentPrice: 45.0,
-      regularPrice: 55.0,
-    },
-    {
-      id: "2",
-      name: "Energy Drink",
-      category: "Beverages",
-      releaseDate: "2025-12-20",
-      image: "/products/energy.jpg",
-      agentPrice: 38.0,
-      regularPrice: 48.0,
-    },
-  ]);
+type FactoryAgentContract = {
+  id: string;
+  factory_id: string;
+  agent_id: string;
+  contract_number: string;
+  contract_document_id?: string | null;
+  contract_document_url?: string | null;
+  contract_document_name?: string | null;
+  contract_type: ContractType;
+  commission_rate: number | string;
+  commission_type: CommissionType;
+  min_sales_target?: number | string | null;
+  max_sales_cap?: number | string | null;
+  territory?: string | null;
+  start_date: string | Date;
+  end_date?: string | Date | null;
+  renewal_date?: string | Date | null;
+  payment_terms: PaymentTerms;
+  last_sale_date?: string | Date | null;
+  termination_reason?: string | null;
+  agent?: AgentUser;
+  contractDocument?: ContractDocument;
+};
 
-  // Mock data - replace with API call
-  useEffect(() => {
-    const fetchAgents = async () => {
-      try {
-        // Simulate API call
-        setTimeout(() => {
-          setAgents(mockAgents);
-          setLoading(false);
-        }, 1000);
-      } catch (error) {
-        console.error("Error fetching agents:", error);
-        setLoading(false);
-      }
-    };
-    fetchAgents();
+const statusBadgeClass: Record<string, string> = {
+  active: "bg-green-100 text-green-700 border-green-200",
+  inactive: "bg-gray-100 text-gray-700 border-gray-200",
+  expired: "bg-red-100 text-red-700 border-red-200",
+};
+
+const getContractStatus = (row: FactoryAgentContract) => {
+  if (row.termination_reason) return "inactive";
+  const end = row.end_date ? new Date(row.end_date).getTime() : null;
+  if (end !== null && end < Date.now()) return "expired";
+  return "active";
+};
+
+const getContractUrl = (row: FactoryAgentContract) => {
+  return (
+    row.contract_document_url ||
+    row.contractDocument?.file_secure_url ||
+    undefined
+  );
+};
+
+const toDateInput = (value: string | Date) =>
+  typeof value === "string" ? value : value.toISOString();
+
+const unwrap = (payload: any) => payload?.data ?? payload;
+
+const FactoryAgentsPage: React.FC = () => {
+  const user = useAuthStore((s) => s.user);
+
+  const [items, setItems] = React.useState<FactoryAgentContract[]>([]);
+  const [loading, setLoading] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+
+  const [search, setSearch] = React.useState("");
+  const [statusFilter, setStatusFilter] = React.useState<
+    "all" | "active" | "inactive" | "expired"
+  >("all");
+
+  const [createOpen, setCreateOpen] = React.useState(false);
+  const [createLoading, setCreateLoading] = React.useState(false);
+  const [availableAgents, setAvailableAgents] = React.useState<AgentUser[]>([]);
+  const [availableSearch, setAvailableSearch] = React.useState("");
+  const [availableLoading, setAvailableLoading] = React.useState(false);
+
+  const [agentId, setAgentId] = React.useState("");
+  const [territory, setTerritory] = React.useState("");
+  const [contractNumber, setContractNumber] = React.useState("");
+  const [contractType, setContractType] = React.useState<ContractType>("exclusive");
+  const [commissionRate, setCommissionRate] = React.useState("");
+  const [commissionType, setCommissionType] =
+    React.useState<CommissionType>("percentage");
+  const [paymentTerms, setPaymentTerms] = React.useState<PaymentTerms>("monthly");
+  const [startDate, setStartDate] = React.useState("");
+  const [endDate, setEndDate] = React.useState("");
+  const [minSalesTarget, setMinSalesTarget] = React.useState("");
+  const [maxSalesCap, setMaxSalesCap] = React.useState("");
+  const [contractFile, setContractFile] = React.useState<File | null>(null);
+
+  const [terminateOpen, setTerminateOpen] = React.useState(false);
+  const [terminateReason, setTerminateReason] = React.useState("");
+  const [terminatingId, setTerminatingId] = React.useState<string | null>(null);
+
+  const load = React.useCallback(async () => {
+    if (!user) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await factoryAgentService.getFactoryAgents();
+      const data = unwrap(response);
+      setItems(Array.isArray(data) ? data : []);
+    } catch (err: any) {
+      setItems([]);
+      setError(err?.response?.data?.message || err?.message || "Failed to load agents");
+    } finally {
+      setLoading(false);
+    }
+  }, [user]);
+
+  const loadAvailableAgents = React.useCallback(async (q?: string) => {
+    setAvailableLoading(true);
+    try {
+      const response = await factoryAgentService.getAvailableAgents(q);
+      const data = unwrap(response);
+      setAvailableAgents(Array.isArray(data) ? data : []);
+    } catch {
+      setAvailableAgents([]);
+    } finally {
+      setAvailableLoading(false);
+    }
   }, []);
 
-  const filteredAgents = agents.filter((agent) => {
-    const matchesSearch =
-      agent.businessName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      agent.territory.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus =
-      statusFilter === "all" || agent.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
+  React.useEffect(() => {
+    void load();
+  }, [load]);
 
-  const expiringAgents = agents.filter((agent) => {
-    const daysUntilExpiry = Math.ceil(
-      (new Date(agent.contractEnd).getTime() - new Date().getTime()) /
-        (1000 * 3600 * 24),
-    );
-    return (
-      daysUntilExpiry <= 30 && daysUntilExpiry > 0 && agent.status === "active"
-    );
-  });
+  React.useEffect(() => {
+    if (!createOpen) return;
+    void loadAvailableAgents();
+  }, [createOpen, loadAvailableAgents]);
 
-  const handleAddAgent = () => {
-    setShowAddModal(true);
+  const filtered = React.useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return items.filter((row) => {
+      const status = getContractStatus(row);
+      if (statusFilter !== "all" && status !== statusFilter) return false;
+
+      if (!q) return true;
+      const agentName =
+        row.agent?.business_name || row.agent?.full_name || row.agent_id;
+      const territoryText = row.territory || "";
+      return (
+        agentName.toLowerCase().includes(q) ||
+        territoryText.toLowerCase().includes(q) ||
+        String(row.contract_number || "").toLowerCase().includes(q)
+      );
+    });
+  }, [items, search, statusFilter]);
+
+  const stats = React.useMemo(() => {
+    const total = items.length;
+    const active = items.filter((r) => getContractStatus(r) === "active").length;
+    const expiringSoon = items.filter((r) => {
+      if (getContractStatus(r) !== "active") return false;
+      if (!r.end_date) return false;
+      const end = new Date(r.end_date).getTime();
+      const days = Math.ceil((end - Date.now()) / (1000 * 3600 * 24));
+      return days > 0 && days <= 30;
+    }).length;
+    return { total, active, expiringSoon };
+  }, [items]);
+
+  const resetCreateForm = () => {
+    setAgentId("");
+    setTerritory("");
+    setContractNumber("");
+    setContractType("exclusive");
+    setCommissionRate("");
+    setCommissionType("percentage");
+    setPaymentTerms("monthly");
+    setStartDate("");
+    setEndDate("");
+    setMinSalesTarget("");
+    setMaxSalesCap("");
+    setContractFile(null);
+    setAvailableSearch("");
   };
 
-  const handleViewContract = (agent: Agent) => {
-    setSelectedAgent(agent);
-    setShowContractModal(true);
-  };
+  const handleCreate = async () => {
+    if (!user) return;
 
-  const handleRenewContract = async (agentId: string) => {
+    if (!agentId) return toast.error("Select an agent (distributor).");
+    if (!contractNumber.trim()) return toast.error("Contract number is required.");
+    if (!commissionRate.trim()) return toast.error("Commission rate is required.");
+    if (!startDate) return toast.error("Start date is required.");
+    if (!contractFile) return toast.error("Partnership contract file is required.");
+
+    const commission = Number(commissionRate);
+    if (Number.isNaN(commission) || commission < 0) {
+      return toast.error("Commission rate must be a valid number.");
+    }
+
+    setCreateLoading(true);
+    const toastId = toast.loading("Creating agent contract...");
     try {
-      // API call to renew contract
-      console.log("Renewing contract for agent:", agentId);
-      // Update local state
-    } catch (error) {
-      console.error("Error renewing contract:", error);
+      const uploadRes = await documentService.uploadDocument(
+        contractFile,
+        "other",
+      );
+      const uploadedDoc = (uploadRes as any)?.data || (uploadRes as any);
+      const doc = uploadedDoc?.id ? uploadedDoc : uploadedDoc?.data;
+
+      const payload = {
+        factory_id: user.id,
+        agent_id: agentId,
+        contract_number: contractNumber.trim(),
+        contract_document_id: doc?.id,
+        contract_document_url: doc?.file_secure_url,
+        contract_document_name: doc?.original_file_name,
+        contract_type: contractType,
+        commission_rate: commission,
+        commission_type: commissionType,
+        min_sales_target: minSalesTarget.trim()
+          ? Number(minSalesTarget)
+          : undefined,
+        max_sales_cap: maxSalesCap.trim() ? Number(maxSalesCap) : undefined,
+        territory: territory.trim() || undefined,
+        start_date: startDate,
+        end_date: endDate || undefined,
+        payment_terms: paymentTerms,
+      };
+
+      await factoryAgentService.create(payload);
+      toast.success("Agent linked successfully", { id: toastId });
+      setCreateOpen(false);
+      resetCreateForm();
+      await load();
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || "Failed to create agent contract", {
+        id: toastId,
+      });
+    } finally {
+      setCreateLoading(false);
     }
   };
 
-  const handleGrantEarlyAccess = async (productId: string) => {
+  const openTerminate = (id: string) => {
+    setTerminatingId(id);
+    setTerminateReason("");
+    setTerminateOpen(true);
+  };
+
+  const handleTerminate = async () => {
+    if (!terminatingId) return;
+    if (!terminateReason.trim()) {
+      toast.error("Termination reason is required.");
+      return;
+    }
+
+    const toastId = toast.loading("Terminating contract...");
+    setCreateLoading(true);
     try {
-      // API call to grant early access
-      console.log("Granting early access for product:", productId);
-    } catch (error) {
-      console.error("Error granting early access:", error);
+      await factoryAgentService.terminate(terminatingId, terminateReason.trim());
+      toast.success("Contract terminated", { id: toastId });
+      setTerminateOpen(false);
+      setTerminatingId(null);
+      await load();
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || "Failed to terminate contract", {
+        id: toastId,
+      });
+    } finally {
+      setCreateLoading(false);
     }
   };
 
-  const getStatusBadge = (status: Agent["status"]) => {
-    const styles = {
-      active: "bg-green-100 text-green-800",
-      inactive: "bg-gray-100 text-gray-800",
-      pending: "bg-yellow-100 text-yellow-800",
-      expired: "bg-red-100 text-red-800",
-    };
-    return styles[status];
-  };
-
-  const getPriorityBadge = (level: number) => {
-    const colors = [
-      "bg-purple-600",
-      "bg-blue-600",
-      "bg-indigo-600",
-      "bg-gray-600",
-      "bg-gray-400",
-    ];
+  if (user?.role !== "factory") {
     return (
-      <span
-        className={`${colors[level - 1]} text-white text-xs px-2 py-1 rounded-full`}
-      >
-        P{level}
-      </span>
-    );
-  };
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="space-y-6">
+        <EmptyState
+          icon={ShieldAlert}
+          title="Factory access only"
+          description="Only factory accounts can manage sales agents."
+        />
       </div>
     );
   }
 
   return (
-    <div className="p-2">
-      {/* Header */}
-      <div className="flex justify-between items-center mb-6">
+    <div className="space-y-6">
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">
-            Agents Management
-          </h1>
-          <p className="text-sm text-gray-600 mt-1">
-            Manage your contracted distributors and their privileges
+          <h1 className="text-3xl font-bold tracking-tight">Factory Agents</h1>
+          <p className="text-muted-foreground mt-1">
+            Link distributor users as your sales agents and manage contracts.
           </p>
         </div>
-        <button
-          onClick={handleAddAgent}
-          className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          Add New Agent
-        </button>
-      </div>
-
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <div className="bg-white p-4 rounded-lg shadow-sm border">
-          <p className="text-sm text-gray-600">Total Agents</p>
-          <p className="text-2xl font-bold">{agents.length}</p>
-        </div>
-        <div className="bg-white p-4 rounded-lg shadow-sm border">
-          <p className="text-sm text-gray-600">Active Contracts</p>
-          <p className="text-2xl font-bold">
-            {agents.filter((a) => a.status === "active").length}
-          </p>
-        </div>
-        <div className="bg-white p-4 rounded-lg shadow-sm border border-yellow-200">
-          <p className="text-sm text-gray-600">Expiring Soon</p>
-          <p className="text-2xl font-bold text-yellow-600">
-            {expiringAgents.length}
-          </p>
-        </div>
-        <div className="bg-white p-4 rounded-lg shadow-sm border">
-          <p className="text-sm text-gray-600">Avg. Performance</p>
-          <p className="text-2xl font-bold">94%</p>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={() => void load()}
+            disabled={loading}
+            className="gap-2"
+          >
+            <RefreshCw className="h-4 w-4" />
+            Refresh
+          </Button>
+          <Button onClick={() => setCreateOpen(true)} className="gap-2">
+            <UserPlus className="h-4 w-4" />
+            Link Agent
+          </Button>
         </div>
       </div>
 
-      {/* Expiring Soon Alert */}
-      {expiringAgents.length > 0 && (
-        <div className="mb-6 bg-yellow-50 border-l-4 border-yellow-400 p-4">
-          <div className="flex items-center">
-            <AlertCircle className="w-5 h-5 text-yellow-400 mr-2" />
-            <p className="text-sm text-yellow-700">
-              {expiringAgents.length} agent contract(s) expiring within 30 days
-            </p>
-          </div>
-        </div>
-      )}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <Card>
+          <CardContent className="p-4">
+            <div className="text-xs text-muted-foreground">Total</div>
+            <div className="text-2xl font-bold">{stats.total}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="text-xs text-muted-foreground">Active</div>
+            <div className="text-2xl font-bold">{stats.active}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="text-xs text-muted-foreground">Expiring (30d)</div>
+            <div className="text-2xl font-bold">{stats.expiringSoon}</div>
+          </CardContent>
+        </Card>
+      </div>
 
-      {/* Search and Filter */}
-      <div className="bg-white p-4 rounded-lg shadow-sm border mb-6">
-        <div className="flex flex-col md:flex-row gap-4">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-            <input
-              type="text"
-              placeholder="Search agents by name or territory..."
-              className="w-full pl-10 pr-4 py-2 border rounded-lg"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-          <div className="flex gap-2">
-            <select
-              className="px-4 py-2 border rounded-lg"
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg">Contracts</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div className="relative md:w-[360px]">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search by agent, territory, contract..."
+                className="pl-9"
+              />
+            </div>
+            <Select
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
+              onValueChange={(v) => setStatusFilter(v as any)}
             >
-              <option value="all">All Status</option>
-              <option value="active">Active</option>
-              <option value="pending">Pending</option>
-              <option value="expired">Expired</option>
-              <option value="inactive">Inactive</option>
-            </select>
-            <button className="px-4 py-2 border rounded-lg flex items-center">
-              <Filter className="w-4 h-4 mr-2" />
-              More Filters
-            </button>
-            <button className="px-4 py-2 border rounded-lg">
-              <Download className="w-4 h-4" />
-            </button>
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="Filter status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All</SelectItem>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="inactive">Inactive</SelectItem>
+                <SelectItem value="expired">Expired</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
-        </div>
-      </div>
 
-      {/* Agents List */}
-      <div className="bg-white rounded-lg shadow-sm border mb-6">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50 border-b">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                  Agent
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                  Territory
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                  Contract
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                  Privileges
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                  Performance
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                  Status
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {filteredAgents.map((agent) => (
-                <tr key={agent.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4">
-                    <div className="flex items-center">
-                      <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-3">
-                        <Star className="w-4 h-4 text-blue-600" />
-                      </div>
-                      <div>
-                        <p className="font-medium">{agent.businessName}</p>
-                        <p className="text-sm text-gray-600">
-                          {agent.contactPerson}
-                        </p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center">
-                      <MapPin className="w-4 h-4 text-gray-400 mr-1" />
-                      <span>{agent.territory}</span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div>
-                      <p className="text-sm font-medium">
-                        {agent.contractNumber}
-                      </p>
-                      <p className="text-xs text-gray-600">
-                        Until:{" "}
-                        {new Date(agent.contractEnd).toLocaleDateString()}
-                      </p>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center space-x-2">
-                      {getPriorityBadge(agent.priorityLevel)}
-                      <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
-                        EA+{agent.earlyAccessDays}
-                      </span>
-                      <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
-                        {agent.specialDiscount}% off
-                      </span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div>
-                      <div className="flex items-center mb-1">
-                        <TrendingUp className="w-4 h-4 text-green-600 mr-1" />
-                        <span className="text-sm font-medium">
-                          {agent.performance.fulfillmentRate}%
-                        </span>
-                      </div>
-                      <p className="text-xs text-gray-600">
-                        {agent.performance.orderCount} orders
-                      </p>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span
-                      className={`px-2 py-1 text-xs rounded-full ${getStatusBadge(agent.status)}`}
-                    >
-                      {agent.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center space-x-2">
-                      <button
-                        onClick={() => handleViewContract(agent)}
-                        className="p-1 hover:bg-gray-100 rounded"
-                        title="View Contract"
-                      >
-                        <FileText className="w-4 h-4 text-gray-600" />
-                      </button>
-                      <button
-                        onClick={() => handleRenewContract(agent.id)}
-                        className="p-1 hover:bg-gray-100 rounded"
-                        title="Renew Contract"
-                      >
-                        <Clock className="w-4 h-4 text-gray-600" />
-                      </button>
-                      <button className="p-1 hover:bg-gray-100 rounded">
-                        <MoreVertical className="w-4 h-4 text-gray-600" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+          {loading ? (
+            <div className="text-sm text-muted-foreground">Loading...</div>
+          ) : error ? (
+            <div className="text-sm text-red-600">{error}</div>
+          ) : filtered.length === 0 ? (
+            <EmptyState
+              icon={Plus}
+              title="No agents found"
+              description="Link a distributor as an agent to get started."
+            />
+          ) : (
+            <div className="rounded-lg border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Agent</TableHead>
+                    <TableHead>Territory</TableHead>
+                    <TableHead>Contract</TableHead>
+                    <TableHead>Commission</TableHead>
+                    <TableHead>Dates</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filtered.map((row) => {
+                    const status = getContractStatus(row);
+                    const agentName =
+                      row.agent?.business_name ||
+                      row.agent?.full_name ||
+                      row.agent_id;
+                    const url = getContractUrl(row);
+                    return (
+                      <TableRow key={row.id}>
+                        <TableCell className="font-medium">
+                          <div className="min-w-0">
+                            <div className="truncate">{agentName}</div>
+                            <div className="text-xs text-muted-foreground truncate">
+                              {row.agent?.email || "—"}
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>{row.territory || "—"}</TableCell>
+                        <TableCell className="whitespace-nowrap">
+                          <div className="text-sm">{row.contract_number}</div>
+                          <div className="text-xs text-muted-foreground capitalize">
+                            {row.contract_type.replace("_", " ")}
+                          </div>
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap">
+                          <span className="text-sm">
+                            {String(row.commission_rate)}
+                            {row.commission_type === "percentage" ? "%" : ""}
+                          </span>
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap text-sm">
+                          <div>Start: {formatDate(toDateInput(row.start_date))}</div>
+                          <div className="text-xs text-muted-foreground">
+                            End:{" "}
+                            {row.end_date ? formatDate(toDateInput(row.end_date)) : "—"}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            variant="outline"
+                            className={cn("capitalize", statusBadgeClass[status])}
+                          >
+                            {status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              disabled={!url}
+                              onClick={() => {
+                                if (!url) return;
+                                window.open(url, "_blank", "noopener,noreferrer");
+                              }}
+                              className="gap-2"
+                            >
+                              <FileText className="h-4 w-4" />
+                              Contract
+                            </Button>
+                            {status === "active" ? (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="text-red-600 hover:text-red-700"
+                                onClick={() => openTerminate(row.id)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            ) : null}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
-      {/* Early Access Products Section */}
-      <div className="bg-white rounded-lg shadow-sm border p-6">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-lg font-semibold">Early Access Products</h2>
-          <button className="text-blue-600 text-sm hover:underline">
-            Manage All
-          </button>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {earlyAccessProducts.map((product) => (
-            <div key={product.id} className="border rounded-lg p-4">
-              <div className="flex items-start justify-between">
-                <div>
-                  <h3 className="font-medium">{product.name}</h3>
-                  <p className="text-sm text-gray-600">{product.category}</p>
-                </div>
-                <span className="bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded">
-                  Early Access
-                </span>
-              </div>
-              <div className="mt-3">
-                <p className="text-sm">
-                  Release: {new Date(product.releaseDate).toLocaleDateString()}
-                </p>
-                <div className="flex items-center mt-2">
-                  <span className="text-lg font-bold text-blue-600">
-                    ETB {product.agentPrice}
-                  </span>
-                  <span className="text-sm text-gray-400 line-through ml-2">
-                    ETB {product.regularPrice}
-                  </span>
-                </div>
-              </div>
-              <div className="mt-4 flex gap-2">
-                <button className="flex-1 px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700">
-                  Grant Access
-                </button>
-                <button className="px-3 py-1 border rounded text-sm hover:bg-gray-50">
-                  Edit
-                </button>
+      <Dialog
+        open={createOpen}
+        onOpenChange={(open) => {
+          setCreateOpen(open);
+          if (!open) resetCreateForm();
+        }}
+      >
+        <DialogContent className="sm:max-w-[760px]">
+          <DialogHeader>
+            <DialogTitle>Link Sales Agent</DialogTitle>
+            <DialogDescription>
+              Choose a distributor user to represent your factory and upload the partnership contract.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div className="space-y-2 md:col-span-2">
+              <Label>Search distributors</Label>
+              <div className="flex gap-2">
+                <Input
+                  value={availableSearch}
+                  onChange={(e) => setAvailableSearch(e.target.value)}
+                  placeholder="Search by name, business, or email..."
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => void loadAvailableAgents(availableSearch)}
+                  disabled={availableLoading}
+                  className="gap-2"
+                >
+                  <Search className="h-4 w-4" />
+                  {availableLoading ? "Searching..." : "Search"}
+                </Button>
               </div>
             </div>
-          ))}
-        </div>
-      </div>
 
-      {/* Add Agent Modal */}
-      {showAddModal && <AddAgentModal onClose={() => setShowAddModal(false)} />}
+            <div className="space-y-2 md:col-span-2">
+              <Label>Agent (Distributor)</Label>
+              <Select value={agentId} onValueChange={setAgentId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select distributor user" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableAgents.map((a) => {
+                    const label = a.business_name || a.full_name || a.email || a.id;
+                    const sub = [a.email, a.phone].filter(Boolean).join(" • ");
+                    return (
+                      <SelectItem key={a.id} value={a.id}>
+                        {label}
+                        {sub ? ` — ${sub}` : ""}
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
 
-      {/* View Contract Modal */}
-      {showContractModal && selectedAgent && (
-        <ContractModal
-          agent={selectedAgent}
-          onClose={() => setShowContractModal(false)}
-        />
-      )}
-    </div>
-  );
-};
+            <div className="space-y-2">
+              <Label>Territory (optional)</Label>
+              <Input value={territory} onChange={(e) => setTerritory(e.target.value)} />
+            </div>
 
-// Add Agent Modal Component
-const AddAgentModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
-  const [formData, setFormData] = useState({
-    businessName: "",
-    contactPerson: "",
-    email: "",
-    phone: "",
-    territory: "",
-    contractNumber: "",
-    contractStart: "",
-    contractEnd: "",
-    earlyAccessDays: 7,
-    priorityLevel: 3,
-    specialDiscount: 5,
-    paymentTerms: "Net 30",
-  });
+            <div className="space-y-2">
+              <Label>Contract number</Label>
+              <Input
+                value={contractNumber}
+                onChange={(e) => setContractNumber(e.target.value)}
+                placeholder="e.g. CT-2026-001"
+              />
+            </div>
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    // API call to add agent
-    onClose();
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-        <div className="p-6 border-b">
-          <h2 className="text-xl font-bold">Add New Agent</h2>
-        </div>
-        <form onSubmit={handleSubmit} className="p-6">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="col-span-2">
-              <label className="block text-sm font-medium mb-1">
-                Business Name
-              </label>
-              <input
-                type="text"
-                required
-                className="w-full px-3 py-2 border rounded-lg"
-                value={formData.businessName}
-                onChange={(e) =>
-                  setFormData({ ...formData, businessName: e.target.value })
-                }
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Contact Person
-              </label>
-              <input
-                type="text"
-                required
-                className="w-full px-3 py-2 border rounded-lg"
-                value={formData.contactPerson}
-                onChange={(e) =>
-                  setFormData({ ...formData, contactPerson: e.target.value })
-                }
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">Email</label>
-              <input
-                type="email"
-                required
-                className="w-full px-3 py-2 border rounded-lg"
-                value={formData.email}
-                onChange={(e) =>
-                  setFormData({ ...formData, email: e.target.value })
-                }
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">Phone</label>
-              <input
-                type="tel"
-                required
-                className="w-full px-3 py-2 border rounded-lg"
-                value={formData.phone}
-                onChange={(e) =>
-                  setFormData({ ...formData, phone: e.target.value })
-                }
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Territory
-              </label>
-              <input
-                type="text"
-                required
-                className="w-full px-3 py-2 border rounded-lg"
-                value={formData.territory}
-                onChange={(e) =>
-                  setFormData({ ...formData, territory: e.target.value })
-                }
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Contract Number
-              </label>
-              <input
-                type="text"
-                required
-                className="w-full px-3 py-2 border rounded-lg"
-                value={formData.contractNumber}
-                onChange={(e) =>
-                  setFormData({ ...formData, contractNumber: e.target.value })
-                }
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Contract Start
-              </label>
-              <input
-                type="date"
-                required
-                className="w-full px-3 py-2 border rounded-lg"
-                value={formData.contractStart}
-                onChange={(e) =>
-                  setFormData({ ...formData, contractStart: e.target.value })
-                }
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Contract End
-              </label>
-              <input
-                type="date"
-                required
-                className="w-full px-3 py-2 border rounded-lg"
-                value={formData.contractEnd}
-                onChange={(e) =>
-                  setFormData({ ...formData, contractEnd: e.target.value })
-                }
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Contract Document
-              </label>
-              <input
-                type="file"
-                accept=".pdf,.doc,.docx"
-                className="w-full px-3 py-2 border rounded-lg"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Early Access (Days)
-              </label>
-              <input
-                type="number"
-                min="0"
-                max="30"
-                className="w-full px-3 py-2 border rounded-lg"
-                value={formData.earlyAccessDays}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    earlyAccessDays: parseInt(e.target.value),
-                  })
-                }
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Priority Level
-              </label>
-              <select
-                className="w-full px-3 py-2 border rounded-lg"
-                value={formData.priorityLevel}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    priorityLevel: parseInt(e.target.value) as
-                      | 1
-                      | 2
-                      | 3
-                      | 4
-                      | 5,
-                  })
-                }
+            <div className="space-y-2">
+              <Label>Contract type</Label>
+              <Select
+                value={contractType}
+                onValueChange={(v) => setContractType(v as ContractType)}
               >
-                <option value="1">Level 1 (Highest)</option>
-                <option value="2">Level 2</option>
-                <option value="3">Level 3</option>
-                <option value="4">Level 4</option>
-                <option value="5">Level 5</option>
-              </select>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="exclusive">Exclusive</SelectItem>
+                  <SelectItem value="non_exclusive">Non-exclusive</SelectItem>
+                  <SelectItem value="temporary">Temporary</SelectItem>
+                  <SelectItem value="permanent">Permanent</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Special Discount (%)
-              </label>
-              <input
-                type="number"
-                min="0"
-                max="100"
-                className="w-full px-3 py-2 border rounded-lg"
-                value={formData.specialDiscount}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    specialDiscount: parseInt(e.target.value),
-                  })
-                }
+
+            <div className="space-y-2">
+              <Label>Payment terms</Label>
+              <Select
+                value={paymentTerms}
+                onValueChange={(v) => setPaymentTerms(v as PaymentTerms)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="monthly">Monthly</SelectItem>
+                  <SelectItem value="quarterly">Quarterly</SelectItem>
+                  <SelectItem value="annually">Annually</SelectItem>
+                  <SelectItem value="upon_sale">Upon sale</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Commission rate</Label>
+              <Input
+                value={commissionRate}
+                onChange={(e) => setCommissionRate(e.target.value)}
+                placeholder="e.g. 5"
               />
             </div>
-            <div className="col-span-2">
-              <label className="block text-sm font-medium mb-1">
-                Payment Terms
-              </label>
-              <input
-                type="text"
-                className="w-full px-3 py-2 border rounded-lg"
-                value={formData.paymentTerms}
-                onChange={(e) =>
-                  setFormData({ ...formData, paymentTerms: e.target.value })
-                }
+
+            <div className="space-y-2">
+              <Label>Commission type</Label>
+              <Select
+                value={commissionType}
+                onValueChange={(v) => setCommissionType(v as CommissionType)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="percentage">Percentage</SelectItem>
+                  <SelectItem value="fixed_amount">Fixed amount</SelectItem>
+                  <SelectItem value="tiered">Tiered</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Start date</Label>
+              <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+            </div>
+
+            <div className="space-y-2">
+              <Label>End date (optional)</Label>
+              <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Min sales target (optional)</Label>
+              <Input value={minSalesTarget} onChange={(e) => setMinSalesTarget(e.target.value)} />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Max sales cap (optional)</Label>
+              <Input value={maxSalesCap} onChange={(e) => setMaxSalesCap(e.target.value)} />
+            </div>
+
+            <div className="space-y-2 md:col-span-2">
+              <Label>Partnership contract (PDF/JPG/PNG/WEBP)</Label>
+              <Input
+                type="file"
+                accept=".pdf,image/*"
+                onChange={(e) => setContractFile(e.target.files?.[0] || null)}
               />
+              {contractFile ? (
+                <p className="text-xs text-muted-foreground">
+                  Selected: {contractFile.name}
+                </p>
+              ) : null}
             </div>
           </div>
-          <div className="flex justify-end gap-3 mt-6">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 border rounded-lg hover:bg-gray-50"
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setCreateOpen(false)}
+              disabled={createLoading}
             >
               Cancel
-            </button>
-            <button
-              type="submit"
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-            >
-              Add Agent
-            </button>
+            </Button>
+            <Button onClick={() => void handleCreate()} disabled={createLoading} className="gap-2">
+              <Plus className="h-4 w-4" />
+              {createLoading ? "Linking..." : "Link Agent"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={terminateOpen} onOpenChange={setTerminateOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Terminate contract</DialogTitle>
+            <DialogDescription>
+              Provide a reason. This sets an end date and marks the contract inactive.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label>Reason</Label>
+            <Textarea
+              value={terminateReason}
+              onChange={(e) => setTerminateReason(e.target.value)}
+              placeholder="e.g. Contract ended by mutual agreement"
+            />
           </div>
-        </form>
-      </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setTerminateOpen(false)} disabled={createLoading}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={() => void handleTerminate()} disabled={createLoading}>
+              Terminate
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
 
-// Contract Modal Component
-const ContractModal: React.FC<{ agent: Agent; onClose: () => void }> = ({
-  agent,
-  onClose,
-}) => {
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg w-full max-w-2xl">
-        <div className="p-6 border-b">
-          <h2 className="text-xl font-bold">
-            Contract Details - {agent.businessName}
-          </h2>
-        </div>
-        <div className="p-6">
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-sm text-gray-600">Contract Number</p>
-                <p className="font-medium">{agent.contractNumber}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">Status</p>
-                <span
-                  className={`px-2 py-1 text-xs rounded-full ${getStatusBadge(agent.status)}`}
-                >
-                  {agent.status}
-                </span>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">Start Date</p>
-                <p>{new Date(agent.contractStart).toLocaleDateString()}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">End Date</p>
-                <p>{new Date(agent.contractEnd).toLocaleDateString()}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">Territory</p>
-                <p>{agent.territory}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">Payment Terms</p>
-                <p>{agent.paymentTerms}</p>
-              </div>
-            </div>
-
-            <div className="border-t pt-4">
-              <h3 className="font-medium mb-2">Privileges</h3>
-              <div className="flex flex-wrap gap-2">
-                <span className="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm">
-                  Priority Level {agent.priorityLevel}
-                </span>
-                <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">
-                  Early Access: {agent.earlyAccessDays} days
-                </span>
-                <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">
-                  {agent.specialDiscount}% Special Discount
-                </span>
-                <span className="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm">
-                  Commission: {agent.commissionRate}%
-                </span>
-              </div>
-            </div>
-
-            <div className="border-t pt-4">
-              <h3 className="font-medium mb-2">Contract Document</h3>
-              <div className="flex items-center p-3 bg-gray-50 rounded-lg">
-                <FileText className="w-5 h-5 text-gray-600 mr-2" />
-                <span className="flex-1">
-                  signed_contract_{agent.contractNumber}.pdf
-                </span>
-                <button className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700">
-                  <Download className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-
-            <div className="border-t pt-4">
-              <h3 className="font-medium mb-2">Performance Summary</h3>
-              <div className="grid grid-cols-3 gap-4">
-                <div className="text-center p-3 bg-gray-50 rounded">
-                  <p className="text-sm text-gray-600">Orders</p>
-                  <p className="text-xl font-bold">
-                    {agent.performance.orderCount}
-                  </p>
-                </div>
-                <div className="text-center p-3 bg-gray-50 rounded">
-                  <p className="text-sm text-gray-600">Total Value</p>
-                  <p className="text-xl font-bold">
-                    ETB {agent.performance.totalValue.toLocaleString()}
-                  </p>
-                </div>
-                <div className="text-center p-3 bg-gray-50 rounded">
-                  <p className="text-sm text-gray-600">Fulfillment</p>
-                  <p className="text-xl font-bold">
-                    {agent.performance.fulfillmentRate}%
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="p-6 border-t flex justify-end gap-3">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 border rounded-lg hover:bg-gray-50"
-          >
-            Close
-          </button>
-          <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-            Renew Contract
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// Mock data
-const mockAgents: Agent[] = [
-  {
-    id: "1",
-    businessName: "ABC Trading PLC",
-    contactPerson: "Tesfaye Alemu",
-    email: "tesfaye@abctrading.com",
-    phone: "+251911234567",
-    territory: "Addis Ababa",
-    contractNumber: "CT-2025-001",
-    contractStart: "2025-01-01",
-    contractEnd: "2025-12-31",
-    contractDocument: "/contracts/ct-2025-001.pdf",
-    earlyAccessDays: 7,
-    priorityLevel: 1,
-    specialDiscount: 10,
-    commissionRate: 5,
-    paymentTerms: "Net 30",
-    status: "active",
-    performance: {
-      lastOrder: "2025-03-10",
-      orderCount: 45,
-      totalValue: 1250000,
-      fulfillmentRate: 98,
-      rating: 4.8,
-    },
-  },
-  {
-    id: "2",
-    businessName: "XYZ Distributors",
-    contactPerson: "Sara Hailu",
-    email: "sara@xyzdist.com",
-    phone: "+251922345678",
-    territory: "Oromia",
-    contractNumber: "CT-2025-002",
-    contractStart: "2025-02-01",
-    contractEnd: "2025-09-30",
-    contractDocument: "/contracts/ct-2025-002.pdf",
-    earlyAccessDays: 5,
-    priorityLevel: 2,
-    specialDiscount: 7,
-    commissionRate: 4,
-    paymentTerms: "Net 15",
-    status: "active",
-    performance: {
-      lastOrder: "2025-03-12",
-      orderCount: 32,
-      totalValue: 890000,
-      fulfillmentRate: 95,
-      rating: 4.5,
-    },
-  },
-  {
-    id: "3",
-    businessName: "Fresh Supply",
-    contactPerson: "Abebe Kebede",
-    email: "abebe@freshsupply.com",
-    phone: "+251933456789",
-    territory: "Dire Dawa",
-    contractNumber: "CT-2024-089",
-    contractStart: "2024-06-01",
-    contractEnd: "2025-03-28",
-    contractDocument: "/contracts/ct-2024-089.pdf",
-    earlyAccessDays: 3,
-    priorityLevel: 3,
-    specialDiscount: 5,
-    commissionRate: 3,
-    paymentTerms: "Net 7",
-    status: "active",
-    performance: {
-      lastOrder: "2025-03-11",
-      orderCount: 28,
-      totalValue: 450000,
-      fulfillmentRate: 92,
-      rating: 4.2,
-    },
-  },
-];
-
-// Helper function (duplicated from component for modal use)
-const getStatusBadge = (status: Agent["status"]) => {
-  const styles = {
-    active: "bg-green-100 text-green-800",
-    inactive: "bg-gray-100 text-gray-800",
-    pending: "bg-yellow-100 text-yellow-800",
-    expired: "bg-red-100 text-red-800",
-  };
-  return styles[status];
-};
-
-export default AgentsPage;
+export default FactoryAgentsPage;

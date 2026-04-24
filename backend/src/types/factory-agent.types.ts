@@ -7,6 +7,9 @@ export interface IFactoryAgent {
   factory_id: string;
   agent_id: string;
   contract_number: string;
+  contract_document_id?: string | null;
+  contract_document_url?: string | null;
+  contract_document_name?: string | null;
   contract_type: ContractType;
   commission_rate: number;
   commission_type: CommissionType;
@@ -28,6 +31,9 @@ export interface CreateFactoryAgentDTO {
   factory_id: string;
   agent_id: string;
   contract_number: string;
+  contract_document_id?: string;
+  contract_document_url: string;
+  contract_document_name?: string;
   contract_type: ContractType;
   commission_rate: number;
   commission_type: CommissionType;

@@ -3,13 +3,32 @@ import sequelize from '../config/database';
 import { IFactoryAgent, ContractType, CommissionType, PaymentTerms } from '../types/factory-agent.types';
 import { User } from './user.model';
 
-interface FactoryAgentCreationAttributes extends Optional<IFactoryAgent, 'id' | 'min_sales_target' | 'max_sales_cap' | 'territory' | 'end_date' | 'renewal_date' | 'last_sale_date' | 'termination_reason' | 'updated_at' | 'deleted_at'> {}
+interface FactoryAgentCreationAttributes
+  extends Optional<
+    IFactoryAgent,
+    | 'id'
+    | 'contract_document_id'
+    | 'contract_document_url'
+    | 'contract_document_name'
+    | 'min_sales_target'
+    | 'max_sales_cap'
+    | 'territory'
+    | 'end_date'
+    | 'renewal_date'
+    | 'last_sale_date'
+    | 'termination_reason'
+    | 'updated_at'
+    | 'deleted_at'
+  > {}
 
 export class FactoryAgent extends Model<IFactoryAgent, FactoryAgentCreationAttributes> implements IFactoryAgent {
   public id!: string;
   public factory_id!: string;
   public agent_id!: string;
   public contract_number!: string;
+  public contract_document_id?: string | null;
+  public contract_document_url?: string | null;
+  public contract_document_name?: string | null;
   public contract_type!: ContractType;
   public commission_rate!: number;
   public commission_type!: CommissionType;
@@ -53,6 +72,18 @@ FactoryAgent.init(
       type: DataTypes.STRING(50),
       allowNull: false,
       unique: true
+    },
+    contract_document_id: {
+      type: DataTypes.UUID,
+      allowNull: true,
+    },
+    contract_document_url: {
+      type: DataTypes.STRING(500),
+      allowNull: true,
+    },
+    contract_document_name: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
     },
     contract_type: {
       type: DataTypes.ENUM('exclusive', 'non_exclusive', 'temporary', 'permanent'),

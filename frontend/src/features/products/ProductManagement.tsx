@@ -147,8 +147,7 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({
   }, [initialProducts]);
 
   const formCategories = useMemo(
-    () =>
-      filterCategories.filter((category) => category !== "All Categories"),
+    () => filterCategories.filter((category) => category !== "All Categories"),
     [filterCategories],
   );
   const getProductImages = (product: Product) => {
@@ -315,18 +314,12 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>Export As</DropdownMenuLabel>
-              <DropdownMenuItem onClick={() => handleExport("csv")}>
-                <span className="mr-2">📊</span>
-                CSV File
-              </DropdownMenuItem>
+
               <DropdownMenuItem onClick={() => handleExport("excel")}>
                 <span className="mr-2">📑</span>
                 Excel Spreadsheet
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleExport("pdf")}>
-                <span className="mr-2">📄</span>
-                PDF Report
-              </DropdownMenuItem>
+
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => window.print()}>
                 <span className="mr-2">🖨️</span>

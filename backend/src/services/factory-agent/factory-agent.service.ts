@@ -1,16 +1,37 @@
 import { FactoryAgentRepository } from '../../repositories/factory-agent.repository';
+import { UserRepository } from '../../repositories/user.repository';
 import { AppError } from '../../utils/errors';
 import { IFactoryAgent, CreateFactoryAgentDTO, UpdateFactoryAgentDTO } from '../../types/factory-agent.types';
 import logger from '../../utils/logger';
 
 export class FactoryAgentService {
   private factoryAgentRepo = new FactoryAgentRepository();
+  private userRepo = new UserRepository();
 
   async createFactoryAgent(data: CreateFactoryAgentDTO, createdBy: string): Promise<IFactoryAgent> {
-    if (!data.factory_id || !data.agent_id || !data.contract_number ||
-        !data.contract_type || !data.commission_rate || !data.commission_type ||
-        !data.start_date || !data.payment_terms) {
+    if (
+      !data.factory_id ||
+      !data.agent_id ||
+      !data.contract_number ||
+      !data.contract_type ||
+      data.commission_rate === undefined ||
+      data.commission_rate === null ||
+      !data.commission_type ||
+      !data.start_date ||
+      !data.payment_terms ||
+      !data.contract_document_url
+    ) {
       throw new AppError('Missing required fields', 400);
+    }
+
+    const factory = await this.userRepo.findById(data.factory_id);
+    if (!factory || factory.role !== 'factory') {
+      throw new AppError('Invalid factory_id', 400);
+    }
+
+    const agent = await this.userRepo.findById(data.agent_id);
+    if (!agent || agent.role !== 'distributor' || agent.status !== 'active') {
+      throw new AppError('Agent must be an active distributor account', 400);
     }
 
     // Check if contract number already exists
@@ -35,6 +56,10 @@ export class FactoryAgentService {
 
   async getAgentContracts(agentId: string): Promise<IFactoryAgent[]> {
     return this.factoryAgentRepo.findByAgent(agentId) as Promise<IFactoryAgent[]>;
+  }
+
+  async getAvailableAgents(search?: string) {
+    return this.userRepo.findDistributors(search);
   }
 
   async getActiveContracts(): Promise<IFactoryAgent[]> {

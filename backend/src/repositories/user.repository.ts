@@ -87,6 +87,28 @@ export class UserRepository extends BaseRepository<User> {
     });
   }
 
+  /** List users with role=distributor (for factories to link as their sales agents). */
+  async findDistributors(search?: string): Promise<User[]> {
+    const where: any = {
+      role: 'distributor',
+      status: 'active',
+      deleted_at: null,
+    };
+    if (search && search.trim()) {
+      where[Op.or] = [
+        { email: { [Op.like]: `%${search.trim()}%` } },
+        { full_name: { [Op.like]: `%${search.trim()}%` } },
+        { business_name: { [Op.like]: `%${search.trim()}%` } },
+      ];
+    }
+    return this.findAll({
+      where,
+      attributes: ['id', 'full_name', 'business_name', 'email', 'phone', 'status', 'role'],
+      limit: 50,
+      order: [['business_name', 'ASC'], ['full_name', 'ASC']],
+    });
+  }
+
   async getUsers(options?: {
     limit?: number;
     offset?: number;

@@ -273,7 +273,10 @@ export const PlaceOrderDialog: React.FC<PlaceOrderDialogProps> = ({
               </div>
               <div className="space-y-3">
                 {items.map((item) => (
-                  <div key={item.id} className="flex justify-between gap-4 text-sm">
+                  <div
+                    key={item.id}
+                    className="flex justify-between gap-4 text-sm"
+                  >
                     <div className="min-w-0">
                       <span className="font-medium">{item.product?.name}</span>
                       {onUpdateItemQuantity ? (
@@ -319,7 +322,9 @@ export const PlaceOrderDialog: React.FC<PlaceOrderDialogProps> = ({
                             type="number"
                             min={Math.max(
                               1,
-                              Number((item.product as any)?.min_order_amount || 1),
+                              Number(
+                                (item.product as any)?.min_order_amount || 1,
+                              ),
                             )}
                             value={item.quantity}
                             disabled={isPlacing}
@@ -337,7 +342,10 @@ export const PlaceOrderDialog: React.FC<PlaceOrderDialogProps> = ({
                               );
                               const parsed = parseInt(e.target.value, 10);
                               if (!Number.isFinite(parsed)) return;
-                              onUpdateItemQuantity(productId, Math.max(min, parsed));
+                              onUpdateItemQuantity(
+                                productId,
+                                Math.max(min, parsed),
+                              );
                             }}
                             className="h-7 w-20 text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                           />
