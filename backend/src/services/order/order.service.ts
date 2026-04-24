@@ -121,7 +121,7 @@ export class OrderService {
 
   // CREATE ORDER
   async createOrder(buyerId: string, orderData: CreateOrderDTO) {
-    const { supplier_id, items, payment_method, delivery_address, notes } = orderData;
+    const { supplier_id, items, payment_method, delivery_address } = orderData;
 
     // Validate supplier exists
     const supplier = await this.userRepo.findById(supplier_id);
@@ -132,6 +132,7 @@ export class OrderService {
     // Validate products and calculate subtotal
     let subtotal = 0;
     const orderItems = [];
+    const productNameById = new Map<string, string>();
 
     const toNumber = (value: any, fallback = 0) => {
       const parsed = Number(value);
@@ -197,6 +198,8 @@ export class OrderService {
         throw new AppError(`Minimum order for ${product.name} is ${product.min_order_amount}`, 400);
       }
 
+      productNameById.set(product.id, product.name);
+
       const promotion = await this.broadcastRepo.findActiveDiscountByOwnerAndCode(
         supplier_id,
         product.sku,
@@ -211,9 +214,6 @@ export class OrderService {
         quantity: item.quantity,
         unit_price: unitPrice,
       });
-
-      // Reserve stock
-      await this.productRepo.decrementStock(product.id, item.quantity);
     }
 
     const supplierVatRegistered = supplier.is_vat_registered === true;
@@ -251,24 +251,46 @@ export class OrderService {
     }
 
     // Create order with items in a transaction
-    const order = await this.orderRepo.createOrderWithItems(
-      {
-        buyer_id: buyerId,
-        supplier_id,
-        total_price,
-        order_status: 'pending',
-      },
-      orderItems
-    );
+    let order: any;
+    try {
+      order = await this.orderRepo.createOrderWithItems(
+        {
+          buyer_id: buyerId,
+          supplier_id,
+          total_price,
+          order_status: 'pending',
+        },
+        orderItems
+      );
+    } catch (err: any) {
+      const message = typeof err?.message === 'string' ? err.message : '';
+      if (message.startsWith('INSUFFICIENT_STOCK:')) {
+        const productId = message.split(':')[1] || '';
+        const productName = productNameById.get(productId);
+        throw new AppError(
+          productName ? `Insufficient stock for ${productName}` : 'Insufficient stock',
+          400,
+        );
+      }
+      throw err;
+    }
 
     // Create payment record only when method is explicitly provided
     if (typeof payment_method === 'string' && payment_method.trim().length > 0) {
-      await this.createPaymentRecord(order.id, total_price, payment_method);
+      try {
+        await this.createPaymentRecord(order.id, total_price, payment_method);
+      } catch (err) {
+        logger.error(`Failed to create payment record for order ${order.id}`, err);
+      }
     }
 
     // Create delivery record if address provided
     if (delivery_address) {
-      await this.createDeliveryRecord(order.id, delivery_address);
+      try {
+        await this.createDeliveryRecord(order.id, delivery_address);
+      } catch (err) {
+        logger.error(`Failed to create delivery record for order ${order.id}`, err);
+      }
     }
 
     logger.info(`Order created: ${order.id} by buyer: ${buyerId}`);

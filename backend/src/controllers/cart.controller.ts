@@ -72,21 +72,42 @@ export class CartController {
   }
 
   // UPDATE CART ITEM
-async updateCartItem(req: Request, res: Response) {
-  const { itemId } = req.params;
-  const { quantity } = req.body;
+  async updateCartItem(req: Request, res: Response) {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        res.status(401).json({ success: false, message: "User not authenticated" });
+        return;
+      }
 
-  const updatedItem = await cartService.updateCartItemById(
-    itemId,
-    quantity
-  );
+      const { itemId } = req.params;
+      const { quantity } = req.body;
 
-  if (!updatedItem) {
-    return res.status(404).json({ message: "Item not found" });
+      const updatedCart = await cartService.updateCartItemById(
+        userId,
+        itemId,
+        Number(quantity),
+      );
+
+      if (!updatedCart) {
+        res.status(404).json({ success: false, message: "Item not found" });
+        return;
+      }
+
+      res.json({
+        success: true,
+        data: updatedCart,
+        message: "Cart updated successfully",
+      });
+    } catch (error) {
+      if (error instanceof AppError) {
+        res.status(error.statusCode).json({ success: false, message: error.message });
+      } else {
+        logger.error("Update cart item error:", error);
+        res.status(500).json({ success: false, message: "Internal server error" });
+      }
+    }
   }
-
-  return res.json(updatedItem);
-}
 
   // REMOVE FROM CART
   async removeFromCart(req: Request, res: Response) {

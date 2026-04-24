@@ -15,6 +15,7 @@ import {
   applyDiscountToUnitPrice,
   resolveBestDiscountPromotion,
 } from "@/lib/promotion-utils";
+import toast from "react-hot-toast";
 // import { useAuthStore } from "@/stores/auth.store";
 
 const categories = ["All Categories", "Beverages", "Food"];
@@ -89,6 +90,9 @@ const RetailerProductsPage: React.FC = () => {
   const addToCart = async (productId: string | number, quantity: number) => {
     try {
       const productIdStr = productId.toString();
+      const product = transformedProducts.find((p) => String(p.id) === productIdStr);
+      const minOrder = Math.max(1, Number(product?.min_order_amount || 1));
+      const stock = Number(product?.stock_quantity || 0);
 
       // Check if product already in cart
       const existingItem = cartItems?.find(
@@ -97,28 +101,44 @@ const RetailerProductsPage: React.FC = () => {
 
       if (existingItem) {
         // Update existing cart item
-        await updateQuantity(existingItem.id, existingItem.quantity + quantity);
+        const nextQuantity = existingItem.quantity + quantity;
+        if (stock > 0 && nextQuantity > stock) {
+          toast.error(`Only ${stock} available`);
+          return;
+        }
+        await updateQuantity(existingItem.id, nextQuantity);
       } else {
         // Create new cart item
-        await addToCartStore(productIdStr, quantity);
+        const initialQuantity = Math.max(quantity, minOrder);
+        if (stock > 0 && initialQuantity > stock) {
+          toast.error(`Only ${stock} available`);
+          return;
+        }
+        await addToCartStore(productIdStr, initialQuantity);
       }
 
       // Refresh cart to get updated data
       await fetchCart();
     } catch (error) {
       console.error("Failed to add to cart:", error);
+      toast.error((error as any)?.message || "Failed to add to cart");
     }
   };
 
   const removeFromCart = async (productId: string | number) => {
     try {
       const productIdStr = productId.toString();
+      const product = transformedProducts.find((p) => String(p.id) === productIdStr);
+      const minOrder = Math.max(1, Number(product?.min_order_amount || 1));
       const existingItem = cartItems?.find(
         (item: any) => item.product_id === productIdStr,
       );
 
       if (existingItem) {
-        if (existingItem.quantity > 1) {
+        if (existingItem.quantity - 1 < minOrder) {
+          // If decrement would break MOQ, remove the item instead.
+          await removeFromCartStore(existingItem.id);
+        } else if (existingItem.quantity > 1) {
           // Decrease quantity
           await updateQuantity(existingItem.id, existingItem.quantity - 1);
         } else {
@@ -131,6 +151,7 @@ const RetailerProductsPage: React.FC = () => {
       }
     } catch (error) {
       console.error("Failed to remove from cart:", error);
+      toast.error((error as any)?.message || "Failed to update cart");
     }
   };
 
@@ -260,10 +281,10 @@ const RetailerProductsPage: React.FC = () => {
         longitude: Number.isFinite(Number(supplierAddress?.longitude))
           ? Number(supplierAddress?.longitude)
           : null,
-        min_order_amount: product.min_order_amount,
+        min_order_amount: minQty,
         unit: product.unit_type,
         description: product.description || "",
-        stock_quantity: product.stock_quantity,
+        stock_quantity: Number(product.stock_quantity || 0),
         delivery_available: product.delivery_available,
         delivery_pricing: product.delivery_pricing,
         delivery_fee_per_km: product.delivery_fee_per_km,

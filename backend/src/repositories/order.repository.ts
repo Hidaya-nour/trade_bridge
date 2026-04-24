@@ -181,6 +181,27 @@ export class OrderRepository extends BaseRepository<Order> {
     const transaction = await sequelize.transaction();
 
     try {
+      // Reserve stock inside the same transaction to avoid stock changes when order creation fails.
+      for (const item of items) {
+        const [updated] = await Product.update(
+          {
+            stock_quantity: sequelize.literal(`stock_quantity - ${item.quantity}`),
+            updated_at: new Date(),
+          } as any,
+          {
+            where: {
+              id: item.product_id,
+              stock_quantity: { [Op.gte]: item.quantity },
+            },
+            transaction,
+          },
+        );
+
+        if (updated === 0) {
+          throw new Error(`INSUFFICIENT_STOCK:${item.product_id}`);
+        }
+      }
+
       const order = await this.model.create(orderData as any, { transaction });
 
       const orderItems = items.map(item => ({

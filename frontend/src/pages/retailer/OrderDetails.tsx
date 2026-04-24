@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo } from "react";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 
 import OrderDetailsView from "@/features/order/OrderDetailsView";
 import { useOrderStore } from "@/stores/order.store";
@@ -9,6 +9,7 @@ import { getPaymentMethodLabel } from "@/lib/payment-method-utils";
 import toast from "react-hot-toast";
 import type { Order, OrderStatus, OrderDetailsData } from "@/types/order.types";
 import { WithAsync } from "@/components/shared/WithAsync";
+import { Button } from "@/components/ui/button";
 
 const statusIndex: Record<OrderStatus, number> = {
   pending: 0,
@@ -125,6 +126,7 @@ const mapOrderToDetails = (order: Order): OrderDetailsData => {
 
 const OrderDetailsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const { currentOrder, fetchOrderById, isLoading, error, createOrder } =
     useOrderStore();
 
@@ -218,6 +220,16 @@ const OrderDetailsPage: React.FC = () => {
         <div className="p-6 text-sm text-muted-foreground">{resolvedError}</div>
       }
     >
+      {currentOrder && !currentOrder.delivery ? (
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-lg border bg-muted/30 p-3">
+          <div className="text-sm text-muted-foreground">
+            This supplier did not provide delivery for this order. You can request an independent driver.
+          </div>
+          <Button onClick={() => navigate(`/retailer/orders/${currentOrder.id}/request-driver`)}>
+            Request Driver
+          </Button>
+        </div>
+      ) : null}
       <OrderDetailsView
         key={orderDetails?.id}
         initialOrder={orderDetails as OrderDetailsData}

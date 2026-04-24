@@ -12,6 +12,23 @@ import api from './api';
 
 
 class OrderService {
+  private formatErrorMessage(input: unknown): string {
+    if (typeof input === "string") {
+      return input;
+    }
+    if (Array.isArray(input)) {
+      return input.map(String).join(", ");
+    }
+    if (input && typeof input === "object") {
+      return Object.entries(input as Record<string, unknown>)
+        .map(([field, value]) => {
+          if (Array.isArray(value)) return `${field}: ${value.join(", ")}`;
+          return `${field}: ${String(value)}`;
+        })
+        .join(" | ");
+    }
+    return "Request failed";
+  }
   // ========================================================================
   // GET METHODS
   // ========================================================================
@@ -86,8 +103,20 @@ class OrderService {
   // CREATE METHODS
   async createOrder(data: CreateOrderData): Promise<OrderResponse> {
     console.log("Order payload:", JSON.stringify(data, null, 2));
-    const response = await api.post('/orders', data);
-    return response.data;
+    try {
+      const response = await api.post("/orders", data);
+      return response.data;
+    } catch (error: any) {
+      const backendMessage = error?.response?.data?.message;
+      const backendErrors = error?.response?.data?.errors;
+      const message =
+        backendMessage !== undefined
+          ? this.formatErrorMessage(backendMessage)
+          : backendErrors !== undefined
+            ? this.formatErrorMessage(backendErrors)
+            : this.formatErrorMessage(error?.message);
+      throw new Error(message);
+    }
   }
 
   // UPDATE METHODS
