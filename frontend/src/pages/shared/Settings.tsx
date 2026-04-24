@@ -49,6 +49,25 @@ import SecurityTab from "../../components/setting/SecurityTab";
 import PaymentTab from "../../components/setting/PaymentTab";
 import PreferencesTab from "../../components/setting/PreferencesTab";
 
+type ProfileFormState = {
+  full_name: string;
+  email: string;
+  phone: string;
+  altPhone: string;
+  business_name: string;
+  businessType: string;
+  tin_number: string;
+  vatRegistered: boolean;
+  bio: string;
+  avatar: string;
+};
+
+type BusinessFieldErrors = {
+  business_name?: string | null;
+  tin_number?: string | null;
+  vatRegistered?: string | null;
+};
+
 // Mock user data
 const userData = {
   profile: {
@@ -167,11 +186,8 @@ const SettingsPage: React.FC = () => {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [businessMessage, setBusinessMessage] = useState<string | null>(null);
-  const [businessFieldErrors, setBusinessFieldErrors] = useState<{
-    business_name: string | null;
-    tin_number: string | null;
-    vatRegistered: string | null;
-  }>({
+  const [businessFieldErrors, setBusinessFieldErrors] =
+    useState<BusinessFieldErrors>({
     business_name: null,
     tin_number: null,
     vatRegistered: null,
@@ -225,7 +241,7 @@ const SettingsPage: React.FC = () => {
     isLoading: addressesLoading,
     error: addressesError,
   } = useAddressStore();
-  const [profileForm, setProfileForm] = useState({
+  const [profileForm, setProfileFormState] = useState<ProfileFormState>({
     full_name: "",
     email: "",
     phone: "",
@@ -237,6 +253,15 @@ const SettingsPage: React.FC = () => {
     bio: "",
     avatar: "",
   });
+  const [profileFormDirty, setProfileFormDirty] = useState(false);
+  const [profileFormHydratedUserId, setProfileFormHydratedUserId] = useState<
+    string | null
+  >(null);
+  const setProfileForm: React.Dispatch<React.SetStateAction<ProfileFormState>> =
+    (next) => {
+      setProfileFormDirty(true);
+      setProfileFormState(next);
+    };
 
   const [licenseFile, setLicenseFile] = useState<File | null>(null);
   const [licenseIssuedDate, setLicenseIssuedDate] = useState("");
@@ -275,7 +300,27 @@ const SettingsPage: React.FC = () => {
       return;
     }
 
-    setProfileForm((prev) => ({
+    // Hydrate the form once per user, then stop overwriting while the user edits.
+    if (profileFormHydratedUserId !== user.id) {
+      setProfileFormState((prev) => ({
+        ...prev,
+        full_name: user.full_name || "",
+        email: user.email || "",
+        phone: user.phone || "",
+        business_name: user.business_name || "",
+        businessType: user.role || "",
+        tin_number: user.tin_number || "",
+        vatRegistered: user.is_vat_registered === true,
+        avatar: user.profile_image || "",
+      }));
+      setProfileFormHydratedUserId(user.id);
+      setProfileFormDirty(false);
+      return;
+    }
+
+    if (profileFormDirty) return;
+
+    setProfileFormState((prev) => ({
       ...prev,
       full_name: user.full_name || "",
       email: user.email || "",
@@ -286,7 +331,7 @@ const SettingsPage: React.FC = () => {
       vatRegistered: user.is_vat_registered === true,
       avatar: user.profile_image || "",
     }));
-  }, [user, fetchUser]);
+  }, [user, fetchUser, profileFormDirty, profileFormHydratedUserId]);
 
   useEffect(() => {
     if (!canManageSupplierPaymentMethods && activeTab === "payment") {
@@ -330,6 +375,7 @@ const SettingsPage: React.FC = () => {
       });
       setSaveMessage("Profile updated successfully");
       setIsEditing(false);
+      setProfileFormDirty(false);
     } catch {
       setSaveMessage("Failed to update profile");
     }
@@ -391,6 +437,7 @@ const SettingsPage: React.FC = () => {
         tin_number: null,
         vatRegistered: null,
       });
+      setProfileFormDirty(false);
     } catch {
       setBusinessMessage("Failed to update business info");
     }
