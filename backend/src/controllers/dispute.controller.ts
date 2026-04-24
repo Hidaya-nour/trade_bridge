@@ -43,7 +43,7 @@ const mapDispute = (dispute: any) => {
     resolution: null,
     resolved_at: dispute.resolved_at || null,
     created_at: dispute.created_at,
-    updated_at: dispute.created_at,
+    updated_at: dispute.updated_at,
     raised_by: raisedBy
       ? {
           id: raisedBy.id,
@@ -76,6 +76,7 @@ const mapDispute = (dispute: any) => {
           total_price: order.total_price,
           order_status: order.order_status,
           created_at: order.created_at,
+          updated_at: order.updated_at,
         }
       : null,
   };
@@ -85,7 +86,7 @@ const disputeInclude = [
   {
     model: Order,
     as: 'order',
-    attributes: ['id', 'total_price', 'order_status', 'created_at'],
+    attributes: ['id', 'total_price', 'order_status', 'created_at', 'updated_at'],
     required: false,
   },
   {

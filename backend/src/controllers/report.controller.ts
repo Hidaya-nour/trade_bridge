@@ -4,6 +4,7 @@ import { AppError } from '../utils/errors';
 import UserReport from '../models/user-report.model';
 import User from '../models/user.model';
 import Order from '../models/order.model';
+import SuspensionAppeal from '../models/suspension-appeal.model';
 
 let userReportsTableReady: Promise<void> | null = null;
 const ensureUserReportsTable = async () => {
@@ -11,6 +12,14 @@ const ensureUserReportsTable = async () => {
     userReportsTableReady = UserReport.sync().then(() => undefined);
   }
   await userReportsTableReady;
+};
+
+let suspensionAppealsTableReady: Promise<void> | null = null;
+const ensureSuspensionAppealsTable = async () => {
+  if (!suspensionAppealsTableReady) {
+    suspensionAppealsTableReady = SuspensionAppeal.sync().then(() => undefined);
+  }
+  await suspensionAppealsTableReady;
 };
 
 class ReportController {
@@ -85,8 +94,9 @@ class ReportController {
     try {
       this.ensureAdmin(req);
       await ensureUserReportsTable();
+      await ensureSuspensionAppealsTable();
 
-      const rows = (await UserReport.findAll({
+      const reportRows = (await UserReport.findAll({
         attributes: [
           'reported_user_id',
           [fn('COUNT', col('id')), 'total_reports'],
@@ -98,20 +108,52 @@ class ReportController {
         raw: true,
       })) as Array<any>;
 
-      const userIds = rows.map((r) => r.reported_user_id).filter(Boolean);
+      const latestOpenAppeals = (await SuspensionAppeal.findAll({
+        where: { status: 'open' } as any,
+        attributes: ['id', 'user_id', 'message', 'created_at'],
+        order: [['created_at', 'DESC']],
+        raw: true,
+      })) as Array<any>;
+
+      const latestAppealByUser = new Map<string, any>();
+      for (const appeal of latestOpenAppeals) {
+        const userId = String(appeal.user_id || '');
+        if (!userId) continue;
+        if (!latestAppealByUser.has(userId)) {
+          latestAppealByUser.set(userId, appeal);
+        }
+      }
+
+      const reportUserIds = reportRows.map((r) => r.reported_user_id).filter(Boolean);
+      const appealUserIds = Array.from(latestAppealByUser.keys());
+      const userIds = Array.from(new Set([...reportUserIds, ...appealUserIds]));
       const users = await User.findAll({
         where: { id: { [Op.in]: userIds } },
         attributes: ['id', 'full_name', 'email', 'business_name', 'role', 'status', 'verified', 'created_at'],
       });
       const userMap = new Map<string, any>(users.map((u: any) => [u.id, u]));
 
-      const summary = rows.map((row) => ({
+      const summaryBase = reportRows.map((row) => ({
         reported_user_id: row.reported_user_id,
         total_reports: Number(row.total_reports || 0),
         open_reports: Number(row.open_reports || 0),
         last_reported_at: row.last_reported_at,
         user: userMap.get(row.reported_user_id) || null,
+        open_appeal: latestAppealByUser.get(String(row.reported_user_id)) || null,
       }));
+
+      const missingReportRows = appealUserIds
+        .filter((userId) => !reportUserIds.includes(userId))
+        .map((userId) => ({
+          reported_user_id: userId,
+          total_reports: 0,
+          open_reports: 0,
+          last_reported_at: null,
+          user: userMap.get(userId) || null,
+          open_appeal: latestAppealByUser.get(userId) || null,
+        }));
+
+      const summary = [...summaryBase, ...missingReportRows];
 
       return res.json({ success: true, data: { summary } });
     } catch (error) {
