@@ -3,6 +3,7 @@ import { UserRepository } from '../../repositories/user.repository';
 import { AppError } from '../../utils/errors';
 import { Op } from 'sequelize';
 import Order from '../../models/order.model';
+import Address from '../../models/address.model';
 import supplierReviewRepository from '../../repositories/supplier-review.repository';
 
 export class SupplierService {
@@ -43,12 +44,22 @@ export class SupplierService {
           'full_name', 
           'email', 
           'phone', 
+          'role',
           'verified', 
           'is_vat_registered',
           'vat_rate',
           'profile_image',
           'created_at'
-        ]
+        ],
+        include: [
+          {
+            model: Address,
+            as: 'addresses',
+            required: false,
+            where: { deleted_at: null },
+            attributes: ['id', 'region', 'city', 'subcity', 'common_name'],
+          },
+        ],
       });
 
       return suppliers;
@@ -73,11 +84,21 @@ export class SupplierService {
         'full_name', 
         'email', 
         'phone', 
+        'role',
         'verified', 
         'is_vat_registered',
         'vat_rate',
         'profile_image',
         'created_at'
+      ],
+      include: [
+        {
+          model: Address,
+          as: 'addresses',
+          required: false,
+          where: { deleted_at: null },
+          attributes: ['id', 'region', 'city', 'subcity', 'common_name'],
+        },
       ],
       limit: 1
     });
@@ -105,9 +126,19 @@ export class SupplierService {
           'id', 
           'business_name', 
           'full_name', 
+          'role',
           'verified', 
           'profile_image',
           'created_at'
+        ],
+        include: [
+          {
+            model: Address,
+            as: 'addresses',
+            required: false,
+            where: { deleted_at: null },
+            attributes: ['id', 'region', 'city', 'subcity', 'common_name'],
+          },
         ],
         limit: 50
       });
@@ -133,9 +164,19 @@ export class SupplierService {
           'id', 
           'business_name', 
           'full_name', 
+          'role',
           'verified', 
           'profile_image',
           'created_at'
+        ],
+        include: [
+          {
+            model: Address,
+            as: 'addresses',
+            required: false,
+            where: { deleted_at: null },
+            attributes: ['id', 'region', 'city', 'subcity', 'common_name'],
+          },
         ],
         // order: [['rating', 'DESC']],
         limit
@@ -169,9 +210,19 @@ export class SupplierService {
           'id', 
           'business_name', 
           'full_name', 
+          'role',
           'verified', 
           'profile_image',
           'created_at'
+        ],
+        include: [
+          {
+            model: Address,
+            as: 'addresses',
+            required: false,
+            where: { deleted_at: null },
+            attributes: ['id', 'region', 'city', 'subcity', 'common_name'],
+          },
         ],
         limit: filters?.limit || 20,
         offset: filters?.page ? (filters.page - 1) * (filters.limit || 20) : 0

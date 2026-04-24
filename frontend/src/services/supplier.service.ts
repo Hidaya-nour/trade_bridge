@@ -68,6 +68,25 @@ export interface SupplierReview {
   verified_purchase: boolean;
 }
 
+export interface SupplierAddressSummary {
+  id: string;
+  region: string;
+  city: string;
+  subcity?: string | null;
+  common_name?: string | null;
+}
+
+export interface SupplierListItem {
+  id: string;
+  business_name?: string;
+  full_name?: string;
+  role?: 'factory' | 'distributor';
+  verified?: boolean;
+  profile_image?: string;
+  created_at?: string;
+  addresses?: SupplierAddressSummary[];
+}
+
 export interface SearchSuppliersParams {
   query?: string;
   category?: string;
@@ -237,6 +256,19 @@ class SupplierService {
       return response.data;
     } catch (error) {
       console.error('Error fetching top suppliers:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get all suppliers (directory)
+   */
+  async getAllSuppliers(): Promise<ApiResponse<{ suppliers: SupplierListItem[] }>> {
+    try {
+      const response = await api.get(`${this.BASE_PATH}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching all suppliers:', error);
       throw error;
     }
   }
