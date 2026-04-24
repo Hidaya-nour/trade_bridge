@@ -699,6 +699,7 @@ const SettingsPage: React.FC = () => {
         is_primary: false,
       });
       await fetchSupplierPaymentMethods();
+      window.dispatchEvent(new Event("supplier-payment-methods-updated"));
     } else {
       setPaymentMessage("Failed to add payment method");
     }
@@ -710,6 +711,7 @@ const SettingsPage: React.FC = () => {
     if (updated) {
       setPaymentMessage("Primary payment method updated");
       await fetchSupplierPaymentMethods();
+      window.dispatchEvent(new Event("supplier-payment-methods-updated"));
     } else {
       setPaymentMessage("Failed to update primary payment method");
     }
@@ -721,6 +723,7 @@ const SettingsPage: React.FC = () => {
     if (deleted) {
       setPaymentMessage("Payment method removed");
       await fetchSupplierPaymentMethods();
+      window.dispatchEvent(new Event("supplier-payment-methods-updated"));
     } else {
       setPaymentMessage("Failed to remove payment method");
     }

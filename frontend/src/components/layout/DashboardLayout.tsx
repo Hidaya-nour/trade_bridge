@@ -4,6 +4,7 @@ import DashboardSidebar from "./DashboardSidebar";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/auth.store";
 import { AccountSuspendedNotice } from "@/components/auth/AccountSuspendedNotice";
+import { SupplierPaymentSetupBanner } from "@/components/supplier/SupplierPaymentSetupBanner";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -76,6 +77,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
         <DashboardHeader onMenuClick={() => setMobileSidebarOpen(true)} />
         <main className="flex-1 p-4 lg:p-6">
           <div className="mx-auto max-w-7xl">
+            <SupplierPaymentSetupBanner />
             {children}
           </div>
         </main>

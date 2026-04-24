@@ -2,9 +2,20 @@ import { SupplierPaymentMethodRepository } from '../../repositories/supplier-pay
 import { AppError } from '../../utils/errors';
 import { ISupplierPaymentMethod, CreateSupplierPaymentMethodDTO, UpdateSupplierPaymentMethodDTO } from '../../types/supplier-payment-method.types';
 import logger from '../../utils/logger';
+import { Product } from '../../models/product.model';
 
 export class SupplierPaymentMethodService {
   private paymentMethodRepo = new SupplierPaymentMethodRepository();
+
+  private async ensureSupplierProductsInactiveIfNoActiveMethods(supplierId: string) {
+    const activeMethods = await this.paymentMethodRepo.findActiveBySupplier(supplierId);
+    if (Array.isArray(activeMethods) && activeMethods.length > 0) return;
+
+    await Product.update(
+      { is_available: false, updated_at: new Date() } as any,
+      { where: { supplier_id: supplierId, is_available: true } as any },
+    );
+  }
 
   async createPaymentMethod(data: CreateSupplierPaymentMethodDTO): Promise<ISupplierPaymentMethod> {
     if (!data.supplier_id || !data.method_type || !data.provider_name ||
@@ -23,6 +34,7 @@ export class SupplierPaymentMethodService {
 
     const paymentMethod = await this.paymentMethodRepo.create(data as any);
     logger.info(`Payment method created for supplier ${data.supplier_id}`);
+    await this.ensureSupplierProductsInactiveIfNoActiveMethods(data.supplier_id);
     return paymentMethod as ISupplierPaymentMethod;
   }
 
@@ -49,6 +61,12 @@ export class SupplierPaymentMethodService {
 
     const updated = await this.paymentMethodRepo.update(id, data as any);
     logger.info(`Payment method ${id} updated`);
+
+    const method = await this.paymentMethodRepo.findById(id);
+    if (method?.supplier_id) {
+      await this.ensureSupplierProductsInactiveIfNoActiveMethods(method.supplier_id);
+    }
+
     return updated as [number, ISupplierPaymentMethod[]];
   }
 
@@ -60,6 +78,7 @@ export class SupplierPaymentMethodService {
 
     const deleted = await this.paymentMethodRepo.delete(id);
     logger.info(`Payment method ${id} deleted`);
+    await this.ensureSupplierProductsInactiveIfNoActiveMethods(method.supplier_id);
     return deleted;
   }
 
