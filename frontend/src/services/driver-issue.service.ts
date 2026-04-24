@@ -24,6 +24,11 @@ class DriverIssueService {
     const response = await api.post(this.BASE, data);
     return response.data;
   }
+
+  async getForOrder(orderId: string) {
+    const response = await api.get(`${this.BASE}/order/${orderId}`);
+    return response.data;
+  }
 }
 
 export default new DriverIssueService();

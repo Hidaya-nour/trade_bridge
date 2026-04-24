@@ -5,6 +5,44 @@ import { AppError } from '../utils/errors';
 import { body, param } from 'express-validator';
 
 class DriverController {
+  /** Driver self: list vehicle records linked to the authenticated driver user. */
+  async me(req: Request, res: Response): Promise<any> {
+    try {
+      const driverId = (req as any).user.id as string;
+      const rows = await driverService.listMyDriverLinks(driverId);
+      const drivers = (rows as any[]).map((r) =>
+        typeof r.get === 'function' ? r.get({ plain: true }) : { ...r },
+      );
+      return res.json({ success: true, data: { drivers } });
+    } catch (err) {
+      if (err instanceof AppError) {
+        return res.status(err.statusCode).json({ success: false, message: err.message });
+      }
+      logger.error('Driver me error', err);
+      return res.status(500).json({ success: false, message: 'Internal server error' });
+    }
+  }
+
+  /** Driver self: update vehicle info for one linked driver record. */
+  async updateMe(req: Request, res: Response): Promise<any> {
+    try {
+      const driverId = (req as any).user.id as string;
+      const { id } = req.params;
+      const updated = await driverService.updateMyDriverLink(id, driverId, req.body || {});
+      const driver =
+        updated && typeof (updated as any).get === 'function'
+          ? (updated as any).get({ plain: true })
+          : updated;
+      return res.json({ success: true, data: { driver } });
+    } catch (err) {
+      if (err instanceof AppError) {
+        return res.status(err.statusCode).json({ success: false, message: err.message });
+      }
+      logger.error('Update driver me error', err);
+      return res.status(500).json({ success: false, message: 'Internal server error' });
+    }
+  }
+
   async create(req: Request, res: Response): Promise<any> {
     try {
       const supplierId = (req as any).user.id as string;
@@ -107,6 +145,12 @@ class DriverController {
   ];
 
   static idValidation = [param('id').isUUID().withMessage('Invalid driver ID')];
+
+  static updateMeValidation = [
+    param('id').isUUID().withMessage('Invalid driver ID'),
+    body('vehicle_type').optional().isString().isLength({ max: 100 }),
+    body('license_plate').optional().isString().isLength({ max: 50 }),
+  ];
 }
 
 export default new DriverController();

@@ -44,6 +44,16 @@ export class DriverService {
     return this.DriverRepo.findBySupplier(supplierId);
   }
 
+  /** Driver self view: list driver records linked to this driver user. */
+  async listMyDriverLinks(driverUserId: string) {
+    const driverUser = await this.userRepo.findById(driverUserId);
+    if (!driverUser || driverUser.role !== 'driver') {
+      throw new AppError('Only driver accounts can access vehicle info', 403);
+    }
+
+    return this.DriverRepo.findByDriver(driverUserId);
+  }
+
   /** List users with role=driver for the supplier to choose and link. */
   async getAvailableDrivers(supplierId: string, search?: string) {
     const supplier = await this.userRepo.findById(supplierId);
@@ -61,6 +71,25 @@ export class DriverService {
 
     await this.DriverRepo.update(id, data as any);
     return this.DriverRepo.findById(id);
+  }
+
+  /** Driver self update: update vehicle info for a specific driver record owned by this driver user. */
+  async updateMyDriverLink(
+    id: string,
+    driverUserId: string,
+    data: Partial<Pick<UpdateDriverDTO, 'vehicle_type' | 'license_plate'>>,
+  ) {
+    const record = await this.DriverRepo.findById(id);
+    if (!record || record.driver_id !== driverUserId) {
+      throw new AppError('Driver record not found', 404);
+    }
+
+    const patch: any = {};
+    if (data.vehicle_type !== undefined) patch.vehicle_type = data.vehicle_type;
+    if (data.license_plate !== undefined) patch.license_plate = data.license_plate;
+
+    await this.DriverRepo.update(id, patch as any);
+    return this.DriverRepo.findByIdWithSupplier(id);
   }
 
   async removeDriver(id: string, supplierId: string) {

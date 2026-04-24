@@ -65,6 +65,7 @@ import { formatPrice, formatDate, formatDateTime } from "@/lib/formatters";
 import { getPaymentMethodLabel } from "@/lib/payment-method-utils";
 import { getInitials, cn } from "@/lib/utils";
 import deliveryService from "@/services/delivery.service";
+import driverIssueService from "@/services/driver-issue.service";
 import disputeService from "@/services/dispute.service";
 import { reportService } from "@/services/report.service";
 import toast from "react-hot-toast";
@@ -144,6 +145,9 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
   const [reportSubmitting, setReportSubmitting] = useState(false);
   const [deliveryRecord, setDeliveryRecord] = useState<any | null>(null);
   const [deliveryFetching, setDeliveryFetching] = useState(false);
+  const [driverIssueReports, setDriverIssueReports] = useState<any[]>([]);
+  const [driverIssueLoading, setDriverIssueLoading] = useState(false);
+  const [driverIssueError, setDriverIssueError] = useState<string | null>(null);
 
   useEffect(() => {
     setOrder(initialOrder);
@@ -175,6 +179,41 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
       cancelled = true;
     };
   }, [order.delivery?.deliveryId]);
+
+  useEffect(() => {
+    if (!order?.id) {
+      setDriverIssueReports([]);
+      setDriverIssueError(null);
+      return;
+    }
+
+    let cancelled = false;
+    setDriverIssueLoading(true);
+    setDriverIssueError(null);
+
+    (async () => {
+      try {
+        const res = await driverIssueService.getForOrder(String(order.id));
+        const reports = Array.isArray(res?.data?.reports) ? res.data.reports : [];
+        if (!cancelled) setDriverIssueReports(reports);
+      } catch (err: any) {
+        const message =
+          err?.response?.data?.message ||
+          err?.message ||
+          "Failed to load driver issues";
+        if (!cancelled) {
+          setDriverIssueReports([]);
+          setDriverIssueError(message);
+        }
+      } finally {
+        if (!cancelled) setDriverIssueLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [order?.id]);
 
   const getDeliveryStatusBadge = (status?: DeliveryStatus | string | null) => {
     const raw = String(status || "").trim().toLowerCase();
@@ -727,6 +766,85 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                     </div>
                   </div>
                 </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Driver Issues */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Driver Issues</CardTitle>
+              <CardDescription>
+                Reports submitted by the assigned driver for this order
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {driverIssueLoading ? (
+                <Badge variant="outline">Loading driver issues…</Badge>
+              ) : driverIssueError ? (
+                <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                  {driverIssueError}
+                </div>
+              ) : driverIssueReports.length === 0 ? (
+                <div className="text-sm text-muted-foreground">
+                  No driver issues have been reported for this order.
+                </div>
+              ) : (
+                driverIssueReports.map((report) => (
+                  <div
+                    key={String(report.id)}
+                    className="rounded-lg border border-slate-200 bg-white p-3"
+                  >
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <AlertCircle className="h-4 w-4 text-amber-600" />
+                          <p className="text-sm font-medium">
+                            {String(report.category || "issue")}
+                          </p>
+                          {report.urgency ? (
+                            <Badge variant="secondary">
+                              {String(report.urgency)}
+                            </Badge>
+                          ) : null}
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          {String(report.sub_type || "")}
+                        </p>
+                        {report.driverUser ? (
+                          <p className="text-xs text-muted-foreground">
+                            Driver:{" "}
+                            {report.driverUser.business_name ||
+                              report.driverUser.full_name ||
+                              report.driver_id}
+                          </p>
+                        ) : null}
+                      </div>
+
+                      {report.created_at ? (
+                        <div className="text-xs text-muted-foreground">
+                          {formatDateTime(String(report.created_at))}
+                        </div>
+                      ) : null}
+                    </div>
+
+                    <div className="mt-2 space-y-2">
+                      {report.location ? (
+                        <div className="text-xs text-muted-foreground">
+                          Location: {String(report.location)}
+                        </div>
+                      ) : null}
+                      {report.concerned_party ? (
+                        <div className="text-xs text-muted-foreground">
+                          Concerned party: {String(report.concerned_party)}
+                        </div>
+                      ) : null}
+                      {report.description ? (
+                        <div className="text-sm">{String(report.description)}</div>
+                      ) : null}
+                    </div>
+                  </div>
+                ))
               )}
             </CardContent>
           </Card>

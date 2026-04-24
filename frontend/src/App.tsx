@@ -31,10 +31,10 @@ import BroadcastPromotionsPage from "./pages/distributor/BroadcastPromotions";
 import BroadcastAnnouncementsPage from "./pages/factory/BroadcastAnnouncements";
 import PurchaseOrdersPage from "./pages/distributor/PurchaseOrders";
 import MarketPlace from "./pages/distributor/MarketPlace";
-import ProductionAnalyticsPage from "./pages/factory/ProductionAnalytics";
 import FactoryForecastPage from "./pages/factory/Forecast";
-import AdminDashboard from "./pages/admin/dashboard";
+import AdminDashboard from "./pages/admin/Dashboard";
 import UserManagementPage from "./pages/admin/UserManagementPage";
+import AdminUserDetailsPage from "./pages/admin/UserDetailsPage";
 import ProductListingsPage from "./pages/admin/ProductListingsPage";
 import { VerificationsPage } from "./pages/admin/VerificationsPage";
 import { DisputesManagementPage } from "./pages/admin/DisputesManagementPage";
@@ -509,14 +509,7 @@ function App() {
               </DashboardLayout>
             }
           />
-          <Route
-            path="/factory/analytics"
-            element={
-              <DashboardLayout>
-                <ProductionAnalyticsPage />
-              </DashboardLayout>
-            }
-          />
+
           <Route
             path="/factory/reports"
             element={
@@ -563,6 +556,14 @@ function App() {
             element={
               <DashboardLayout>
                 <UserManagementPage />
+              </DashboardLayout>
+            }
+          />
+          <Route
+            path="/admin/users/:id"
+            element={
+              <DashboardLayout>
+                <AdminUserDetailsPage />
               </DashboardLayout>
             }
           />

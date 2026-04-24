@@ -78,6 +78,8 @@ router.post('/admin/approve/:id', authenticate, authorize('admin'), authControll
 router.post('/admin/suspend/:id', authenticate, authorize('admin'), authController.suspendUser);
 router.post('/admin/reactivate/:id', authenticate, authorize('admin'), authController.reactivateUser);
 router.get('/admin/users', authenticate, authorize('admin'), authController.getUsers);
+router.get('/admin/users/:id', authenticate, authorize('admin'), authController.getUserById);
+router.patch('/admin/users/:id', authenticate, authorize('admin'), authController.updateUserById);
 router.get('/admin/recent-users', authenticate, authorize('admin'), authController.getRecentUsers);
 
 export default router;

@@ -25,4 +25,32 @@ export class DriverRepository extends BaseRepository<Driver> {
   async findBySupplierAndDriver(supplierId: string, driverId: string) {
     return this.findOne({ supplier_id: supplierId, driver_id: driverId } as any);
   }
+
+  async findByDriver(driverId: string) {
+    return this.findAll({
+      where: { driver_id: driverId, deleted_at: null },
+      order: [['updated_at', 'DESC']],
+      include: [
+        {
+          model: User,
+          as: 'supplier',
+          attributes: ['id', 'full_name', 'business_name', 'role', 'status'],
+          required: false,
+        },
+      ],
+    });
+  }
+
+  async findByIdWithSupplier(id: string) {
+    return Driver.findByPk(id, {
+      include: [
+        {
+          model: User,
+          as: 'supplier',
+          attributes: ['id', 'full_name', 'business_name', 'role', 'status'],
+          required: false,
+        },
+      ],
+    });
+  }
 }

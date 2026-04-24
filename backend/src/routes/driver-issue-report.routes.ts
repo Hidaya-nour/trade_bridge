@@ -5,9 +5,9 @@ import { authenticate, authorize } from '../middleware/auth.middleware';
 const router = Router();
 
 router.use(authenticate);
-router.use(authorize('driver'));
 
-router.get('/mine', driverIssueReportController.listMine);
-router.post('/', driverIssueReportController.create);
+router.get('/mine', authorize('driver'), driverIssueReportController.listMine);
+router.post('/', authorize('driver'), driverIssueReportController.create);
+router.get('/order/:orderId', driverIssueReportController.listByOrder);
 
 export default router;

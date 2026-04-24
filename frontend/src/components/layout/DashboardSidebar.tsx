@@ -155,13 +155,8 @@ const roleNavigation = {
       href: "/factory/agents",
       icon: Warehouse,
     },
-    {
-      name: "Production Analytics",
-      href: "/factory/analytics",
-      icon: BarChart3,
-    },
+
     { name: "Export Reports", href: "/factory/reports", icon: FileText },
-    { name: "Inventory", href: "/factory/inventory", icon: FileText },
     {
       name: "Broadcast Announcements",
       href: "/factory/announcements",

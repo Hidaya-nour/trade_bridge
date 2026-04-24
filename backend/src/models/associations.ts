@@ -18,6 +18,7 @@ import Review from './rating-reviews.model';
 import Dispute from './dispute.model';
 import SupplierReview from './supplier-review.model';
 import UserReport from './user-report.model';
+import DriverIssueReport from './driver-issue-report.model';
 
 // This function must be called AFTER all models are imported
 export const setupAssociations = () => {
@@ -398,6 +399,13 @@ export const setupAssociations = () => {
 
   User.hasMany(Driver, { foreignKey: 'supplier_id', as: 'supplierDrivers' });
   User.hasMany(Driver, { foreignKey: 'driver_id', as: 'assignedDrivers' });
+
+  // Driver Issue Reports
+  DriverIssueReport.belongsTo(User, { foreignKey: 'driver_id', as: 'driverUser' });
+  User.hasMany(DriverIssueReport, { foreignKey: 'driver_id', as: 'driverIssueReports' });
+
+  DriverIssueReport.belongsTo(Delivery, { foreignKey: 'delivery_id', as: 'delivery' });
+  Delivery.hasMany(DriverIssueReport, { foreignKey: 'delivery_id', as: 'issueReports' });
 
   console.log('✅ Associations defined successfully');
 };

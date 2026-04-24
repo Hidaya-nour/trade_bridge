@@ -671,9 +671,11 @@ export const UserManagementPage: React.FC = () => {
                               View Details
                             </Link>
                           </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            <Edit className="h-4 w-4 mr-2" />
-                            Edit User
+                          <DropdownMenuItem asChild>
+                            <Link to={`/admin/users/${user.id}?edit=1`}>
+                              <Edit className="h-4 w-4 mr-2" />
+                              Edit User
+                            </Link>
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           {user.status === "active" ? (

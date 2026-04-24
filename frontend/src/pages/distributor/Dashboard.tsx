@@ -544,14 +544,6 @@ const DistributorDashboard: React.FC = () => {
                 </div>
               </ScrollArea>
             </CardContent>
-            <CardFooter className="border-t pt-4">
-              <Button variant="ghost" className="w-full" asChild>
-                <Link to="/distributor/inventory">
-                  Manage Inventory
-                  <ChevronRight className="h-4 w-4 ml-1" />
-                </Link>
-              </Button>
-            </CardFooter>
           </Card>
 
           {/* Quick Actions */}
@@ -584,26 +576,6 @@ const DistributorDashboard: React.FC = () => {
                 <Link to="/distributor/reports">
                   <BarChart3 className="mr-2 h-4 w-4" />
                   Generate Report
-                </Link>
-              </Button>
-              <Button
-                variant="outline"
-                className="w-full justify-start"
-                asChild
-              >
-                <Link to="/distributor/partners">
-                  <Store className="mr-2 h-4 w-4" />
-                  Manage Suppliers
-                </Link>
-              </Button>
-              <Button
-                variant="outline"
-                className="w-full justify-start"
-                asChild
-              >
-                <Link to="/distributor/delivery">
-                  <Truck className="mr-2 h-4 w-4" />
-                  Assign Driver
                 </Link>
               </Button>
             </CardContent>

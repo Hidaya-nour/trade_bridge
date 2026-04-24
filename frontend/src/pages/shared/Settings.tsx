@@ -1,13 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import L from "leaflet";
-import {
-  MapContainer,
-  Marker,
-  TileLayer,
-  useMap,
-  useMapEvents,
-} from "react-leaflet";
+import { useMap, useMapEvents } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import {
   User,
@@ -19,6 +13,7 @@ import {
   Lock,
   LogOut,
   Trash2,
+  Truck,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -38,34 +33,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { ScrollArea } from "@/components/ui/scroll-area";
+
 import { useAuthStore } from "@/stores/auth.store";
 import { useSupplierPaymentMethodStore } from "@/stores/supplier-payment-method.store";
 import { useNotificationStore } from "@/stores/notification.store";
@@ -75,6 +43,7 @@ import documentService from "@/services/document.service";
 import { authService } from "@/services/auth.service";
 import ProfileTab from "../../components/setting/ProfileTab";
 import BusinessTab from "../../components/setting/BusinessTab";
+import VehicleTab from "../../components/setting/VehicleTab";
 import NotificationsTab from "../../components/setting/NotificationsTab";
 import SecurityTab from "../../components/setting/SecurityTab";
 import PaymentTab from "../../components/setting/PaymentTab";
@@ -226,6 +195,7 @@ const SettingsPage: React.FC = () => {
   const { user, fetchUser, updateProfile, changePassword, isLoading } =
     useAuthStore();
   const isSupplier = user?.role === "factory" || user?.role === "distributor";
+  const isDriver = user?.role === "driver";
   const {
     items: supplierPaymentMethods,
     isLoading: isPaymentLoading,
@@ -804,14 +774,20 @@ const SettingsPage: React.FC = () => {
                   <User className="h-4 w-4 mr-2" />
                   Profile
                 </Button>
-                <Button
-                  variant={activeTab === "business" ? "secondary" : "ghost"}
-                  className="w-full justify-start"
-                  onClick={() => setActiveTab("business")}
-                >
-                  <Building className="h-4 w-4 mr-2" />
-                  Business Info
-                </Button>
+                {user?.role !== "admin" && (
+                  <Button
+                    variant={activeTab === "business" ? "secondary" : "ghost"}
+                    className="w-full justify-start"
+                    onClick={() => setActiveTab("business")}
+                  >
+                    {isDriver ? (
+                      <Truck className="h-4 w-4 mr-2" />
+                    ) : (
+                      <Building className="h-4 w-4 mr-2" />
+                    )}
+                    {isDriver ? "Vehicle Info" : "Business Info"}
+                  </Button>
+                )}
                 <Button
                   variant={
                     activeTab === "notifications" ? "secondary" : "ghost"
@@ -888,57 +864,71 @@ const SettingsPage: React.FC = () => {
             />
 
             {/* Business Info Tab */}
-            <BusinessTab
-              profileForm={profileForm}
-              setProfileForm={setProfileForm}
-              isSupplier={isSupplier}
-              isBusinessVerified={user?.verified || false}
-              businessLicenseDoc={documents.find(
-                (doc: any) => doc.document_type === "business_license",
-              )}
-              sortedDocuments={documents
-                .filter((doc: any) => doc.document_type !== "business_license")
-                .sort(
-                  (a: any, b: any) =>
-                    new Date(b.created_at).getTime() -
-                    new Date(a.created_at).getTime(),
+            {user?.role !== "admin" && (
+              <>
+                {isDriver ? (
+                  <VehicleTab />
+                ) : (
+                  <BusinessTab
+                    profileForm={profileForm}
+                    setProfileForm={setProfileForm}
+                    isSupplier={isSupplier}
+                    isBusinessVerified={user?.verified || false}
+                    businessLicenseDoc={documents.find(
+                      (doc: any) => doc.document_type === "business_license",
+                    )}
+                    sortedDocuments={documents
+                      .filter(
+                        (doc: any) => doc.document_type !== "business_license",
+                      )
+                      .sort(
+                        (a: any, b: any) =>
+                          new Date(b.created_at).getTime() -
+                          new Date(a.created_at).getTime(),
+                      )}
+                    addressForm={addressForm}
+                    setAddressForm={setAddressForm}
+                    hasCoordinates={
+                      !!(addressForm.latitude && addressForm.longitude)
+                    }
+                    mapCenter={{
+                      lat:
+                        parseFloat(addressForm.latitude) ||
+                        DEFAULT_MAP_CENTER.lat,
+                      lng:
+                        parseFloat(addressForm.longitude) ||
+                        DEFAULT_MAP_CENTER.lng,
+                    }}
+                    locationMessage={locationMessage}
+                    addressMessage={addressMessage}
+                    saveAddress={saveAddress}
+                    handleUseCurrentLocation={handleUseCurrentLocation}
+                    isLocating={isLocating}
+                    extraDocs={extraDocs}
+                    setExtraDocs={setExtraDocs}
+                    docsError={docsError}
+                    addressesError={addressesError}
+                    licenseMessage={licenseMessage}
+                    licenseUploading={licenseUploading}
+                    docsLoading={docsLoading}
+                    addressesLoading={addressesLoading}
+                    handleUploadDocuments={handleUploadDocuments}
+                    licenseFile={licenseFile}
+                    setLicenseFile={setLicenseFile}
+                    licenseIssuedDate={licenseIssuedDate}
+                    setLicenseIssuedDate={setLicenseIssuedDate}
+                    licenseExpiryDate={licenseExpiryDate}
+                    setLicenseExpiryDate={setLicenseExpiryDate}
+                    businessMessage={businessMessage}
+                    setBusinessMessage={setBusinessMessage}
+                    businessFieldErrors={businessFieldErrors}
+                    setBusinessFieldErrors={setBusinessFieldErrors}
+                    handleBusinessSave={handleBusinessSave}
+                    isLoading={isLoading}
+                  />
                 )}
-              addressForm={addressForm}
-              setAddressForm={setAddressForm}
-              hasCoordinates={!!(addressForm.latitude && addressForm.longitude)}
-              mapCenter={{
-                lat: parseFloat(addressForm.latitude) || DEFAULT_MAP_CENTER.lat,
-                lng:
-                  parseFloat(addressForm.longitude) || DEFAULT_MAP_CENTER.lng,
-              }}
-              locationMessage={locationMessage}
-              addressMessage={addressMessage}
-              saveAddress={saveAddress}
-              handleUseCurrentLocation={handleUseCurrentLocation}
-              isLocating={isLocating}
-              extraDocs={extraDocs}
-              setExtraDocs={setExtraDocs}
-              docsError={docsError}
-              addressesError={addressesError}
-              licenseMessage={licenseMessage}
-              licenseUploading={licenseUploading}
-              docsLoading={docsLoading}
-              addressesLoading={addressesLoading}
-              handleUploadDocuments={handleUploadDocuments}
-              licenseFile={licenseFile}
-              setLicenseFile={setLicenseFile}
-              licenseIssuedDate={licenseIssuedDate}
-              setLicenseIssuedDate={setLicenseIssuedDate}
-              licenseExpiryDate={licenseExpiryDate}
-              setLicenseExpiryDate={setLicenseExpiryDate}
-              businessMessage={businessMessage}
-              setBusinessMessage={setBusinessMessage}
-              businessFieldErrors={businessFieldErrors}
-              setBusinessFieldErrors={setBusinessFieldErrors}
-              handleBusinessSave={handleBusinessSave}
-              isLoading={isLoading}
-            />
-
+              </>
+            )}
             {/* Notifications Tab */}
             <NotificationsTab
               notificationCounts={notificationCounts}

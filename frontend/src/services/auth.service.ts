@@ -14,6 +14,15 @@ export interface RegisterData {
   business_name?: string;
 }
 
+export interface AdminUpdateUserData {
+  full_name?: string;
+  phone?: string;
+  business_name?: string;
+  role?: 'retailer' | 'distributor' | 'factory' | 'driver' | 'admin';
+  status?: 'pending' | 'active' | 'suspended' | 'rejected';
+  verified?: boolean;
+}
+
 export interface UpdateProfileData {
   full_name?: string;
   phone?: string;
@@ -150,5 +159,15 @@ export const authService = {
     const url = limit ? `/auth/admin/recent-users?limit=${limit}` : '/auth/admin/recent-users';
     const response = await api.get(url);
     return normalizeUserListResponse(response.data);
+  },
+
+  async getUserById(userId: string) {
+    const response = await api.get(`/auth/admin/users/${userId}`);
+    return unwrapApiData<{ user: any }>(response.data);
+  },
+
+  async updateUser(userId: string, data: AdminUpdateUserData) {
+    const response = await api.patch(`/auth/admin/users/${userId}`, data);
+    return response.data;
   }
 };

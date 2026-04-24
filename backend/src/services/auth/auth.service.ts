@@ -469,4 +469,44 @@ async register(data: RegisterDTO): Promise<{ user: SafeUser }> {
       return safeUser as SafeUser;
     });
   }
+
+  async getUserByIdAdmin(userId: string): Promise<SafeUser> {
+    const user = await this.userRepo.findById(userId);
+    if (!user || (user as any).deleted_at) {
+      throw new AppError('User not found', 404);
+    }
+
+    const userJson = user.toJSON();
+    const { password_hash: _, ...safeUser } = userJson as any;
+    return safeUser as SafeUser;
+  }
+
+  async updateUserByIdAdmin(
+    userId: string,
+    patch: Partial<{
+      full_name: string;
+      phone: string;
+      business_name: string;
+      role: UserRole;
+      status: UserStatus;
+      verified: boolean;
+    }>,
+  ): Promise<SafeUser> {
+    const user = await this.userRepo.findById(userId);
+    if (!user || (user as any).deleted_at) {
+      throw new AppError('User not found', 404);
+    }
+
+    const next: any = {};
+
+    if (patch.full_name !== undefined) next.full_name = String(patch.full_name || '').trim();
+    if (patch.phone !== undefined) next.phone = String(patch.phone || '').trim();
+    if (patch.business_name !== undefined) next.business_name = String(patch.business_name || '').trim();
+    if (patch.role !== undefined) next.role = patch.role;
+    if (patch.status !== undefined) next.status = patch.status;
+    if (patch.verified !== undefined) next.verified = patch.verified === true;
+
+    await this.userRepo.update(userId, next as any);
+    return this.getUserByIdAdmin(userId);
+  }
 }

@@ -91,6 +91,8 @@ interface Delivery {
   supplierPhone: string;
   customerName: string;
   customerPhone: string;
+  vehicleType?: string;
+  licensePlate?: string;
 }
 
 interface DriverStats {
@@ -116,6 +118,18 @@ const mapApiDelivery = (delivery: any): Delivery => {
   const buyer = delivery?.order?.buyer;
   const supplier = delivery?.order?.supplier;
   const driver = delivery?.driver?.driverUser || delivery?.driver;
+  const vehicleType =
+    delivery?.driver?.vehicle_type ||
+    delivery?.driver?.vehicleType ||
+    driver?.vehicle_type ||
+    driver?.vehicleType ||
+    undefined;
+  const licensePlate =
+    delivery?.driver?.license_plate ||
+    delivery?.driver?.licensePlate ||
+    driver?.license_plate ||
+    driver?.licensePlate ||
+    undefined;
 
   return {
     id: String(delivery?.id || orderId),
@@ -145,6 +159,8 @@ const mapApiDelivery = (delivery: any): Delivery => {
     supplierPhone: supplier?.phone || supplier?.user?.phone || "N/A",
     customerName: buyer?.business_name || buyer?.full_name || "Customer",
     customerPhone: buyer?.phone || "N/A",
+    vehicleType: vehicleType ? String(vehicleType) : undefined,
+    licensePlate: licensePlate ? String(licensePlate) : undefined,
   };
 };
 
@@ -214,11 +230,14 @@ export const DriverDashboard: React.FC = () => {
   }, []);
 
   if (!authUser) return null;
+  const primaryVehicle = deliveries.find((d) => d.vehicleType || d.licensePlate) || null;
+  const vehicleLabel = primaryVehicle?.vehicleType || "Vehicle not assigned";
+  const plateLabel = primaryVehicle?.licensePlate || "Plate not assigned";
 
   const driverUser = {
     id: authUser.id,
     name: authUser.full_name,
-    business: authUser.business_name ?? "Independent Driver",
+    business: `${vehicleLabel} • ${plateLabel}`,
     role: authUser.role,
     verified: authUser.verified,
   };
@@ -346,12 +365,12 @@ export const DriverDashboard: React.FC = () => {
                 <Truck className="h-6 w-6 text-primary" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Vehicle</p>
-                <p className="font-medium">{authUser.business_name || "Truck"}</p>
+                <p className="text-sm text-muted-foreground">Vehicle Type</p>
+                <p className="font-medium">{vehicleLabel}</p>
               </div>
               <div className="border-l pl-4">
                 <p className="text-sm text-muted-foreground">License Plate</p>
-                <p className="font-medium">{authUser.phone || "Not available"}</p>
+                <p className="font-medium">{plateLabel}</p>
               </div>
             </div>
             <Badge variant="outline" className="bg-green-100 text-green-800">

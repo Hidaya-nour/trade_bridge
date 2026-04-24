@@ -257,7 +257,7 @@ const UserReportsManagementPage: React.FC = () => {
           {selected?.reported_user_id ? (
             <div className="flex flex-wrap gap-2">
               <Button size="sm" variant="outline" asChild>
-                <Link to={`/admin/users?search=${selected.reported_user_id}`}>
+                <Link to={`/admin/users/${selected.reported_user_id}`}>
                   View Profile
                 </Link>
               </Button>

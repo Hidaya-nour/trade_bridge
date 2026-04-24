@@ -379,7 +379,8 @@ const BusinessTab: React.FC<BusinessTabProps> = ({
                     placeholder="e.g. Near Edna Mall"
                   />
                   <p className="text-[11px] text-muted-foreground">
-                    Used as your pickup location for deliveries (shown to buyers and drivers).
+                    Used as your pickup location for deliveries (shown to buyers
+                    and drivers).
                   </p>
                 </div>
                 <div className="space-y-2 md:col-span-2">
@@ -462,19 +463,35 @@ const BusinessTab: React.FC<BusinessTabProps> = ({
                         {addressMessage}
                       </p>
                     )}
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => void saveAddress(true)}
-                      disabled={addressesLoading}
-                    >
-                      {addressesLoading ? "Saving..." : "Save Address"}
-                    </Button>
+                    {!addressMessage && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => void saveAddress(true)}
+                        disabled={addressesLoading}
+                      >
+                        {addressesLoading ? "Saving..." : "Save Address"}
+                      </Button>
+                    )}
                   </div>
                   {addressesError && (
                     <p className="text-xs text-red-600">{addressesError}</p>
                   )}
+                  <div className="flex justify-end gap-4 border-t pt-6">
+                    <Button
+                      variant="outline"
+                      onClick={() => setBusinessMessage(null)}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      onClick={() => void handleBusinessSave()}
+                      disabled={isLoading}
+                    >
+                      {isLoading ? "Saving..." : "Save Changes"}
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -908,17 +925,7 @@ const BusinessTab: React.FC<BusinessTabProps> = ({
             </div>
           )}
         </CardContent>
-        <CardFooter className="flex justify-end gap-2 border-t pt-6">
-          <Button variant="outline" onClick={() => setBusinessMessage(null)}>
-            Cancel
-          </Button>
-          <Button
-            onClick={() => void handleBusinessSave()}
-            disabled={isLoading}
-          >
-            {isLoading ? "Saving..." : "Save Changes"}
-          </Button>
-        </CardFooter>
+
         {businessMessage && (
           <p className="px-6 pb-6 text-sm text-muted-foreground">
             {businessMessage}

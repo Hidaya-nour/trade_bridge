@@ -18,6 +18,19 @@ export interface Driver {
   driver?: DriverUser;
 }
 
+export interface DriverSupplier {
+  id: string;
+  full_name?: string;
+  business_name?: string;
+  role?: string;
+  status?: string;
+}
+
+export interface DriverLink extends Driver {
+  supplier?: DriverSupplier;
+  updated_at?: string;
+}
+
 class DriverService {
   private readonly BASE_PATH = "/drivers";
 
@@ -53,10 +66,25 @@ class DriverService {
     return (data as any).driver as Driver;
   }
 
+  // Driver self-service
+  async getMyVehicleLinks(): Promise<{ drivers: DriverLink[] }> {
+    const response = await api.get(`${this.BASE_PATH}/me`);
+    const data = response.data?.data || response.data || response;
+    return data as { drivers: DriverLink[] };
+  }
+
+  async updateMyVehicleLink(
+    id: string,
+    payload: Partial<Pick<Driver, "vehicle_type" | "license_plate">>,
+  ): Promise<DriverLink> {
+    const response = await api.patch(`${this.BASE_PATH}/me/${id}`, payload);
+    const data = response.data?.data || response.data || response;
+    return (data as any).driver as DriverLink;
+  }
+
   async removeDriver(id: string): Promise<void> {
     await api.delete(`${this.BASE_PATH}/${id}`);
   }
 }
 
 export default new DriverService();
-
