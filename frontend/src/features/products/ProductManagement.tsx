@@ -104,7 +104,6 @@ interface ProductManagementProps {
   onAddProduct: (product: any) => void;
   onEditProduct: (id: string, product: any) => void;
   onDeleteProduct: (id: string) => void;
-  onDuplicateProduct: (product: Product) => void;
   onToggleStatus: (id: string) => void;
 }
 
@@ -123,7 +122,6 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({
   onAddProduct,
   onEditProduct,
   onDeleteProduct,
-  onDuplicateProduct,
   onToggleStatus,
 }) => {
   const [products, setProducts] = useState<Product[]>(initialProducts);
@@ -548,15 +546,7 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({
                               <Edit className="h-4 w-4 mr-2" />
                               Edit
                             </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onDuplicateProduct(product);
-                              }}
-                            >
-                              <Copy className="h-4 w-4 mr-2" />
-                              Duplicate
-                            </DropdownMenuItem>
+
                             <DropdownMenuItem
                               onClick={(e) => {
                                 e.stopPropagation();

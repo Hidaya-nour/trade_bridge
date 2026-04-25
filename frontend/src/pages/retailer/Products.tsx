@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { ProductCatalog } from "@/features/products/ProductCatalog";
 import type { CatalogConfig, CatalogProduct } from "@/types/product.types";
 import { Store } from "lucide-react";
@@ -9,7 +9,6 @@ import { ActivePromotionsPanel } from "@/components/shared/ActivePromotionsPanel
 import type { BroadcastRecord } from "@/types/broadcast.types";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent } from "@/components/ui/card";
-import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
   applyDiscountToUnitPrice,
@@ -38,6 +37,21 @@ const RetailerProductsPage: React.FC = () => {
     fetchProducts,
   } = useProductStore();
   const [promotions, setPromotions] = useState<BroadcastRecord[]>([]);
+
+  const visibleProducts = useMemo(() => {
+    const rows = Array.isArray(products) ? products : [];
+    return rows.filter((product: any) => {
+      const role = String(
+        product?.supplier?.role ||
+          product?.supplier_role ||
+          product?.supplierRole ||
+          "",
+      )
+        .trim()
+        .toLowerCase();
+      return role !== "factory";
+    });
+  }, [products]);
 
   const {
     items: cartItems,
@@ -76,7 +90,7 @@ const RetailerProductsPage: React.FC = () => {
     const promotionSku = new URLSearchParams(location.search).get("promotion");
     if (!promotionSku) return;
 
-    const match = products?.find(
+    const match = visibleProducts.find(
       (product) =>
         String(product.sku || "").trim().toUpperCase() ===
         promotionSku.trim().toUpperCase(),
@@ -196,7 +210,7 @@ const RetailerProductsPage: React.FC = () => {
   const availableCategories = [
     "All Categories",
     ...new Set(
-      products
+      visibleProducts
         ?.map((p) => p.category)
         .filter((category): category is string => Boolean(category)),
     ),
@@ -204,7 +218,7 @@ const RetailerProductsPage: React.FC = () => {
   const availableLocations = [
     "All Locations",
     ...new Set(
-      products
+      visibleProducts
         ?.map((p) => {
           const address = p.supplier?.addresses?.[0];
           return address?.city || address?.region;
@@ -233,7 +247,7 @@ const RetailerProductsPage: React.FC = () => {
 
   // Transform products to match CatalogProduct type
   const transformedProducts: CatalogProduct[] =
-    products?.map((product) => {
+    visibleProducts?.map((product) => {
       const supplierAddress = product.supplier?.addresses?.[0];
       const minQty = Math.max(1, Number(product.min_order_amount || 1));
       const bestPromotion = resolveBestDiscountPromotion(
@@ -328,7 +342,7 @@ const RetailerProductsPage: React.FC = () => {
           getProductLink={(promotion) => {
             const code = promotion.code?.trim();
             if (!code) return null;
-            const match = products?.find(
+            const match = visibleProducts.find(
               (product) =>
                 String(product.sku || "").trim().toUpperCase() ===
                 code.toUpperCase(),
