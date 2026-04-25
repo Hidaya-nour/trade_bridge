@@ -36,6 +36,7 @@ export interface Product {
     business_name?: string;
     email?: string;
     phone?: string;
+    role?: "retailer" | "distributor" | "factory" | "driver" | "admin";
     is_vat_registered?: boolean;
     vat_rate?: number;
     rating?:number;
@@ -66,6 +67,7 @@ export interface CatalogProduct {
     id: string;
     business_name?: string;
     full_name?: string;
+    role?: "retailer" | "distributor" | "factory" | "driver" | "admin";
     is_vat_registered?: boolean;
     vat_rate?: number;
     is_verified?: boolean;

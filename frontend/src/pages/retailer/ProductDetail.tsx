@@ -78,10 +78,7 @@ const RetailerProductDetailPage: React.FC = () => {
   useEffect(() => {
     const loadPromotions = async () => {
       try {
-        const response = await broadcastService.getActive([
-          "distributor",
-          "factory",
-        ]);
+        const response = await broadcastService.getActive(["distributor"]);
         setPromotions(response.data || []);
       } catch (error) {
         setPromotions([]);
@@ -90,6 +87,25 @@ const RetailerProductDetailPage: React.FC = () => {
 
     loadPromotions();
   }, []);
+
+  const isFactoryProduct = useMemo(() => {
+    const role = String(
+      (product as any)?.supplier?.role ||
+        (product as any)?.supplier_role ||
+        (product as any)?.supplierRole ||
+        "",
+    )
+      .trim()
+      .toLowerCase();
+    return role === "factory";
+  }, [product]);
+
+  useEffect(() => {
+    if (!isLoading && product && isFactoryProduct) {
+      toast.error("Factory products are only available to distributors.");
+      navigate("/retailer/products", { replace: true });
+    }
+  }, [isFactoryProduct, isLoading, navigate, product]);
 
   const resolvedError = !isLoading && !product ? "Product not found" : null;
 

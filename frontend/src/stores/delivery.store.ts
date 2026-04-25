@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import deliveryService from '@/services/delivery.service';
+import driverIssueService from '@/services/driver-issue.service';
 
 interface DeliveryState {
   items: any[];
@@ -12,6 +13,7 @@ interface DeliveryState {
   create: (data: any) => Promise<any | null>;
   update: (id: string, data: any) => Promise<any | null>;
   delete: (id: string) => Promise<boolean>;
+  reportIssue: (data: { deliveryId?: string; description: string; location?: string }) => Promise<any | null>;
   clearError: () => void;
 }
 
@@ -100,6 +102,29 @@ export const useDeliveryStore = create<DeliveryState>((set, get) => ({
         isLoading: false,
       });
       return false;
+    }
+  },
+
+  reportIssue: async (data: { deliveryId?: string; description: string; location?: string }) => {
+    set({ isLoading: true, error: null });
+    try {
+      const payload = {
+        delivery_id: data.deliveryId,
+        category: "delivery_issue",
+        sub_type: "Delivery issue",
+        location: data.location || "N/A",
+        urgency: "medium",
+        description: data.description,
+      };
+      const response = await driverIssueService.create(payload as any);
+      set({ isLoading: false });
+      return response?.data?.report || response?.data || response;
+    } catch (error: any) {
+      set({
+        error: error.response?.data?.message || 'Failed to report issue',
+        isLoading: false,
+      });
+      return null;
     }
   },
 

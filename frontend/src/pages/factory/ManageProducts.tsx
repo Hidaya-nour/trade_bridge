@@ -16,7 +16,6 @@ const FactoryManageProductsPage: React.FC = () => {
       onAddProduct={(product) => console.log("Add", product)}
       onEditProduct={(id, product) => console.log("Edit", id, product)}
       onDeleteProduct={(id) => console.log("Delete", id)}
-      onDuplicateProduct={(product) => console.log("Duplicate", product)}
       onToggleStatus={(id) => console.log("Toggle", id)}
     />
   );

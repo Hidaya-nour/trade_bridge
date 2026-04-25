@@ -81,19 +81,11 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Pagination,
-  PaginationContent,
-  PaginationEllipsis,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from "@/components/ui/pagination";
+
+import { StatsCard, EmptyState, PaginationBar } from "@/components";
 
 import { formatDate } from "@/lib/formatters";
 import { getInitials, cn } from "@/lib/utils";
-import { EmptyState } from "../../components/shared/EmptyState";
 import { reportService } from "@/services/report.service";
 // ============================================================================
 // TYPES
@@ -347,69 +339,45 @@ export const UserManagementPage: React.FC = () => {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-        <Card>
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <Users className="h-5 w-5 text-blue-600" />
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Total Users</p>
-              <p className="text-xl font-bold">{total}</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <Store className="h-5 w-5 text-blue-600" />
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Retailers</p>
-              <p className="text-xl font-bold">
-                {users.filter((u) => u.role === "retailer").length}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="p-2 bg-purple-100 rounded-lg">
-              <Package className="h-5 w-5 text-purple-600" />
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Distributors</p>
-              <p className="text-xl font-bold">
-                {users.filter((u) => u.role === "distributor").length}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="p-2 bg-green-100 rounded-lg">
-              <Factory className="h-5 w-5 text-green-600" />
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Factories</p>
-              <p className="text-xl font-bold">
-                {users.filter((u) => u.role === "factory").length}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="p-2 bg-amber-100 rounded-lg">
-              <Truck className="h-5 w-5 text-amber-600" />
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Drivers</p>
-              <p className="text-xl font-bold">
-                {users.filter((u) => u.role === "driver").length}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+        <StatsCard
+          title="Total Users"
+          value={total}
+          icon={Users}
+          iconBg="bg-blue-100"
+          iconColor="text-blue-600"
+        />
+        <StatsCard
+          title="Retailers"
+          value={users.filter((u) => u.role === "retailer").length}
+          icon={Store}
+          iconBg="bg-blue-100"
+          iconColor="text-blue-600"
+          subtext="This page"
+        />
+        <StatsCard
+          title="Distributors"
+          value={users.filter((u) => u.role === "distributor").length}
+          icon={Package}
+          iconBg="bg-purple-100"
+          iconColor="text-purple-600"
+          subtext="This page"
+        />
+        <StatsCard
+          title="Factories"
+          value={users.filter((u) => u.role === "factory").length}
+          icon={Factory}
+          iconBg="bg-green-100"
+          iconColor="text-green-600"
+          subtext="This page"
+        />
+        <StatsCard
+          title="Drivers"
+          value={users.filter((u) => u.role === "driver").length}
+          icon={Truck}
+          iconBg="bg-amber-100"
+          iconColor="text-amber-600"
+          subtext="This page"
+        />
       </div>
 
       {/* Filters */}
@@ -501,79 +469,72 @@ export const UserManagementPage: React.FC = () => {
         </div>
       )}
 
-      {/* Users Table */}
-      <Card>
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-12">
-                  <Checkbox
-                    checked={
-                      paginatedUsers.length > 0 &&
-                      selectedUsers.length === paginatedUsers.length
-                    }
-                    onCheckedChange={handleSelectAll}
-                  />
-                </TableHead>
-                <TableHead>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="font-medium"
-                    onClick={() => {
-                      setSortBy("name");
-                      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
-                    }}
-                  >
-                    User
-                    <ArrowUpDown className="ml-2 h-3 w-3" />
-                  </Button>
-                </TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Business</TableHead>
-                <TableHead>Location</TableHead>
-                <TableHead>Reports</TableHead>
-                <TableHead>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="font-medium"
-                    onClick={() => {
-                      setSortBy("date");
-                      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
-                    }}
-                  >
-                    Joined
-                    <ArrowUpDown className="ml-2 h-3 w-3" />
-                  </Button>
-                </TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
+      {loading ? (
+        <Card>
+          <CardContent className="flex items-center justify-center py-12 text-sm text-muted-foreground">
+            <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+            Loading users...
+          </CardContent>
+        </Card>
+      ) : paginatedUsers.length === 0 ? (
+        <EmptyState
+          icon={Users}
+          title="No users found"
+          description="Try adjusting your search or filters."
+        />
+      ) : (
+        <Card>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center py-8">
-                    <div className="flex items-center justify-center">
-                      <RefreshCw className="h-4 w-4 animate-spin mr-2" />
-                      Loading users...
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ) : paginatedUsers.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={9} className="text-center py-8">
-                    <EmptyState
-                      title="No users found"
-                      description="Try adjusting your search or filters"
-                      icon={Users}
+                  <TableHead className="w-12">
+                    <Checkbox
+                      checked={
+                        paginatedUsers.length > 0 &&
+                        selectedUsers.length === paginatedUsers.length
+                      }
+                      onCheckedChange={handleSelectAll}
                     />
-                  </TableCell>
+                  </TableHead>
+                  <TableHead>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="font-medium"
+                      onClick={() => {
+                        setSortBy("name");
+                        setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+                      }}
+                    >
+                      User
+                      <ArrowUpDown className="ml-2 h-3 w-3" />
+                    </Button>
+                  </TableHead>
+                  <TableHead>Role</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Business</TableHead>
+                  <TableHead>Location</TableHead>
+                  <TableHead>Reports</TableHead>
+                  <TableHead>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="font-medium"
+                      onClick={() => {
+                        setSortBy("date");
+                        setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+                      }}
+                    >
+                      Joined
+                      <ArrowUpDown className="ml-2 h-3 w-3" />
+                    </Button>
+                  </TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
-              ) : (
-                paginatedUsers.map((user) => (
+              </TableHeader>
+              <TableBody>
+                {paginatedUsers.map((user) => (
                   <TableRow key={user.id}>
                     <TableCell>
                       <Checkbox
@@ -653,9 +614,7 @@ export const UserManagementPage: React.FC = () => {
                       })()}
                     </TableCell>
                     <TableCell>
-                      <div className="text-sm">
-                        {formatDate(user.joinedDate)}
-                      </div>
+                      <div className="text-sm">{formatDate(user.joinedDate)}</div>
                     </TableCell>
                     <TableCell className="text-right">
                       <DropdownMenu>
@@ -704,69 +663,23 @@ export const UserManagementPage: React.FC = () => {
                       </DropdownMenu>
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-        <CardFooter className="flex items-center justify-between p-4 border-t">
-          <p className="text-sm text-muted-foreground">
-            Showing {total === 0 ? 0 : startIndex + 1}-
-            {Math.min(startIndex + paginatedUsers.length, total)} of {total} users
-          </p>
-          <Pagination>
-            <PaginationContent>
-              <PaginationItem>
-                <PaginationPrevious
-                  href="#"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    if (currentPage > 1) setCurrentPage(currentPage - 1);
-                  }}
-                />
-              </PaginationItem>
-              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                let pageNum = i + 1;
-                if (totalPages > 5 && currentPage > 3) {
-                  pageNum = currentPage - 3 + i;
-                }
-                if (pageNum <= totalPages) {
-                  return (
-                    <PaginationItem key={pageNum}>
-                      <PaginationLink
-                        href="#"
-                        isActive={currentPage === pageNum}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          setCurrentPage(pageNum);
-                        }}
-                      >
-                        {pageNum}
-                      </PaginationLink>
-                    </PaginationItem>
-                  );
-                }
-                return null;
-              })}
-              {totalPages > 5 && currentPage < totalPages - 2 && (
-                <PaginationItem>
-                  <PaginationEllipsis />
-                </PaginationItem>
-              )}
-              <PaginationItem>
-                <PaginationNext
-                  href="#"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    if (currentPage < totalPages)
-                      setCurrentPage(currentPage + 1);
-                  }}
-                />
-              </PaginationItem>
-            </PaginationContent>
-          </Pagination>
-        </CardFooter>
-      </Card>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+          <CardFooter className="flex items-center justify-between p-4 border-t">
+            <p className="text-sm text-muted-foreground">
+              Showing {total === 0 ? 0 : startIndex + 1}-
+              {Math.min(startIndex + paginatedUsers.length, total)} of {total} users
+            </p>
+            <PaginationBar
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+            />
+          </CardFooter>
+        </Card>
+      )}
 
       {/* User Reports Dialog */}
       <Dialog open={reportsDialogOpen} onOpenChange={setReportsDialogOpen}>

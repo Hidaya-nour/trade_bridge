@@ -83,7 +83,8 @@ const DistributorManageProductsPage: React.FC = () => {
         delivery_available: productData.delivery_available,
         delivery_pricing: productData.delivery_pricing,
         delivery_fee_per_km: productData.delivery_fee_per_km,
-        free_delivery_max_distance_km: productData.free_delivery_max_distance_km,
+        free_delivery_max_distance_km:
+          productData.free_delivery_max_distance_km,
       });
 
       if (newProduct) {
@@ -99,24 +100,27 @@ const DistributorManageProductsPage: React.FC = () => {
             );
           const activeMethods = response.data || response;
           if (!Array.isArray(activeMethods) || activeMethods.length === 0) {
-            toast.custom((t) => (
-              <div className="rounded-xl border border-yellow-200 bg-yellow-50 p-4 text-sm text-yellow-900">
-                <div className="font-semibold">No active payment methods</div>
-                <p className="mt-1">
-                  Buyers cannot place orders until you add one in Settings.
-                </p>
-                <button
-                  type="button"
-                  className="mt-3 inline-flex rounded-md bg-yellow-600 px-3 py-1 text-white hover:bg-yellow-700"
-                  onClick={() => {
-                    navigate("/settings?tab=payment");
-                    toast.dismiss(t.id);
-                  }}
-                >
-                  Add Payment Method
-                </button>
-              </div>
-            ), { duration: Infinity });
+            toast.custom(
+              (t) => (
+                <div className="rounded-xl border border-yellow-200 bg-yellow-50 p-4 text-sm text-yellow-900">
+                  <div className="font-semibold">No active payment methods</div>
+                  <p className="mt-1">
+                    Buyers cannot place orders until you add one in Settings.
+                  </p>
+                  <button
+                    type="button"
+                    className="mt-3 inline-flex rounded-md bg-yellow-600 px-3 py-1 text-white hover:bg-yellow-700"
+                    onClick={() => {
+                      navigate("/settings?tab=payment");
+                      toast.dismiss(t.id);
+                    }}
+                  >
+                    Add Payment Method
+                  </button>
+                </div>
+              ),
+              { duration: Infinity },
+            );
           }
         } catch (error) {
           console.error("Unable to check supplier payment methods", error);
@@ -145,7 +149,8 @@ const DistributorManageProductsPage: React.FC = () => {
         delivery_available: productData.delivery_available,
         delivery_pricing: productData.delivery_pricing,
         delivery_fee_per_km: productData.delivery_fee_per_km,
-        free_delivery_max_distance_km: productData.free_delivery_max_distance_km,
+        free_delivery_max_distance_km:
+          productData.free_delivery_max_distance_km,
       });
 
       if (updated) {
@@ -174,36 +179,6 @@ const DistributorManageProductsPage: React.FC = () => {
       }
     } catch (error: any) {
       toast.error("Failed to delete product", {
-        id: toastId,
-      });
-    }
-  };
-
-  const handleDuplicateProduct = async (product: Product) => {
-    const toastId = toast.loading("Duplicating product...");
-
-    try {
-      const duplicatedData = {
-        name: `${product.name} (Copy)`,
-        category: product.category,
-        price: product.price,
-        unit_type: product.unit_type,
-        min_order_amount: product.min_order_amount,
-        stock_quantity: 0,
-        description: product.description,
-        is_available: false,
-        supplier_id: product.supplier_id,
-      };
-
-      const newProduct = await createProduct(duplicatedData);
-      if (newProduct) {
-        toast.success("Product duplicated successfully", {
-          id: toastId,
-        });
-        await fetchProducts({ supplier_id: user?.id });
-      }
-    } catch (error: any) {
-      toast.error(error.message || "Failed to duplicate product", {
         id: toastId,
       });
     }
@@ -248,7 +223,6 @@ const DistributorManageProductsPage: React.FC = () => {
       onAddProduct={handleAddProduct}
       onEditProduct={handleEditProduct}
       onDeleteProduct={handleDeleteProduct}
-      onDuplicateProduct={handleDuplicateProduct}
       onToggleStatus={handleToggleStatus}
     />
   );

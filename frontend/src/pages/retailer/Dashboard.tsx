@@ -295,23 +295,8 @@ const RetailerDashboard: React.FC = () => {
       return a.name.localeCompare(b.name);
     });
 
-    if (ranked.length > 0) return ranked.slice(0, 4);
-
-    // Fallback to latest products if there is no order history yet.
-    return products.slice(0, 4).map((product: any) => ({
-      id: product.id,
-      name: product.name,
-      supplier:
-        product.supplier?.business_name ||
-        product.supplier?.full_name ||
-        "Supplier",
-      supplierId: product.supplier_id || product.supplier?.id,
-      price: Number(product.price || 0),
-      unit: product.unit_type || "unit",
-      orders: Number(product.order_count || 0),
-      quantity: 0,
-    }));
-  }, [buyerOrders, products]);
+    return ranked.slice(0, 4);
+  }, [buyerOrders]);
 
   // Order summary data
   const orderSummary = useMemo(
@@ -449,45 +434,57 @@ const RetailerDashboard: React.FC = () => {
               />
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {frequentProducts.map((product) => (
-                  <div
-                    key={product.id}
-                    className="flex items-center justify-between p-3 border rounded-lg hover:shadow-sm transition-shadow"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 bg-muted rounded-md flex items-center justify-center">
-                        <Package className="h-5 w-5 text-muted-foreground" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium">{product.name}</p>
-                        <Link
-                          to={`/retailer/suppliers/${product.supplierId}`}
-                          className="text-xs text-muted-foreground hover:text-primary"
-                        >
-                          {product.supplier}
-                        </Link>
-                        <div className="flex items-center gap-2 mt-1">
-                          <span className="text-xs font-semibold text-primary">
-                            {formatPrice(product.price)}
-                          </span>
-                          <span className="text-xs text-muted-foreground">
-                            / {product.unit}
-                          </span>
-                          <Badge variant="outline" className="text-[10px] h-5">
-                            {product.orders} orders
-                          </Badge>
+              {frequentProducts.length === 0 ? (
+                <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
+                  No frequently ordered products yet.
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {frequentProducts.map((product) => (
+                    <div
+                      key={product.id}
+                      className="flex items-center justify-between p-3 border rounded-lg hover:shadow-sm transition-shadow"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 bg-muted rounded-md flex items-center justify-center">
+                          <Package className="h-5 w-5 text-muted-foreground" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium">{product.name}</p>
+                          {product.supplierId ? (
+                            <Link
+                              to={`/retailer/suppliers/${product.supplierId}`}
+                              className="text-xs text-muted-foreground hover:text-primary"
+                            >
+                              {product.supplier}
+                            </Link>
+                          ) : (
+                            <p className="text-xs text-muted-foreground">
+                              {product.supplier}
+                            </p>
+                          )}
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-xs font-semibold text-primary">
+                              {formatPrice(product.price)}
+                            </span>
+                            <span className="text-xs text-muted-foreground">
+                              / {product.unit}
+                            </span>
+                            <Badge variant="outline" className="text-[10px] h-5">
+                              {product.orders} orders
+                            </Badge>
+                          </div>
                         </div>
                       </div>
+                      <Button size="sm" variant="ghost" asChild>
+                        <Link to={`/retailer/cart?add=${product.id}`}>
+                          <ShoppingCart className="h-4 w-4" />
+                        </Link>
+                      </Button>
                     </div>
-                    <Button size="sm" variant="ghost" asChild>
-                      <Link to={`/retailer/cart?add=${product.id}`}>
-                        <ShoppingCart className="h-4 w-4" />
-                      </Link>
-                    </Button>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>

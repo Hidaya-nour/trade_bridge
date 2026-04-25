@@ -1,5 +1,10 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import {
+  Link,
+  useNavigate,
+  useParams,
+  useSearchParams,
+} from "react-router-dom";
 import toast from "react-hot-toast";
 import {
   ArrowLeft,
@@ -46,8 +51,13 @@ import { reportService } from "@/services/report.service";
 import { formatDate } from "@/lib/formatters";
 import { cn, getInitials } from "@/lib/utils";
 
-type AdminUserRole = "retailer" | "distributor" | "factory" | "driver" | "admin";
-type AdminUserStatus = "pending" | "active" | "suspended" | "rejected";
+type AdminUserRole =
+  | "retailer"
+  | "distributor"
+  | "factory"
+  | "driver"
+  | "admin";
+type AdminUserStatus = "pending" | "active" | "suspended";
 
 type AdminUser = {
   id: string;
@@ -74,7 +84,6 @@ const statusBadgeClass: Record<AdminUserStatus, string> = {
   active: "bg-green-100 text-green-700 border-green-200",
   pending: "bg-yellow-100 text-yellow-700 border-yellow-200",
   suspended: "bg-red-100 text-red-700 border-red-200",
-  rejected: "bg-gray-100 text-gray-700 border-gray-200",
 };
 
 export const AdminUserDetailsPage: React.FC = () => {
@@ -87,9 +96,10 @@ export const AdminUserDetailsPage: React.FC = () => {
   const [user, setUser] = useState<AdminUser | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState<"overview" | "reports">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "reports">(
+    "overview",
+  );
   const [suspendDialogOpen, setSuspendDialogOpen] = useState(false);
-  const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
 
   const [reports, setReports] = useState<any[]>([]);
   const [reportsLoading, setReportsLoading] = useState(false);
@@ -153,7 +163,9 @@ export const AdminUserDetailsPage: React.FC = () => {
     } catch (err: any) {
       setReports([]);
       setReportsError(
-        err?.response?.data?.message || err?.message || "Failed to load reports",
+        err?.response?.data?.message ||
+          err?.message ||
+          "Failed to load reports",
       );
     } finally {
       setReportsLoading(false);
@@ -243,23 +255,6 @@ export const AdminUserDetailsPage: React.FC = () => {
     }
   };
 
-  const handleReject = async () => {
-    if (!id) return;
-    setIsSaving(true);
-    try {
-      const response = await authService.updateUser(id, { status: "rejected" });
-      const updated = response?.data?.user || response?.user;
-      if (updated) setUser(updated);
-      toast.success("User rejected");
-      setRejectDialogOpen(false);
-      await loadUser();
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message || "Failed to reject user");
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
@@ -307,18 +302,6 @@ export const AdminUserDetailsPage: React.FC = () => {
             >
               <ShieldOff className="h-4 w-4" />
               Suspend
-            </Button>
-          ) : null}
-
-          {user?.status !== "rejected" && user ? (
-            <Button
-              variant="outline"
-              onClick={() => setRejectDialogOpen(true)}
-              disabled={isSaving || isLoading}
-              className="gap-2"
-            >
-              <Ban className="h-4 w-4" />
-              Reject
             </Button>
           ) : null}
 
@@ -393,13 +376,19 @@ export const AdminUserDetailsPage: React.FC = () => {
 
                   <div className="mt-2 flex flex-wrap items-center gap-2">
                     <Badge
-                      className={cn("gap-1 capitalize", roleBadgeClass[user.role])}
+                      className={cn(
+                        "gap-1 capitalize",
+                        roleBadgeClass[user.role],
+                      )}
                     >
                       {user.role}
                     </Badge>
                     <Badge
                       variant="outline"
-                      className={cn("capitalize", statusBadgeClass[user.status])}
+                      className={cn(
+                        "capitalize",
+                        statusBadgeClass[user.status],
+                      )}
                     >
                       {user.status}
                     </Badge>
@@ -426,7 +415,9 @@ export const AdminUserDetailsPage: React.FC = () => {
                   </div>
                 </div>
                 <div>
-                  <div className="text-xs text-muted-foreground">Last login</div>
+                  <div className="text-xs text-muted-foreground">
+                    Last login
+                  </div>
                   <div className="text-sm font-semibold">
                     {user.last_login ? formatDate(user.last_login) : "Never"}
                   </div>
@@ -505,7 +496,10 @@ export const AdminUserDetailsPage: React.FC = () => {
                     <Input
                       value={form.business_name ?? ""}
                       onChange={(e) =>
-                        setForm((p) => ({ ...p, business_name: e.target.value }))
+                        setForm((p) => ({
+                          ...p,
+                          business_name: e.target.value,
+                        }))
                       }
                       disabled={!editMode}
                     />
@@ -525,7 +519,13 @@ export const AdminUserDetailsPage: React.FC = () => {
                       </SelectTrigger>
                       <SelectContent>
                         {(
-                          ["retailer", "distributor", "factory", "driver", "admin"] as const
+                          [
+                            "retailer",
+                            "distributor",
+                            "factory",
+                            "driver",
+                            "admin",
+                          ] as const
                         ).map((role) => (
                           <SelectItem key={role} value={role}>
                             {role}
@@ -548,13 +548,13 @@ export const AdminUserDetailsPage: React.FC = () => {
                         <SelectValue placeholder="Select status" />
                       </SelectTrigger>
                       <SelectContent>
-                        {(
-                          ["pending", "active", "suspended", "rejected"] as const
-                        ).map((status) => (
-                          <SelectItem key={status} value={status}>
-                            {status}
-                          </SelectItem>
-                        ))}
+                        {(["pending", "active", "suspended"] as const).map(
+                          (status) => (
+                            <SelectItem key={status} value={status}>
+                              {status}
+                            </SelectItem>
+                          ),
+                        )}
                       </SelectContent>
                     </Select>
                   </div>
@@ -667,7 +667,8 @@ export const AdminUserDetailsPage: React.FC = () => {
           <AlertDialogHeader>
             <AlertDialogTitle>Suspend user</AlertDialogTitle>
             <AlertDialogDescription>
-              Suspended users will not be able to log in or access their dashboard.
+              Suspended users will not be able to log in or access their
+              dashboard.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -682,30 +683,8 @@ export const AdminUserDetailsPage: React.FC = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      <AlertDialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Reject user</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will set the account status to rejected. You can still reactivate
-              the account later.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isSaving}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => void handleReject()}
-              disabled={isSaving}
-            >
-              Reject
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 };
 
 export default AdminUserDetailsPage;
-
