@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { OrderService } from '../services/order/order.service';
+import driverReviewService from '../services/driver-review.service';
 import { AppError } from '../utils/errors';
 import logger from '../utils/logger';
 import { OrderFilters } from '../types/order.types';
@@ -310,6 +311,56 @@ export class OrderController {
         logger.error('Verify receipt error:', error);
         res.status(500).json({ success: false, message: 'Internal server error' });
       }
+    }
+  }
+
+  async getDriverReview(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      const userId = req.user?.id as string | undefined;
+      const userRole = req.user?.role as string | undefined;
+
+      if (!userId || !userRole) {
+        return res.status(401).json({ success: false, message: 'Unauthorized' });
+      }
+
+      const review = await driverReviewService.getForOrder(id, userId, userRole);
+      return res.json({ success: true, data: { review } });
+    } catch (error) {
+      if (error instanceof AppError) {
+        return res.status(error.statusCode).json({ success: false, message: error.message });
+      }
+      logger.error('Get driver review error:', error);
+      return res.status(500).json({ success: false, message: 'Internal server error' });
+    }
+  }
+
+  async submitDriverReview(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      const userId = req.user?.id as string | undefined;
+      const userRole = req.user?.role as string | undefined;
+
+      if (!userId || !userRole) {
+        return res.status(401).json({ success: false, message: 'Unauthorized' });
+      }
+
+      if (!['retailer', 'distributor'].includes(String(userRole).toLowerCase())) {
+        return res.status(403).json({ success: false, message: 'Only buyers can rate drivers' });
+      }
+
+      const rating = Number(req.body?.rating);
+      const comment =
+        typeof req.body?.comment === 'string' ? req.body.comment : undefined;
+
+      const review = await driverReviewService.submitForOrder(id, userId, rating, comment);
+      return res.status(201).json({ success: true, data: { review } });
+    } catch (error) {
+      if (error instanceof AppError) {
+        return res.status(error.statusCode).json({ success: false, message: error.message });
+      }
+      logger.error('Submit driver review error:', error);
+      return res.status(500).json({ success: false, message: 'Internal server error' });
     }
   }
 }

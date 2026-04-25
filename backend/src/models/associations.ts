@@ -17,6 +17,7 @@ import Address from './address.model';
 import Review from './rating-reviews.model';
 import Dispute from './dispute.model';
 import SupplierReview from './supplier-review.model';
+import DriverReview from './driver-review.model';
 import UserReport from './user-report.model';
 import DriverIssueReport from './driver-issue-report.model';
 import FactoryAgent from './factory-agent.model';
@@ -370,6 +371,40 @@ export const setupAssociations = () => {
   SupplierReview.belongsTo(User, {
     foreignKey: 'user_id',
     as: 'reviewer',
+  });
+
+  // Driver Reviews (User -> DriverReview with two roles, plus Delivery)
+  Delivery.hasOne(DriverReview, {
+    foreignKey: 'delivery_id',
+    as: 'driverReview',
+    onDelete: 'CASCADE',
+  });
+
+  DriverReview.belongsTo(Delivery, {
+    foreignKey: 'delivery_id',
+    as: 'delivery',
+  });
+
+  User.hasMany(DriverReview, {
+    foreignKey: 'driver_user_id',
+    as: 'driverReviewsReceived',
+    onDelete: 'CASCADE',
+  });
+
+  User.hasMany(DriverReview, {
+    foreignKey: 'buyer_id',
+    as: 'driverReviewsWritten',
+    onDelete: 'CASCADE',
+  });
+
+  DriverReview.belongsTo(User, {
+    foreignKey: 'driver_user_id',
+    as: 'driverUser',
+  });
+
+  DriverReview.belongsTo(User, {
+    foreignKey: 'buyer_id',
+    as: 'buyer',
   });
 
   // User Reports

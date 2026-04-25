@@ -366,14 +366,7 @@ const FactoryDashboard: React.FC = () => {
       iconColor: "text-amber-600",
       iconBg: "bg-amber-100",
     },
-    {
-      title: "Active Production",
-      value: factoryStats.activeProduction.toString(),
-      subtext: `${factoryStats.productionCapacity}% capacity used`,
-      icon: Activity,
-      iconColor: "text-emerald-600",
-      iconBg: "bg-emerald-100",
-    },
+
     {
       title: "Inventory Alerts",
       value: factoryStats.inventoryAlerts.toString(),
@@ -390,7 +383,7 @@ const FactoryDashboard: React.FC = () => {
       <WelcomeHeader user={user} />
 
       {/* Stats Grid - Using shared StatsCard */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {statsData.map((stat, index) => (
           <StatsCard key={index} {...stat} />
         ))}
@@ -519,49 +512,82 @@ const FactoryDashboard: React.FC = () => {
               </Button>
             </CardFooter>
           </Card>
-
-          {/* Production Schedule */}
+          {/* Inventory Alerts */}
           <Card>
-            <CardHeader className="pb-2">
-              <SectionHeader
-                title="Production Schedule"
-                description="Next 3 days"
-                actionLabel="Manage Schedule"
-                actionHref="/factory/production"
-              />
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base">Inventory Alerts</CardTitle>
+                <Badge
+                  variant="outline"
+                  className="bg-red-100 text-red-800 border-red-200"
+                >
+                  {factoryStats.inventoryAlerts} alerts
+                </Badge>
+              </div>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {productionSchedule.map((item, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center justify-between p-2 border rounded-lg"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="h-8 w-8 bg-muted rounded-full flex items-center justify-center">
-                        <Calendar className="h-4 w-4 text-muted-foreground" />
+            <CardContent className="pb-3">
+              <ScrollArea className="h-[200px] pr-3">
+                <div className="space-y-3">
+                  {inventoryAlerts.map((alert) => (
+                    <div
+                      key={alert.id}
+                      className="flex items-start gap-3 p-2 hover:bg-accent/50 rounded-lg"
+                    >
+                      <div
+                        className={`p-1.5 rounded-full ${
+                          alert.status === "critical"
+                            ? "bg-red-100"
+                            : alert.status === "low"
+                              ? "bg-amber-100"
+                              : "bg-blue-100"
+                        }`}
+                      >
+                        <AlertTriangle
+                          className={`h-3 w-3 ${
+                            alert.status === "critical"
+                              ? "text-red-600"
+                              : alert.status === "low"
+                                ? "text-amber-600"
+                                : "text-blue-600"
+                          }`}
+                        />
                       </div>
-                      <div>
-                        <p className="text-sm font-medium">{item.product}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {item.quantity} {item.unit} • {formatDate(item.date)}
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between">
+                          <p className="text-xs font-medium">
+                            {alert.productName}
+                          </p>
+                          <Badge
+                            variant="outline"
+                            className={
+                              alert.status === "critical"
+                                ? "bg-red-100 text-red-800"
+                                : alert.status === "low"
+                                  ? "bg-amber-100 text-amber-800"
+                                  : "bg-blue-100 text-blue-800"
+                            }
+                          >
+                            {alert.status}
+                          </Badge>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          SKU: {alert.sku} • Stock: {alert.currentStock} /{" "}
+                          {alert.minStock} min
                         </p>
                       </div>
                     </div>
-                    <Badge
-                      variant="outline"
-                      className={
-                        item.status === "scheduled"
-                          ? "bg-blue-100 text-blue-800"
-                          : "bg-gray-100 text-gray-800"
-                      }
-                    >
-                      {item.status}
-                    </Badge>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              </ScrollArea>
             </CardContent>
+            <CardFooter className="border-t pt-4">
+              <Button variant="ghost" className="w-full text-xs" asChild>
+                <Link to="/factory/inventory">
+                  Manage Inventory
+                  <ChevronRight className="h-3 w-3 ml-1" />
+                </Link>
+              </Button>
+            </CardFooter>
           </Card>
         </div>
 
@@ -648,96 +674,12 @@ const FactoryDashboard: React.FC = () => {
             </CardFooter>
           </Card>
 
-          {/* Inventory Alerts */}
-          <Card>
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-base">Inventory Alerts</CardTitle>
-                <Badge
-                  variant="outline"
-                  className="bg-red-100 text-red-800 border-red-200"
-                >
-                  {factoryStats.inventoryAlerts} alerts
-                </Badge>
-              </div>
-            </CardHeader>
-            <CardContent className="pb-3">
-              <ScrollArea className="h-[200px] pr-3">
-                <div className="space-y-3">
-                  {inventoryAlerts.map((alert) => (
-                    <div
-                      key={alert.id}
-                      className="flex items-start gap-3 p-2 hover:bg-accent/50 rounded-lg"
-                    >
-                      <div
-                        className={`p-1.5 rounded-full ${
-                          alert.status === "critical"
-                            ? "bg-red-100"
-                            : alert.status === "low"
-                              ? "bg-amber-100"
-                              : "bg-blue-100"
-                        }`}
-                      >
-                        <AlertTriangle
-                          className={`h-3 w-3 ${
-                            alert.status === "critical"
-                              ? "text-red-600"
-                              : alert.status === "low"
-                                ? "text-amber-600"
-                                : "text-blue-600"
-                          }`}
-                        />
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between">
-                          <p className="text-xs font-medium">
-                            {alert.productName}
-                          </p>
-                          <Badge
-                            variant="outline"
-                            className={
-                              alert.status === "critical"
-                                ? "bg-red-100 text-red-800"
-                                : alert.status === "low"
-                                  ? "bg-amber-100 text-amber-800"
-                                  : "bg-blue-100 text-blue-800"
-                            }
-                          >
-                            {alert.status}
-                          </Badge>
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          SKU: {alert.sku} • Stock: {alert.currentStock} /{" "}
-                          {alert.minStock} min
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </ScrollArea>
-            </CardContent>
-            <CardFooter className="border-t pt-4">
-              <Button variant="ghost" className="w-full text-xs" asChild>
-                <Link to="/factory/inventory">
-                  Manage Inventory
-                  <ChevronRight className="h-3 w-3 ml-1" />
-                </Link>
-              </Button>
-            </CardFooter>
-          </Card>
-
           {/* Quick Actions */}
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-base">Quick Actions</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
-              <Button className="w-full justify-start" size="sm" asChild>
-                <Link to="/factory/production/new">
-                  <Plus className="mr-2 h-4 w-4" />
-                  New Production Batch
-                </Link>
-              </Button>
               <Button
                 variant="outline"
                 className="w-full justify-start"
@@ -754,12 +696,7 @@ const FactoryDashboard: React.FC = () => {
                 className="w-full justify-start"
                 size="sm"
                 asChild
-              >
-                <Link to="/factory/inventory/update">
-                  <Package className="mr-2 h-4 w-4" />
-                  Update Inventory
-                </Link>
-              </Button>
+              ></Button>
               <Button
                 variant="outline"
                 className="w-full justify-start"
@@ -784,39 +721,6 @@ const FactoryDashboard: React.FC = () => {
               </Button>
             </CardContent>
           </Card>
-
-          {/* Partnership Requests */}
-          {factoryStats.newPartnershipRequests > 0 && (
-            <Card className="bg-blue-50/50 border-blue-200">
-              <CardContent className="p-4">
-                <div className="flex items-start gap-3">
-                  <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
-                    <Users className="h-4 w-4 text-blue-600" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-blue-800">
-                      {factoryStats.newPartnershipRequests} New Partnership
-                      Requests
-                    </p>
-                    <p className="text-xs text-blue-700 mt-1">
-                      Distributors waiting to connect with your factory
-                    </p>
-                    <Button
-                      size="sm"
-                      variant="link"
-                      className="h-auto p-0 mt-2 text-xs text-blue-800"
-                      asChild
-                    >
-                      <Link to="/factory/partners/requests">
-                        Review requests
-                        <ChevronRight className="h-3 w-3 ml-1" />
-                      </Link>
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
         </div>
       </div>
     </div>

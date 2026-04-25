@@ -100,6 +100,11 @@ class OrderService {
     return response.data;
   }
 
+  async getDriverReview(orderId: string): Promise<any> {
+    const response = await api.get(`/orders/${encodeURIComponent(orderId)}/driver-review`);
+    return response.data;
+  }
+
   // CREATE METHODS
   async createOrder(data: CreateOrderData): Promise<OrderResponse> {
     console.log("Order payload:", JSON.stringify(data, null, 2));
@@ -127,6 +132,14 @@ class OrderService {
 
   async cancelOrder(id: string, data?: CancelOrderData): Promise<any> {
     const response = await api.patch(`/orders/${id}/cancel`, data || {});
+    return response.data;
+  }
+
+  async submitDriverReview(orderId: string, payload: { rating: number; comment?: string }): Promise<any> {
+    const response = await api.post(
+      `/orders/${encodeURIComponent(orderId)}/driver-review`,
+      payload,
+    );
     return response.data;
   }
 }

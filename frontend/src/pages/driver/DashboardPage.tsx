@@ -47,6 +47,9 @@ import {
 import { cn, getInitials } from "@/lib/utils";
 import { useAuthStore } from "@/stores/auth.store";
 import deliveryService from "@/services/delivery.service";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { useDeliveryStore } from "@/stores/delivery.store";
+import toast from "react-hot-toast";
 
 // ============================================================================
 // TYPES
@@ -101,7 +104,6 @@ interface DriverStats {
   pendingDeliveries: number;
 
   totalDistance: number;
-  rating: number;
 }
 
 const mapApiDelivery = (delivery: any): Delivery => {
@@ -114,7 +116,9 @@ const mapApiDelivery = (delivery: any): Delivery => {
       }))
     : [];
 
-  const orderId = String(delivery?.order_id || delivery?.order?.id || delivery?.id || "");
+  const orderId = String(
+    delivery?.order_id || delivery?.order?.id || delivery?.id || "",
+  );
   const buyer = delivery?.order?.buyer;
   const supplier = delivery?.order?.supplier;
   const driver = delivery?.driver?.driverUser || delivery?.driver;
@@ -133,16 +137,23 @@ const mapApiDelivery = (delivery: any): Delivery => {
 
   return {
     id: String(delivery?.id || orderId),
-    deliveryNumber: String(delivery?.delivery_number || delivery?.id || orderId),
+    deliveryNumber: String(
+      delivery?.delivery_number || delivery?.id || orderId,
+    ),
     orderId,
     orderNumber: String(delivery?.order_number || orderId),
     pickupLocation: delivery?.pickup_location || "Pickup not set",
-    pickupAddress: delivery?.pickup_address || delivery?.pickup_location || "Not provided",
+    pickupAddress:
+      delivery?.pickup_address || delivery?.pickup_location || "Not provided",
     pickupContact:
-      supplier?.business_name || supplier?.full_name || supplier?.user?.full_name || "Supplier",
+      supplier?.business_name ||
+      supplier?.full_name ||
+      supplier?.user?.full_name ||
+      "Supplier",
     pickupPhone: supplier?.phone || supplier?.user?.phone || "N/A",
     dropoffLocation: delivery?.dropoff_location || "Dropoff not set",
-    dropoffAddress: delivery?.dropoff_address || delivery?.dropoff_location || "Not provided",
+    dropoffAddress:
+      delivery?.dropoff_address || delivery?.dropoff_location || "Not provided",
     dropoffContact: buyer?.business_name || buyer?.full_name || "Customer",
     dropoffPhone: buyer?.phone || "N/A",
     items,
@@ -150,12 +161,18 @@ const mapApiDelivery = (delivery: any): Delivery => {
     assignedAt: delivery?.created_at || new Date().toISOString(),
     pickedUpAt: delivery?.picked_up_at,
     deliveredAt: delivery?.completed_at,
-    estimatedDelivery: delivery?.estimated_delivery || delivery?.updated_at || new Date().toISOString(),
+    estimatedDelivery:
+      delivery?.estimated_delivery ||
+      delivery?.updated_at ||
+      new Date().toISOString(),
     distance: Number(delivery?.distance_km || 0),
     priority: items.length > 8 ? "high" : items.length > 3 ? "medium" : "low",
     notes: delivery?.notes,
     supplierName:
-      supplier?.business_name || supplier?.full_name || supplier?.user?.full_name || "Supplier",
+      supplier?.business_name ||
+      supplier?.full_name ||
+      supplier?.user?.full_name ||
+      "Supplier",
     supplierPhone: supplier?.phone || supplier?.user?.phone || "N/A",
     customerName: buyer?.business_name || buyer?.full_name || "Customer",
     customerPhone: buyer?.phone || "N/A",
@@ -215,6 +232,9 @@ export const DriverDashboard: React.FC = () => {
   const [issueReport, setIssueReport] = useState("");
   const [showIssueDialog, setShowIssueDialog] = useState(false);
 
+  const reportIssue = useDeliveryStore((state) => state.reportIssue);
+  const deliveryStoreError = useDeliveryStore((state) => state.error);
+
   useEffect(() => {
     const loadDeliveries = async () => {
       try {
@@ -230,7 +250,8 @@ export const DriverDashboard: React.FC = () => {
   }, []);
 
   if (!authUser) return null;
-  const primaryVehicle = deliveries.find((d) => d.vehicleType || d.licensePlate) || null;
+  const primaryVehicle =
+    deliveries.find((d) => d.vehicleType || d.licensePlate) || null;
   const vehicleLabel = primaryVehicle?.vehicleType || "Vehicle not assigned";
   const plateLabel = primaryVehicle?.licensePlate || "Plate not assigned";
 
@@ -253,6 +274,10 @@ export const DriverDashboard: React.FC = () => {
       ),
     [deliveries],
   );
+  const pendingDeliveries = useMemo(
+    () => deliveries.filter((d) => d.status === "pending"),
+    [deliveries],
+  );
   const completedDeliveries = useMemo(
     () =>
       deliveries.filter(
@@ -269,11 +294,15 @@ export const DriverDashboard: React.FC = () => {
     totalDeliveries: deliveries.length,
     completedToday: completedDeliveries.filter((delivery) => {
       const deliveryDate = delivery.deliveredAt || delivery.assignedAt;
-      return new Date(deliveryDate).toDateString() === new Date().toDateString();
+      return (
+        new Date(deliveryDate).toDateString() === new Date().toDateString()
+      );
     }).length,
-    pendingDeliveries: activeDeliveries.length,
-    totalDistance: deliveries.reduce((sum, delivery) => sum + delivery.distance, 0),
-    rating: 4.8,
+    pendingDeliveries: pendingDeliveries.length,
+    totalDistance: deliveries.reduce(
+      (sum, delivery) => sum + delivery.distance,
+      0,
+    ),
   };
 
   // Handle status update
@@ -304,19 +333,24 @@ export const DriverDashboard: React.FC = () => {
   };
 
   // Handle report issue
-  const handleReportIssue = () => {
-    if (selectedDelivery && issueReport.trim()) {
-      console.log(
-        "Reporting issue for:",
-        selectedDelivery.id,
-        "Issue:",
-        issueReport,
-      );
-      setShowIssueDialog(false);
-      setIssueReport("");
-      setSelectedDelivery(null);
-      // In real app, call API
+  const handleReportIssue = async () => {
+    if (!selectedDelivery || !issueReport.trim()) return;
+
+    const result = await reportIssue({
+      deliveryId: selectedDelivery.id,
+      description: issueReport.trim(),
+      location: selectedDelivery.dropoffLocation || selectedDelivery.pickupLocation,
+    });
+
+    if (!result) {
+      toast.error(deliveryStoreError || "Failed to report issue");
+      return;
     }
+
+    toast.success("Issue reported.");
+    setShowIssueDialog(false);
+    setIssueReport("");
+    setSelectedDelivery(null);
   };
 
   return (
@@ -325,7 +359,7 @@ export const DriverDashboard: React.FC = () => {
       <WelcomeHeader user={driverUser} />
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-4">
         <StatsCard
           title="Total Deliveries"
           value={stats.totalDeliveries}
@@ -346,13 +380,6 @@ export const DriverDashboard: React.FC = () => {
           icon={Clock}
           iconBg="bg-yellow-100"
           iconColor="text-yellow-600"
-        />
-        <StatsCard
-          title="Rating"
-          value={stats.rating.toFixed(1)}
-          icon={Star}
-          iconBg="bg-amber-100"
-          iconColor="text-amber-600"
         />
       </div>
 
@@ -687,7 +714,7 @@ export const DriverDashboard: React.FC = () => {
 
       {/* Delivery Details Dialog */}
       <Dialog open={showDetailsDialog} onOpenChange={setShowDetailsDialog}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-hidden">
           <DialogHeader>
             <DialogTitle>Delivery Details</DialogTitle>
             <DialogDescription>
@@ -697,7 +724,8 @@ export const DriverDashboard: React.FC = () => {
           </DialogHeader>
 
           {selectedDelivery && (
-            <div className="space-y-4">
+            <ScrollArea className="max-h-[70vh] pr-4">
+              <div className="space-y-4">
               {/* Status */}
               <div className="flex gap-2">
                 <Badge className={statusColors[selectedDelivery.status]}>
@@ -832,7 +860,8 @@ export const DriverDashboard: React.FC = () => {
                   </p>
                 </div>
               )}
-            </div>
+              </div>
+            </ScrollArea>
           )}
 
           <DialogFooter>

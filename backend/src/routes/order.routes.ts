@@ -46,6 +46,14 @@ const receiptNumberValidation = [
     .withMessage('Valid receipt number is required'),
 ];
 
+const driverReviewValidation = [
+  param('id').isUUID().withMessage('Valid order ID is required'),
+  body('rating')
+    .isInt({ min: 1, max: 5 })
+    .withMessage('Rating must be between 1 and 5'),
+  body('comment').optional().isString(),
+];
+
 // Public receipt verification route
 router.get(
   '/verify/receipt/:receiptNumber',
@@ -107,6 +115,19 @@ router.get(
   '/:id/receipt',
   orderIdValidation,
   orderController.getOrderReceipt
+);
+
+// Driver rating (buyer after delivered)
+router.get(
+  '/:id/driver-review',
+  validate(orderIdValidation),
+  orderController.getDriverReview,
+);
+
+router.post(
+  '/:id/driver-review',
+  validate(driverReviewValidation),
+  orderController.submitDriverReview,
 );
 
 

@@ -67,6 +67,7 @@ import { getInitials, cn } from "@/lib/utils";
 import deliveryService from "@/services/delivery.service";
 import driverIssueService from "@/services/driver-issue.service";
 import disputeService from "@/services/dispute.service";
+import orderService from "@/services/order.service";
 import { reportService } from "@/services/report.service";
 import toast from "react-hot-toast";
 import type {
@@ -148,6 +149,12 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
   const [driverIssueReports, setDriverIssueReports] = useState<any[]>([]);
   const [driverIssueLoading, setDriverIssueLoading] = useState(false);
   const [driverIssueError, setDriverIssueError] = useState<string | null>(null);
+  const [driverReview, setDriverReview] = useState<any | null>(null);
+  const [driverReviewLoading, setDriverReviewLoading] = useState(false);
+  const [showDriverReviewDialog, setShowDriverReviewDialog] = useState(false);
+  const [driverRating, setDriverRating] = useState(5);
+  const [driverReviewComment, setDriverReviewComment] = useState("");
+  const [driverReviewSubmitting, setDriverReviewSubmitting] = useState(false);
 
   const availableDrivers = (order.drivers || []).filter(
     (d) => d && d.available !== false,
@@ -220,6 +227,42 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
       cancelled = true;
     };
   }, [order?.id]);
+
+  useEffect(() => {
+    if (!order?.id) {
+      setDriverReview(null);
+      return;
+    }
+
+    if (mode !== "outgoing") {
+      setDriverReview(null);
+      return;
+    }
+
+    if (role !== "retailer" && role !== "distributor") {
+      setDriverReview(null);
+      return;
+    }
+
+    let cancelled = false;
+    setDriverReviewLoading(true);
+
+    (async () => {
+      try {
+        const res = await orderService.getDriverReview(String(order.id));
+        const review = res?.data?.review || null;
+        if (!cancelled) setDriverReview(review);
+      } catch {
+        if (!cancelled) setDriverReview(null);
+      } finally {
+        if (!cancelled) setDriverReviewLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [mode, order?.id, role]);
 
   const getDeliveryStatusBadge = (status?: DeliveryStatus | string | null) => {
     const raw = String(status || "")
@@ -521,6 +564,39 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
     ? `/messages?user=${encodeURIComponent(String(effectiveDriverUserId))}&order=${encodeURIComponent(order.id)}`
     : null;
 
+  const canRateDriver =
+    mode === "outgoing" &&
+    (role === "retailer" || role === "distributor") &&
+    String(effectiveDeliveryStatus || "")
+      .trim()
+      .toLowerCase() === "delivered" &&
+    Boolean(effectiveDriverName || effectiveDriverPhone);
+
+  const handleSubmitDriverReview = async () => {
+    if (!order?.id || driverReviewSubmitting) return;
+
+    setDriverReviewSubmitting(true);
+    try {
+      const payload = {
+        rating: driverRating,
+        comment: driverReviewComment.trim() || undefined,
+      };
+      const res = await orderService.submitDriverReview(String(order.id), payload);
+      const review = res?.data?.review || null;
+      setDriverReview(review);
+      toast.success("Driver rated successfully.");
+      setShowDriverReviewDialog(false);
+    } catch (err: any) {
+      const message =
+        err?.response?.data?.message ||
+        err?.message ||
+        "Failed to submit driver rating.";
+      toast.error(message);
+    } finally {
+      setDriverReviewSubmitting(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header with Back Button */}
@@ -740,6 +816,32 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                     </div>
 
                     <div className="flex flex-wrap gap-2 justify-end">
+                      {canRateDriver ? (
+                        driverReviewLoading ? (
+                          <Badge variant="outline" className="h-7 text-xs bg-white">
+                            Loading ratingâ€¦
+                          </Badge>
+                        ) : driverReview ? (
+                          <Badge variant="outline" className="h-7 text-xs bg-white">
+                            <Star className="h-3.5 w-3.5 mr-1.5 fill-yellow-400 text-yellow-400" />
+                            {Number(driverReview.rating || 0)}/5
+                          </Badge>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 text-xs bg-white"
+                            onClick={() => {
+                              setDriverRating(5);
+                              setDriverReviewComment("");
+                              setShowDriverReviewDialog(true);
+                            }}
+                          >
+                            <Star className="h-3.5 w-3.5 mr-1.5" />
+                            Rate Driver
+                          </Button>
+                        )
+                      ) : null}
                       {driverChatLink ? (
                         <Button
                           size="sm"
@@ -1450,6 +1552,73 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
             </Button>
             <Button onClick={() => setShowReviewDialog(false)}>
               Submit Review
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Driver Rating Dialog */}
+      <Dialog
+        open={showDriverReviewDialog}
+        onOpenChange={setShowDriverReviewDialog}
+      >
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Rate Driver</DialogTitle>
+            <DialogDescription>
+              Share feedback about your delivery experience
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Rating</Label>
+              <div className="flex items-center gap-2">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    type="button"
+                    onClick={() => setDriverRating(star)}
+                    className="p-1 hover:scale-110 transition-transform"
+                  >
+                    <Star
+                      className={cn(
+                        "h-8 w-8",
+                        star <= driverRating
+                          ? "fill-yellow-400 text-yellow-400"
+                          : "text-gray-300",
+                      )}
+                    />
+                  </button>
+                ))}
+                <span className="text-sm ml-2">{driverRating}/5</span>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="driverReview" className="text-sm font-medium">
+                Comment (Optional)
+              </Label>
+              <Textarea
+                id="driverReview"
+                rows={4}
+                placeholder="e.g., on time, professional, careful with items..."
+                value={driverReviewComment}
+                onChange={(e) => setDriverReviewComment(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowDriverReviewDialog(false)}
+              disabled={driverReviewSubmitting}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleSubmitDriverReview} disabled={driverReviewSubmitting}>
+              Submit Rating
             </Button>
           </DialogFooter>
         </DialogContent>
