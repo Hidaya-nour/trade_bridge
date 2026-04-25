@@ -342,9 +342,23 @@ export class OrderService {
       throw new AppError('Order not found', 404);
     }
 
-    // Check authorization
-    if (userRole === 'supplier' && order.supplier_id !== userId) {
+    const normalizedRole = String(userRole || '').trim().toLowerCase();
+    const isSupplierActor = ['factory', 'distributor'].includes(normalizedRole);
+
+    // Check authorization (suppliers can only update their own orders)
+    if (isSupplierActor && order.supplier_id !== userId) {
       throw new AppError('You can only update your own orders', 403);
+    }
+
+    // Shipping/delivery statuses must be driven by the driver delivery status.
+    if (
+      isSupplierActor &&
+      ['shipped', 'delivered', 'closed'].includes(String(statusData.status))
+    ) {
+      throw new AppError(
+        'Shipped/delivered statuses are updated by the driver delivery status',
+        403,
+      );
     }
 
     // Validate status transition

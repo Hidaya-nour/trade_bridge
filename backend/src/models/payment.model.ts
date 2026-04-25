@@ -146,6 +146,15 @@ Payment.init(
           if (payment.changed('payment_status') && payment.payment_status === 'completed') {
             const order = await Order.findByPk(payment.order_id);
             if (order) {
+              // Auto-close delivered orders once payment completes
+              try {
+                if ((order as any).order_status === 'delivered') {
+                  await (order as any).update({ order_status: 'closed' });
+                }
+              } catch (err) {
+                console.error('Payment hook order close error', err);
+              }
+
               // notify buyer
               await Notification.create({
                 user_id: order.buyer_id,

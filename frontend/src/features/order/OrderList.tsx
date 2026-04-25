@@ -248,20 +248,20 @@ export const OrderList: React.FC<OrderListProps> = ({
 
     setPaymentProcessing(true);
     try {
-        const success = await onProcessPayment(
-          selectedOrder.id,
-          method,
-          details,
-          documents,
-        );
+      const success = await onProcessPayment(
+        selectedOrder.id,
+        method,
+        details,
+        documents,
+      );
 
-        if (success) {
-          toast.success(
-            method === "app_payment"
-              ? "Redirecting to app payment checkout..."
-              : "Payment submitted successfully!",
-          );
-          return true;
+      if (success) {
+        toast.success(
+          method === "app_payment"
+            ? "Redirecting to app payment checkout..."
+            : "Payment submitted successfully!",
+        );
+        return true;
       } else {
         toast.error("Payment failed. Please try again.");
         return false;
@@ -665,17 +665,6 @@ export const OrderList: React.FC<OrderListProps> = ({
                           <Calendar className="h-3 w-3 mr-1" />
                           Ordered: {formatDate(order.created_at)}
                         </span>
-                        {order.delivery && (
-                          <>
-                            <span className="text-xs text-muted-foreground">
-                              •
-                            </span>
-                            <span className="text-xs text-muted-foreground flex items-center">
-                              <MapPin className="h-3 w-3 mr-1" />
-                              {order.delivery.dropoff_location}
-                            </span>
-                          </>
-                        )}
                       </div>
                     </div>
                   </div>

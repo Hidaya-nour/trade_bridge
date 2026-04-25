@@ -125,6 +125,38 @@ Delivery.init(
             const order = await Order.findByPk(delivery.order_id);
             if (!order) return;
 
+            // Keep order_status in sync with driver-driven delivery status.
+            try {
+              const currentOrderStatus = String((order as any).order_status || '');
+              const isTerminal = ['cancelled', 'closed'].includes(currentOrderStatus);
+
+              if (!isTerminal) {
+                if (status === 'picked_up' || status === 'in_transit') {
+                  if (['pending', 'approved', 'processing'].includes(currentOrderStatus)) {
+                    await (order as any).update({ order_status: 'shipped' });
+                  }
+                }
+
+                if (status === 'delivered') {
+                  if (['pending', 'approved', 'processing', 'shipped'].includes(currentOrderStatus)) {
+                    await (order as any).update({ order_status: 'delivered' });
+                  }
+
+                  // Auto-close when delivered & paid
+                  const paymentModule: any = await import('./payment.model');
+                  const PaymentModel = paymentModule.Payment || paymentModule.default;
+                  const payment = await PaymentModel.findOne({
+                    where: { order_id: (order as any).id },
+                  });
+                  if (payment?.payment_status === 'completed') {
+                    await (order as any).update({ order_status: 'closed' });
+                  }
+                }
+              }
+            } catch (err) {
+              console.error('Delivery hook order_status sync error', err);
+            }
+
             if (
               status === 'assigned'
             ) {

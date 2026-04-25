@@ -308,6 +308,25 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
   };
 
   const getNextStatusOptions = (): { value: OrderStatus; label: string }[] => {
+    const normalizedRole = String(role || "")
+      .trim()
+      .toLowerCase();
+    const isSupplierIncoming =
+      mode === "incoming" &&
+      ["factory", "distributor"].includes(normalizedRole);
+
+    // Suppliers can approve/process only. Shipping/delivery is driven by the driver delivery status.
+    if (isSupplierIncoming) {
+      switch (order.status) {
+        case "pending":
+          return [{ value: "approved", label: "Approve Order" }];
+        case "approved":
+          return [{ value: "processing", label: "Start Processing" }];
+        default:
+          return [];
+      }
+    }
+
     switch (order.status) {
       case "pending":
         return [{ value: "approved", label: "Approve Order" }];
@@ -557,7 +576,9 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
     order.delivery?.driverPhone ||
     null;
   const effectiveDriverUserId =
-    deliveryRecord?.driver?.driverUser?.id || order.delivery?.driverUserId || null;
+    deliveryRecord?.driver?.driverUser?.id ||
+    order.delivery?.driverUserId ||
+    null;
   const telPhone = normalizeTel(effectiveDriverPhone);
   const waPhone = normalizeWhatsapp(effectiveDriverPhone);
   const driverChatLink = effectiveDriverUserId
@@ -581,7 +602,10 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
         rating: driverRating,
         comment: driverReviewComment.trim() || undefined,
       };
-      const res = await orderService.submitDriverReview(String(order.id), payload);
+      const res = await orderService.submitDriverReview(
+        String(order.id),
+        payload,
+      );
       const review = res?.data?.review || null;
       setDriverReview(review);
       toast.success("Driver rated successfully.");
@@ -818,11 +842,17 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                     <div className="flex flex-wrap gap-2 justify-end">
                       {canRateDriver ? (
                         driverReviewLoading ? (
-                          <Badge variant="outline" className="h-7 text-xs bg-white">
+                          <Badge
+                            variant="outline"
+                            className="h-7 text-xs bg-white"
+                          >
                             Loading ratingâ€¦
                           </Badge>
                         ) : driverReview ? (
-                          <Badge variant="outline" className="h-7 text-xs bg-white">
+                          <Badge
+                            variant="outline"
+                            className="h-7 text-xs bg-white"
+                          >
                             <Star className="h-3.5 w-3.5 mr-1.5 fill-yellow-400 text-yellow-400" />
                             {Number(driverReview.rating || 0)}/5
                           </Badge>
@@ -1446,7 +1476,10 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
             <div className="space-y-4 py-4">
               <div className="space-y-2">
                 <Label>Available Drivers</Label>
-                <Select value={selectedDriver} onValueChange={setSelectedDriver}>
+                <Select
+                  value={selectedDriver}
+                  onValueChange={setSelectedDriver}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Choose a driver" />
                   </SelectTrigger>
@@ -1617,7 +1650,10 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
             >
               Cancel
             </Button>
-            <Button onClick={handleSubmitDriverReview} disabled={driverReviewSubmitting}>
+            <Button
+              onClick={handleSubmitDriverReview}
+              disabled={driverReviewSubmitting}
+            >
               Submit Rating
             </Button>
           </DialogFooter>

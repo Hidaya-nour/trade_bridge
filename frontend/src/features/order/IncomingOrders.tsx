@@ -672,7 +672,7 @@ export const IncomingOrders: React.FC<IncomingOrdersProps> = ({
                           onClick={() => openAssignDialog(order)}
                         >
                           <Truck className="h-4 w-4 mr-2" />
-                          {order.driver ? "Change Driver" : "Assign Driver"}
+                          {order.deliveryId ? "Change Driver" : "Assign Driver"}
                         </Button>
                       )}
 
@@ -688,31 +688,6 @@ export const IncomingOrders: React.FC<IncomingOrdersProps> = ({
                         View Details
                       </Link>
                     </Button>
-
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem asChild>
-                          <Link to={`/${config.role}/orders/${order.id}/edit`}>
-                            <Printer className="h-4 w-4 mr-2" />
-                            Print Invoice
-                          </Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem>
-                          <Mail className="h-4 w-4 mr-2" />
-                          Contact {config.customerLabel}
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem className="text-destructive">
-                          <XCircle className="h-4 w-4 mr-2" />
-                          Cancel Order
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
                   </div>
                 </div>
               </CardContent>

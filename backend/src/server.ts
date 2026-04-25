@@ -120,6 +120,8 @@ app.use('/api/payments', paymentRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/disputes', disputeRoutes);
 app.use('/api/inventory-movements', inventoryMovementRoutes);
+// Prefer "stock" naming going forward; keep inventory route for backward compatibility.
+app.use('/api/stock-movements', inventoryMovementRoutes);
 app.use('/api/messages', chatMessageRoutes);
 app.use('/api/login-attempts', loginAttemptRoutes);
 app.use('/api/documents', documentRoutes);

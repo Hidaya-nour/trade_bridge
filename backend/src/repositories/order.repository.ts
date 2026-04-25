@@ -159,7 +159,15 @@ export class OrderRepository extends BaseRepository<Order> {
         {
           model: Delivery,
           as: 'delivery',
-          attributes: ['status']
+          attributes: [
+            'id',
+            'driver_id',
+            'pickup_location',
+            'dropoff_location',
+            'status',
+            'started_at',
+            'completed_at',
+          ]
         }
       ]
     });
