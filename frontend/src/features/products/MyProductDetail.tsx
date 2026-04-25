@@ -41,12 +41,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 
-import { formatPrice } from "@/lib/formatters";
+import { formatDateTime, formatPrice } from "@/lib/formatters";
+import { cn } from "@/lib/utils";
 import { EditProductDialog } from "../../components/product/AddEditProductDialog";
 import type { Product } from "@/types/product.types";
 import toast from "react-hot-toast"; // Add toast import
 import { ProductGallery } from "@/components/product/ProductGallery";
 import { ProductSpecifications } from "@/components/product/ProductSpecifications";
+import stockMovementService from "@/services/stock-movement.service";
+import type { StockMovement } from "@/types/stock-movement.types";
 
 // ============================================================================
 // TYPES
@@ -86,6 +89,9 @@ export const MyProductDetail: React.FC<MyProductDetailProps> = ({
   const [showDeleteDialog, setShowDeleteDialog] = useState(false); // Add delete dialog state
   const [newStock, setNewStock] = useState(product.stock_quantity);
   const [newPrice, setNewPrice] = useState(product.price);
+  const [stockMovements, setStockMovements] = useState<StockMovement[]>([]);
+  const [stockHistoryLoading, setStockHistoryLoading] = useState(false);
+  const [stockHistoryError, setStockHistoryError] = useState<string | null>(null);
 
   // Loading states
   const [loadingStock, setLoadingStock] = useState(false);
@@ -98,6 +104,66 @@ export const MyProductDetail: React.FC<MyProductDetailProps> = ({
     setNewStock(product.stock_quantity);
     setNewPrice(product.price);
   }, [product]);
+
+  useEffect(() => {
+    const load = async () => {
+      if (activeTab !== "stock") return;
+      setStockHistoryLoading(true);
+      setStockHistoryError(null);
+      try {
+        const response = await stockMovementService.getByProduct(product.id);
+        const data = (response as any)?.data || response;
+        setStockMovements(Array.isArray(data) ? data : []);
+      } catch (err: any) {
+        setStockMovements([]);
+        setStockHistoryError(
+          err?.response?.data?.message || err?.message || "Failed to load stock history",
+        );
+      } finally {
+        setStockHistoryLoading(false);
+      }
+    };
+
+    void load();
+  }, [activeTab, product.id]);
+
+  const stockHistoryRows = React.useMemo(() => {
+    const currentStock = Number(product.stock_quantity) || 0;
+    let running = currentStock;
+
+    return stockMovements.map((movement) => {
+      const qty = Number(movement.quantity) || 0;
+      const delta =
+        movement.movement_type === "in"
+          ? qty
+          : movement.movement_type === "out"
+            ? -qty
+            : qty;
+
+      const stockAfter = running;
+      const stockBefore = stockAfter - delta;
+      running = stockBefore;
+
+      const label =
+        movement.movement_type === "in"
+          ? "Stock In"
+          : movement.movement_type === "out"
+            ? "Stock Out"
+            : "Stock Adjustment";
+
+      return {
+        id: movement.id,
+        label,
+        createdAt: movement.created_at,
+        reason: movement.reason,
+        userName: movement.user?.full_name || movement.user?.email || null,
+        delta,
+        quantity: qty,
+        stockAfter,
+        stockBefore,
+      };
+    });
+  }, [product.stock_quantity, stockMovements]);
 
   const getRoleIcon = () => {
     switch (role) {
@@ -191,9 +257,6 @@ export const MyProductDetail: React.FC<MyProductDetailProps> = ({
             <div className="flex items-center gap-2 mt-1">
               <Badge variant="outline">SKU: {product.sku}</Badge>
               <Badge variant="secondary">{product.category}</Badge>
-              <Badge variant="outline" className="bg-blue-50 text-blue-700">
-                {getRoleName()} Product
-              </Badge>
             </div>
           </div>
         </div>
@@ -333,11 +396,10 @@ export const MyProductDetail: React.FC<MyProductDetailProps> = ({
 
       {/* Tabs for Details */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-4 lg:w-[600px]">
+        <TabsList className="grid w-full grid-cols-3 lg:w-[600px]">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="specifications">Specifications</TabsTrigger>
-          <TabsTrigger value="inventory">Inventory</TabsTrigger>
-          <TabsTrigger value="analytics">Analytics</TabsTrigger>
+          <TabsTrigger value="stock">Stock</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="mt-6">
@@ -365,70 +427,69 @@ export const MyProductDetail: React.FC<MyProductDetailProps> = ({
           </Card>
         </TabsContent>
 
-        <TabsContent value="inventory" className="mt-6">
+        <TabsContent value="stock" className="mt-6">
           <Card>
             <CardHeader>
-              <CardTitle>Inventory History</CardTitle>
+              <CardTitle>Stock History</CardTitle>
               <CardDescription>
                 Recent stock movements and adjustments
               </CardDescription>
             </CardHeader>
             <CardContent className="p-6">
-              <div className="space-y-3">
-                {[1, 2, 3].map((i) => (
-                  <div
-                    key={i}
-                    className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-blue-100 rounded-full">
-                        <TrendingUp className="h-4 w-4 text-blue-600" />
+              <div className="mb-4 rounded-lg border bg-muted/30 p-3">
+                <div className="text-sm font-medium">Current Stock</div>
+                <div className="text-2xl font-bold">{product.stock_quantity}</div>
+              </div>
+
+              {stockHistoryLoading ? (
+                <div className="rounded-lg border p-4 text-sm text-muted-foreground">
+                  Loading stock history...
+                </div>
+              ) : stockHistoryError ? (
+                <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                  {stockHistoryError}
+                </div>
+              ) : stockHistoryRows.length === 0 ? (
+                <div className="rounded-lg border p-4 text-sm text-muted-foreground">
+                  No stock history yet.
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {stockHistoryRows.map((row) => (
+                    <div
+                      key={row.id}
+                      className="flex items-center justify-between gap-3 p-3 bg-muted/50 rounded-lg"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-blue-100 rounded-full">
+                          <TrendingUp className="h-4 w-4 text-blue-600" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium">{row.label}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {row.createdAt ? formatDateTime(row.createdAt) : "Unknown date"}
+                            {row.userName ? ` • ${row.userName}` : ""}
+                            {row.reason ? ` • ${row.reason}` : ""}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            Stock: {row.stockAfter} → {row.stockBefore}
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-sm font-medium">Stock Adjustment</p>
-                        <p className="text-xs text-muted-foreground">
-                          2 days ago
-                        </p>
-                      </div>
+                      <Badge
+                        variant="outline"
+                        className={cn(
+                          "whitespace-nowrap",
+                          row.delta >= 0 ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700",
+                        )}
+                      >
+                        {row.delta >= 0 ? "+" : ""}
+                        {Math.abs(row.delta)} units
+                      </Badge>
                     </div>
-                    <Badge variant="outline" className="bg-green-50">
-                      +50 units
-                    </Badge>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="analytics" className="mt-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Performance Analytics</CardTitle>
-              <CardDescription>Sales and revenue metrics</CardDescription>
-            </CardHeader>
-            <CardContent className="p-6">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="p-4 bg-muted/50 rounded-lg">
-                  <p className="text-sm text-muted-foreground">Monthly Sales</p>
-                  <p className="text-2xl font-bold mt-1">156</p>
-                  <Badge variant="outline" className="mt-2 bg-green-50">
-                    +12% vs last month
-                  </Badge>
+                  ))}
                 </div>
-
-                <div className="p-4 bg-muted/50 rounded-lg">
-                  <p className="text-sm text-muted-foreground">
-                    Monthly Revenue
-                  </p>
-                  <p className="text-2xl font-bold mt-1">
-                    {formatPrice(15600)}
-                  </p>
-                  <Badge variant="outline" className="mt-2 bg-green-50">
-                    +8% vs last month
-                  </Badge>
-                </div>
-              </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

@@ -13,6 +13,7 @@ import {
   Plus,
   Minus,
   ShoppingCart,
+  CreditCard,
   Share2,
   Award,
 } from "lucide-react";
@@ -116,6 +117,7 @@ export interface ProductDetailProps {
   onViewSupplier?: () => void;
   onCompare?: () => void;
   onRateProduct?: (productId: string, rating: number, review: string) => void;
+  onOrderNow?: (quantity: number) => void;
 }
 
 // ============================================================================
@@ -129,6 +131,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
   cartQuantity = 0,
   onSetCartQuantity,
   onViewSupplier,
+  onOrderNow,
 }) => {
   const [quantity] = useState(product.min_order_amount);
   const [activeTab, setActiveTab] = useState("description");
@@ -147,6 +150,12 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
 
   const handleAddToCart = () => {
     onAddToCart(quantity);
+  };
+
+  const handleOrderNow = () => {
+    if (!onOrderNow) return;
+    const nextQuantity = cartQuantity > 0 ? cartQuantity : quantity;
+    onOrderNow(nextQuantity);
   };
 
   return (
@@ -237,7 +246,10 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
             {product.pickup_location ? (
               <div className="mt-3 flex items-center text-sm text-muted-foreground">
                 <MapPin className="h-4 w-4 mr-2" />
-                Pickup: <span className="ml-1 text-foreground font-medium">{product.pickup_location}</span>
+                Pickup:{" "}
+                <span className="ml-1 text-foreground font-medium">
+                  {product.pickup_location}
+                </span>
               </div>
             ) : null}
 
@@ -297,7 +309,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
             )}
 
             {/* Action Buttons */}
-            <div className="flex gap-3 mt-6">
+            <div className="flex flex-col sm:flex-row gap-3 mt-6">
               {cartQuantity > 0 && onSetCartQuantity ? (
                 <div className="flex flex-1 items-center gap-3">
                   <div className="flex items-center border rounded-lg overflow-hidden bg-background shadow-sm">
@@ -352,96 +364,21 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
                   Add to Cart
                 </Button>
               )}
-              <Button size="lg" variant="outline">
-                <Share2 className="h-4 w-4" />
-              </Button>
+              {onOrderNow ? (
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="flex-1"
+                  onClick={handleOrderNow}
+                >
+                  <CreditCard className="h-4 w-4 mr-2" />
+                  Place Order
+                </Button>
+              ) : null}
             </div>
           </div>
         </div>
       </div>
-
-      {/* Supplier Information */}
-      {product.supplierName && (
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-              <div className="flex items-center gap-4">
-                <Avatar className="h-16 w-16">
-                  <AvatarFallback className="bg-primary/10 text-primary text-lg">
-                    {getInitials(product.supplierName)}
-                  </AvatarFallback>
-                </Avatar>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-lg font-semibold">
-                      {product.supplierName}
-                    </h3>
-                    {product.supplierVerified && (
-                      <Badge
-                        variant="outline"
-                        className="bg-green-50 text-green-700"
-                      >
-                        Verified
-                      </Badge>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-4 mt-1">
-                    <div className="flex items-center">
-                      <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                      <span className="text-xs ml-1">
-                        {product.supplierRating}
-                      </span>
-                    </div>
-                    {product.supplierLocation && (
-                      <>
-                        <span className="text-xs text-muted-foreground">•</span>
-                        <span className="text-xs text-muted-foreground flex items-center">
-                          <MapPin className="h-3 w-3 mr-1" />
-                          {product.supplierLocation}
-                        </span>
-                      </>
-                    )}
-                    {product.supplierEstablished && (
-                      <>
-                        <span className="text-xs text-muted-foreground">•</span>
-                        <span className="text-xs text-muted-foreground">
-                          {/* Est. {product.supplierEstablished} */}
-                        </span>
-                      </>
-                    )}
-                  </div>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                {product.supplierId ? (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setRateSupplierOpen(true)}
-                  >
-                    <Star className="h-4 w-4 mr-2" />
-                    Rate Supplier
-                  </Button>
-                ) : null}
-                <Button
-                  variant="outline"
-                  onClick={onViewSupplier}
-                  asChild={!!onViewSupplier}
-                >
-                  {onViewSupplier ? (
-                    <Link to={getSupplierPath()}>
-                      View Profile
-                      <ChevronRight className="h-4 w-4 ml-2" />
-                    </Link>
-                  ) : (
-                    <span>View Profile</span>
-                  )}
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Tabs for Details */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>

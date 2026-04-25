@@ -26,14 +26,26 @@ import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 import { formatPrice } from "@/lib/formatters";
 import { resolveBoolean } from "@/lib/coerce";
+import { geocodeAreaName, haversineKm } from "@/lib/geo";
 import toast from "react-hot-toast";
 import type { OrderItem } from "@/types/order.types";
 import { PaymentDialog } from "../payment/PaymentDialog";
 import type { PaymentDetails, PaymentMethod } from "@/types/payment.types";
 import { Textarea } from "../ui/textarea";
+import addressService from "@/services/address.service";
+import type { Address } from "@/types/address.types";
 
 export interface OrderSummary {
   subtotal: number;
@@ -109,8 +121,17 @@ export const PlaceOrderDialog: React.FC<PlaceOrderDialogProps> = ({
   isPlacing: externalIsPlacing,
 }) => {
   const navigate = useNavigate();
+  const DEFAULT_DISTANCE_KM = 1;
   const [deliveryOption] = React.useState("supplier_policy");
   const [deliveryAddress, setDeliveryAddress] = React.useState("");
+  const [addresses, setAddresses] = React.useState<Address[]>([]);
+  const [addressesLoading, setAddressesLoading] = React.useState(false);
+  const [addressesError, setAddressesError] = React.useState<string | null>(null);
+  const [useSavedLocation, setUseSavedLocation] = React.useState(false);
+  const [selectedAddressId, setSelectedAddressId] = React.useState<string>("");
+  const [buyerCoords, setBuyerCoords] = React.useState<{ lat: number; lng: number } | null>(null);
+  const [geoLoading, setGeoLoading] = React.useState(false);
+  const [geoError, setGeoError] = React.useState<string | null>(null);
   const [internalIsPlacing, setInternalIsPlacing] = React.useState(false);
   const [openPaymentDialog, setOpenPaymentDialog] = React.useState(false);
   const [openPostOrderChoice, setOpenPostOrderChoice] = React.useState(false);
@@ -122,11 +143,156 @@ export const PlaceOrderDialog: React.FC<PlaceOrderDialogProps> = ({
   );
   const [paymentProcessing, setPaymentProcessing] = React.useState(false);
 
+  const toFinite = (value: any) => {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  };
+
+  const formatAddress = (addr: Address) => {
+    const parts = [addr.common_name, addr.subcity, addr.city, addr.region]
+      .map((v) => String(v || "").trim())
+      .filter(Boolean);
+    return parts
+      .filter(
+        (value, index, all) =>
+          all.findIndex((v) => v.toLowerCase() === value.toLowerCase()) ===
+          index,
+      )
+      .join(", ");
+  };
+
+  const sortedAddresses = React.useMemo(() => {
+    if (!Array.isArray(addresses)) return [];
+    const safeDate = (value: any) => {
+      const d = value ? new Date(value) : null;
+      return d && !Number.isNaN(d.getTime()) ? d.getTime() : 0;
+    };
+    return [...addresses].sort(
+      (a, b) => safeDate(b.created_at) - safeDate(a.created_at),
+    );
+  }, [addresses]);
+
+  const selectedSavedAddress = React.useMemo(() => {
+    if (!useSavedLocation) return null;
+    if (!selectedAddressId) return sortedAddresses[0] || null;
+    return (
+      sortedAddresses.find((a) => a.id === selectedAddressId) ||
+      sortedAddresses[0] ||
+      null
+    );
+  }, [selectedAddressId, sortedAddresses, useSavedLocation]);
+
+  React.useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+
+    const loadAddresses = async () => {
+      setAddressesLoading(true);
+      setAddressesError(null);
+      try {
+        const response = await addressService.getAll();
+        const data = (response as any)?.data || response;
+        const next = Array.isArray(data) ? (data as Address[]) : [];
+        if (cancelled) return;
+        setAddresses(next);
+
+        if (next.length > 0 && !deliveryAddress.trim()) {
+          const preferred = next
+            .slice()
+            .sort((a, b) => {
+              const at = a.created_at ? new Date(a.created_at as any).getTime() : 0;
+              const bt = b.created_at ? new Date(b.created_at as any).getTime() : 0;
+              return bt - at;
+            })[0];
+          if (preferred) {
+            setUseSavedLocation(true);
+            setSelectedAddressId(preferred.id);
+            setDeliveryAddress(formatAddress(preferred));
+          }
+        }
+      } catch (err: any) {
+        if (cancelled) return;
+        setAddresses([]);
+        setAddressesError(
+          err?.response?.data?.message ||
+            err?.message ||
+            "Failed to load saved locations",
+        );
+      } finally {
+        if (!cancelled) setAddressesLoading(false);
+      }
+    };
+
+    void loadAddresses();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  React.useEffect(() => {
+    if (!open) return;
+    if (!useSavedLocation) return;
+    if (!selectedSavedAddress) return;
+    const formatted = formatAddress(selectedSavedAddress);
+    if (!formatted) return;
+    setDeliveryAddress((prev) => (prev.trim() ? prev : formatted));
+  }, [open, selectedSavedAddress, useSavedLocation]);
+
+  React.useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+
+    const savedLat = selectedSavedAddress ? toFinite(selectedSavedAddress.latitude) : null;
+    const savedLng = selectedSavedAddress ? toFinite(selectedSavedAddress.longitude) : null;
+    if (savedLat !== null && savedLng !== null) {
+      setBuyerCoords({ lat: savedLat, lng: savedLng });
+      setGeoError(null);
+      return;
+    }
+
+    const query = deliveryAddress.trim();
+    if (!query) {
+      setBuyerCoords(null);
+      setGeoError(null);
+      return;
+    }
+
+    setGeoLoading(true);
+    setGeoError(null);
+
+    const timer = setTimeout(async () => {
+      try {
+        const coords = await geocodeAreaName(query);
+        if (cancelled) return;
+        setBuyerCoords(coords);
+        if (!coords) {
+          setGeoError("Unable to resolve this area name to coordinates.");
+        }
+      } catch (err: any) {
+        if (cancelled) return;
+        setBuyerCoords(null);
+        setGeoError(err?.message || "Failed to resolve location.");
+      } finally {
+        if (!cancelled) setGeoLoading(false);
+      }
+    }, 600);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+      setGeoLoading(false);
+    };
+  }, [deliveryAddress, open, selectedSavedAddress]);
+
   const deliveryPolicyRows = React.useMemo(() => {
     return items
       .map((item) => {
         const product = item.product as any;
         if (!product) return null;
+        const supplierId = String(
+          product.supplier_id || product.supplierId || product.supplier?.id || "",
+        ).trim();
 
         const deliveryAvailable = resolveBoolean(product.delivery_available, true);
         const rawDeliveryPricing = String(
@@ -143,6 +309,7 @@ export const PlaceOrderDialog: React.FC<PlaceOrderDialogProps> = ({
 
         return {
           id: product.id || item.id,
+          supplierId: supplierId || null,
           name: product.name || "Product",
           deliveryAvailable,
           deliveryPricing,
@@ -152,6 +319,7 @@ export const PlaceOrderDialog: React.FC<PlaceOrderDialogProps> = ({
       })
       .filter(Boolean) as Array<{
       id: string;
+      supplierId: string | null;
       name: string;
       deliveryAvailable: boolean;
       deliveryPricing: "free" | "paid";
@@ -159,6 +327,93 @@ export const PlaceOrderDialog: React.FC<PlaceOrderDialogProps> = ({
       freeMaxKm: number | null;
     }>;
   }, [items]);
+
+  const shippingEstimate = React.useMemo(() => {
+    const distanceBySupplier: Record<string, number> = {};
+    const missingSupplierCoords = new Set<string>();
+
+    const getSupplierCoords = (product: any) => {
+      const addr = product?.supplier?.addresses?.[0] || null;
+      const lat = toFinite(addr?.latitude ?? product?.latitude);
+      const lng = toFinite(addr?.longitude ?? product?.longitude);
+      if (lat === null || lng === null) return null;
+      return { lat, lng };
+    };
+
+    const coordsBySupplier = new Map<string, { lat: number; lng: number }>();
+    for (const item of items) {
+      const product = (item as any)?.product;
+      if (!product) continue;
+      const supplierId = String(product?.supplier_id || product?.supplier?.id || "").trim();
+      if (!supplierId) continue;
+      if (coordsBySupplier.has(supplierId)) continue;
+      const coords = getSupplierCoords(product);
+      if (coords) coordsBySupplier.set(supplierId, coords);
+      else missingSupplierCoords.add(supplierId);
+    }
+
+    if (buyerCoords) {
+      coordsBySupplier.forEach((coords, supplierId) => {
+        distanceBySupplier[supplierId] = Number(
+          haversineKm(buyerCoords, coords).toFixed(2),
+        );
+      });
+    }
+
+    const shippingBySupplier: Record<string, number> = {};
+    let usedFallbackDistance = false;
+
+    for (const row of deliveryPolicyRows) {
+      const supplierId = row.supplierId || "unknown";
+      const distanceKm =
+        buyerCoords && distanceBySupplier[supplierId] !== undefined
+          ? distanceBySupplier[supplierId]
+          : DEFAULT_DISTANCE_KM;
+
+      if (!buyerCoords || distanceBySupplier[supplierId] === undefined) {
+        usedFallbackDistance = true;
+      }
+
+      if (!row.deliveryAvailable) continue;
+
+      const freeMaxKm = row.freeMaxKm;
+      if (freeMaxKm !== null && distanceKm <= freeMaxKm) {
+        shippingBySupplier[supplierId] = Math.max(
+          shippingBySupplier[supplierId] || 0,
+          0,
+        );
+        continue;
+      }
+
+      if (row.deliveryPricing === "paid" || row.feePerKm > 0) {
+        const fee = Number((row.feePerKm * distanceKm).toFixed(2));
+        shippingBySupplier[supplierId] = Math.max(
+          shippingBySupplier[supplierId] || 0,
+          fee,
+        );
+      }
+    }
+
+    const shipping = Number(
+      Object.values(shippingBySupplier)
+        .reduce((sum, fee) => sum + fee, 0)
+        .toFixed(2),
+    );
+
+    const knownDistances = Object.values(distanceBySupplier);
+    const singleSupplierKm =
+      knownDistances.length === 1 ? knownDistances[0] : null;
+
+    return {
+      shipping,
+      usedFallbackDistance,
+      missingSupplierCoordsCount: missingSupplierCoords.size,
+      supplierCount: new Set(
+        deliveryPolicyRows.map((r) => r.supplierId || "unknown"),
+      ).size,
+      singleSupplierKm,
+    };
+  }, [buyerCoords, deliveryPolicyRows, items]);
 
   const hasAnyNoDelivery = deliveryPolicyRows.some(
     (row) => !row.deliveryAvailable,
@@ -465,11 +720,81 @@ export const PlaceOrderDialog: React.FC<PlaceOrderDialogProps> = ({
                 Provide the destination location for supplier delivery or an
                 independent driver.
               </p>
+              {addressesLoading && sortedAddresses.length === 0 ? (
+                <div className="text-xs text-muted-foreground">
+                  Loading saved locations...
+                </div>
+              ) : null}
+              {sortedAddresses.length > 0 ? (
+                <div className="rounded-lg border bg-muted/20 p-3 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      checked={useSavedLocation}
+                      onCheckedChange={(next) => {
+                        const checked = Boolean(next);
+                        setUseSavedLocation(checked);
+                        if (checked && sortedAddresses.length > 0) {
+                          const preferred =
+                            selectedSavedAddress || sortedAddresses[0];
+                          if (preferred) {
+                            setSelectedAddressId(preferred.id);
+                            setDeliveryAddress((prev) =>
+                              prev.trim() ? prev : formatAddress(preferred),
+                            );
+                          }
+                        }
+                      }}
+                    />
+                    <Label className="text-sm">Use saved location</Label>
+                  </div>
+                  {useSavedLocation ? (
+                    <Select
+                      value={selectedSavedAddress?.id || ""}
+                      onValueChange={(value) => setSelectedAddressId(value)}
+                      disabled={addressesLoading}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a saved location" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {sortedAddresses.map((addr) => (
+                          <SelectItem key={addr.id} value={addr.id}>
+                            {formatAddress(addr) || "Saved location"}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : null}
+                  {addressesError ? (
+                    <div className="text-xs text-red-600">{addressesError}</div>
+                  ) : null}
+                </div>
+              ) : null}
               <Textarea
                 placeholder="City, sub-city, street, landmark, phone (if needed)…"
                 value={deliveryAddress}
                 onChange={(e) => setDeliveryAddress(e.target.value)}
               />
+              <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                {geoLoading ? (
+                  <span>Resolving area to coordinates...</span>
+                ) : null}
+                {geoError ? (
+                  <span className="text-red-600">{geoError}</span>
+                ) : null}
+                {!geoLoading && !geoError && buyerCoords ? (
+                  <span>
+                    {typeof shippingEstimate.singleSupplierKm === "number"
+                      ? `Estimated distance: ${shippingEstimate.singleSupplierKm} km`
+                      : `Estimated distance calculated for ${shippingEstimate.supplierCount} supplier(s)`}
+                  </span>
+                ) : null}
+                {shippingEstimate.usedFallbackDistance ? (
+                  <span>
+                    Using {DEFAULT_DISTANCE_KM} km for items missing coordinates.
+                  </span>
+                ) : null}
+              </div>
             </div>
 
             {/* Order Total */}
@@ -481,7 +806,11 @@ export const PlaceOrderDialog: React.FC<PlaceOrderDialogProps> = ({
                 </div>
                 <div className="flex justify-between text-sm">
                   <span>Shipping</span>
-                  <span>{formatPrice(summary.shipping)}</span>
+                  <span>
+                    {formatPrice(
+                      buyerCoords ? shippingEstimate.shipping : summary.shipping,
+                    )}
+                  </span>
                 </div>
                 {summary.promoApplied && (
                   <div className="flex justify-between text-sm text-green-600">
@@ -501,7 +830,12 @@ export const PlaceOrderDialog: React.FC<PlaceOrderDialogProps> = ({
                 <div className="flex justify-between text-base font-bold">
                   <span>Total</span>
                   <span className="text-primary">
-                    {formatPrice(summary.total)}
+                    {formatPrice(
+                      summary.subtotal +
+                        (buyerCoords ? shippingEstimate.shipping : summary.shipping) +
+                        summary.tax -
+                        summary.discount,
+                    )}
                   </span>
                 </div>
               </div>
