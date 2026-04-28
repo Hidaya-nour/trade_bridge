@@ -24,6 +24,7 @@ const Login = () => {
 
   const handleLogin = async (data: { email: string; password: string }) => {
     clearError();
+
     if (!data.email || !data.password) return;
 
     try {
@@ -122,7 +123,7 @@ const Login = () => {
             <LoginForm
               onSubmit={handleLogin}
               isLoading={isLoading}
-              error={undefined}
+              error={displayError}
             />
 
             <p className="mt-6 text-center text-sm text-gray-600">

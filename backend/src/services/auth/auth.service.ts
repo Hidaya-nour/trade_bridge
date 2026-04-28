@@ -49,44 +49,6 @@ export class AuthService {
   private userRepo = new UserRepository();
   private passwordService = new PasswordService();
   private tokenService = new TokenService();
-  private emailService = new EmailService();
-
-//   async register(data: RegisterDTO): Promise<{ user: SafeUser }> {
-//     // Validate password strength
-//     this.passwordService.validatePasswordStrength(data.password);
-
-//     // Check if user exists
-//     const existingUser = await this.userRepo.findByEmail(data.email);
-//     if (existingUser) {
-//       throw new AppError('User with this email already exists', 409);
-//     }
-
-//     // Hash password
-//     const password_hash = await this.passwordService.hashPassword(data.password);
-
-//     // Create user
-//     const user = await this.userRepo.create({
-//       email: data.email,
-//       full_name: data.full_name,
-//       role: data.role,
-//       phone: data.phone,
-//       password_hash,
-//       business_name: data.business_name,
-//       tin_number: data.tin_number,
-//       status: data.role === 'admin' ? 'active' : 'pending'
-//     });
-
-//     // Send verification email
-//     await this.emailService.sendWelcomeEmail(user.email, user.full_name);
-
-//     // Log registration
-//     logger.info(`User registered: ${user.id} (${user.role})`);
-
-//     const userResponse = user.toJSON();
-//     const { password_hash: _, ...safeUser } = userResponse;
-
-//     return { user: safeUser as SafeUser };
-//   }
 
 async register(data: RegisterDTO): Promise<{ user: SafeUser }> {
   // Validate password strength
@@ -135,7 +97,7 @@ async register(data: RegisterDTO): Promise<{ user: SafeUser }> {
     // Find user by email
     const user = await this.userRepo.findByEmailWithPassword(data.email);
     if (!user) {
-      throw new AuthError('Invalid email or password');
+      throw new AuthError('Account not found');
     }
 
     // Check if user is deleted

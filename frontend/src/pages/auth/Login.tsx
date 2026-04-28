@@ -8,10 +8,6 @@ export const LoginPage: React.FC = () => {
   const { isLoading } = useAuthStore();
   const navigate = useNavigate();
 
-  if (isLoading) {
-    return <LoadingSpinner fullScreen text="Loading your data..." />;
-  }
-
   const handleSuccessRedirect = () => {
     const user = useAuthStore.getState().user;
     if (!user) return;
