@@ -1,14 +1,17 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { ProductCatalog } from "@/features/products/ProductCatalog";
 import { useProductStore } from "@/stores/product.store";
 import { useCartStore } from "@/stores/cart.store";
-import { Factory } from "lucide-react";
+import { Factory, ShieldOff } from "lucide-react";
 import toast from "react-hot-toast";
 import { useAuthStore } from "@/stores/auth.store";
 import type { CatalogConfig } from "@/types/product.types";
 import broadcastService from "@/services/broadcast.service";
 import { ActivePromotionsPanel } from "@/components/shared/ActivePromotionsPanel";
 import type { BroadcastRecord } from "@/types/broadcast.types";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 
 const categories = ["Beverages", "Foods"];
 
@@ -23,9 +26,57 @@ const locations = [
 ];
 
 const DistributorMarketplacePage: React.FC = () => {
+  const navigate = useNavigate();
   const [localProducts, setLocalProducts] = useState<any[]>([]);
   const [promotions, setPromotions] = useState<BroadcastRecord[]>([]);
   const user = useAuthStore((state) => state.user);
+
+  // Check if distributor is verified
+  const isVerified = user?.verified === true;
+  const isDistributor = user?.role === "distributor";
+
+  // Block unverified distributors from browsing products
+  if (isDistributor && !isVerified) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
+        <Card className="max-w-md w-full">
+          <CardContent className="p-8 text-center">
+            <div className="flex justify-center mb-4">
+              <div className="h-16 w-16 rounded-full bg-amber-100 flex items-center justify-center">
+                <ShieldOff className="h-8 w-8 text-amber-600" />
+              </div>
+            </div>
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">
+              Verification Required
+            </h2>
+            <p className="text-gray-600 mb-6">
+              You must verify your distributor account before browsing products
+              and placing orders.
+            </p>
+            <p className="text-sm text-gray-500 mb-6">
+              Please upload your business license and required documents for
+              admin review.
+            </p>
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => navigate("/distributor/dashboard")}
+              >
+                Go Back
+              </Button>
+              <Button
+                className="flex-1"
+                onClick={() => navigate("/settings?tab=business")}
+              >
+                Upload Documents
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   const {
     products: storeProducts,

@@ -134,6 +134,8 @@ router.post(
 // Create new order
 router.post(
   '/',
+  authenticate,
+  requireVerifiedSupplier,
   validate(createOrderValidation),
   orderController.createOrder
 );
