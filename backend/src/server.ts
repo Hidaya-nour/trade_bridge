@@ -192,12 +192,8 @@ const startServer = async () => {
   }
 
   if (process.env.NODE_ENV === 'development') {
-    // Dev-only safety: older DBs may contain legacy/invalid ENUM values for
-    // `supplier_payment_methods.method_type`, which can cause `sync({ alter: true })`
-    // to fail with "Data truncated". Normalize and convert to VARCHAR before alter-sync.
-    try {
+     try {
       await sequelize.query(
-        // Use a value that is likely present in older ENUM definitions.
         "UPDATE supplier_payment_methods SET method_type='mobile_banking' WHERE method_type='' OR method_type IS NULL",
       );
       await sequelize.query(
@@ -211,26 +207,19 @@ const startServer = async () => {
     }
 
     try {
-      await sequelize.sync({ alter: true });
+      await sequelize.sync({ alter: false });
       logger.info('✅ Database synced (alter)');
     } catch (error) {
       logger.error('❌ Database sync (alter) failed', error);
-      // Allow the server to start in development even if alter-sync fails.
-      // This prevents hard-blocking local work due to schema drift.
-    }
+       }
   }
 
-  // Ensure newly added tables exist even if alter-sync is skipped/fails (common in dev).
-  // Scoped to the user reporting feature to avoid unintended schema changes.
-  try {
+   try {
     await UserReport.sync();
   } catch (error) {
     logger.warn('Failed to ensure user_reports table exists', error);
   }
-
-  // Suspension appeals are intentionally kept in a small, isolated table so
-  // suspended users can submit an appeal without needing access to protected APIs.
-  try {
+ try {
     await SuspensionAppeal.sync();
   } catch (error) {
     logger.warn('Failed to ensure suspension_appeals table exists', error);
@@ -241,8 +230,4 @@ const startServer = async () => {
   });
 };
 
-//   app.listen(PORT, () => {
-//     logger.info(`🚀 Server running on port ${PORT}`);
-//   });
-// };
 startServer();

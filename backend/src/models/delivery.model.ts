@@ -68,7 +68,6 @@ Delivery.init(
         'pending',
         'assigned',
         'picked_up',
-        'in_transit',
         'delivered',
         'failed',
         'cancelled'
@@ -131,7 +130,7 @@ Delivery.init(
               const isTerminal = ['cancelled', 'closed'].includes(currentOrderStatus);
 
               if (!isTerminal) {
-                if (status === 'picked_up' || status === 'in_transit') {
+                if (status === 'picked_up' ) {
                   if (['pending', 'approved', 'processing'].includes(currentOrderStatus)) {
                     await (order as any).update({ order_status: 'shipped' });
                   }
@@ -177,7 +176,7 @@ Delivery.init(
               } as any);
             }
 
-            if (status === 'picked_up' || status === 'in_transit') {
+            if (status === 'picked_up' ) {
               await Notification.create({
                 user_id: order.buyer_id,
                 type: 'delivery',

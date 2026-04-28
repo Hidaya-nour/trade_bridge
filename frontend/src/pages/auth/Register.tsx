@@ -130,14 +130,13 @@ export const RegisterPage: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1">
-                Phone (Optional)
-              </label>
+              <label className="block text-sm font-medium mb-1">Phone</label>
               <Input
                 value={formData.phone}
                 onChange={(e) =>
                   setFormData({ ...formData, phone: e.target.value })
                 }
+                required
                 disabled={isLoading}
               />
             </div>
