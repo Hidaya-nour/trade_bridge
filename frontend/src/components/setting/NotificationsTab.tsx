@@ -22,11 +22,8 @@ type NotificationCounts = {
 type NotificationPreferences = {
   emailOrders: boolean;
   emailPromotions: boolean;
-  emailNewsletter: boolean;
   pushOrders: boolean;
   pushShipping: boolean;
-  smsOrders: boolean;
-  smsShipping: boolean;
 };
 
 type NotificationsTabProps = {
@@ -94,7 +91,10 @@ const NotificationsTab: React.FC<NotificationsTabProps> = ({
                     delivery
                   </p>
                 </div>
-                <Switch id="emailOrders" defaultChecked={notifications.emailOrders} />
+                <Switch
+                  id="emailOrders"
+                  defaultChecked={notifications.emailOrders}
+                />
               </div>
               <Separator />
               <div className="flex items-center justify-between">
@@ -112,20 +112,6 @@ const NotificationsTab: React.FC<NotificationsTabProps> = ({
                 />
               </div>
               <Separator />
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label htmlFor="emailNewsletter" className="text-sm">
-                    Newsletter
-                  </Label>
-                  <p className="text-xs text-muted-foreground">
-                    Receive monthly newsletter with platform updates
-                  </p>
-                </div>
-                <Switch
-                  id="emailNewsletter"
-                  defaultChecked={notifications.emailNewsletter}
-                />
-              </div>
             </div>
           </div>
 
@@ -143,7 +129,10 @@ const NotificationsTab: React.FC<NotificationsTabProps> = ({
                     Receive push notifications for order status changes
                   </p>
                 </div>
-                <Switch id="pushOrders" defaultChecked={notifications.pushOrders} />
+                <Switch
+                  id="pushOrders"
+                  defaultChecked={notifications.pushOrders}
+                />
               </div>
               <Separator />
               <div className="flex items-center justify-between">
@@ -164,38 +153,6 @@ const NotificationsTab: React.FC<NotificationsTabProps> = ({
           </div>
 
           <Separator />
-
-          <div>
-            <h3 className="text-sm font-medium mb-4">SMS Notifications</h3>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label htmlFor="smsOrders" className="text-sm">
-                    Order Confirmations
-                  </Label>
-                  <p className="text-xs text-muted-foreground">
-                    Receive SMS when orders are confirmed
-                  </p>
-                </div>
-                <Switch id="smsOrders" defaultChecked={notifications.smsOrders} />
-              </div>
-              <Separator />
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label htmlFor="smsShipping" className="text-sm">
-                    Delivery Updates
-                  </Label>
-                  <p className="text-xs text-muted-foreground">
-                    Receive SMS when orders are out for delivery
-                  </p>
-                </div>
-                <Switch
-                  id="smsShipping"
-                  defaultChecked={notifications.smsShipping}
-                />
-              </div>
-            </div>
-          </div>
         </CardContent>
         <CardFooter className="flex justify-end gap-2 border-t pt-6">
           <Button variant="outline">Reset to Default</Button>

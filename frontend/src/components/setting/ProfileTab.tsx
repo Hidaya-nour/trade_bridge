@@ -1,5 +1,5 @@
 import React, { useRef } from "react";
-import { Camera, Save } from "lucide-react";
+import { Camera, Save, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -16,6 +16,17 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { TabsContent } from "@/components/ui/tabs";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "../ui/alert-dialog";
 
 type ProfileForm = {
   full_name: string;
@@ -86,7 +97,10 @@ const ProfileTab: React.FC<ProfileTabProps> = ({
           <div className="flex items-center gap-6">
             <Avatar className="h-24 w-24">
               {profileForm.avatar && (
-                <AvatarImage src={profileForm.avatar} alt={profileForm.full_name} />
+                <AvatarImage
+                  src={profileForm.avatar}
+                  alt={profileForm.full_name}
+                />
               )}
               <AvatarFallback className="bg-primary/10 text-primary text-2xl">
                 {getInitials(profileForm.full_name || "User")}
@@ -215,6 +229,47 @@ const ProfileTab: React.FC<ProfileTabProps> = ({
           </CardFooter>
         )}
       </Card>
+      {/* Danger Zone */}
+      <div className="space-y-4">
+        <h3 className="text-sm font-medium text-destructive">Danger Zone</h3>
+        <div className="border border-destructive/20 rounded-lg p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium">Delete Account</p>
+              <p className="text-xs text-muted-foreground">
+                Permanently delete your account and all associated data
+              </p>
+            </div>
+            <AlertDialog
+            // open={showDeleteDialog}
+            // onOpenChange={setShowDeleteDialog}
+            >
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" size="sm">
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete Account
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This action cannot be undone. This will permanently delete
+                    your account and remove all your order history, messages,
+                    and data from our servers.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                    Yes, delete my account
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
+        </div>
+      </div>
     </TabsContent>
   );
 };
