@@ -203,8 +203,10 @@ export const UserManagementPage: React.FC = () => {
       try {
         const response = await reportService.getAdminSummary();
         const summary = response?.data?.summary || [];
-        const next: Record<string, { total: number; open: number; last?: string }> =
-          {};
+        const next: Record<
+          string,
+          { total: number; open: number; last?: string }
+        > = {};
         summary.forEach((item: any) => {
           if (!item?.reported_user_id) return;
           next[item.reported_user_id] = {
@@ -448,10 +450,7 @@ export const UserManagementPage: React.FC = () => {
             >
               Clear
             </Button>
-            <Button size="sm" variant="outline">
-              <Mail className="h-4 w-4 mr-2" />
-              Message
-            </Button>
+
             <Button
               size="sm"
               variant="outline"
@@ -614,7 +613,9 @@ export const UserManagementPage: React.FC = () => {
                       })()}
                     </TableCell>
                     <TableCell>
-                      <div className="text-sm">{formatDate(user.joinedDate)}</div>
+                      <div className="text-sm">
+                        {formatDate(user.joinedDate)}
+                      </div>
                     </TableCell>
                     <TableCell className="text-right">
                       <DropdownMenu>
@@ -670,7 +671,8 @@ export const UserManagementPage: React.FC = () => {
           <CardFooter className="flex items-center justify-between p-4 border-t">
             <p className="text-sm text-muted-foreground">
               Showing {total === 0 ? 0 : startIndex + 1}-
-              {Math.min(startIndex + paginatedUsers.length, total)} of {total} users
+              {Math.min(startIndex + paginatedUsers.length, total)} of {total}{" "}
+              users
             </p>
             <PaginationBar
               currentPage={currentPage}

@@ -188,10 +188,10 @@ const SettingsPage: React.FC = () => {
   const [businessMessage, setBusinessMessage] = useState<string | null>(null);
   const [businessFieldErrors, setBusinessFieldErrors] =
     useState<BusinessFieldErrors>({
-    business_name: null,
-    tin_number: null,
-    vatRegistered: null,
-  });
+      business_name: null,
+      tin_number: null,
+      vatRegistered: null,
+    });
   const [securityMessage, setSecurityMessage] = useState<string | null>(null);
   const [passwordForm, setPasswordForm] = useState({
     currentPassword: "",
@@ -257,11 +257,12 @@ const SettingsPage: React.FC = () => {
   const [profileFormHydratedUserId, setProfileFormHydratedUserId] = useState<
     string | null
   >(null);
-  const setProfileForm: React.Dispatch<React.SetStateAction<ProfileFormState>> =
-    (next) => {
-      setProfileFormDirty(true);
-      setProfileFormState(next);
-    };
+  const setProfileForm: React.Dispatch<
+    React.SetStateAction<ProfileFormState>
+  > = (next) => {
+    setProfileFormDirty(true);
+    setProfileFormState(next);
+  };
 
   const [licenseFile, setLicenseFile] = useState<File | null>(null);
   const [licenseIssuedDate, setLicenseIssuedDate] = useState("");
@@ -873,20 +874,6 @@ const SettingsPage: React.FC = () => {
                 >
                   <Globe className="h-4 w-4 mr-2" />
                   Preferences
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-4">
-              <div className="space-y-1">
-                <Button
-                  variant="ghost"
-                  className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10"
-                >
-                  <LogOut className="h-4 w-4 mr-2" />
-                  Sign Out
                 </Button>
               </div>
             </CardContent>
