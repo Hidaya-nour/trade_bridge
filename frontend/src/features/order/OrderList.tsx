@@ -230,7 +230,9 @@ export const OrderList: React.FC<OrderListProps> = ({
     if (order.order_status === "cancelled") {
       return false;
     }
-
+if (order.order_status !== "approved") {
+      return false;
+    }
     if (!order.payment) {
       return true;
     }

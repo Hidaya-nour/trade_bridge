@@ -182,6 +182,11 @@ export class OrderService {
         throw new AppError(`Product ${item.product_id} not found`, 404);
       }
 
+      // Check if product has been deleted
+      if (product.deleted_at !== null) {
+        throw new AppError(`Product ${product.name} is no longer available`, 400);
+      }
+
       if (product.supplier_id !== supplier_id) {
         throw new AppError(`Product ${product.name} does not belong to this supplier`, 400);
       }

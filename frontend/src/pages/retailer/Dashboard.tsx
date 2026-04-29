@@ -476,10 +476,13 @@ const RetailerDashboard: React.FC = () => {
                           </div>
                         </div>
                       </div>
-                      <Button size="sm" variant="ghost" asChild>
-                        <Link to={`/retailer/cart?add=${product.id}`}>
-                          <ShoppingCart className="h-4 w-4" />
-                        </Link>
+                      <Button 
+                        size="sm" 
+                        variant="ghost"
+                        onClick={() => handleQuickReorder(product)}
+                        title="Reorder this product"
+                      >
+                        <ShoppingCart className="h-4 w-4" />
                       </Button>
                     </div>
                   ))}

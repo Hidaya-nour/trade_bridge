@@ -94,7 +94,6 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
   getTotalCartValue,
 }) => {
   const DEFAULT_VAT_RATE = 0.15;
-  const CHECKOUT_DISTANCE_KM = 1;
   const resolveProductVatRate = (product?: Partial<CatalogProduct> | null) => {
     const supplier = product?.supplier;
     if (!supplier || supplier.is_vat_registered !== true) return 0;
@@ -109,25 +108,17 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
     const deliveryAvailable = resolveBoolean(product.delivery_available, true);
     if (!deliveryAvailable) return { shipping: 0, blocked: true };
 
-    const feePerKm = Number(product.delivery_fee_per_km || 0);
+    // Distance-based delivery calculation is no longer available
+    // Delivery is either free or blocked based on supplier settings
     const pricing = String(product.delivery_pricing || "").toLowerCase();
-    const freeMaxKm =
-      product.free_delivery_max_distance_km !== null &&
-      product.free_delivery_max_distance_km !== undefined
-        ? Number(product.free_delivery_max_distance_km)
-        : null;
 
-    if (freeMaxKm !== null && CHECKOUT_DISTANCE_KM <= freeMaxKm) {
-      return { shipping: 0, blocked: false };
+    if (pricing === "paid") {
+      // Paid delivery - but we don't calculate based on km anymore
+      // Return blocked to indicate delivery needs manual arrangement
+      return { shipping: 0, blocked: true };
     }
 
-    if (pricing === "paid" || feePerKm > 0) {
-      return {
-        shipping: Number((feePerKm * CHECKOUT_DISTANCE_KM).toFixed(2)),
-        blocked: false,
-      };
-    }
-
+    // Free delivery or no specific pricing
     return { shipping: 0, blocked: false };
   };
 

@@ -41,7 +41,6 @@ import { resolveBoolean } from "@/lib/coerce";
 import { geocodeAreaName, haversineKm } from "@/lib/geo";
 import toast from "react-hot-toast";
 import type { OrderItem } from "@/types/order.types";
-import { PaymentDialog } from "../payment/PaymentDialog";
 import type { PaymentDetails, PaymentMethod } from "@/types/payment.types";
 import { Textarea } from "../ui/textarea";
 import addressService from "@/services/address.service";
@@ -91,20 +90,6 @@ export interface PlaceOrderDialogProps {
   isPlacing?: boolean;
 }
 
-export const PAYMENT_METHODS = [
-  {
-    id: "app_payment",
-    name: "App Payment",
-    icon: CreditCard,
-    description: "Pay securely in the app",
-  },
-  {
-    id: "mobile_banking",
-    name: "Mobile Banking",
-    icon: Smartphone,
-    description: "Pay with mobile money",
-  },
-];
 
 export const PlaceOrderDialog: React.FC<PlaceOrderDialogProps> = ({
   open,
@@ -133,15 +118,12 @@ export const PlaceOrderDialog: React.FC<PlaceOrderDialogProps> = ({
   const [geoLoading, setGeoLoading] = React.useState(false);
   const [geoError, setGeoError] = React.useState<string | null>(null);
   const [internalIsPlacing, setInternalIsPlacing] = React.useState(false);
-  const [openPaymentDialog, setOpenPaymentDialog] = React.useState(false);
-  const [openPostOrderChoice, setOpenPostOrderChoice] = React.useState(false);
   const [createdOrderId, setCreatedOrderId] = React.useState<string | null>(
     null,
   );
   const [createdOrderTotal, setCreatedOrderTotal] = React.useState<number>(
     summary.total,
   );
-  const [paymentProcessing, setPaymentProcessing] = React.useState(false);
 
   const toFinite = (value: any) => {
     const parsed = Number(value);
@@ -385,13 +367,7 @@ export const PlaceOrderDialog: React.FC<PlaceOrderDialogProps> = ({
         continue;
       }
 
-      if (row.deliveryPricing === "paid" || row.feePerKm > 0) {
-        const fee = Number((row.feePerKm * distanceKm).toFixed(2));
-        shippingBySupplier[supplierId] = Math.max(
-          shippingBySupplier[supplierId] || 0,
-          fee,
-        );
-      }
+     
     }
 
     const shipping = Number(
@@ -427,31 +403,7 @@ export const PlaceOrderDialog: React.FC<PlaceOrderDialogProps> = ({
 
   const isPlacing =
     externalIsPlacing !== undefined ? externalIsPlacing : internalIsPlacing;
-  const handlePaymentSubmit = async (
-    method: PaymentMethod,
-    details: PaymentDetails,
-    documents?: File[],
-  ) => {
-    if (!onProcessPayment || !createdOrderId) return false;
-
-    setPaymentProcessing(true);
-    try {
-      const success = await onProcessPayment(
-        createdOrderId,
-        method,
-        details,
-        documents,
-      );
-      if (success) {
-        setOpenPaymentDialog(false);
-        onOpenChange(false);
-        navigate(config.ordersPath);
-      }
-      return success;
-    } finally {
-      setPaymentProcessing(false);
-    }
-  };
+ 
 
   const handlePlaceOrder = async () => {
     if (onPlaceOrder) {
@@ -468,13 +420,8 @@ export const PlaceOrderDialog: React.FC<PlaceOrderDialogProps> = ({
           deliveryOption,
           normalizedAddress,
         );
-        if (result?.primaryOrderId && onProcessPayment) {
-          if (showPostOrderDialog) {
-            setCreatedOrderId(result.primaryOrderId);
-            setCreatedOrderTotal(result.total || summary.total);
-            setOpenPostOrderChoice(true);
-            return;
-          }
+        if (result?.primaryOrderId ) {
+          
           onOpenChange(false);
           navigate(config.ordersPath);
           return;
@@ -576,15 +523,16 @@ export const PlaceOrderDialog: React.FC<PlaceOrderDialogProps> = ({
 
                           <Input
                             type="number"
+                            value={item.quantity}
                             min={Math.max(
                               1,
                               Number(
                                 (item.product as any)?.min_order_amount || 1,
                               ),
                             )}
-                            value={item.quantity}
+                            defaultValue={item.quantity}
                             disabled={isPlacing}
-                            onChange={(e) => {
+                            onBlur={(e) => {
                               const productId = String(
                                 item.product_id ||
                                   (item.product as any)?.id ||
@@ -804,14 +752,7 @@ export const PlaceOrderDialog: React.FC<PlaceOrderDialogProps> = ({
                   <span>Subtotal</span>
                   <span>{formatPrice(summary.subtotal)}</span>
                 </div>
-                <div className="flex justify-between text-sm">
-                  <span>Shipping</span>
-                  <span>
-                    {formatPrice(
-                      buyerCoords ? shippingEstimate.shipping : summary.shipping,
-                    )}
-                  </span>
-                </div>
+                
                 {summary.promoApplied && (
                   <div className="flex justify-between text-sm text-green-600">
                     <span>Discount ({summary.discountPercentage! * 100}%)</span>
@@ -842,10 +783,10 @@ export const PlaceOrderDialog: React.FC<PlaceOrderDialogProps> = ({
             </div>
 
             {/* Delivery Estimate */}
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <div className="flex items-center gap-2 text-l text-muted-foreground">
               <Truck className="h-3 w-3" />
               <span>
-                Estimated delivery timeline depends on supplier delivery policy.
+                Delivery cost is not included in the Total 
               </span>
             </div>
           </div>
@@ -864,58 +805,8 @@ export const PlaceOrderDialog: React.FC<PlaceOrderDialogProps> = ({
           </Button>
         </DialogFooter>
       </DialogContent>
-      <AlertDialog
-        open={openPostOrderChoice}
-        onOpenChange={setOpenPostOrderChoice}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Order Placed Successfully</AlertDialogTitle>
-            <AlertDialogDescription>
-              Your order has been created. You can pay now or pay later (credit
-              / invoice flow).
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel
-              onClick={() => {
-                setOpenPostOrderChoice(false);
-                onOpenChange(false);
-                navigate(config.ordersPath);
-              }}
-            >
-              Pay Later
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                setOpenPostOrderChoice(false);
-                setOpenPaymentDialog(true);
-              }}
-            >
-              Pay Now
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-      {createdOrderId && (
-        <PaymentDialog
-          open={openPaymentDialog}
-          onOpenChange={setOpenPaymentDialog}
-          orderId={createdOrderId}
-          orderNumber={createdOrderId.slice(-8)}
-          amount={createdOrderTotal}
-          onPaymentSubmit={handlePaymentSubmit}
-          isProcessing={paymentProcessing}
-          config={{
-            allowedMethods: [
-              "app_payment",
-              "mobile_banking",
-            ] as PaymentMethod[],
-            supplierAllowedMethods,
-            supplierPaymentMethods,
-          }}
-        />
-      )}
+      
+     
     </Dialog>
   );
 };
