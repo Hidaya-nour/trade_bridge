@@ -49,7 +49,6 @@ const statusColorMap: Record<DeliveryStatus, string> = {
   pending: "border-amber-200 bg-amber-50 text-amber-700",
   assigned: "border-blue-200 bg-blue-50 text-blue-700",
   picked_up: "border-violet-200 bg-violet-50 text-violet-700",
-  in_transit: "border-orange-200 bg-orange-50 text-orange-700",
   delivered: "border-emerald-200 bg-emerald-50 text-emerald-700",
   failed: "border-rose-200 bg-rose-50 text-rose-700",
   cancelled: "border-rose-200 bg-rose-50 text-rose-700",
@@ -63,7 +62,7 @@ const priorityColorMap: Record<DeliveryPriority, string> = {
 
 const matchesTab = (delivery: DriverDelivery, tab: DeliveryTab) =>
   tab === "picked_up"
-    ? ["picked_up", "in_transit"].includes(delivery.status)
+    ? ["picked_up"].includes(delivery.status)
     : delivery.status === tab;
 
 const tabLabels: Record<DeliveryTab, string> = {

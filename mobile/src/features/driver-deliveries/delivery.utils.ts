@@ -60,7 +60,6 @@ const inferProgress = (status: DeliveryStatus) => {
       return 20;
     case "picked_up":
       return 45;
-    case "in_transit":
       return 75;
     case "delivered":
       return 100;
@@ -78,7 +77,6 @@ const inferEtaMinutes = (status: DeliveryStatus) => {
       return 45;
     case "picked_up":
       return 28;
-    case "in_transit":
       return 15;
     case "delivered":
     case "failed":
@@ -107,15 +105,15 @@ const buildTimeline = (delivery: any) => {
           : status === "pending" || status === "assigned"
             ? "Pending pickup"
             : assignedTime,
-      complete: ["picked_up", "in_transit", "delivered"].includes(status),
+      complete: ["picked_up", "delivered"].includes(status),
     },
     {
       label: "In transit",
       time:
-        status === "in_transit" || status === "delivered"
+     status === "delivered"
           ? formatShortDateTime(delivery?.updated_at)
           : "Pending transit",
-      complete: ["in_transit", "delivered"].includes(status),
+      complete: ["", "delivered"].includes(status),
     },
     {
       label:

@@ -136,8 +136,6 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ onMenuClick }) => {
       case "delivery":
       case "order_shipped":
       case "delivery_assigned":
-      case "delivery_in_transit":
-        return Truck;
       case "payment":
       case "payment_received":
       case "payment_successful":
@@ -172,11 +170,6 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ onMenuClick }) => {
         };
       case "delivery":
       case "order_shipped":
-      case "delivery_in_transit":
-        return {
-          color: "text-purple-500",
-          bg: "bg-purple-100 dark:bg-purple-950/30",
-        };
       case "message":
       case "message_received":
         return {

@@ -26,7 +26,6 @@ export type DeliveryStatus =
   | 'pending' 
   | 'assigned' 
   | 'picked_up' 
-  | 'in_transit' 
   | 'delivered' 
   | 'failed' 
   | 'cancelled';
@@ -126,7 +125,7 @@ export interface IDelivery {
   driver_id?: string;
   pickup_location: string;
   dropoff_location: string;
-  status: 'pending' | 'assigned' | 'picked_up' | 'in_transit' | 'delivered' | 'failed' | 'cancelled';
+  status: 'pending' | 'assigned' | 'picked_up' |  'delivered' | 'failed' | 'cancelled';
   started_at?: Date;
   completed_at?: Date;
   notes?: string;

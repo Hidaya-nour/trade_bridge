@@ -38,7 +38,7 @@ const matchesTab = (delivery: DriverDelivery, tab: DeliveryTab) => {
     case "cancelled":
       return delivery.status === tab;
     case "picked_up":
-      return ["picked_up", "in_transit"].includes(delivery.status);
+      return ["picked_up"].includes(delivery.status);
   }
 };
 
@@ -51,8 +51,6 @@ const getStatusColors = (status: DeliveryStatus) => {
       return { bg: "#eff6ff", text: "#1d4ed8", border: "#bfdbfe" };
     case "picked_up":
       return { bg: "#ede9fe", text: "#6d28d9", border: "#ddd6fe" };
-    case "in_transit":
-      return { bg: "#fff7ed", text: "#c2410c", border: "#fed7aa" };
     case "delivered":
       return { bg: "#ecfdf3", text: "#15803d", border: "#bbf7d0" };
     case "pending":

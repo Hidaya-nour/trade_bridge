@@ -32,7 +32,6 @@ type DriverDelivery = {
   status:
     | "assigned"
     | "picked_up"
-    | "in_transit"
     | "delivered"
     | "failed"
     | "cancelled"
@@ -267,13 +266,7 @@ const DriverLiveTrackingPage: React.FC = () => {
     }
 
     try {
-      if (
-        activeDelivery.status === "assigned" ||
-        activeDelivery.status === "picked_up" ||
-        activeDelivery.status === "pending"
-      ) {
-        await deliveryService.updateStatus(activeDelivery.id, "in_transit");
-      }
+     
 
       const initialPosition = await new Promise<GeolocationPosition>(
         (resolve, reject) => {
@@ -393,9 +386,7 @@ const DriverLiveTrackingPage: React.FC = () => {
                   <Badge variant="outline" className="capitalize bg-white">
                     {activeDelivery.status.replace("_", " ")}
                   </Badge>
-                  <Badge variant="outline" className="bg-white">
-                    Auto-refresh every 5s
-                  </Badge>
+                 
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <Button
@@ -538,29 +529,9 @@ const DriverLiveTrackingPage: React.FC = () => {
                     </MapContainer>
                   </div>
 
-                  <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                    <div className="rounded-2xl bg-slate-50 p-3">
-                      <p className="text-xs uppercase tracking-wide text-slate-500">
-                        Current coordinates
-                      </p>
-                      <p className="mt-2 text-sm font-semibold text-slate-950">
-                        {latestLocation
-                          ? `${latestLocation.latitude}, ${latestLocation.longitude}`
-                          : lastCoords
-                            ? `${lastCoords.lat}, ${lastCoords.lng}`
-                            : "Waiting for GPS"}
-                      </p>
-                    </div>
-                    <div className="rounded-2xl bg-slate-50 p-3">
-                      <p className="text-xs uppercase tracking-wide text-slate-500">
-                        Latest backend point
-                      </p>
-                      <p className="mt-2 text-sm font-semibold text-slate-950">
-                        {latestLocation
-                          ? formatDateTime(latestLocation.recorded_at)
-                          : "No point yet"}
-                      </p>
-                    </div>
+                  <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-2">
+                    
+                   
                     <div className="rounded-2xl bg-slate-50 p-3">
                       <p className="text-xs uppercase tracking-wide text-slate-500">
                         Pickup
@@ -647,50 +618,7 @@ const DriverLiveTrackingPage: React.FC = () => {
 
               <Separator />
 
-              {loadingLocations && !locations.length ? (
-                <p className="text-sm text-slate-500">Loading route history...</p>
-              ) : locations.length ? (
-                <div className="space-y-3">
-                  {locations
-                    .slice()
-                    .sort(
-                      (a, b) =>
-                        new Date(b.recorded_at).getTime() -
-                        new Date(a.recorded_at).getTime(),
-                    )
-                    .map((location) => (
-                      <div
-                        key={location.id}
-                        className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm"
-                      >
-                        <div className="space-y-1">
-                          <p className="font-medium text-slate-950">
-                            {location.latitude}, {location.longitude}
-                          </p>
-                          <p className="text-slate-500">
-                            {formatDateTime(location.recorded_at)}
-                          </p>
-                        </div>
-                        <Button asChild variant="ghost" size="sm">
-                          <a
-                            href={buildGoogleMapsSearchUrl(
-                              location.latitude,
-                              location.longitude,
-                            )}
-                            target="_blank"
-                            rel="noreferrer"
-                          >
-                            <ExternalLink className="h-4 w-4" />
-                          </a>
-                        </Button>
-                      </div>
-                    ))}
-                </div>
-              ) : (
-                <p className="text-sm text-slate-500">
-                  Once the driver shares GPS updates, route points will appear here.
-                </p>
-              )}
+             
             </CardContent>
           </Card>
         </div>

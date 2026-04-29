@@ -308,7 +308,7 @@ export const PartnerProfile: React.FC<PartnerProfileProps> = ({
                   <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
                   <span className="text-lg font-bold">{profile.rating}</span>
                   <span className="text-xs text-muted-foreground">
-                    ({profile.review_count})
+                    ({profile.review_count} reviews)
                   </span>
                 </div>
               </CardContent>

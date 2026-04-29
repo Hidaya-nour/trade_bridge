@@ -67,9 +67,7 @@ const getStatusTone = (status: DeliveryStatus) => {
       return { bg: "#eff6ff", text: "#1d4ed8", border: "#bfdbfe" };
     case "picked_up":
       return { bg: "#ede9fe", text: "#6d28d9", border: "#ddd6fe" };
-    case "in_transit":
-      return { bg: "#fff7ed", text: "#c2410c", border: "#fed7aa" };
-    case "delivered":
+   case "delivered":
       return { bg: "#ecfdf3", text: "#15803d", border: "#bbf7d0" };
     case "pending":
       return { bg: "#fef3c7", text: "#d97706", border: "#fcd34d" };
@@ -310,13 +308,7 @@ export default function DriverTrackingScreen() {
         return;
       }
 
-      if (
-        activeDelivery.status === "assigned" ||
-        activeDelivery.status === "picked_up" ||
-        activeDelivery.status === "pending"
-      ) {
-        await updateDeliveryStatus(activeDelivery.id, "in_transit");
-      }
+     
 
       const initialPosition = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.Highest,

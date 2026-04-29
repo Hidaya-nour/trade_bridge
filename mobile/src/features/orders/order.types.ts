@@ -18,7 +18,6 @@ export type DeliveryStatus =
   | "pending"
   | "assigned"
   | "picked_up"
-  | "in_transit"
   | "delivered"
   | "failed"
   | "cancelled";

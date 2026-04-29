@@ -206,9 +206,7 @@ export default function DistributorDashboardScreen() {
           "Retailer",
         driver: shipment.driver?.full_name || shipment.driver?.driverUser?.full_name || "Unassigned",
         status:
-          shipmentStatus === "in_transit"
-            ? "in-transit"
-            : shipmentStatus === "picked_up"
+          shipmentStatus === "picked_up"
               ? "in-transit"
               : shipmentStatus,
         date: shipment.updated_at || shipment.created_at || new Date().toISOString(),

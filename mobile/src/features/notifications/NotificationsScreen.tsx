@@ -39,7 +39,6 @@ const resolveNotificationTarget = (role: UserRole, type: string) => {
     [
       "delivery",
       "delivery_assigned",
-      "delivery_in_transit",
       "order",
       "order_created",
       "order_confirmed",

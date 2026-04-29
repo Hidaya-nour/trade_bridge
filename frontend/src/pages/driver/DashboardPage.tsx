@@ -59,7 +59,6 @@ type DeliveryStatus =
   | "pending"
   | "assigned"
   | "picked_up"
-  | "in_transit"
   | "delivered"
   | "failed"
   | "cancelled";
@@ -189,7 +188,6 @@ const statusColors: Record<DeliveryStatus, string> = {
   pending: "bg-yellow-100 text-yellow-800 border-yellow-200",
   assigned: "bg-blue-100 text-blue-800 border-blue-200",
   picked_up: "bg-purple-100 text-purple-800 border-purple-200",
-  in_transit: "bg-indigo-100 text-indigo-800 border-indigo-200",
   delivered: "bg-green-100 text-green-800 border-green-200",
   failed: "bg-red-100 text-red-800 border-red-200",
   cancelled: "bg-gray-100 text-gray-800 border-gray-200",
@@ -199,7 +197,6 @@ const statusIcons: Record<DeliveryStatus, React.ElementType> = {
   pending: Clock,
   assigned: Clock,
   picked_up: Package,
-  in_transit: Truck,
   delivered: CheckCircle2,
   failed: XCircle,
   cancelled: XCircle,
@@ -209,7 +206,6 @@ const statusLabels: Record<DeliveryStatus, string> = {
   pending: "Pending Acceptance",
   assigned: "Assigned",
   picked_up: "Picked Up",
-  in_transit: "In Transit",
   delivered: "Delivered",
   failed: "Failed",
   cancelled: "Cancelled",
@@ -598,23 +594,9 @@ export const DriverDashboard: React.FC = () => {
                           </Button>
                         )}
 
-                        {delivery.status === "picked_up" && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="w-full text-indigo-600"
-                            onClick={() => {
-                              setSelectedDelivery(delivery);
-                              setNewStatus("in_transit");
-                              setShowStatusDialog(true);
-                            }}
-                          >
-                            <Truck className="h-4 w-4 mr-2" />
-                            Start Trip
-                          </Button>
-                        )}
+                       
 
-                        {delivery.status === "in_transit" && (
+                        {delivery.status === "picked_up" && (
                           <Button
                             size="sm"
                             className="w-full bg-green-600 hover:bg-green-700"

@@ -368,8 +368,7 @@ export const DeliveryManagement: React.FC<DeliveryManagementProps> = ({
     switch (String(status || '').toLowerCase()) {
       case 'picked_up':
         return 'picked-up' as const;
-      case 'in_transit':
-        return 'in-transit' as const;
+     
       default:
         return status as any;
     }

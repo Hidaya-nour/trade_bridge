@@ -262,9 +262,7 @@ const DistributorDashboard: React.FC = () => {
           shipment?.driver?.driverUser?.full_name ||
           "Unassigned",
         status:
-          shipmentStatus === "in_transit"
-            ? "in-transit"
-            : shipmentStatus === "picked_up"
+           shipmentStatus === "picked_up"
               ? "in-transit"
               : shipmentStatus,
         date:

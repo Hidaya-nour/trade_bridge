@@ -13,8 +13,7 @@ class DeliveryService {
     const transitions: Record<string, string[]> = {
       pending: ['assigned', 'cancelled'],
       assigned: ['picked_up', 'cancelled'],
-      picked_up: ['in_transit', 'failed', 'cancelled'],
-      in_transit: ['delivered', 'failed', 'cancelled'],
+      picked_up: ['delivered', 'failed', 'cancelled'],
       delivered: [],
       failed: [],
       cancelled: [],
@@ -364,7 +363,6 @@ class DeliveryService {
       'pending',
       'assigned',
       'picked_up',
-      'in_transit',
       'delivered',
       'failed',
       'cancelled',

@@ -34,8 +34,6 @@ const getStatusStyle = (status: DeliveryStatus) => {
       return { bg: "#eff6ff", border: "#bfdbfe", text: "#1d4ed8" };
     case "picked_up":
       return { bg: "#ede9fe", border: "#ddd6fe", text: "#6d28d9" };
-    case "in_transit":
-      return { bg: "#fff7ed", border: "#fed7aa", text: "#c2410c" };
     case "delivered":
       return { bg: "#ecfdf3", border: "#bbf7d0", text: "#15803d" };
     default:

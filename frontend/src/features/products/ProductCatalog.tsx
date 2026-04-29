@@ -1141,7 +1141,7 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
                         {product.rating}
                       </span>
                       <span className="text-xs text-muted-foreground ml-1">
-                        ({product.review_count})
+                        ({product.review_count} reviews)
                       </span>
                     </div>
                     <span className="text-xs text-muted-foreground">•</span>
