@@ -1,3 +1,4 @@
+// Restart triggered for .env reload
 import Payment from '../../models/payment.model';
 import { Order } from '../../models/order.model';
 import User from '../../models/user.model';
@@ -117,6 +118,10 @@ class PaymentService {
       throw new AppError('Order not found', 404);
     }
 
+    if (order.order_status === 'pending') {
+      throw new AppError('Order must be approved by the supplier before payment can be submitted.', 400);
+    }
+
     let payment = await this.getOrRestorePaymentByOrderId(orderId);
     const selectedMethod = (
       payload.payment_method ||
@@ -180,6 +185,8 @@ class PaymentService {
 
       if (selectedMethod === 'app_payment') {
         const buyer = await User.findByPk(order.buyer_id);
+        const supplier = await User.findByPk(order.supplier_id);
+
         if (!buyer?.email || !buyer?.full_name) {
           throw new AppError('Buyer profile must include name and email for app payment', 400);
         }
@@ -200,14 +207,13 @@ class PaymentService {
         const backendBaseUrl =
           process.env.BACKEND_URL ||
           `http://localhost:${process.env.PORT || 5000}`;
-        const callbackUrl =
-          process.env.CHAPA_CALLBACK_URL ||
-          `${backendBaseUrl}/api/payments/chapa/callback`;
         const frontendBaseUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
         const buyerOrdersPath =
           buyer.role === 'distributor' ? '/distributor/purchase-orders' : '/retailer/orders';
+        const frontendReturnPath = `${frontendBaseUrl}${buyerOrdersPath}`;
         const returnUrl =
-          process.env.CHAPA_RETURN_URL || `${frontendBaseUrl}${buyerOrdersPath}`;
+          process.env.CHAPA_RETURN_URL ||
+          `${backendBaseUrl}/api/payments/chapa/return?tx_ref=${txRef}&redirect_to=${encodeURIComponent(frontendReturnPath)}`;
 
         const chapaPhone = this.toChapaPhoneNumber(buyer.phone);
 
@@ -218,9 +224,9 @@ class PaymentService {
           first_name: firstName,
           last_name: lastName,
           tx_ref: txRef,
-          callback_url: callbackUrl,
           return_url: returnUrl,
           phone_number: chapaPhone,
+          ...(supplier?.chapa_subaccount_id ? { 'subaccounts[id]': supplier.chapa_subaccount_id } : {}),
           customization: {
             title: 'TradeBridge',
             description: `Order ${order.id.slice(0, 8)} payment`,

@@ -7,7 +7,7 @@ interface InitializePayload {
   first_name: string;
   last_name: string;
   tx_ref: string;
-  callback_url: string;
+  callback_url?: string;
   return_url: string;
   phone_number?: string;
   customization?: {
@@ -15,6 +15,7 @@ interface InitializePayload {
     description?: string;
   };
   meta?: Record<string, any>;
+  'subaccounts[id]'?: string;
 }
 
 const getHeaders = () => {
@@ -115,3 +116,47 @@ export const verifyChapaTransaction = async (txRef: string) => {
     );
   }
 };
+
+export interface CreateSubaccountPayload {
+  business_name: string;
+  account_name: string;
+  bank_code: string;
+  account_number: string;
+  split_type: 'percentage' | 'flat';
+  split_value: number;
+}
+
+export const createChapaSubaccount = async (payload: CreateSubaccountPayload) => {
+  const CHAPA_BASE_URL = process.env.CHAPA_BASE_URL || 'https://api.chapa.co/v1';
+  try {
+    const response = await fetch(`${CHAPA_BASE_URL}/subaccount`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(payload),
+    });
+
+    const raw = await response.text();
+    let data: any = {};
+    try {
+      data = raw ? JSON.parse(raw) : {};
+    } catch {
+      throw new AppError(`Invalid Chapa subaccount response: ${raw || 'empty body'}`, 502);
+    }
+
+    if (!response.ok || data?.status !== 'success') {
+      throw new AppError(
+        normalizeChapaMessage(data, 'Failed to create Chapa subaccount'),
+        400,
+      );
+    }
+
+    return data;
+  } catch (error: any) {
+    if (error instanceof AppError) throw error;
+    throw new AppError(
+      `Unable to reach Chapa API: ${error?.message || 'unknown network error'}`,
+      502,
+    );
+  }
+};
+

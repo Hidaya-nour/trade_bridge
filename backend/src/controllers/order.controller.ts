@@ -206,6 +206,30 @@ export class OrderController {
     }
   }
 
+
+  async approveOrder(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      const supplierId = req.user?.id!;
+      const delivery_fee = req.body.delivery_fee || 0;
+
+      const order = await orderService.approveOrder(id, supplierId, delivery_fee);
+      
+      res.json({
+        success: true,
+        message: 'Order approved successfully',
+        data: { order }
+      });
+    } catch (error) {
+      if (error instanceof AppError) {
+        res.status(error.statusCode).json({ success: false, message: error.message });
+      } else {
+        logger.error('Approve order error:', error);
+        res.status(500).json({ success: false, message: 'Internal server error' });
+      }
+    }
+  }
+
   // CANCEL ORDER
   async cancelOrder(req: Request, res: Response) {
     try {

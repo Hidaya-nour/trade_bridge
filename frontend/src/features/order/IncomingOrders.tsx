@@ -95,7 +95,7 @@ import type { IncomingOrder, IncomingOrdersConfig } from "@/types/order.types";
 interface IncomingOrdersProps {
   config: IncomingOrdersConfig;
   orders: IncomingOrder[];
-  onApproveOrder: (orderId: string) => void;
+  onApproveOrder: (orderId: string, deliveryFee?: number) => void;
   onRejectOrder: (orderId: string, reason: string) => void;
   onProcessOrder: (orderId: string) => void;
   onAssignDriver?: (
@@ -144,6 +144,7 @@ export const IncomingOrders: React.FC<IncomingOrdersProps> = ({
     null,
   );
   const [showApproveDialog, setShowApproveDialog] = useState(false);
+  const [deliveryFee, setDeliveryFee] = useState<number | "">("");
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [rejectionReason, setRejectionReason] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -642,7 +643,7 @@ export const IncomingOrders: React.FC<IncomingOrdersProps> = ({
                           className="bg-green-600 hover:bg-green-700"
                           onClick={() => {
                             setSelectedOrder(order);
-                            setShowApproveDialog(true);
+                            setDeliveryFee(""); setShowApproveDialog(true);
                           }}
                         >
                           <CheckCircle2 className="h-4 w-4 mr-2" />

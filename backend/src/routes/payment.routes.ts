@@ -10,6 +10,9 @@ const router = Router();
 router.get('/chapa/callback', (req, res) => paymentController.chapaCallback(req, res));
 router.post('/chapa/callback', (req, res) => paymentController.chapaCallback(req, res));
 
+// Public return endpoint for Chapa redirects
+router.get('/chapa/return', (req, res) => paymentController.chapaReturn(req, res));
+
 router.use(authenticate);
 
 const paymentMethodValues = [
@@ -78,5 +81,6 @@ router.patch(
   validate(updatePaymentStatusValidation),
   (req, res) => paymentController.updateStatus(req, res),
 );
+router.post('/chapa/subaccount', (req, res) => paymentController.registerSubaccount(req, res));
 
 export default router;

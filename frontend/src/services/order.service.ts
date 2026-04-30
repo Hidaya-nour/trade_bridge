@@ -130,6 +130,11 @@ class OrderService {
     return response.data;
   }
 
+  async approveOrder(id: string, deliveryFee: number): Promise<OrderResponse> {
+    const response = await api.put(`/orders/${id}/approve`, { delivery_fee: deliveryFee });
+    return response.data;
+  }
+
   async cancelOrder(id: string, data?: CancelOrderData): Promise<any> {
     const response = await api.patch(`/orders/${id}/cancel`, data || {});
     return response.data;

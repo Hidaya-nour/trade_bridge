@@ -86,6 +86,7 @@ type OrderDetailsViewProps = {
   cancelReasonOptions?: string[];
   onAssignDriver?: (deliveryId: string, driverId: string) => Promise<void>;
   onUpdateStatus?: (status: OrderStatus) => Promise<boolean> | boolean | void;
+  onApproveOrder?: (deliveryFee: number) => Promise<boolean> | boolean | void;
   onApprovePayment?: (
     paymentId: string,
     amountPaid?: number,
@@ -117,6 +118,7 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
   cancelReasonOptions,
   onAssignDriver,
   onUpdateStatus,
+  onApproveOrder,
   onApprovePayment,
   onReorderPlaceOrder,
   onProcessPayment,
@@ -126,6 +128,9 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
   const navigate = useNavigate();
   const location = useLocation();
   const [order, setOrder] = useState<OrderDetailsData>(initialOrder);
+  const [showApproveDialog, setShowApproveDialog] = useState(false);
+  const [deliveryFee, setDeliveryFee] = useState<number | "">("");
+  const [approveLoading, setApproveLoading] = useState(false);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [showAssignDialog, setShowAssignDialog] = useState(false);
   const [showReviewDialog, setShowReviewDialog] = useState(false);
@@ -357,7 +362,31 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
   const handleAdvanceStatus = async () => {
     const next = getNextStatusOptions()[0];
     if (!next) return;
+    if (next.value === "approved" && mode === "incoming") {
+      setShowApproveDialog(true);
+      return;
+    }
     await updateOrderStatus(next.value);
+  };
+
+  const handleApproveOrderSubmit = async () => {
+    const fee = Number(deliveryFee);
+    if (isNaN(fee) || fee < 0) {
+      toast.error("Please enter a valid delivery fee.");
+      return;
+    }
+    setApproveLoading(true);
+    try {
+      if (onApproveOrder) {
+        const result = await onApproveOrder(fee);
+        if (result === false) return;
+      } else {
+        await updateOrderStatus("approved");
+      }
+      setShowApproveDialog(false);
+    } finally {
+      setApproveLoading(false);
+    }
   };
 
   const handleApprovePayment = async () => {
@@ -1291,6 +1320,46 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
           </Card>
         </div>
       </div>
+
+      {/* Approve Order Dialog */}
+      <Dialog open={showApproveDialog} onOpenChange={setShowApproveDialog}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Approve Order</DialogTitle>
+            <DialogDescription>
+              Review the order and enter the delivery fee for this order. 
+              Leave it as 0 if delivery is free.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="deliveryFee" className="text-right">
+                Delivery Fee (ETB)
+              </Label>
+              <div className="col-span-3">
+                <input
+                  id="deliveryFee"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  placeholder="0.00"
+                  value={deliveryFee}
+                  onChange={(e) => setDeliveryFee(e.target.value === "" ? "" : Number(e.target.value))}
+                />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowApproveDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleApproveOrderSubmit} disabled={approveLoading}>
+              {approveLoading ? "Approving..." : "Approve Order"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Cancel Order Dialog */}
       <AlertDialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>

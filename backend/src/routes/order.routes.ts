@@ -142,6 +142,18 @@ router.post(
 
 // PATCH Routes
 // Update order status
+
+// Approve order (Supplier only)
+router.put(
+  '/:id/approve',
+  authorize('factory', 'distributor'),
+  validate([
+    param('id').isUUID().withMessage('Invalid order ID'),
+    body('delivery_fee').isFloat({ min: 0 }).withMessage('Delivery fee must be a positive number')
+  ]),
+  (req, res) => orderController.approveOrder(req, res)
+);
+
 router.patch(
   '/:id/status',
   authorize('distributor', 'factory', 'admin'),

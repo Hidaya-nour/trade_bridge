@@ -56,6 +56,11 @@ Order.init(
         min: 0,
       },
     },
+    delivery_fee: {
+      type: DataTypes.DECIMAL(10, 2),
+      allowNull: false,
+      defaultValue: 0,
+    },
     order_status: {
       type: DataTypes.ENUM('pending', 'approved', 'processing', 'shipped', 'delivered','closed', 'cancelled'),
       defaultValue: 'pending',

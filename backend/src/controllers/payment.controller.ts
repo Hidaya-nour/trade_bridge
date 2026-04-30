@@ -144,6 +144,104 @@ class PaymentController {
     }
   }
 
+  async chapaReturn(req: Request, res: Response): Promise<any> {
+    const redirectTo = String(req.query.redirect_to || '');
+    try {
+      const txRef = String(
+        req.query.trx_ref ||
+        req.query.tx_ref ||
+        ''
+      );
+
+      logger.info(`Chapa return hit with txRef: ${txRef}, redirectTo: ${redirectTo}`);
+
+      if (txRef) {
+        try {
+          const verifyResult = await paymentService.verifyChapaByTxRef(txRef);
+          logger.info(`Chapa verification result for ${txRef}: ${verifyResult.payment.payment_status}`);
+        } catch (verifyErr: any) {
+          logger.error(`Chapa verification failed during return for txRef ${txRef}: ${verifyErr?.message}`, verifyErr);
+        }
+      } else {
+        logger.warn('Chapa return hit without tx_ref');
+      }
+
+      if (redirectTo) {
+        res.status(302).setHeader('Location', redirectTo);
+        return res.send(`
+          <html>
+            <head><meta http-equiv="refresh" content="0;url=${redirectTo}"></head>
+            <body>Redirecting to <a href="${redirectTo}">${redirectTo}</a>...</body>
+          </html>
+        `);
+      }
+
+      return res.send('Payment flow completed.');
+    } catch (err) {
+      logger.error('Chapa return error', err);
+      if (redirectTo) {
+        res.status(302).setHeader('Location', redirectTo);
+        return res.send(`
+          <html>
+            <head><meta http-equiv="refresh" content="0;url=${redirectTo}"></head>
+            <body>Redirecting to <a href="${redirectTo}">${redirectTo}</a>...</body>
+          </html>
+        `);
+      }
+      return res.status(500).send('Error during payment return.');
+    }
+  }
+
+  async registerSubaccount(req: Request, res: Response): Promise<any> {
+    try {
+      const user = req.user;
+      this.ensureAuthenticated(req);
+      if (!user) return res.status(401).json({ success: false, message: 'Unauthorized' });
+      
+      if (!this.isSupplierRole(user.role)) {
+        return res.status(403).json({ success: false, message: 'Only suppliers can register subaccounts' });
+      }
+
+      const { business_name, account_name, bank_code, account_number } = req.body;
+      
+      if (!business_name || !account_name || !bank_code || !account_number) {
+        return res.status(400).json({ success: false, message: 'Missing required bank details' });
+      }
+
+      const { createChapaSubaccount } = await import('../config/chapa');
+      
+      // Default platform fee: 2% (0.02)
+      const platformFee = Number(process.env.CHAPA_PLATFORM_FEE_PERCENTAGE || 0.02);
+
+      const chapaResponse = await createChapaSubaccount({
+        business_name,
+        account_name,
+        bank_code,
+        account_number,
+        split_type: 'percentage',
+        split_value: platformFee, 
+      });
+
+      const subaccountId = chapaResponse.data?.subaccount_id;
+      if (!subaccountId) {
+        throw new AppError('Chapa did not return a subaccount ID', 500);
+      }
+
+      // Save to user
+      const userRecord = await require('../models/user.model').User.findByPk(user.id);
+      if (!userRecord) {
+        throw new AppError('User not found', 404);
+      }
+
+      userRecord.chapa_subaccount_id = subaccountId;
+      await userRecord.save();
+
+      return res.json({ success: true, message: 'Subaccount registered successfully', subaccount_id: subaccountId });
+    } catch (err) {
+      return this.handleError(res, err, 'Register subaccount error');
+    }
+  }
+
   async updateStatus(req: Request, res: Response): Promise<any> {
     try {
       const { id } = req.params;
