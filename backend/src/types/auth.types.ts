@@ -21,6 +21,7 @@ export interface IUser {
   approved_at?: Date;
   approved_by?: string;
   last_login?: Date;
+  chapa_subaccount_id?: string;
 }
 
 export interface IRefreshToken {

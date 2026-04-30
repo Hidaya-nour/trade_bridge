@@ -327,6 +327,18 @@ const DistributorOrderDetailsPage: React.FC = () => {
           mode === "outgoing" ? handleReorderPlaceOrder : undefined
         }
         onProcessPayment={mode === "outgoing" ? handleProcessPayment : undefined}
+        onApproveOrder={
+          mode === "incoming"
+            ? async (deliveryFee) => {
+                const ok = await useOrderStore.getState().approveOrder(orderDetails!.id, deliveryFee);
+                if (ok) {
+                  await fetchOrderById(orderDetails!.id);
+                  toast.success("Order approved.");
+                }
+                return ok;
+              }
+            : undefined
+        }
         onUpdateStatus={
           mode === "incoming"
             ? async (status) => {

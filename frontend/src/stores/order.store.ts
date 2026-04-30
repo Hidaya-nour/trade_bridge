@@ -55,6 +55,7 @@ interface OrderState {
   // Actions - Supplier
   fetchOrdersAsSupplier: (filters?: OrderFilters) => Promise<void>;
   updateOrderStatus: (id: string, status: any) => Promise<boolean>;
+  approveOrder: (id: string, deliveryFee: number) => Promise<boolean>;
   
   // Common Actions
   createOrder: (data: any) => Promise<Order | null>;
@@ -196,7 +197,27 @@ export const useOrderStore = create<OrderState>((set, get) => ({
   },
 
   // Common Actions
-createOrder: async (data: any) => {
+approveOrder: async (id: string, deliveryFee: number) => {
+    set({ isLoading: true, error: null });
+    try {
+      const response = await orderService.approveOrder(id, deliveryFee);
+      
+      const orders = get().orders.map(o => 
+        o.id === id ? normalizeOrder(response.data.order) : o
+      );
+      
+      set({ orders, isLoading: false });
+      return true;
+    } catch (error: any) {
+      set({
+        error: error.response?.data?.message || 'Failed to approve order',
+        isLoading: false,
+      });
+      return false;
+    }
+  },
+
+  createOrder: async (data: any) => {
   set({ isLoading: true, error: null });
   try {
     // The backend will add buyer_id from auth token

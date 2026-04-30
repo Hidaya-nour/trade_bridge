@@ -3,6 +3,8 @@ import { SupplierPaymentMethodService } from '../services/supplier-payment-metho
 import { AppError } from '../utils/errors';
 import logger from '../utils/logger';
 import { body, param } from 'express-validator';
+import { createChapaSubaccount } from '../config/chapa';
+import User from '../models/user.model';
 
 const paymentMethodService = new SupplierPaymentMethodService();
 
@@ -144,6 +146,40 @@ export class SupplierPaymentMethodController {
         res.status(error.statusCode).json({ success: false, message: error.message });
       } else {
         logger.error('Delete payment method error:', error);
+        res.status(500).json({ success: false, message: 'Internal server error' });
+      }
+    }
+  }
+
+  async registerChapaSubaccount(req: Request, res: Response) {
+    try {
+      this.ensureSupplierRole(req);
+      const supplierId = (req as any).user.id;
+      const { bank_code, account_number, account_name, business_name, split_type, split_value } = req.body;
+
+      const subaccountData = await createChapaSubaccount({
+        business_name: business_name || account_name,
+        account_name,
+        bank_code,
+        account_number,
+        split_type: split_type || 'percentage',
+        split_value: split_value || 0.05
+      });
+
+      const subaccountId = subaccountData.data?.subaccount_id || subaccountData.subaccount_id || subaccountData.data;
+      if (!subaccountId || typeof subaccountId !== 'string') {
+        throw new AppError('Subaccount ID not returned from Chapa', 500);
+      }
+
+      await User.update({ chapa_subaccount_id: subaccountId }, { where: { id: supplierId } });
+
+      res.json({ success: true, message: 'Chapa subaccount created', data: { subaccount_id: subaccountId } });
+    } catch (error) {
+      if (error instanceof AppError) {
+        res.status(error.statusCode).json({ success: false, message: error.message });
+      } else {
+        // @ts-ignore
+        logger.error('Register Chapa subaccount error:', error);
         res.status(500).json({ success: false, message: 'Internal server error' });
       }
     }

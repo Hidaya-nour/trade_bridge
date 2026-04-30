@@ -151,7 +151,13 @@ const FactoryIncomingOrdersPage: React.FC = () => {
       <IncomingOrders
         config={config}
         orders={orders}
-        onApproveOrder={(id) => updateOrderStatus(id, { status: "approved" })}
+        onApproveOrder={async (id, fee) => {
+          const ok = await useOrderStore.getState().approveOrder(id, fee ?? 0);
+          if (ok) {
+            await fetchOrdersAsSupplier();
+            toast.success("Order approved.");
+          }
+        }}
         onRejectOrder={(id, reason) => cancelOrder(id, reason)}
         onProcessOrder={(id) => updateOrderStatus(id, { status: "processing" })}
         onAssignDriver={async (_orderId, _deliveryId, _driverId) => {

@@ -38,6 +38,7 @@ export interface IOrder {
   buyer_id: string;
   supplier_id: string;
   total_price: number;
+  delivery_fee: number;
   order_status: OrderStatus;
   created_at: Date;
   updated_at: Date;

@@ -116,6 +116,10 @@ User.init(
       type: DataTypes.DATE,
       allowNull: true,
     },
+    chapa_subaccount_id: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+    },
   },
   {
     sequelize,

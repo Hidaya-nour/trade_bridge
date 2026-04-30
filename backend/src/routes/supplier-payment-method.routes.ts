@@ -11,6 +11,11 @@ router.use(authenticate);
 
 // Supplier payment method routes
 router.post(
+  '/chapa-subaccount',
+  (req, res) => paymentMethodController.registerChapaSubaccount(req, res)
+);
+
+router.post(
   '/',
   validate(SupplierPaymentMethodController.createValidation),
   (req, res) => paymentMethodController.create(req, res)

@@ -334,6 +334,56 @@ export class OrderService {
     return deliveryService.default.createDelivery(orderId, '', address);
   }
 
+
+  async approveOrder(orderId: string, supplierId: string, deliveryFee: number) {
+    const order = await this.orderRepo.findById(orderId);
+    if (!order) {
+      throw new AppError('Order not found', 404);
+    }
+
+    if (order.supplier_id !== supplierId) {
+      throw new AppError('You do not have permission to approve this order', 403);
+    }
+
+    if (order.order_status !== 'pending') {
+      throw new AppError(`Order cannot be approved from ${order.order_status} status`, 400);
+    }
+
+    const fee = Number(deliveryFee);
+    if (isNaN(fee) || fee < 0) {
+      throw new AppError('Invalid delivery fee', 400);
+    }
+
+    const newTotal = Number(order.total_price) + fee;
+
+    const [updatedRows] = await require('../../models/order.model').Order.update({
+      order_status: 'approved',
+      delivery_fee: fee,
+      total_price: newTotal
+    }, {
+      where: { id: orderId }
+    });
+
+    if (updatedRows === 0) {
+      throw new AppError('Failed to approve order', 500);
+    }
+
+    logger.info(`Order ${orderId} approved by supplier ${supplierId} with delivery fee ${fee}`);
+
+    try {
+      await notificationService.createNotification({
+        user_id: order.buyer_id,
+        type: 'order',
+        title: 'Order Approved',
+        message: `Your order ${orderId} has been approved. Please proceed to payment.`
+      } as any);
+    } catch (err) {
+      logger.error('Failed to create notification for order approval', err);
+    }
+
+    return this.orderRepo.findByIdWithDetails(orderId);
+  }
+
   // UPDATE ORDER STATUS
   async updateOrderStatus(
     orderId: string, 
