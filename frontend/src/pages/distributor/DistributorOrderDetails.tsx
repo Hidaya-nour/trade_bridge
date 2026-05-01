@@ -1,17 +1,18 @@
-import React, { useEffect, useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 
-import OrderDetailsView from "@/features/order/OrderDetailsView";
-import { useOrderStore } from "@/stores/order.store";
-import { useDriverStore } from "@/stores/driver.store";
-import deliveryService from "@/services/delivery.service";
-import paymentService from "@/services/payment.service";
-import documentService from "@/services/document.service";
-import { getPaymentMethodLabel } from "@/lib/payment-method-utils";
-import toast from "react-hot-toast";
-import type { Order, OrderStatus, OrderDetailsData } from "@/types/order.types";
 import { WithAsync } from "@/components/shared/WithAsync";
 import { Button } from "@/components/ui/button";
+import OrderDetailsView from "@/features/order/OrderDetailsView";
+import { getPaymentMethodLabel } from "@/lib/payment-method-utils";
+import deliveryService from "@/services/delivery.service";
+import documentService from "@/services/document.service";
+import orderService from "@/services/order.service";
+import paymentService from "@/services/payment.service";
+import { useDriverStore } from "@/stores/driver.store";
+import { useOrderStore } from "@/stores/order.store";
+import type { Order, OrderDetailsData, OrderStatus } from "@/types/order.types";
+import toast from "react-hot-toast";
 
 const statusIndex: Record<OrderStatus, number> = {
   pending: 0,
@@ -97,7 +98,8 @@ const mapOrderToDetails = (
 
   const subtotal = items.reduce((sum, item) => sum + item.total, 0);
   const total = order.total_price || subtotal;
-  const tax = Math.max(0, total - subtotal);
+  const shipping = (order as any).delivery_fee ?? 0;
+  const tax = Math.max(0, total - subtotal - shipping);
 
   const supplierName =
     order.supplier?.business_name || order.supplier?.full_name || "Supplier";
@@ -151,7 +153,7 @@ const mapOrderToDetails = (
     paymentProofName:
       (order.payment as any)?.proofDocument?.original_file_name || undefined,
     subtotal,
-    shipping: 0,
+    shipping,
     tax,
     total,
     notes: undefined,
@@ -200,6 +202,7 @@ const DistributorOrderDetailsPage: React.FC = () => {
     createOrder,
   } = useOrderStore();
   const { drivers, fetchMyDrivers } = useDriverStore();
+  const [buyerOrderHistory, setBuyerOrderHistory] = useState<Array<any>>([]);
 
   const isPurchaseOrder = location.pathname.includes("/purchase-orders/");
   const mode: "incoming" | "outgoing" = isPurchaseOrder
@@ -217,6 +220,32 @@ const DistributorOrderDetailsPage: React.FC = () => {
       fetchMyDrivers();
     }
   }, [mode, fetchMyDrivers]);
+
+  useEffect(() => {
+    if (!currentOrder || mode !== "incoming") return;
+    if (currentOrder.payment?.payment_method !== "credit") return;
+
+    const fetchHistory = async () => {
+      try {
+        // Fetch orders as supplier, filtered by both supplier_id and buyer_id.
+        // The backend must support these filters.
+        // We'll call the store action which will update the store's orders,
+        // but we only need the filtered list; we can also call the service directly.
+        const response = await orderService.getOrdersAsSupplier({
+          supplier_id: currentOrder.supplier_id,
+          buyer_id: currentOrder.buyer_id,
+          limit: 20,
+          // omit "status: 'all'" – not allowed by type
+        });
+        const orders = response.data?.orders || response.orders || [];
+        setBuyerOrderHistory(orders);
+      } catch (err) {
+        console.error("Failed to fetch buyer order history", err);
+      }
+    };
+
+    fetchHistory();
+  }, [currentOrder, mode]);
 
   const driverOptions = useMemo(
     () =>
@@ -316,12 +345,21 @@ const DistributorOrderDetailsPage: React.FC = () => {
         <div className="p-6 text-sm text-muted-foreground">{resolvedError}</div>
       }
     >
-      {mode === "outgoing" && currentOrder && hasNoSupplierDelivery(currentOrder) ? (
+      {mode === "outgoing" &&
+      currentOrder &&
+      hasNoSupplierDelivery(currentOrder) ? (
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-lg border bg-muted/30 p-3">
           <div className="text-sm text-muted-foreground">
-            This supplier did not provide delivery for this order. You can request an independent driver.
+            This supplier did not provide delivery for this order. You can
+            request an independent driver.
           </div>
-          <Button onClick={() => navigate(`/distributor/purchase-orders/${currentOrder.id}/request-driver`)}>
+          <Button
+            onClick={() =>
+              navigate(
+                `/distributor/purchase-orders/${currentOrder.id}/request-driver`,
+              )
+            }
+          >
             Request Driver
           </Button>
         </div>
@@ -340,11 +378,15 @@ const DistributorOrderDetailsPage: React.FC = () => {
         onReorderPlaceOrder={
           mode === "outgoing" ? handleReorderPlaceOrder : undefined
         }
-        onProcessPayment={mode === "outgoing" ? handleProcessPayment : undefined}
+        onProcessPayment={
+          mode === "outgoing" ? handleProcessPayment : undefined
+        }
         onApproveOrder={
           mode === "incoming"
             ? async (deliveryFee) => {
-                const ok = await useOrderStore.getState().approveOrder(orderDetails!.id, deliveryFee);
+                const ok = await useOrderStore
+                  .getState()
+                  .approveOrder(orderDetails!.id, deliveryFee);
                 if (ok) {
                   await fetchOrderById(orderDetails!.id);
                   toast.success("Order approved.");
@@ -356,7 +398,9 @@ const DistributorOrderDetailsPage: React.FC = () => {
         onUpdateStatus={
           mode === "incoming"
             ? async (status) => {
-                const ok = await updateOrderStatus(orderDetails!.id, { status });
+                const ok = await updateOrderStatus(orderDetails!.id, {
+                  status,
+                });
                 if (ok) {
                   await fetchOrderById(orderDetails!.id);
                 }
@@ -416,6 +460,7 @@ const DistributorOrderDetailsPage: React.FC = () => {
             ? ["Out of stock", "Customer request", "Payment issue", "Other"]
             : undefined
         }
+        buyerOrderHistory={buyerOrderHistory}
       />
     </WithAsync>
   );

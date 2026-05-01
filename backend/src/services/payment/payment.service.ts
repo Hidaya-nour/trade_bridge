@@ -34,11 +34,11 @@ interface SubmitPaymentPayload {
 class PaymentService {
   private supplierPaymentMethodService = new SupplierPaymentMethodService();
 
-  private toStoredPaymentMethod(method: string): 'mobile_banking' | 'chapa' {
-    // Frontend/API uses "app_payment" to mean "platform checkout". In the DB we store this as "chapa".
-    if (method === 'app_payment' || method === 'chapa') return 'chapa';
-    return 'mobile_banking';
-  }
+  private toStoredPaymentMethod(method: string): 'mobile_banking' | 'chapa' | 'credit' {
+  if (method === 'app_payment' || method === 'chapa') return 'chapa';
+  if (method === 'credit') return 'credit';
+  return 'mobile_banking';
+}
 
   private toChapaPhoneNumber(phone?: string | null): string | undefined {
     if (!phone) return undefined;
@@ -257,9 +257,12 @@ class PaymentService {
       }
 
       // Default flow per method.
-      payment.payment_status =
-        selectedMethod === 'mobile_banking' ? 'processing' : 'pending';
+      payment.payment_status ='pending';
 
+// For mobile banking, set the paid amount to the full order total
+if (selectedMethod === 'mobile_banking') {
+  payment.amount_paid = Number(order.total_price) as any;
+}
       await payment.save();
       return {
         payment,

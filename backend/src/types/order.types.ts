@@ -98,10 +98,7 @@ export interface IPayment {
   total_amount: number;
   amount_paid: number;
   payment_status: PaymentStatus;
-  cheque_number?: string;
-  cheque_bank?: string;
-  cheque_date?: Date;
-  cheque_status?: string;
+  _number?: string;
   chapa_transaction_id?: string;
   chapa_payment_url?: string;
   proof_document_id?: string;

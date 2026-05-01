@@ -1,13 +1,14 @@
-import React, { useEffect, useMemo, useState } from "react";
 import {
+  AlertCircle,
+  CheckCircle2,
   CreditCard,
   Smartphone,
-  BadgeDollarSign,
   Upload,
-  CheckCircle2,
-  AlertCircle,
 } from "lucide-react";
+import React, { useEffect, useMemo, useState } from "react";
 
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -15,14 +16,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
 import { formatPrice } from "@/lib/formatters";
-import toast from "react-hot-toast";
+import { cn } from "@/lib/utils";
 import type {
   PaymentDetails,
   PaymentDialogConfig,
@@ -30,6 +28,7 @@ import type {
   PaymentMethod,
   PaymentMethodConfig,
 } from "@/types/payment.types";
+import toast from "react-hot-toast";
 
 const PAYMENT_METHODS: PaymentMethodConfig[] = [
   {
@@ -45,14 +44,6 @@ const PAYMENT_METHODS: PaymentMethodConfig[] = [
     icon: Smartphone,
     description: "Send payment manually and upload proof after transfer",
     requiresDocument: true,
-    enabled: true,
-  },
-  {
-    id: "credit",
-    name: "Buy on Credit",
-    icon: BadgeDollarSign,
-    description: "Request supplier approval to pay later within their credit terms",
-    requiresApproval: true,
     enabled: true,
   },
 ];
@@ -135,10 +126,10 @@ export const PaymentDialog: React.FC<PaymentDialogProps> = ({
     return baseMethods.length > 0 ? baseMethods : PAYMENT_METHODS;
   }, [config.allowedMethods, config.supplierAllowedMethods]);
 
-  const supplierMethodDetails = useMemo(
-    () => getMethodSpecificSupplierDetails(config, selectedMethod),
-    [config, selectedMethod],
-  );
+  const supplierMethodDetails = useMemo(() => {
+    if (selectedMethod === "app_payment") return [];
+    return getMethodSpecificSupplierDetails(config, selectedMethod);
+  }, [config, selectedMethod]);
 
   const supplierHasMobileProviders = useMemo(() => {
     return (
@@ -464,8 +455,11 @@ export const PaymentDialog: React.FC<PaymentDialogProps> = ({
               </p>
               {supplierMethodDetails[0] && (
                 <div className="rounded-md bg-muted/40 p-3 text-sm">
-                  Due in {supplierMethodDetails[0].credit_due_days || "N/A"} days · Limit ETB{" "}
-                  {Number(supplierMethodDetails[0].credit_limit || 0).toLocaleString()}
+                  Due in {supplierMethodDetails[0].credit_due_days || "N/A"}{" "}
+                  days · Limit ETB{" "}
+                  {Number(
+                    supplierMethodDetails[0].credit_limit || 0,
+                  ).toLocaleString()}
                 </div>
               )}
               <div className="space-y-2">
@@ -501,7 +495,7 @@ export const PaymentDialog: React.FC<PaymentDialogProps> = ({
                 ? "Continue to App Payment"
                 : selectedMethod === "credit"
                   ? "Request Credit"
-                : "Submit Payment"}
+                  : "Submit Payment"}
           </Button>
         </DialogFooter>
       </DialogContent>

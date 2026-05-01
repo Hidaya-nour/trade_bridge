@@ -1,7 +1,5 @@
 // src/components/shared/EditProductDialog.tsx
-import React, { useState, useEffect, useMemo } from "react";
-import toast from "react-hot-toast";
-import { X } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -10,10 +8,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Select,
   SelectContent,
@@ -22,26 +19,36 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import type { Product } from "@/types/product.types";
+import { Textarea } from "@/components/ui/textarea";
 import productService from "@/services/product.service";
+import type { Product } from "@/types/product.types";
+import { X } from "lucide-react";
+import React, { useEffect, useMemo, useState } from "react";
+import toast from "react-hot-toast";
 
-// Constants (could be moved to a shared constants file later)
-const PRODUCT_CATEGORIES = ["Beverages", "Food Products"];
-const UNIT_TYPES = [
+// Ethiopian context product categories – ALWAYS use these, ignore props
+const DEFAULT_CATEGORIES = [
+  "Staple Foods", // ዋና ምግቦች
+  "Processed Foods", // የተቀነባበሩ ምግቦች
+  "Animal Products", // የእንስሳት ተዋጽኦ
+  "Fruits and Vegetables", // ፍራፍሬና አትክልቶች
+  "Oils and Fats", // ዘይትና ስብ
+  "Spices and Condiments", // ቅመሞችና ማጣፈጫዎች
+  "Sugar and Confectionery", // ስኳርና ጣፋጭ ምግቦች
+  "Non-Alcoholic Beverages", // አልኮል የሌላቸው መጠጦች
+  "Alcoholic Beverages", // አልኮል ያላቸው መጠጦች
+];
+
+const DEFAULT_UNIT_TYPES = [
   "kg",
   "liter",
   "piece",
   "box",
   "carton",
   "dozen",
-  "meter",
-  "square meter",
   "ton",
   "gram",
   "milliliter",
-  "set",
-  "pair",
   "bundle",
 ];
 
@@ -51,9 +58,9 @@ interface EditProductDialogProps {
   product: Product | null;
   onSave?: (productId: string, updatedProduct: Partial<Product>) => void;
   mode: "add" | "edit";
-  onAdd?: (product: any) => void; // For add mode
-  categories?: string[];
-  unitTypes?: string[];
+  onAdd?: (product: any) => void;
+  categories?: string[]; // Kept for API compatibility, but IGNORED for dropdown
+  unitTypes?: string[]; // Kept for API compatibility, but IGNORED for dropdown
 }
 
 export const EditProductDialog: React.FC<EditProductDialogProps> = ({
@@ -63,14 +70,13 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
   onSave,
   mode,
   onAdd,
-  categories = PRODUCT_CATEGORIES,
-  unitTypes = UNIT_TYPES,
+  // categories and unitTypes props are deliberately not used
 }) => {
   const initialFormData = {
     name: "",
-    category: categories[0] || PRODUCT_CATEGORIES[0],
+    category: DEFAULT_CATEGORIES[0],
     price: "",
-    unit_type: unitTypes[0] || "kg",
+    unit_type: DEFAULT_UNIT_TYPES[0],
     min_order_amount: "",
     stock_quantity: "",
     description: "",
@@ -87,7 +93,6 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [isUploadingImages, setIsUploadingImages] = useState(false);
-
   const [specifications, setSpecifications] = useState<
     { key: string; value: string }[]
   >([]);
@@ -97,9 +102,16 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
     if (mode === "edit" && product) {
       setFormData({
         name: product.name || "",
-        category: product.category || categories[0] || PRODUCT_CATEGORIES[0],
+        // Use product's category if it exists and is in our list, otherwise fallback to first default
+        category:
+          product.category && DEFAULT_CATEGORIES.includes(product.category)
+            ? product.category
+            : DEFAULT_CATEGORIES[0],
         price: product.price?.toString() || "",
-        unit_type: product.unit_type || unitTypes[0] || "kg",
+        unit_type:
+          product.unit_type && DEFAULT_UNIT_TYPES.includes(product.unit_type)
+            ? product.unit_type
+            : DEFAULT_UNIT_TYPES[0],
         min_order_amount: product.min_order_amount?.toString() || "",
         stock_quantity: product.stock_quantity?.toString() || "",
         description: product.description || "",
@@ -121,8 +133,6 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
 
       if (product.specifications) {
         let parsedSpecs = product.specifications;
-
-        // If it's a string, parse it
         if (typeof product.specifications === "string") {
           try {
             parsedSpecs = JSON.parse(product.specifications);
@@ -131,14 +141,12 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
             parsedSpecs = {};
           }
         }
-
         const specsArray = Object.entries(
           parsedSpecs as Record<string, string>,
         ).map(([key, value]) => ({
           key,
           value,
         }));
-
         setSpecifications(specsArray);
       } else {
         setSpecifications([]);
@@ -150,13 +158,13 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
     if (mode === "add" && open) {
       setFormData({
         ...initialFormData,
-        category: categories[0] || PRODUCT_CATEGORIES[0],
-        unit_type: unitTypes[0] || "kg",
+        category: DEFAULT_CATEGORIES[0],
+        unit_type: DEFAULT_UNIT_TYPES[0],
       });
       setSpecifications([]);
       setExistingImages([]);
     }
-  }, [product, mode, open, categories, unitTypes]);
+  }, [product, mode, open]);
 
   useEffect(() => {
     if (!open && (imagePreviews.length > 0 || imageFiles.length > 0)) {
@@ -223,7 +231,6 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
     }
 
     const specificationsObject: Record<string, string> = {};
-
     specifications.forEach((spec) => {
       if (spec.key.trim() !== "") {
         specificationsObject[spec.key] = spec.value;
@@ -326,7 +333,7 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
                     <SelectValue placeholder="Select category" />
                   </SelectTrigger>
                   <SelectContent>
-                    {categories.map((category) => (
+                    {DEFAULT_CATEGORIES.map((category) => (
                       <SelectItem key={category} value={category}>
                         {category}
                       </SelectItem>
@@ -346,7 +353,7 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
                     <SelectValue placeholder="Select unit" />
                   </SelectTrigger>
                   <SelectContent>
-                    {unitTypes.map((unit) => (
+                    {DEFAULT_UNIT_TYPES.map((unit) => (
                       <SelectItem key={unit} value={unit}>
                         {unit}
                       </SelectItem>
@@ -382,10 +389,7 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
                   placeholder="0"
                   value={formData.stock_quantity}
                   onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      stock_quantity: e.target.value,
-                    })
+                    setFormData({ ...formData, stock_quantity: e.target.value })
                   }
                   required
                 />
@@ -442,10 +446,7 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
                 rows={3}
                 value={formData.description}
                 onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    description: e.target.value,
-                  })
+                  setFormData({ ...formData, description: e.target.value })
                 }
               />
             </div>
@@ -489,10 +490,7 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
                   ))}
 
                   {imagePreviews.map((url, index) => (
-                    <div
-                      key={`new-${url}-${index}`}
-                      className="relative group"
-                    >
+                    <div key={`new-${url}-${index}`} className="relative group">
                       <img
                         src={url}
                         alt="New product"
@@ -516,7 +514,6 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
             {/* Specifications */}
             <div className="space-y-3">
               <Label>Specifications (Optional)</Label>
-
               {specifications.map((spec, index) => (
                 <div key={index} className="flex gap-2">
                   <Input
@@ -550,7 +547,6 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
                   </Button>
                 </div>
               ))}
-
               <Button
                 variant="outline"
                 onClick={() =>
@@ -560,6 +556,7 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
                 + Add Specification
               </Button>
             </div>
+
             {/* Active Status */}
             <div className="flex items-center space-x-2">
               <Switch

@@ -1,31 +1,13 @@
-import React, { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
 import {
-  Package,
-  Eye,
-  CheckCircle2,
-  XCircle,
-  Clock,
-  Truck,
-  Download,
-  Calendar,
-  MapPin,
-  Repeat,
-  Star,
-  CreditCard,
-  AlertCircle,
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  EmptyState,
+  PaginationBar,
+  PaymentDialog,
+  StatsCard,
+  StatusBadge,
+} from "@/components";
+import OrderTrackingDialog from "@/components/order/OrderTrackingDialog";
+import { PlaceOrderDialog } from "@/components/order/PlaceOrderDialog";
+import { RateReviewDialog } from "@/components/product/RateReviewDialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -36,31 +18,45 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import {
-  StatusBadge,
-  EmptyState,
-  PaginationBar,
-  StatsCard,
-  PaymentDialog,
-} from "@/components";
-import { formatPrice, formatDate } from "@/lib/formatters";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { formatDate, formatPrice } from "@/lib/formatters";
+import { supplierMethodsToPaymentMethods } from "@/lib/payment-method-utils";
 import { cn } from "@/lib/utils";
+import supplierPaymentMethodService from "@/services/supplier-payment-method.service";
 import type { Order } from "@/types/order.types";
 import type {
-  PaymentMethod,
   PaymentDetails,
+  PaymentMethod,
   SupplierPaymentMethodInfo,
 } from "@/types/payment.types";
-import OrderTrackingDialog from "@/components/order/OrderTrackingDialog";
-import { PlaceOrderDialog } from "@/components/order/PlaceOrderDialog";
-import supplierPaymentMethodService from "@/services/supplier-payment-method.service";
 import {
-  getPaymentMethodLabel,
-  supplierMethodsToPaymentMethods,
-} from "@/lib/payment-method-utils";
-import { RateReviewDialog } from "@/components/product/RateReviewDialog";
+  AlertCircle,
+  Calendar,
+  CheckCircle2,
+  Clock,
+  CreditCard,
+  Download,
+  Eye,
+  Package,
+  Repeat,
+  Star,
+  Truck,
+  XCircle,
+} from "lucide-react";
+import React, { useEffect, useState } from "react";
 import toast from "react-hot-toast";
+import { Link } from "react-router-dom";
 
 interface OrderListProps {
   config: {
@@ -230,7 +226,7 @@ export const OrderList: React.FC<OrderListProps> = ({
     if (order.order_status === "cancelled") {
       return false;
     }
-if (order.order_status !== "approved") {
+    if (order.order_status !== "approved") {
       return false;
     }
     if (!order.payment) {

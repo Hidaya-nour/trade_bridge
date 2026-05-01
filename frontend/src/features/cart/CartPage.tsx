@@ -1,54 +1,49 @@
 ﻿// components/shared/CartPage.tsx
-import React, { useState, useEffect, useMemo } from "react";
-import { Link, useNavigate } from "react-router-dom";
 import {
+  ArrowLeft,
+  ChevronRight,
+  Minus,
+  Package,
+  Plus,
   ShoppingCart,
   Trash2,
-  Plus,
-  Minus,
-  ArrowLeft,
-  Truck,
-  Shield,
-  CreditCard,
-  Wallet,
-  Building,
-  ChevronRight,
-  AlertCircle,
-  CheckCircle2,
-  Package,
 } from "lucide-react";
+import React, { useEffect, useMemo, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
-  CardHeader,
-  CardTitle,
   CardDescription,
   CardFooter,
+  CardHeader,
+  CardTitle,
 } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Separator } from "@/components/ui/separator";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
 
-import { useCartStore } from "@/stores/cart.store";
-import { useSupplierStore } from "@/stores/supplier.store";
-import { useOrderStore } from "@/stores/order.store";
-import { formatPrice } from "@/lib/formatters";
 import { resolveBoolean } from "@/lib/coerce";
+import { formatPrice } from "@/lib/formatters";
+import { supplierMethodsToPaymentMethods } from "@/lib/payment-method-utils";
 import { getInitials } from "@/lib/utils";
-import { PlaceOrderDialog } from "../../components/order/PlaceOrderDialog";
-import toast from "react-hot-toast";
+import documentService from "@/services/document.service";
+import paymentService from "@/services/payment.service";
+import supplierPaymentMethodService from "@/services/supplier-payment-method.service";
+import { useCartStore } from "@/stores/cart.store";
+import { useOrderStore } from "@/stores/order.store";
+import { useSupplierStore } from "@/stores/supplier.store";
 import type { CartConfig, CartItem } from "@/types/cart.types";
 import type { OrderItem } from "@/types/order.types";
-import paymentService from "@/services/payment.service";
-import documentService from "@/services/document.service";
-import supplierPaymentMethodService from "@/services/supplier-payment-method.service";
-import { supplierMethodsToPaymentMethods } from "@/lib/payment-method-utils";
-import type { PaymentMethod, SupplierPaymentMethodInfo } from "@/types/payment.types";
+import type {
+  PaymentMethod,
+  SupplierPaymentMethodInfo,
+} from "@/types/payment.types";
+import toast from "react-hot-toast";
+import { PlaceOrderDialog } from "../../components/order/PlaceOrderDialog";
 
 interface CartPageProps {
   config: CartConfig;
@@ -67,8 +62,12 @@ export const CartPage: React.FC<CartPageProps> = ({ config }) => {
   const [promoCode, setPromoCode] = useState("");
   const [promoApplied, setPromoApplied] = useState(false);
   const [checkoutDialogOpen, setCheckoutDialogOpen] = useState(false);
-  const [supplierAllowedMethods, setSupplierAllowedMethods] = useState<PaymentMethod[]>([]);
-  const [supplierPaymentMethods, setSupplierPaymentMethods] = useState<SupplierPaymentMethodInfo[]>([]);
+  const [supplierAllowedMethods, setSupplierAllowedMethods] = useState<
+    PaymentMethod[]
+  >([]);
+  const [supplierPaymentMethods, setSupplierPaymentMethods] = useState<
+    SupplierPaymentMethodInfo[]
+  >([]);
   const [itemSelection, setItemSelection] = useState<Record<string, boolean>>(
     {},
   );
@@ -308,95 +307,6 @@ export const CartPage: React.FC<CartPageProps> = ({ config }) => {
       return false;
     }
   };
-  useEffect(() => {
-    fetchCart();
-  }, [fetchCart]);
-
-  useEffect(() => {
-    if (!checkoutDialogOpen) return;
-    let cancelled = false;
-
-    const loadMethods = async () => {
-      const supplierIds = Array.from(
-        new Set(
-          selectedItems
-            .map((item) => item.product?.supplier_id)
-            .filter(Boolean) as string[],
-        ),
-      );
-      if (supplierIds.length === 0) {
-        setSupplierAllowedMethods([]);
-        setSupplierPaymentMethods([]);
-        return;
-      }
-
-      try {
-        const methodGroups = await Promise.all(
-          supplierIds.map(async (supplierId) => {
-            const response =
-              await supplierPaymentMethodService.getActiveBySupplierId(supplierId);
-            return response.data || response || [];
-          }),
-        );
-        if (cancelled) return;
-        const allMethods = methodGroups.flat();
-        const allowedBySupplier = methodGroups.map((methods) =>
-          supplierMethodsToPaymentMethods(methods),
-        );
-        const sharedMethods = allowedBySupplier.reduce<PaymentMethod[]>(
-          (shared, methods) =>
-            shared.filter((method) => methods.includes(method)),
-          allowedBySupplier[0] || [],
-        );
-        setSupplierPaymentMethods(allMethods);
-        setSupplierAllowedMethods(sharedMethods);
-      } catch (error) {
-        if (cancelled) return;
-        console.error("Failed to load supplier payment methods", error);
-        setSupplierAllowedMethods([]);
-        setSupplierPaymentMethods([]);
-      }
-    };
-
-    void loadMethods();
-    return () => {
-      cancelled = true;
-    };
-  }, [checkoutDialogOpen, selectedItems]);
-
-  useEffect(() => {
-    if (cartItems.length > 0) {
-      const supplierIds = cartItems
-        .map((item) => item.product?.supplier_id)
-        .filter(Boolean) as string[];
-
-      if (supplierIds.length > 0) {
-        fetchSuppliers(supplierIds);
-      }
-    }
-  }, [cartItems, fetchSuppliers]);
-
-  // Initialize selection when cart items change
-  useEffect(() => {
-    if (cartItems.length > 0) {
-      const initialSelection = cartItems.reduce(
-        (acc, item) => {
-          acc[item.id] = true;
-          return acc;
-        },
-        {} as Record<string, boolean>,
-      );
-      setItemSelection(initialSelection);
-      setSelectAll(true);
-    }
-  }, [cartItems]);
-
-  // Show error toast
-  useEffect(() => {
-    if (error) {
-      toast.error(error);
-    }
-  }, [error]);
 
   // ============================================================================
   // CALCULATIONS
@@ -565,16 +475,6 @@ export const CartPage: React.FC<CartPageProps> = ({ config }) => {
     }
   };
 
-  // Apply promo code
-  const applyPromo = () => {
-    if (promoCode.toUpperCase() === "TRADE10") {
-      setPromoApplied(true);
-      toast.success("Promo code applied!");
-    } else {
-      toast.error("Invalid promo code");
-    }
-  };
-
   // Group items by supplier
   const supplierGroups = useMemo(() => {
     const groups: Record<string, any> = {};
@@ -616,6 +516,97 @@ export const CartPage: React.FC<CartPageProps> = ({ config }) => {
 
   // Get role-specific icon
   const RoleIcon = config.supplierIcon;
+  useEffect(() => {
+    fetchCart();
+  }, [fetchCart]);
+
+  useEffect(() => {
+    if (!checkoutDialogOpen) return;
+    let cancelled = false;
+
+    const loadMethods = async () => {
+      const supplierIds = Array.from(
+        new Set(
+          selectedItems
+            .map((item) => item.product?.supplier_id)
+            .filter(Boolean) as string[],
+        ),
+      );
+      if (supplierIds.length === 0) {
+        setSupplierAllowedMethods([]);
+        setSupplierPaymentMethods([]);
+        return;
+      }
+
+      try {
+        const methodGroups = await Promise.all(
+          supplierIds.map(async (supplierId) => {
+            const response =
+              await supplierPaymentMethodService.getActiveBySupplierId(
+                supplierId,
+              );
+            return response.data || response || [];
+          }),
+        );
+        if (cancelled) return;
+        const allMethods = methodGroups.flat();
+        const allowedBySupplier = methodGroups.map((methods) =>
+          supplierMethodsToPaymentMethods(methods),
+        );
+        const sharedMethods = allowedBySupplier.reduce<PaymentMethod[]>(
+          (shared, methods) =>
+            shared.filter((method) => methods.includes(method)),
+          allowedBySupplier[0] || [],
+        );
+        setSupplierPaymentMethods(allMethods);
+        setSupplierAllowedMethods(sharedMethods);
+      } catch (error) {
+        if (cancelled) return;
+        console.error("Failed to load supplier payment methods", error);
+        setSupplierAllowedMethods([]);
+        setSupplierPaymentMethods([]);
+      }
+    };
+
+    void loadMethods();
+    return () => {
+      cancelled = true;
+    };
+  }, [checkoutDialogOpen, selectedItems]);
+
+  useEffect(() => {
+    if (cartItems.length > 0) {
+      const supplierIds = cartItems
+        .map((item) => item.product?.supplier_id)
+        .filter(Boolean) as string[];
+
+      if (supplierIds.length > 0) {
+        fetchSuppliers(supplierIds);
+      }
+    }
+  }, [cartItems, fetchSuppliers]);
+
+  // Initialize selection when cart items change
+  useEffect(() => {
+    if (cartItems.length > 0) {
+      const initialSelection = cartItems.reduce(
+        (acc, item) => {
+          acc[item.id] = true;
+          return acc;
+        },
+        {} as Record<string, boolean>,
+      );
+      setItemSelection(initialSelection);
+      setSelectAll(true);
+    }
+  }, [cartItems]);
+
+  // Show error toast
+  useEffect(() => {
+    if (error) {
+      toast.error(error);
+    }
+  }, [error]);
 
   // ============================================================================
   // LOADING STATE
@@ -917,33 +908,6 @@ export const CartPage: React.FC<CartPageProps> = ({ config }) => {
                     <span>Total</span>
                     <span className="text-primary">{formatPrice(total)}</span>
                   </div>
-                </div>
-
-                {/* Promo Code */}
-                <div className="space-y-2">
-                  <Label htmlFor="promo">Promo Code</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      id="promo"
-                      placeholder="Enter code"
-                      value={promoCode}
-                      onChange={(e) => setPromoCode(e.target.value)}
-                      disabled={promoApplied}
-                    />
-                    <Button
-                      variant="outline"
-                      onClick={applyPromo}
-                      disabled={promoApplied || !promoCode}
-                    >
-                      Apply
-                    </Button>
-                  </div>
-                  {promoApplied && (
-                    <p className="text-xs text-green-600 flex items-center gap-1">
-                      <CheckCircle2 className="h-3 w-3" />
-                      {config.bulkDiscountPercentage! * 100}% discount applied!
-                    </p>
-                  )}
                 </div>
               </CardContent>
               <CardFooter className="flex-col gap-3">

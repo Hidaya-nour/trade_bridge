@@ -107,6 +107,14 @@ type OrderDetailsViewProps = {
   ) => Promise<boolean>;
   ordersPath?: string;
   role?: "retailer" | "distributor" | "factory";
+  buyerOrderHistory?: Array<{
+    id: string;
+    orderDate: string | Date;
+    total: number;
+    status: OrderStatus;
+    paymentStatus?: string;
+    itemsCount?: number;
+  }>;
 };
 
 const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
@@ -123,6 +131,7 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
   onProcessPayment,
   ordersPath,
   role = "retailer",
+  buyerOrderHistory = [],
 }) => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -612,7 +621,6 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
     deliveryRecord?.driver?.driverUser?.id ||
     order.delivery?.driverUserId ||
     null;
-  const telPhone = normalizeTel(effectiveDriverPhone);
   const waPhone = normalizeWhatsapp(effectiveDriverPhone);
   const driverChatLink = effectiveDriverUserId
     ? `/messages?user=${encodeURIComponent(String(effectiveDriverUserId))}&order=${encodeURIComponent(order.id)}`
@@ -1127,6 +1135,7 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                 )}
                 {mode === "incoming" &&
                   order.paymentId &&
+                  order.paymentPaid > 0.0 &&
                   order.paymentStatus !== "paid" &&
                   order.paymentStatus !== "refunded" && (
                     <Button
@@ -1241,6 +1250,71 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
           {/* Action Buttons */}
           <Card>
             <CardContent className="p-4 space-y-2">
+              {/* Buyer Order History (for credit orders) */}
+              {mode === "incoming" &&
+                (order.paymentMethod === "Buy on Credit" ||
+                  order.paymentMethod === "credit") &&
+                buyerOrderHistory.length > 0 && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base">
+                        Customer Order History
+                      </CardTitle>
+                      <CardDescription>
+                        Previous orders from this buyer with your business.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div className="text-sm">
+                        <div className="flex justify-between mb-2 font-medium border-b pb-1">
+                          <span>Order ID</span>
+                          <span>Date</span>
+                          <span>Total</span>
+                          <span>Status</span>
+                        </div>
+                        <div className="space-y-2 max-h-48 overflow-y-auto">
+                          {buyerOrderHistory.slice(0, 5).map((prevOrder) => (
+                            <div
+                              key={prevOrder.id}
+                              className="flex justify-between text-sm"
+                            >
+                              <span className="font-mono text-xs">
+                                {prevOrder.id.slice(-8)}
+                              </span>
+                              <span>{formatDate(prevOrder.orderDate)}</span>
+                              <span className="font-medium">
+                                {formatPrice(prevOrder.total)}
+                              </span>
+                              <StatusBadge status={prevOrder.status} />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      {buyerOrderHistory.length > 5 && (
+                        <p className="text-xs text-muted-foreground text-center">
+                          Showing last 5 of {buyerOrderHistory.length} orders.
+                        </p>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
+              {mode === "incoming" &&
+                (order.paymentMethod === "Buy on Credit" ||
+                  order.paymentMethod === "credit") &&
+                buyerOrderHistory.length === 0 && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base">
+                        Customer Order History
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-muted-foreground">
+                        This buyer has no previous orders with you.
+                      </p>
+                    </CardContent>
+                  </Card>
+                )}
               {mode === "incoming" && getNextStatusOptions().length > 0 && (
                 <Button
                   className="w-full justify-start bg-blue-600 hover:bg-blue-700"
@@ -1331,33 +1405,36 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
           <DialogHeader>
             <DialogTitle>Approve Order</DialogTitle>
             <DialogDescription>
-              Review the order and enter the delivery fee for this order. Leave
-              it as 0 if delivery is free.
+              {hasPaidSupplierDelivery
+                ? "Review the order and enter the delivery fee for this order. Leave it as 0 if delivery is free."
+                : "Review the order and confirm approval. No delivery fee is required for this order."}
             </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="deliveryFee" className="text-right">
-                Delivery Fee (ETB)
-              </Label>
-              <div className="col-span-3">
-                <input
-                  id="deliveryFee"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                  placeholder="0.00"
-                  value={deliveryFee}
-                  onChange={(e) =>
-                    setDeliveryFee(
-                      e.target.value === "" ? "" : Number(e.target.value),
-                    )
-                  }
-                />
+          {hasPaidSupplierDelivery && (
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="deliveryFee" className="text-right">
+                  Delivery Fee (ETB)
+                </Label>
+                <div className="col-span-3">
+                  <input
+                    id="deliveryFee"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    placeholder="0.00"
+                    value={deliveryFee}
+                    onChange={(e) =>
+                      setDeliveryFee(
+                        e.target.value === "" ? "" : Number(e.target.value),
+                      )
+                    }
+                  />
+                </div>
               </div>
             </div>
-          </div>
+          )}
           <DialogFooter>
             <Button
               variant="outline"
@@ -1762,7 +1839,7 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
           }))}
           summary={{
             subtotal: order.subtotal,
-            shipping: order.shipping,
+            shipping: order.delivery_fee,
             discount: 0,
             tax: order.tax,
             total: order.total,

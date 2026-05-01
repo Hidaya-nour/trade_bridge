@@ -74,6 +74,7 @@ export interface Order {
   delivery?: Delivery;
   driver?: OrderDriver;
   products?: Product[];
+  delivery_fee?: number;
 }
 
 export interface OrderItem {
@@ -161,6 +162,7 @@ export type OrderDetailsData = {
   delivery: OrderDelivery;
   party: OrderParty;
   drivers?: OrderDriver[];
+  delivery_fee?: number;
   canAssignDriver?: boolean;
   canCancel?: boolean;
   canReview?: boolean;

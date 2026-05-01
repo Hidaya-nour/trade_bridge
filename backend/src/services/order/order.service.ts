@@ -1,23 +1,23 @@
+import { Op } from 'sequelize';
+import Payment from '../../models/payment.model';
+import { User } from '../../models/user.model';
+import { BroadcastRepository } from '../../repositories/broadcast.repository';
 import { OrderRepository } from '../../repositories/order.repository';
 import { ProductRepository } from '../../repositories/product.repository';
 import { UserRepository } from '../../repositories/user.repository';
-import { BroadcastRepository } from '../../repositories/broadcast.repository';
-import { SupplierPaymentMethodService } from '../supplier-payment-method/supplier-payment-method.service';
-import { AppError } from '../../utils/errors';
-import { 
-  CreateOrderDTO, 
-  OrderFilters, 
+import notificationService from '../../services/notification/notification.service';
+import {
+  CreateOrderDTO,
+  OrderFilters,
   OrderReceipt,
   OrderReceiptVerification,
   OrderStatus,
   // OrderWithDetails,
   UpdateOrderStatusDTO
 } from '../../types/order.types';
+import { AppError } from '../../utils/errors';
 import logger from '../../utils/logger';
-import notificationService from '../../services/notification/notification.service';
-import Payment from '../../models/payment.model';
-import { User } from '../../models/user.model';
-import { Op } from 'sequelize';
+import { SupplierPaymentMethodService } from '../supplier-payment-method/supplier-payment-method.service';
 
 const DEFAULT_VAT_RATE = 0.15;
 
@@ -287,7 +287,8 @@ export class OrderService {
         await this.createPaymentRecord(order.id, total_price, payment_method);
       } catch (err) {
         logger.error(`Failed to create payment record for order ${order.id}`, err);
-      }
+      throw err;
+    }
     }
 
     // Create delivery record if address provided
@@ -383,7 +384,7 @@ export class OrderService {
       { where: { order_id: orderId, payment_status: 'pending' } as any },
     );
     await Payment.update(
-      { payment_status: 'processing' as any },
+      { payment_status: 'compeleted' as any },
       { where: { order_id: orderId, payment_method: 'credit' } as any },
     );
 

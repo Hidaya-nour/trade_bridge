@@ -1,17 +1,16 @@
-import { BaseRepository } from './base.repository';
-import { Op } from 'sequelize';
+import { Op, Order as SequelizeOrder } from 'sequelize';
 import sequelize from '../config/database';
-import { Order as SequelizeOrder } from 'sequelize';
-import { Order } from '../models/order.model';
-import { Product } from '../models/product.model';
-import { Payment } from '../models/payment.model';
 import { Delivery } from '../models/delivery.model';
-import Driver from '../models/driver.model';
-import { User } from '../models/user.model';
 import Document from '../models/document.model';
+import Driver from '../models/driver.model';
+import { Order } from '../models/order.model';
+import { Payment } from '../models/payment.model';
+import { Product } from '../models/product.model';
+import { User } from '../models/user.model';
+import { BaseRepository } from './base.repository';
 
-import { OrderFilters, OrderStatus } from '../types/order.types';
 import OrderItems from '../models/order-item.model';
+import { OrderFilters, OrderStatus } from '../types/order.types';
 
 export class OrderRepository extends BaseRepository<Order> {
   constructor() {

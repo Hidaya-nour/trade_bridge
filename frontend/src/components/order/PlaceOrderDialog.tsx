@@ -1,9 +1,11 @@
 // components/shared/PlaceOrderDialog.tsx
+import { BadgeDollarSign, Minus, Plus, Truck } from "lucide-react";
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { CreditCard, Smartphone, Truck, Plus, Minus, BadgeDollarSign } from "lucide-react";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -12,22 +14,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { Separator } from "@/components/ui/separator";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Select,
   SelectContent,
@@ -35,16 +24,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
 
-import { formatPrice } from "@/lib/formatters";
 import { resolveBoolean } from "@/lib/coerce";
+import { formatPrice } from "@/lib/formatters";
 import { geocodeAreaName, haversineKm } from "@/lib/geo";
-import toast from "react-hot-toast";
-import type { OrderItem } from "@/types/order.types";
-import type { PaymentDetails, PaymentMethod } from "@/types/payment.types";
-import { Textarea } from "../ui/textarea";
 import addressService from "@/services/address.service";
 import type { Address } from "@/types/address.types";
+import type { OrderItem } from "@/types/order.types";
+import type { PaymentDetails, PaymentMethod } from "@/types/payment.types";
+import toast from "react-hot-toast";
+import { Textarea } from "../ui/textarea";
 
 export interface OrderSummary {
   subtotal: number;
@@ -90,7 +80,6 @@ export interface PlaceOrderDialogProps {
   isPlacing?: boolean;
 }
 
-
 export const PlaceOrderDialog: React.FC<PlaceOrderDialogProps> = ({
   open,
   onOpenChange,
@@ -111,21 +100,21 @@ export const PlaceOrderDialog: React.FC<PlaceOrderDialogProps> = ({
   const [deliveryAddress, setDeliveryAddress] = React.useState("");
   const [addresses, setAddresses] = React.useState<Address[]>([]);
   const [addressesLoading, setAddressesLoading] = React.useState(false);
-  const [addressesError, setAddressesError] = React.useState<string | null>(null);
+  const [addressesError, setAddressesError] = React.useState<string | null>(
+    null,
+  );
   const [useSavedLocation, setUseSavedLocation] = React.useState(false);
   const [selectedAddressId, setSelectedAddressId] = React.useState<string>("");
-  const [buyerCoords, setBuyerCoords] = React.useState<{ lat: number; lng: number } | null>(null);
+  const [buyerCoords, setBuyerCoords] = React.useState<{
+    lat: number;
+    lng: number;
+  } | null>(null);
   const [geoLoading, setGeoLoading] = React.useState(false);
   const [geoError, setGeoError] = React.useState<string | null>(null);
   const [internalIsPlacing, setInternalIsPlacing] = React.useState(false);
-  const [createdOrderId, setCreatedOrderId] = React.useState<string | null>(
-    null,
-  );
-  const [createdOrderTotal, setCreatedOrderTotal] = React.useState<number>(
-    summary.total,
-  );
-  const [selectedPaymentMethod, setSelectedPaymentMethod] =
-    React.useState<PaymentMethod>("app_payment");
+
+  // Credit request flag – defaults to false (normal order, no upfront payment method)
+  const [requestCredit, setRequestCredit] = React.useState(false);
 
   const toFinite = (value: any) => {
     const parsed = Number(value);
@@ -181,13 +170,15 @@ export const PlaceOrderDialog: React.FC<PlaceOrderDialogProps> = ({
         setAddresses(next);
 
         if (next.length > 0 && !deliveryAddress.trim()) {
-          const preferred = next
-            .slice()
-            .sort((a, b) => {
-              const at = a.created_at ? new Date(a.created_at as any).getTime() : 0;
-              const bt = b.created_at ? new Date(b.created_at as any).getTime() : 0;
-              return bt - at;
-            })[0];
+          const preferred = next.slice().sort((a, b) => {
+            const at = a.created_at
+              ? new Date(a.created_at as any).getTime()
+              : 0;
+            const bt = b.created_at
+              ? new Date(b.created_at as any).getTime()
+              : 0;
+            return bt - at;
+          })[0];
           if (preferred) {
             setUseSavedLocation(true);
             setSelectedAddressId(preferred.id);
@@ -227,8 +218,12 @@ export const PlaceOrderDialog: React.FC<PlaceOrderDialogProps> = ({
     if (!open) return;
     let cancelled = false;
 
-    const savedLat = selectedSavedAddress ? toFinite(selectedSavedAddress.latitude) : null;
-    const savedLng = selectedSavedAddress ? toFinite(selectedSavedAddress.longitude) : null;
+    const savedLat = selectedSavedAddress
+      ? toFinite(selectedSavedAddress.latitude)
+      : null;
+    const savedLng = selectedSavedAddress
+      ? toFinite(selectedSavedAddress.longitude)
+      : null;
     if (savedLat !== null && savedLng !== null) {
       setBuyerCoords({ lat: savedLat, lng: savedLng });
       setGeoError(null);
@@ -275,10 +270,16 @@ export const PlaceOrderDialog: React.FC<PlaceOrderDialogProps> = ({
         const product = item.product as any;
         if (!product) return null;
         const supplierId = String(
-          product.supplier_id || product.supplierId || product.supplier?.id || "",
+          product.supplier_id ||
+            product.supplierId ||
+            product.supplier?.id ||
+            "",
         ).trim();
 
-        const deliveryAvailable = resolveBoolean(product.delivery_available, true);
+        const deliveryAvailable = resolveBoolean(
+          product.delivery_available,
+          true,
+        );
         const rawDeliveryPricing = String(
           product.delivery_pricing || "",
         ).toLowerCase();
@@ -328,7 +329,9 @@ export const PlaceOrderDialog: React.FC<PlaceOrderDialogProps> = ({
     for (const item of items) {
       const product = (item as any)?.product;
       if (!product) continue;
-      const supplierId = String(product?.supplier_id || product?.supplier?.id || "").trim();
+      const supplierId = String(
+        product?.supplier_id || product?.supplier?.id || "",
+      ).trim();
       if (!supplierId) continue;
       if (coordsBySupplier.has(supplierId)) continue;
       const coords = getSupplierCoords(product);
@@ -369,7 +372,7 @@ export const PlaceOrderDialog: React.FC<PlaceOrderDialogProps> = ({
         continue;
       }
 
-     
+      // For paid delivery we do not add any shipping here because the delivery fee will be added by the supplier upon approval
     }
 
     const shipping = Number(
@@ -406,20 +409,6 @@ export const PlaceOrderDialog: React.FC<PlaceOrderDialogProps> = ({
   const isPlacing =
     externalIsPlacing !== undefined ? externalIsPlacing : internalIsPlacing;
 
-  const availablePaymentMethods = React.useMemo(() => {
-    const methods = supplierAllowedMethods?.length
-      ? supplierAllowedMethods
-      : (["app_payment", "mobile_banking"] as PaymentMethod[]);
-    return Array.from(new Set(methods));
-  }, [supplierAllowedMethods]);
-
-  React.useEffect(() => {
-    if (!availablePaymentMethods.includes(selectedPaymentMethod)) {
-      setSelectedPaymentMethod(availablePaymentMethods[0] || "app_payment");
-    }
-  }, [availablePaymentMethods, selectedPaymentMethod]);
- 
-
   const handlePlaceOrder = async () => {
     if (onPlaceOrder) {
       setInternalIsPlacing(true);
@@ -430,13 +419,15 @@ export const PlaceOrderDialog: React.FC<PlaceOrderDialogProps> = ({
           return;
         }
 
+        // Determine payment method: only send 'credit' if requested, otherwise undefined
+        const paymentMethod = requestCredit ? "credit" : undefined;
+
         const result = await onPlaceOrder(
-          selectedPaymentMethod,
+          paymentMethod,
           deliveryOption,
           normalizedAddress,
         );
-        if (result?.primaryOrderId ) {
-          
+        if (result?.primaryOrderId) {
           onOpenChange(false);
           navigate(config.ordersPath);
           return;
@@ -447,7 +438,7 @@ export const PlaceOrderDialog: React.FC<PlaceOrderDialogProps> = ({
       } catch (error: any) {
         toast.error(
           error.response?.data?.message ||
-            error.response?.data?.message ||
+            error.message ||
             "Failed to place order",
         );
       } finally {
@@ -459,7 +450,6 @@ export const PlaceOrderDialog: React.FC<PlaceOrderDialogProps> = ({
     // Default behavior if no onPlaceOrder provided
     setInternalIsPlacing(true);
     try {
-      // Simulate order placement
       await new Promise((resolve) => setTimeout(resolve, 1500));
       toast.success("Order placed successfully!");
       onOpenChange(false);
@@ -616,51 +606,32 @@ export const PlaceOrderDialog: React.FC<PlaceOrderDialogProps> = ({
 
             <Separator />
 
+            {/* Credit Request Option */}
             <div className="space-y-3">
-              <h4 className="text-sm font-medium">Payment Method</h4>
-              <div className="grid gap-3 md:grid-cols-3">
-                {availablePaymentMethods.map((method) => {
-                  const Icon =
-                    method === "app_payment"
-                      ? CreditCard
-                      : method === "credit"
-                        ? BadgeDollarSign
-                        : Smartphone;
-                  const label =
-                    method === "app_payment"
-                      ? "App Payment"
-                      : method === "credit"
-                        ? "Buy on Credit"
-                        : "Mobile Banking";
-                  const detail =
-                    method === "credit"
-                      ? "Supplier approval required"
-                      : method === "app_payment"
-                        ? "Pay after approval"
-                        : "Upload proof after approval";
-                  return (
-                    <button
-                      key={method}
-                      type="button"
-                      onClick={() => setSelectedPaymentMethod(method)}
-                      className={`rounded-lg border p-3 text-left text-sm ${
-                        selectedPaymentMethod === method
-                          ? "border-primary bg-primary/5"
-                          : "hover:border-primary/50"
-                      }`}
-                    >
-                      <div className="flex items-center gap-2 font-medium">
-                        <Icon className="h-4 w-4" />
-                        {label}
-                      </div>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        {detail}
-                      </p>
-                    </button>
-                  );
-                })}
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="requestCredit"
+                  checked={requestCredit}
+                  onCheckedChange={(checked) => setRequestCredit(!!checked)}
+                />
+                <Label
+                  htmlFor="requestCredit"
+                  className="text-sm font-medium cursor-pointer"
+                >
+                  Request Credit (pay later after supplier approval)
+                </Label>
               </div>
+              {requestCredit && (
+                <div className="rounded-md border bg-muted/40 p-3 text-sm text-muted-foreground">
+                  <BadgeDollarSign className="inline h-4 w-4 mr-1" />
+                  Your credit request will be reviewed by the supplier. If
+                  approved, you will have credit terms (due date and limit). No
+                  upfront payment required.
+                </div>
+              )}
             </div>
+
+            <Separator />
 
             {/* Delivery Options */}
             <div className="space-y-3">
@@ -800,7 +771,8 @@ export const PlaceOrderDialog: React.FC<PlaceOrderDialogProps> = ({
                 ) : null}
                 {shippingEstimate.usedFallbackDistance ? (
                   <span>
-                    Using {DEFAULT_DISTANCE_KM} km for items missing coordinates.
+                    Using {DEFAULT_DISTANCE_KM} km for items missing
+                    coordinates.
                   </span>
                 ) : null}
               </div>
@@ -813,7 +785,7 @@ export const PlaceOrderDialog: React.FC<PlaceOrderDialogProps> = ({
                   <span>Subtotal</span>
                   <span>{formatPrice(summary.subtotal)}</span>
                 </div>
-                
+
                 {summary.promoApplied && (
                   <div className="flex justify-between text-sm text-green-600">
                     <span>Discount ({summary.discountPercentage! * 100}%)</span>
@@ -834,7 +806,9 @@ export const PlaceOrderDialog: React.FC<PlaceOrderDialogProps> = ({
                   <span className="text-primary">
                     {formatPrice(
                       summary.subtotal +
-                        (buyerCoords ? shippingEstimate.shipping : summary.shipping) +
+                        (buyerCoords
+                          ? shippingEstimate.shipping
+                          : summary.shipping) +
                         summary.tax -
                         summary.discount,
                     )}
@@ -843,12 +817,10 @@ export const PlaceOrderDialog: React.FC<PlaceOrderDialogProps> = ({
               </div>
             </div>
 
-            {/* Delivery Estimate */}
-            <div className="flex items-center gap-2 text-l text-muted-foreground">
+            {/* Delivery Estimate Note */}
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <Truck className="h-3 w-3" />
-              <span>
-                Delivery cost is not included in the Total 
-              </span>
+              <span>Delivery cost is not included in the Total</span>
             </div>
           </div>
         </ScrollArea>
@@ -866,8 +838,6 @@ export const PlaceOrderDialog: React.FC<PlaceOrderDialogProps> = ({
           </Button>
         </DialogFooter>
       </DialogContent>
-      
-     
     </Dialog>
   );
 };

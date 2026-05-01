@@ -1,8 +1,8 @@
 import { DataTypes, Model, Optional } from 'sequelize';
 import sequelize from '../config/database';
-import Order from './order.model';
-import Notification from './notification.model';
 import { IPayment, PaymentStatus } from '../types/order.types';
+import Notification from './notification.model';
+import Order from './order.model';
 // import Order from './Order.model';
 // import User from './User.model';
 
@@ -15,10 +15,6 @@ export class Payment extends Model<IPayment, PaymentCreationAttributes> implemen
   public total_amount!: number;
   public amount_paid!: number;
   public payment_status!: PaymentStatus; 
-  public cheque_number?: string;
-  public cheque_bank?: string;
-  public cheque_date?: Date;
-  public cheque_status?: string;
   public chapa_transaction_id?: string;
   public chapa_payment_url?: string;
   public proof_document_id?: string;
@@ -63,25 +59,11 @@ Payment.init(
       defaultValue: 0,
     },
     payment_status: {
-      type: DataTypes.ENUM('pending', 'processing', 'completed', 'failed', 'refunded'), // ✅ Use ENUM
+      type: DataTypes.ENUM('pending',  'completed', 'failed', 'refunded'), // ✅ Use ENUM
       defaultValue: 'pending',
     },
-    cheque_number: {
-      type: DataTypes.STRING(50),
-      allowNull: true,
-    },
-    cheque_bank: {
-      type: DataTypes.STRING(100),
-      allowNull: true,
-    },
-    cheque_date: {
-      type: DataTypes.DATE,
-      allowNull: true,
-    },
-    cheque_status: {
-      type: DataTypes.STRING(30),
-      allowNull: true,
-    },
+   
+    
     chapa_transaction_id: {
       type: DataTypes.STRING(255),
       allowNull: true,
