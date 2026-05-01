@@ -246,6 +246,9 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
         price: parseFloat(formData.price),
         stock_quantity: parseInt(formData.stock_quantity),
         min_order_amount: parseInt(formData.min_order_amount),
+        delivery_pricing: formData.delivery_available
+          ? formData.delivery_pricing
+          : null,
         delivery_fee_per_km:
           formData.delivery_available && formData.delivery_pricing === "paid"
             ? parseFloat(formData.delivery_fee_per_km || "0")

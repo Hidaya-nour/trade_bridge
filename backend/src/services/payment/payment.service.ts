@@ -157,6 +157,7 @@ class PaymentService {
 
     try {
       payment.payment_method = this.toStoredPaymentMethod(selectedMethod) as any;
+      payment.total_amount = Number(order.total_price) as any;
       payment.notes = payload.notes;
       payment.proof_document_id = payload.proof_document_id;
 
@@ -210,9 +211,8 @@ class PaymentService {
         const frontendBaseUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
         const buyerOrdersPath =
           buyer.role === 'distributor' ? '/distributor/purchase-orders' : '/retailer/orders';
-        const frontendReturnPath = `${frontendBaseUrl}${buyerOrdersPath}`;
+        const frontendReturnPath = `${frontendBaseUrl}${buyerOrdersPath}/${order.id}/receipt?payment=chapa&tx_ref=${encodeURIComponent(txRef)}`;
         const returnUrl =
-          process.env.CHAPA_RETURN_URL ||
           `${backendBaseUrl}/api/payments/chapa/return?tx_ref=${txRef}&redirect_to=${encodeURIComponent(frontendReturnPath)}`;
 
         const chapaPhone = this.toChapaPhoneNumber(buyer.phone);
@@ -224,9 +224,12 @@ class PaymentService {
           first_name: firstName,
           last_name: lastName,
           tx_ref: txRef,
+          callback_url: `${backendBaseUrl}/api/payments/chapa/callback?tx_ref=${encodeURIComponent(txRef)}`,
           return_url: returnUrl,
           phone_number: chapaPhone,
-          ...(supplier?.chapa_subaccount_id ? { 'subaccounts[id]': supplier.chapa_subaccount_id } : {}),
+          ...((supplier as any)?.chapa_subaccount_id
+            ? { 'subaccounts[id]': (supplier as any).chapa_subaccount_id }
+            : {}),
           customization: {
             title: 'TradeBridge',
             description: `Order ${order.id.slice(0, 8)} payment`,
@@ -293,8 +296,17 @@ class PaymentService {
       verificationStatus === 'success' ||
       verificationStatus === 'completed' ||
       verificationStatus === 'paid';
+    const isFailure =
+      verificationStatus === 'failed' ||
+      verificationStatus === 'cancelled' ||
+      verificationStatus === 'canceled' ||
+      verificationStatus === 'declined';
 
-    payment.payment_status = isSuccess ? 'completed' : 'failed';
+    payment.payment_status = isSuccess
+      ? 'completed'
+      : isFailure
+        ? 'failed'
+        : 'pending';
     if (isSuccess) {
       payment.amount_paid = payment.total_amount as any;
       payment.payment_date = new Date();

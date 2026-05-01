@@ -79,6 +79,8 @@ const mapOrderToDetails = (
       price: item.unit_price,
       total: item.unit_price * item.quantity,
       stockAvailable: item.product?.stock_quantity,
+      deliveryAvailable: item.product?.delivery_available,
+      deliveryPricing: item.product?.delivery_pricing ?? null,
     })) || [];
 
   const subtotal = items.reduce((sum, item) => sum + item.total, 0);

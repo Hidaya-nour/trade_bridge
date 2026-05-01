@@ -199,9 +199,15 @@ const startServer = async () => {
       await sequelize.query(
         "ALTER TABLE `supplier_payment_methods` MODIFY `method_type` VARCHAR(50) NOT NULL",
       );
+      await sequelize.query(
+        "ALTER TABLE `products` MODIFY `delivery_pricing` ENUM('free','paid') NULL DEFAULT 'free'",
+      );
+      await sequelize.query(
+        "UPDATE `products` SET `delivery_pricing`=NULL WHERE `delivery_available`=false",
+      );
     } catch (error) {
       logger.warn(
-        'Skipping supplier_payment_methods.method_type normalization (table may not exist yet)',
+        'Skipping development database normalization (tables may not exist yet)',
         error,
       );
     }

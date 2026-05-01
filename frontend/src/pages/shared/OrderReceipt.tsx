@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import orderService from "@/services/order.service";
 import type { OrderReceipt } from "@/types/order.types";
 import { formatDateTime, formatPrice } from "@/lib/formatters";
+import paymentService from "@/services/payment.service";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
@@ -16,6 +17,7 @@ const OrderReceiptPage: React.FC = () => {
   const [receipt, setReceipt] = useState<OrderReceipt | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [paymentVerifying, setPaymentVerifying] = useState(false);
 
   useEffect(() => {
     const loadReceipt = async () => {
@@ -44,6 +46,42 @@ const OrderReceiptPage: React.FC = () => {
       setTimeout(() => window.print(), 100);
     }
   }, [location.search, receipt]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const txRef = params.get("tx_ref");
+    if (params.get("payment") !== "chapa" || !txRef || !id) return;
+
+    let cancelled = false;
+    const wait = (ms: number) =>
+      new Promise((resolve) => window.setTimeout(resolve, ms));
+
+    setPaymentVerifying(true);
+    (async () => {
+      try {
+        for (let attempt = 0; attempt < 5 && !cancelled; attempt += 1) {
+          await paymentService.verifyChapa(txRef);
+          if (cancelled) return;
+
+          const response = await orderService.getOrderReceipt(id);
+          const nextReceipt = response.data.receipt;
+          if (cancelled) return;
+          setReceipt(nextReceipt);
+
+          if (nextReceipt.payment.status === "completed") return;
+          await wait(1500);
+        }
+      } catch {
+        // The backend return endpoint may have already verified the payment.
+      } finally {
+        if (!cancelled) setPaymentVerifying(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [id, location.search]);
 
   const roleBase = useMemo(() => {
     if (location.pathname.startsWith("/factory/")) return "/factory/orders";
@@ -154,6 +192,11 @@ const OrderReceiptPage: React.FC = () => {
           <p className="text-sm text-muted-foreground">
             {receipt.receipt_number} • Issued {formatDateTime(receipt.issued_at)}
           </p>
+          {paymentVerifying && (
+            <p className="mt-1 text-sm text-muted-foreground">
+              Confirming Chapa payment...
+            </p>
+          )}
         </div>
         <div className="flex items-center gap-2 no-print">
           <Button variant="outline" asChild>

@@ -35,7 +35,7 @@ export class Product extends Model<IProduct, ProductCreationAttributes> implemen
   public rating!: number;
   public review_count?: number;
   public delivery_available?: boolean;
-  public delivery_pricing?: 'free' | 'paid';
+  public delivery_pricing?: 'free' | 'paid' | null;
   public delivery_fee_per_km?: number | null;
   public free_delivery_max_distance_km?: number | null;
   public is_available!: boolean;
@@ -156,7 +156,7 @@ Product.init(
     },
     delivery_pricing: {
       type: DataTypes.ENUM('free', 'paid'),
-      allowNull: false,
+      allowNull: true,
       defaultValue: 'free',
     },
     delivery_fee_per_km: {

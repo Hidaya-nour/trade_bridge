@@ -16,7 +16,7 @@ export interface IProduct {
   rating: number;
   review_count?: number;
   delivery_available?: boolean;
-  delivery_pricing?: 'free' | 'paid';
+  delivery_pricing?: 'free' | 'paid' | null;
   delivery_fee_per_km?: number | null;
   free_delivery_max_distance_km?: number | null;
   created_at: Date;
@@ -56,7 +56,7 @@ export interface IProductResponse {
   rating: number;
   review_count?: number;
   delivery_available?: boolean;
-  delivery_pricing?: 'free' | 'paid';
+  delivery_pricing?: 'free' | 'paid' | null;
   delivery_fee_per_km?: number | null;
   free_delivery_max_distance_km?: number | null;
   supplier_name?: string;

@@ -349,9 +349,18 @@ export class OrderService {
       throw new AppError(`Order cannot be approved from ${order.order_status} status`, 400);
     }
 
-    const fee = Number(deliveryFee);
+    const details = await this.orderRepo.findByIdWithDetails(orderId);
+    const hasPaidSupplierDelivery = ((details as any)?.items || []).some((item: any) => {
+      const product = item?.product;
+      return product?.delivery_available !== false && product?.delivery_pricing === 'paid';
+    });
+
+    const fee = hasPaidSupplierDelivery ? Number(deliveryFee) : 0;
     if (isNaN(fee) || fee < 0) {
       throw new AppError('Invalid delivery fee', 400);
+    }
+    if (!hasPaidSupplierDelivery && Number(deliveryFee) > 0) {
+      throw new AppError('Delivery fee is only allowed for products with paid supplier delivery', 400);
     }
 
     const newTotal = Number(order.total_price) + fee;
@@ -367,6 +376,11 @@ export class OrderService {
     if (updatedRows === 0) {
       throw new AppError('Failed to approve order', 500);
     }
+
+    await Payment.update(
+      { total_amount: newTotal as any },
+      { where: { order_id: orderId, payment_status: 'pending' } as any },
+    );
 
     logger.info(`Order ${orderId} approved by supplier ${supplierId} with delivery fee ${fee}`);
 

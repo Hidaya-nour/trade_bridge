@@ -22,7 +22,7 @@ export interface Product {
   rating: number;
   review_count:number;
   delivery_available?: boolean;
-  delivery_pricing?: "free" | "paid";
+  delivery_pricing?: "free" | "paid" | null;
   delivery_fee_per_km?: number | null;
   free_delivery_max_distance_km?: number | null;
   reviews?: ReviewItem[];  created_at: string;
@@ -100,7 +100,7 @@ export interface CatalogProduct {
   lead_time?: string;
   payment_terms?: string[];
   delivery_available?: boolean;
-  delivery_pricing?: "free" | "paid";
+  delivery_pricing?: "free" | "paid" | null;
   delivery_fee_per_km?: number | null;
   free_delivery_max_distance_km?: number | null;
   promotion_ends_at?: string | null;
@@ -194,7 +194,7 @@ export interface CreateProductData {
   images?: string[];
   is_available?: boolean;
   delivery_available?: boolean;
-  delivery_pricing?: "free" | "paid";
+  delivery_pricing?: "free" | "paid" | null;
   delivery_fee_per_km?: number | null;
   free_delivery_max_distance_km?: number | null;
 }
@@ -246,7 +246,7 @@ export interface ProductFormData {
   images?: string[];
   is_available: boolean;
   delivery_available: boolean;
-  delivery_pricing: "free" | "paid";
+  delivery_pricing: "free" | "paid" | null;
   delivery_fee_per_km?: number | null;
   free_delivery_max_distance_km?: number | null;
 }

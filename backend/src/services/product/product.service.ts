@@ -66,8 +66,19 @@ export class ProductService {
     return product;
   }
 
+  private normalizeDeliveryPolicy(product: any) {
+    if (product?.delivery_available === false) {
+      product.delivery_pricing = null;
+      if (product.dataValues) product.dataValues.delivery_pricing = null;
+    }
+  }
+
   async getAllProducts(filters: IProductFilters) {
-    return this.productRepo.findAllWithFilters(filters);
+    const result = await this.productRepo.findAllWithFilters(filters);
+    for (const product of (result.products || []) as any[]) {
+      this.normalizeDeliveryPolicy(product);
+    }
+    return result;
   }
 
   async getProductById(id: string) {
@@ -76,6 +87,7 @@ export class ProductService {
       throw new AppError('Product not found', 404);
     }
     await this.ensurePickupLocation(product);
+    this.normalizeDeliveryPolicy(product);
     return product;
   }
 
@@ -88,6 +100,7 @@ export class ProductService {
     const products = await this.productRepo.findBySupplier(supplierId);
     for (const product of products as any[]) {
       await this.ensurePickupLocation(product);
+      this.normalizeDeliveryPolicy(product);
     }
     return products;
   }
@@ -106,7 +119,11 @@ export class ProductService {
 
     const deliveryAvailable = this.parseBoolean(productData.delivery_available) ?? true;
     const deliveryPricing =
-      productData.delivery_pricing === 'paid' ? 'paid' : 'free';
+      deliveryAvailable === false
+        ? null
+        : productData.delivery_pricing === 'paid'
+          ? 'paid'
+          : 'free';
     const deliveryFeePerKm =
       deliveryAvailable && deliveryPricing === 'paid'
         ? Number(productData.delivery_fee_per_km || 0)
@@ -215,9 +232,12 @@ export class ProductService {
   }
 
   if (updateData.delivery_available === false) {
-    updateData.delivery_pricing = 'free';
+    updateData.delivery_pricing = null;
     updateData.delivery_fee_per_km = 0;
     updateData.free_delivery_max_distance_km = null;
+  }
+  if (updateData.delivery_available === true && updateData.delivery_pricing == null) {
+    updateData.delivery_pricing = 'free';
   }
 
   if (updateData.delivery_pricing === 'free') {

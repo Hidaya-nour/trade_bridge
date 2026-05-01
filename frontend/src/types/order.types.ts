@@ -134,6 +134,8 @@ export type OrderDetailsItem = {
   total: number;
   stockAvailable?: number;
   image?: string | null;
+  deliveryAvailable?: boolean;
+  deliveryPricing?: "free" | "paid" | null;
 };
 
 export type OrderDetailsData = {

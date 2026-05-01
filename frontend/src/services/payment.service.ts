@@ -70,6 +70,13 @@ class PaymentService {
     return response.data;
   }
 
+  async verifyChapa(txRef: string) {
+    const response = await api.get(
+      `/payments/chapa/callback?tx_ref=${encodeURIComponent(txRef)}`,
+    );
+    return response.data;
+  }
+
   async getAll(params?: any) {
     const response = await api.get('/payments', { params });
     return response.data;

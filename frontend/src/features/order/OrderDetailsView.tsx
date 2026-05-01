@@ -1,44 +1,24 @@
+import {
+  AlertCircle,
+  ArrowLeft,
+  CheckCircle2,
+  Clock,
+  Flag,
+  Mail,
+  MapPin,
+  MessageSquare,
+  Package,
+  Phone,
+  Printer,
+  RotateCcw,
+  Star,
+  Truck,
+  User,
+  XCircle,
+} from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import {
-  Package,
-  Truck,
-  Clock,
-  CheckCircle2,
-  XCircle,
-  ArrowLeft,
-  MapPin,
-  Phone,
-  Mail,
-  Download,
-  Printer,
-  Star,
-  RotateCcw,
-  MessageSquare,
-  User,
-  AlertCircle,
-  Flag,
-} from "lucide-react";
 
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Separator } from "@/components/ui/separator";
-import { Progress } from "@/components/ui/progress";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -49,6 +29,16 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -58,25 +48,34 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { Progress } from "@/components/ui/progress";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
 
 import { StatusBadge } from "@/components";
 import { PlaceOrderDialog } from "@/components/order/PlaceOrderDialog";
-import { formatPrice, formatDate, formatDateTime } from "@/lib/formatters";
+import { Textarea } from "@/components/ui/textarea";
+import { formatDate, formatDateTime, formatPrice } from "@/lib/formatters";
 import { getPaymentMethodLabel } from "@/lib/payment-method-utils";
-import { getInitials, cn } from "@/lib/utils";
+import { cn, getInitials } from "@/lib/utils";
 import deliveryService from "@/services/delivery.service";
-import driverIssueService from "@/services/driver-issue.service";
 import disputeService from "@/services/dispute.service";
+import driverIssueService from "@/services/driver-issue.service";
 import orderService from "@/services/order.service";
 import { reportService } from "@/services/report.service";
-import toast from "react-hot-toast";
 import type {
-  OrderStatus,
+  DeliveryStatus,
   OrderDetailsData,
   OrderDetailsLinks,
-  DeliveryStatus,
+  OrderStatus,
 } from "@/types/order.types";
-import { Textarea } from "@/components/ui/textarea";
+import toast from "react-hot-toast";
 
 type OrderDetailsViewProps = {
   initialOrder: OrderDetailsData;
@@ -168,6 +167,11 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
   useEffect(() => {
     setOrder(initialOrder);
   }, [initialOrder]);
+
+  const hasPaidSupplierDelivery = order.items.some((item) => {
+    if (item.deliveryAvailable === false) return false;
+    return item.deliveryPricing === "paid";
+  });
 
   useEffect(() => {
     const deliveryId = order.delivery?.deliveryId;
@@ -370,7 +374,7 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
   };
 
   const handleApproveOrderSubmit = async () => {
-    const fee = Number(deliveryFee);
+    const fee = hasPaidSupplierDelivery ? Number(deliveryFee) : 0;
     if (isNaN(fee) || fee < 0) {
       toast.error("Please enter a valid delivery fee.");
       return;
@@ -1327,8 +1331,8 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
           <DialogHeader>
             <DialogTitle>Approve Order</DialogTitle>
             <DialogDescription>
-              Review the order and enter the delivery fee for this order. 
-              Leave it as 0 if delivery is free.
+              Review the order and enter the delivery fee for this order. Leave
+              it as 0 if delivery is free.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
@@ -1345,16 +1349,26 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                   placeholder="0.00"
                   value={deliveryFee}
-                  onChange={(e) => setDeliveryFee(e.target.value === "" ? "" : Number(e.target.value))}
+                  onChange={(e) =>
+                    setDeliveryFee(
+                      e.target.value === "" ? "" : Number(e.target.value),
+                    )
+                  }
                 />
               </div>
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowApproveDialog(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setShowApproveDialog(false)}
+            >
               Cancel
             </Button>
-            <Button onClick={handleApproveOrderSubmit} disabled={approveLoading}>
+            <Button
+              onClick={handleApproveOrderSubmit}
+              disabled={approveLoading}
+            >
               {approveLoading ? "Approving..." : "Approve Order"}
             </Button>
           </DialogFooter>

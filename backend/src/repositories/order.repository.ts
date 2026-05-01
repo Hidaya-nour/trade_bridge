@@ -42,7 +42,16 @@ export class OrderRepository extends BaseRepository<Order> {
             {
               model: Product,
               as: 'product',
-              attributes: ['id', 'name', 'category', 'unit_type', 'images', 'price']
+              attributes: [
+                'id',
+                'name',
+                'category',
+                'unit_type',
+                'images',
+                'price',
+                'delivery_available',
+                'delivery_pricing',
+              ]
             }
           ]
         },
@@ -140,7 +149,15 @@ export class OrderRepository extends BaseRepository<Order> {
             {
               model: Product,
               as: 'product',
-              attributes: ['id', 'name', 'sku', 'unit_type', 'images']
+              attributes: [
+                'id',
+                'name',
+                'sku',
+                'unit_type',
+                'images',
+                'delivery_available',
+                'delivery_pricing',
+              ]
             }
           ]
         },
