@@ -384,7 +384,7 @@ export class OrderService {
       { where: { order_id: orderId, payment_status: 'pending' } as any },
     );
     await Payment.update(
-      { payment_status: 'completed' as any },
+      { payment_status: 'pending' as any },
       { where: { order_id: orderId, payment_method: 'credit' } as any },
     );
 
