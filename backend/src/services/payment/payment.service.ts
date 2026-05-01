@@ -9,7 +9,6 @@ import { SupplierPaymentMethodService } from '../supplier-payment-method/supplie
 type PaymentMethod =
   | 'app_payment'
   | 'mobile_banking'
-  | 'credit'
   | 'chapa';
 
 const supplierPaymentToOrderMethodMap: Record<string, PaymentMethod | null> = {
@@ -17,7 +16,6 @@ const supplierPaymentToOrderMethodMap: Record<string, PaymentMethod | null> = {
   mobile_banking: 'mobile_banking',
   credit_card: 'app_payment',
   chapa: 'app_payment',
-  credit: 'credit',
 };
 
 interface SubmitPaymentPayload {
@@ -36,10 +34,9 @@ interface SubmitPaymentPayload {
 class PaymentService {
   private supplierPaymentMethodService = new SupplierPaymentMethodService();
 
-  private toStoredPaymentMethod(method: string): 'mobile_banking' | 'chapa' | 'credit' {
+  private toStoredPaymentMethod(method: string): 'mobile_banking' | 'chapa' {
     // Frontend/API uses "app_payment" to mean "platform checkout". In the DB we store this as "chapa".
     if (method === 'app_payment' || method === 'chapa') return 'chapa';
-    if (method === 'credit') return 'credit';
     return 'mobile_banking';
   }
 
@@ -183,14 +180,6 @@ class PaymentService {
         ]
           .filter(Boolean)
           .join(' | ');
-      }
-
-      if (selectedMethod === 'credit') {
-        payment.payment_status = 'processing';
-        payment.amount_paid = 0 as any;
-        payment.notes = payment.notes || 'Buyer requested supplier credit.';
-        await payment.save();
-        return { payment };
       }
 
       let chapaCheckoutUrl: string | null = null;
