@@ -167,6 +167,7 @@ export type OrderDetailsData = {
   canCancel?: boolean;
   canReview?: boolean;
   canReorder?: boolean;
+  creditDueDate?: string
 };
 
 export type OrderDetailsLinks = {

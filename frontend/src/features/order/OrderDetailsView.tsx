@@ -1163,6 +1163,15 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                   <span className="text-muted-foreground">Payment Status</span>
                   <StatusBadge status={paymentBadgeStatus} />
                 </div>
+                {order.paymentMethod === "Buy on Credit" &&
+                  order.creditDueDate && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Due Date</span>
+                      <span className="font-medium text-amber-600">
+                        {order.creditDueDate}
+                      </span>
+                    </div>
+                  )}
                 {typeof order.paymentAmount === "number" && (
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Amount Due</span>

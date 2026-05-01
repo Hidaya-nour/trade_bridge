@@ -1,5 +1,5 @@
-import { create } from 'zustand';
 import supplierPaymentMethodService from '@/services/supplier-payment-method.service';
+import { create } from 'zustand';
 
 interface SupplierPaymentMethodState {
   items: any[];

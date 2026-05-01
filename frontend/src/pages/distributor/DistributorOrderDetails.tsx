@@ -4,6 +4,7 @@ import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { WithAsync } from "@/components/shared/WithAsync";
 import { Button } from "@/components/ui/button";
 import OrderDetailsView from "@/features/order/OrderDetailsView";
+import { formatDate } from "@/lib/formatters";
 import { getPaymentMethodLabel } from "@/lib/payment-method-utils";
 import deliveryService from "@/services/delivery.service";
 import documentService from "@/services/document.service";
@@ -11,6 +12,7 @@ import orderService from "@/services/order.service";
 import paymentService from "@/services/payment.service";
 import { useDriverStore } from "@/stores/driver.store";
 import { useOrderStore } from "@/stores/order.store";
+import { useSupplierPaymentMethodStore } from "@/stores/supplier-payment-method.store";
 import type { Order, OrderDetailsData, OrderStatus } from "@/types/order.types";
 import toast from "react-hot-toast";
 
@@ -80,6 +82,7 @@ const mapOrderToDetails = (
     vehicle?: string;
     available?: boolean;
   }[],
+  creditDueDays?: number | null,
 ) => {
   const items =
     order.items?.map((item) => ({
@@ -139,6 +142,24 @@ const mapOrderToDetails = (
     order.delivery?.pickup_location ||
     "Not provided";
 
+  // Compute credit due date if payment method is credit
+  let creditDueDate: string | undefined;
+  if (order.payment?.payment_method === "credit") {
+    // If backend already provides a due date
+    const rawDueDate = (order.payment as any)?.credit_due_date;
+    if (rawDueDate) {
+      creditDueDate = formatDate(rawDueDate);
+    } else if (creditDueDays) {
+      // Use the supplier's credit terms: base date = order approval date (or creation date if not yet approved)
+      const baseDate = (order as any).approved_at || order.created_at;
+      if (baseDate) {
+        const due = new Date(baseDate);
+        due.setDate(due.getDate() + creditDueDays);
+        creditDueDate = formatDate(due.toISOString().split("T")[0]);
+      }
+    }
+  }
+
   return {
     id: order.id,
     orderDate: order.created_at,
@@ -186,6 +207,7 @@ const mapOrderToDetails = (
     canCancel: true,
     canReview: mode === "outgoing",
     canReorder: mode === "outgoing",
+    creditDueDate, // this will be included in the returned object
   } as OrderDetailsData;
 };
 
@@ -203,6 +225,9 @@ const DistributorOrderDetailsPage: React.FC = () => {
   } = useOrderStore();
   const { drivers, fetchMyDrivers } = useDriverStore();
   const [buyerOrderHistory, setBuyerOrderHistory] = useState<Array<any>>([]);
+  const { items: paymentMethods, fetchAll: fetchPaymentMethods } =
+    useSupplierPaymentMethodStore();
+  const [creditDueDays, setCreditDueDays] = useState<number | null>(null);
 
   const isPurchaseOrder = location.pathname.includes("/purchase-orders/");
   const mode: "incoming" | "outgoing" = isPurchaseOrder
@@ -220,37 +245,57 @@ const DistributorOrderDetailsPage: React.FC = () => {
       fetchMyDrivers();
     }
   }, [mode, fetchMyDrivers]);
+
+  // Fetch buyer order history for credit orders
   useEffect(() => {
     if (!currentOrder || mode !== "incoming") return;
     if (currentOrder.payment?.payment_method !== "credit") return;
 
     const fetchHistory = async () => {
       try {
-        // Use the updated method that accepts buyer_id and supplier_id
         const response = await orderService.getOrdersAsSupplier({
           supplier_id: currentOrder.supplier_id,
           buyer_id: currentOrder.buyer_id,
           limit: 20,
         });
         const orders = response.data?.orders || response.orders || [];
-        // Map the response to match the expected shape for buyerOrderHistory
         const mappedOrders = orders.map((order: any) => ({
           id: order.id,
           orderDate: order.created_at,
           total: order.total_price,
-          status: order.order_status, // important for StatusBadge
+          status: order.order_status,
           paymentStatus: order.payment?.payment_status,
           itemsCount: order.items?.length,
         }));
         setBuyerOrderHistory(mappedOrders);
       } catch (err) {
         console.error("Failed to fetch buyer order history", err);
-        setBuyerOrderHistory([]); // fallback to empty
+        setBuyerOrderHistory([]);
       }
     };
 
     fetchHistory();
   }, [currentOrder, mode]);
+
+  // Fetch supplier payment methods to get credit due days
+  useEffect(() => {
+    if (currentOrder && currentOrder.supplier_id) {
+      fetchPaymentMethods({ supplier_id: currentOrder.supplier_id });
+    }
+  }, [currentOrder, fetchPaymentMethods]);
+
+  // Extract credit_due_days from the supplier's credit payment method
+  useEffect(() => {
+    const creditMethod = paymentMethods.find(
+      (m) => m.method_type === "credit" && m.is_active,
+    );
+    if (creditMethod?.credit_due_days) {
+      setCreditDueDays(creditMethod.credit_due_days);
+    } else {
+      setCreditDueDays(null);
+    }
+  }, [paymentMethods]);
+
   const driverOptions = useMemo(
     () =>
       drivers
@@ -267,8 +312,8 @@ const DistributorOrderDetailsPage: React.FC = () => {
 
   const orderDetails = useMemo(() => {
     if (!currentOrder) return null;
-    return mapOrderToDetails(currentOrder, mode, driverOptions);
-  }, [currentOrder, mode, driverOptions]);
+    return mapOrderToDetails(currentOrder, mode, driverOptions, creditDueDays);
+  }, [currentOrder, mode, driverOptions, creditDueDays]);
 
   const resolvedError =
     !isLoading && !orderDetails ? error || "Order not found." : null;

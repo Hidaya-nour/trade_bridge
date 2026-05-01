@@ -1,15 +1,18 @@
-import React, { useEffect, useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 
-import OrderDetailsView from "@/features/order/OrderDetailsView";
-import { useOrderStore } from "@/stores/order.store";
-import { useDriverStore } from "@/stores/driver.store";
-import deliveryService from "@/services/delivery.service";
-import paymentService from "@/services/payment.service";
-import { getPaymentMethodLabel } from "@/lib/payment-method-utils";
-import toast from "react-hot-toast";
-import type { Order, OrderStatus, OrderDetailsData } from "@/types/order.types";
 import { WithAsync } from "@/components/shared/WithAsync";
+import OrderDetailsView from "@/features/order/OrderDetailsView";
+import { formatDate } from "@/lib/formatters";
+import { getPaymentMethodLabel } from "@/lib/payment-method-utils";
+import deliveryService from "@/services/delivery.service";
+import orderService from "@/services/order.service";
+import paymentService from "@/services/payment.service";
+import { useDriverStore } from "@/stores/driver.store";
+import { useOrderStore } from "@/stores/order.store";
+import { useSupplierPaymentMethodStore } from "@/stores/supplier-payment-method.store";
+import type { Order, OrderDetailsData, OrderStatus } from "@/types/order.types";
+import toast from "react-hot-toast";
 
 const statusIndex: Record<OrderStatus, number> = {
   pending: 0,
@@ -64,6 +67,7 @@ const mapOrderToDetails = (
     vehicle?: string;
     available?: boolean;
   }[],
+  creditDueDays?: number | null,
 ) => {
   const items =
     order.items?.map((item) => ({
@@ -82,7 +86,8 @@ const mapOrderToDetails = (
 
   const subtotal = items.reduce((sum, item) => sum + item.total, 0);
   const total = order.total_price || subtotal;
-  const tax = Math.max(0, total - subtotal);
+  const shipping = (order as any).delivery_fee ?? 0;
+  const tax = Math.max(0, total - subtotal - shipping);
 
   const buyerName =
     order.buyer?.business_name || order.buyer?.full_name || "Customer";
@@ -102,6 +107,22 @@ const mapOrderToDetails = (
     order.delivery?.pickup_location ||
     "Not provided";
 
+  // Compute credit due date if payment method is credit
+  let creditDueDate: string | undefined;
+  if (order.payment?.payment_method === "credit") {
+    const rawDueDate = (order.payment as any)?.credit_due_date;
+    if (rawDueDate) {
+      creditDueDate = formatDate(rawDueDate);
+    } else if (creditDueDays) {
+      const baseDate = (order as any).approved_at || order.created_at;
+      if (baseDate) {
+        const due = new Date(baseDate);
+        due.setDate(due.getDate() + creditDueDays);
+        creditDueDate = formatDate(due.toISOString().split("T")[0]);
+      }
+    }
+  }
+
   return {
     id: order.id,
     orderDate: order.created_at,
@@ -116,7 +137,7 @@ const mapOrderToDetails = (
     paymentProofName:
       (order.payment as any)?.proofDocument?.original_file_name || undefined,
     subtotal,
-    shipping: 0,
+    shipping,
     tax,
     total,
     notes: undefined,
@@ -129,7 +150,7 @@ const mapOrderToDetails = (
       status: (order.delivery as any)?.status,
       address,
       recipient: recipientName,
-      phone: ((order.buyer as any)?.phone || undefined) || "N/A",
+      phone: (order.buyer as any)?.phone || undefined || "N/A",
       requestedDate: undefined,
       estimatedDate: undefined,
       actualDate: order.delivery?.completed_at,
@@ -147,6 +168,9 @@ const mapOrderToDetails = (
     drivers,
     canAssignDriver: true,
     canCancel: true,
+    canReview: false, // not relevant for supplier
+    canReorder: false, // not relevant for supplier
+    creditDueDate,
   } as OrderDetailsData;
 };
 
@@ -155,6 +179,10 @@ const FactoryOrderDetailsPage: React.FC = () => {
   const { currentOrder, fetchOrderById, isLoading, error, updateOrderStatus } =
     useOrderStore();
   const { drivers, fetchMyDrivers } = useDriverStore();
+  const { items: paymentMethods, fetchAll: fetchPaymentMethods } =
+    useSupplierPaymentMethodStore();
+  const [buyerOrderHistory, setBuyerOrderHistory] = useState<Array<any>>([]);
+  const [creditDueDays, setCreditDueDays] = useState<number | null>(null);
 
   useEffect(() => {
     if (id) {
@@ -165,6 +193,56 @@ const FactoryOrderDetailsPage: React.FC = () => {
   useEffect(() => {
     fetchMyDrivers();
   }, [fetchMyDrivers]);
+
+  // Fetch customer order history for credit orders
+  useEffect(() => {
+    if (!currentOrder || currentOrder.payment?.payment_method !== "credit")
+      return;
+
+    const fetchHistory = async () => {
+      try {
+        const response = await orderService.getOrdersAsSupplier({
+          supplier_id: currentOrder.supplier_id,
+          buyer_id: currentOrder.buyer_id,
+          limit: 20,
+        });
+        const orders = response.data?.orders || response.orders || [];
+        const mappedOrders = orders.map((order: any) => ({
+          id: order.id,
+          orderDate: order.created_at,
+          total: order.total_price,
+          status: order.order_status,
+          paymentStatus: order.payment?.payment_status,
+          itemsCount: order.items?.length,
+        }));
+        setBuyerOrderHistory(mappedOrders);
+      } catch (err) {
+        console.error("Failed to fetch buyer order history", err);
+        setBuyerOrderHistory([]);
+      }
+    };
+
+    fetchHistory();
+  }, [currentOrder]);
+
+  // Fetch supplier payment methods to get credit due days
+  useEffect(() => {
+    if (currentOrder && currentOrder.supplier_id) {
+      fetchPaymentMethods({ supplier_id: currentOrder.supplier_id });
+    }
+  }, [currentOrder, fetchPaymentMethods]);
+
+  // Extract credit_due_days from the supplier's credit payment method
+  useEffect(() => {
+    const creditMethod = paymentMethods.find(
+      (m) => m.method_type === "credit" && m.is_active,
+    );
+    if (creditMethod?.credit_due_days) {
+      setCreditDueDays(creditMethod.credit_due_days);
+    } else {
+      setCreditDueDays(null);
+    }
+  }, [paymentMethods]);
 
   const driverOptions = useMemo(
     () =>
@@ -182,8 +260,8 @@ const FactoryOrderDetailsPage: React.FC = () => {
 
   const orderDetails = useMemo(() => {
     if (!currentOrder) return null;
-    return mapOrderToDetails(currentOrder, driverOptions);
-  }, [currentOrder, driverOptions]);
+    return mapOrderToDetails(currentOrder, driverOptions, creditDueDays);
+  }, [currentOrder, driverOptions, creditDueDays]);
 
   const resolvedError =
     !isLoading && !orderDetails ? error || "Order not found." : null;
@@ -253,6 +331,7 @@ const FactoryOrderDetailsPage: React.FC = () => {
           "Payment issue",
           "Other",
         ]}
+        buyerOrderHistory={buyerOrderHistory} // <-- pass history for credit orders
       />
     </WithAsync>
   );
