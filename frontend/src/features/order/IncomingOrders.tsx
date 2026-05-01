@@ -1,64 +1,19 @@
+import {
+  AlertCircle,
+  Calendar,
+  CheckCircle2,
+  Clock,
+  Eye,
+  MapPin,
+  Package,
+  Phone,
+  Truck,
+  User,
+  XCircle,
+} from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import {
-  Package,
-  Search,
-  Filter,
-  Eye,
-  CheckCircle2,
-  XCircle,
-  Clock,
-  Truck,
-  AlertCircle,
-  ChevronRight,
-  Download,
-  Store,
-  User,
-  Calendar,
-  DollarSign,
-  MapPin,
-  Phone,
-  Mail,
-  Printer,
-  MoreVertical,
-  Factory,
-} from "lucide-react";
 
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardFooter,
-} from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -69,24 +24,41 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Separator } from "@/components/ui/separator";
-import { Progress } from "@/components/ui/progress";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 import {
-  StatusBadge,
-  StatsCard,
   EmptyState,
   PaginationBar,
   SearchFilter,
+  StatsCard,
+  StatusBadge,
 } from "@/components";
-import { formatPrice, formatDate, formatDateTime } from "@/lib/formatters";
-import { getInitials, cn } from "@/lib/utils";
-import { useDriverStore } from "@/stores/driver.store";
+import { formatDate, formatPrice } from "@/lib/formatters";
+import { cn, getInitials } from "@/lib/utils";
 import deliveryService from "@/services/delivery.service";
-import toast from "react-hot-toast";
+import { useDriverStore } from "@/stores/driver.store";
 import type { IncomingOrder, IncomingOrdersConfig } from "@/types/order.types";
+import toast from "react-hot-toast";
 
 // ============================================================================
 // PROPS
@@ -624,45 +596,6 @@ export const IncomingOrders: React.FC<IncomingOrdersProps> = ({
                   </div>
 
                   <div className="flex items-center gap-2 flex-wrap">
-                    {order.status === "pending" && (
-                      <>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                          onClick={() => {
-                            setSelectedOrder(order);
-                            setShowRejectDialog(true);
-                          }}
-                        >
-                          <XCircle className="h-4 w-4 mr-2" />
-                          Reject
-                        </Button>
-                        <Button
-                          size="sm"
-                          className="bg-green-600 hover:bg-green-700"
-                          onClick={() => {
-                            setSelectedOrder(order);
-                            setDeliveryFee(""); setShowApproveDialog(true);
-                          }}
-                        >
-                          <CheckCircle2 className="h-4 w-4 mr-2" />
-                          Approve Order
-                        </Button>
-                      </>
-                    )}
-
-                    {order.status === "approved" && (
-                      <Button
-                        size="sm"
-                        className="bg-blue-600 hover:bg-blue-700"
-                        onClick={() => handleProcess(order.id)}
-                      >
-                        <Package className="h-4 w-4 mr-2" />
-                        Start Processing
-                      </Button>
-                    )}
-
                     {order.status === "processing" &&
                       (config.role === "distributor" ||
                         config.role === "factory") &&
