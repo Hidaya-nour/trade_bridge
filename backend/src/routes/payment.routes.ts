@@ -1,8 +1,8 @@
 import { Router } from 'express';
 import { body, param } from 'express-validator';
+import paymentController from '../controllers/payment.controller';
 import { authenticate } from '../middleware/auth.middleware';
 import { validate } from '../middleware/validation.middleware';
-import paymentController from '../controllers/payment.controller';
 
 const router = Router();
 
@@ -23,7 +23,6 @@ const paymentMethodValues = [
 
 const paymentStatusValues = [
   'pending',
-  'processing',
   'completed',
   'failed',
   'refunded',

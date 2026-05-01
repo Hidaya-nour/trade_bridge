@@ -1050,6 +1050,72 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
               </CardContent>
             </Card>
           )}
+
+          {/* Buyer Order History (for credit orders) */}
+          {mode === "incoming" &&
+            (order.paymentMethod === "Buy on Credit" ||
+              order.paymentMethod === "credit") &&
+            buyerOrderHistory.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">
+                    Customer Order History
+                  </CardTitle>
+                  <CardDescription>
+                    Previous orders from this buyer with your business.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="text-sm">
+                    <div className="flex justify-between mb-2 font-medium border-b pb-1">
+                      <span>Order ID</span>
+                      <span>Date</span>
+                      <span>Total</span>
+                      <span>Status</span>
+                    </div>
+                    <div className="space-y-2 max-h-48 overflow-y-auto">
+                      {buyerOrderHistory.slice(0, 5).map((prevOrder) => (
+                        <div
+                          key={prevOrder.id}
+                          className="flex justify-between text-sm"
+                        >
+                          <span className="font-mono text-xs">
+                            {prevOrder.id.slice(-8)}
+                          </span>
+                          <span>{formatDate(prevOrder.orderDate)}</span>
+                          <span className="font-medium">
+                            {formatPrice(prevOrder.total)}
+                          </span>
+                          <StatusBadge status={prevOrder.status} />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  {buyerOrderHistory.length > 5 && (
+                    <p className="text-xs text-muted-foreground text-center">
+                      Showing last 5 of {buyerOrderHistory.length} orders.
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+          {mode === "incoming" &&
+            (order.paymentMethod === "Buy on Credit" ||
+              order.paymentMethod === "credit") &&
+            buyerOrderHistory.length === 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">
+                    Customer Order History
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground">
+                    This buyer has no previous orders with you.
+                  </p>
+                </CardContent>
+              </Card>
+            )}
         </div>
 
         {/* Right Column - 1 col */}
@@ -1250,71 +1316,6 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
           {/* Action Buttons */}
           <Card>
             <CardContent className="p-4 space-y-2">
-              {/* Buyer Order History (for credit orders) */}
-              {mode === "incoming" &&
-                (order.paymentMethod === "Buy on Credit" ||
-                  order.paymentMethod === "credit") &&
-                buyerOrderHistory.length > 0 && (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-base">
-                        Customer Order History
-                      </CardTitle>
-                      <CardDescription>
-                        Previous orders from this buyer with your business.
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      <div className="text-sm">
-                        <div className="flex justify-between mb-2 font-medium border-b pb-1">
-                          <span>Order ID</span>
-                          <span>Date</span>
-                          <span>Total</span>
-                          <span>Status</span>
-                        </div>
-                        <div className="space-y-2 max-h-48 overflow-y-auto">
-                          {buyerOrderHistory.slice(0, 5).map((prevOrder) => (
-                            <div
-                              key={prevOrder.id}
-                              className="flex justify-between text-sm"
-                            >
-                              <span className="font-mono text-xs">
-                                {prevOrder.id.slice(-8)}
-                              </span>
-                              <span>{formatDate(prevOrder.orderDate)}</span>
-                              <span className="font-medium">
-                                {formatPrice(prevOrder.total)}
-                              </span>
-                              <StatusBadge status={prevOrder.status} />
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                      {buyerOrderHistory.length > 5 && (
-                        <p className="text-xs text-muted-foreground text-center">
-                          Showing last 5 of {buyerOrderHistory.length} orders.
-                        </p>
-                      )}
-                    </CardContent>
-                  </Card>
-                )}
-              {mode === "incoming" &&
-                (order.paymentMethod === "Buy on Credit" ||
-                  order.paymentMethod === "credit") &&
-                buyerOrderHistory.length === 0 && (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-base">
-                        Customer Order History
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-sm text-muted-foreground">
-                        This buyer has no previous orders with you.
-                      </p>
-                    </CardContent>
-                  </Card>
-                )}
               {mode === "incoming" && getNextStatusOptions().length > 0 && (
                 <Button
                   className="w-full justify-start bg-blue-600 hover:bg-blue-700"

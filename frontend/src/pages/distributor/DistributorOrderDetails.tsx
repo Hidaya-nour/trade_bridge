@@ -220,33 +220,37 @@ const DistributorOrderDetailsPage: React.FC = () => {
       fetchMyDrivers();
     }
   }, [mode, fetchMyDrivers]);
-
   useEffect(() => {
     if (!currentOrder || mode !== "incoming") return;
     if (currentOrder.payment?.payment_method !== "credit") return;
 
     const fetchHistory = async () => {
       try {
-        // Fetch orders as supplier, filtered by both supplier_id and buyer_id.
-        // The backend must support these filters.
-        // We'll call the store action which will update the store's orders,
-        // but we only need the filtered list; we can also call the service directly.
+        // Use the updated method that accepts buyer_id and supplier_id
         const response = await orderService.getOrdersAsSupplier({
           supplier_id: currentOrder.supplier_id,
           buyer_id: currentOrder.buyer_id,
           limit: 20,
-          // omit "status: 'all'" – not allowed by type
         });
         const orders = response.data?.orders || response.orders || [];
-        setBuyerOrderHistory(orders);
+        // Map the response to match the expected shape for buyerOrderHistory
+        const mappedOrders = orders.map((order: any) => ({
+          id: order.id,
+          orderDate: order.created_at,
+          total: order.total_price,
+          status: order.order_status, // important for StatusBadge
+          paymentStatus: order.payment?.payment_status,
+          itemsCount: order.items?.length,
+        }));
+        setBuyerOrderHistory(mappedOrders);
       } catch (err) {
         console.error("Failed to fetch buyer order history", err);
+        setBuyerOrderHistory([]); // fallback to empty
       }
     };
 
     fetchHistory();
   }, [currentOrder, mode]);
-
   const driverOptions = useMemo(
     () =>
       drivers
