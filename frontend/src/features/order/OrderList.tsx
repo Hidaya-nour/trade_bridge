@@ -1025,7 +1025,7 @@ if (order.order_status !== "approved") {
           onPaymentSubmit={handlePaymentSubmit}
           isProcessing={paymentProcessing}
           config={{
-            allowedMethods: ["app_payment", "mobile_banking"],
+            allowedMethods: ["app_payment", "mobile_banking", "credit"],
             supplierAllowedMethods: supplierAllowedMethods,
             supplierPaymentMethods,
             maxDocumentSize: 5,
@@ -1132,6 +1132,8 @@ if (order.order_status !== "approved") {
             )
           }
           onProcessPayment={onProcessPayment as any}
+          supplierAllowedMethods={supplierAllowedMethods}
+          supplierPaymentMethods={supplierPaymentMethods}
         />
       )}
 

@@ -1,53 +1,36 @@
-import React, { useEffect, useState } from "react";
-import { Link, useLocation } from "react-router-dom";
 import L from "leaflet";
-import { useMap, useMapEvents } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import {
-  User,
-  Building,
   Bell,
-  Shield,
+  Building,
   CreditCard,
   Globe,
-  Lock,
-  LogOut,
-  Trash2,
+  Shield,
   Truck,
+  User,
 } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import { useMap, useMapEvents } from "react-leaflet";
+import { useLocation } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
-import { Separator } from "@/components/ui/separator";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent } from "@/components/ui/card";
+import { Tabs } from "@/components/ui/tabs";
 
-import { useAuthStore } from "@/stores/auth.store";
-import { useSupplierPaymentMethodStore } from "@/stores/supplier-payment-method.store";
-import { useNotificationStore } from "@/stores/notification.store";
-import { useDocumentStore } from "@/stores/document.store";
-import { useAddressStore } from "@/stores/address.store";
-import documentService from "@/services/document.service";
 import { authService } from "@/services/auth.service";
-import ProfileTab from "../../components/setting/ProfileTab";
+import documentService from "@/services/document.service";
+import { useAddressStore } from "@/stores/address.store";
+import { useAuthStore } from "@/stores/auth.store";
+import { useDocumentStore } from "@/stores/document.store";
+import { useNotificationStore } from "@/stores/notification.store";
+import { useSupplierPaymentMethodStore } from "@/stores/supplier-payment-method.store";
 import BusinessTab from "../../components/setting/BusinessTab";
-import VehicleTab from "../../components/setting/VehicleTab";
 import NotificationsTab from "../../components/setting/NotificationsTab";
-import SecurityTab from "../../components/setting/SecurityTab";
 import PaymentTab from "../../components/setting/PaymentTab";
 import PreferencesTab from "../../components/setting/PreferencesTab";
+import ProfileTab from "../../components/setting/ProfileTab";
+import SecurityTab from "../../components/setting/SecurityTab";
+import VehicleTab from "../../components/setting/VehicleTab";
 
 type ProfileFormState = {
   full_name: string;
@@ -200,11 +183,13 @@ const SettingsPage: React.FC = () => {
   });
   const [paymentMessage, setPaymentMessage] = useState<string | null>(null);
   const [newPaymentMethod, setNewPaymentMethod] = useState({
-    method_type: "credit_card",
+    method_type: "chapa",
     provider_name: "",
     account_holder_name: "",
     account_identifier: "",
     account_display: "",
+    credit_due_days: "",
+    credit_limit: "",
     is_primary: false,
   });
 
@@ -674,38 +659,92 @@ const SettingsPage: React.FC = () => {
 
   const handleCreatePaymentMethod = async () => {
     setPaymentMessage(null);
-    if (
-      !newPaymentMethod.provider_name ||
-      !newPaymentMethod.account_holder_name ||
-      !newPaymentMethod.account_identifier
-    ) {
-      setPaymentMessage("Please fill all payment method fields");
-      return;
+
+    // Trim all string fields
+    const trimmedProvider = newPaymentMethod.provider_name?.trim();
+    const trimmedHolder = newPaymentMethod.account_holder_name?.trim();
+    const trimmedIdentifier = newPaymentMethod.account_identifier?.trim();
+    const trimmedDueDays = newPaymentMethod.credit_due_days?.trim();
+    const trimmedCreditLimit = newPaymentMethod.credit_limit?.trim();
+
+    // Validation as you already have...
+    if (newPaymentMethod.method_type !== "credit") {
+      if (!trimmedProvider) {
+        setPaymentMessage("Please select a payment provider.");
+        return;
+      }
+      if (!trimmedHolder) {
+        setPaymentMessage("Account holder name is required.");
+        return;
+      }
+      if (!trimmedIdentifier) {
+        setPaymentMessage(
+          "Account identifier (phone/account number) is required.",
+        );
+        return;
+      }
+    } else {
+      if (!trimmedHolder) {
+        setPaymentMessage("Account holder name is required.");
+        return;
+      }
+      const dueDays = Number(trimmedDueDays);
+      const limit = Number(trimmedCreditLimit);
+      if (!dueDays || dueDays <= 0 || !limit || limit <= 0) {
+        setPaymentMessage(
+          "Please set valid due days and credit limit (positive numbers).",
+        );
+        return;
+      }
     }
 
-    const created = await createSupplierPaymentMethod({
-      ...newPaymentMethod,
+    const payload = {
+      method_type: newPaymentMethod.method_type,
+      provider_name:
+        newPaymentMethod.method_type === "credit"
+          ? "Supplier Credit"
+          : trimmedProvider,
+      account_holder_name: trimmedHolder,
+      account_identifier:
+        newPaymentMethod.method_type === "credit"
+          ? "credit"
+          : trimmedIdentifier,
       account_display:
-        newPaymentMethod.account_display ||
-        `${newPaymentMethod.provider_name} - ${newPaymentMethod.account_identifier}`,
-    });
-    if (created) {
-      setPaymentMessage("Payment method added");
-      setNewPaymentMethod({
-        method_type: "credit_card",
-        provider_name: "",
-        account_holder_name: "",
-        account_identifier: "",
-        account_display: "",
-        is_primary: false,
-      });
-      await fetchSupplierPaymentMethods();
-      window.dispatchEvent(new Event("supplier-payment-methods-updated"));
-    } else {
-      setPaymentMessage("Failed to add payment method");
+        newPaymentMethod.account_display?.trim() ||
+        (newPaymentMethod.method_type === "credit"
+          ? `${Number(trimmedDueDays)} days, max ETB ${Number(trimmedCreditLimit).toLocaleString()}`
+          : `${trimmedProvider} - ${trimmedIdentifier}`),
+      credit_due_days: trimmedDueDays ? Number(trimmedDueDays) : undefined,
+      credit_limit: trimmedCreditLimit ? Number(trimmedCreditLimit) : undefined,
+      is_primary: newPaymentMethod.is_primary,
+      supplier_id: user?.id,
+    };
+
+    try {
+      const created = await createSupplierPaymentMethod(payload);
+      if (created) {
+        setPaymentMessage("Payment method added");
+        setNewPaymentMethod({
+          method_type: "chapa",
+          provider_name: "",
+          account_holder_name: "",
+          account_identifier: "",
+          account_display: "",
+          credit_due_days: "",
+          credit_limit: "",
+          is_primary: false,
+        });
+        await fetchSupplierPaymentMethods();
+        window.dispatchEvent(new Event("supplier-payment-methods-updated"));
+      } else {
+        setPaymentMessage("Failed to add payment method");
+      }
+    } catch (error: any) {
+      console.error("Payment method creation error:", error);
+      const backendMessage = error?.response?.data?.message || error?.message;
+      setPaymentMessage(backendMessage || "Failed to add payment method");
     }
   };
-
   const handleSetPrimaryPaymentMethod = async (id: string) => {
     setPaymentMessage(null);
     const updated = await updateSupplierPaymentMethod(id, { is_primary: true });

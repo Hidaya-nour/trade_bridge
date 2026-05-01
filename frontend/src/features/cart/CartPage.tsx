@@ -46,6 +46,9 @@ import type { CartConfig, CartItem } from "@/types/cart.types";
 import type { OrderItem } from "@/types/order.types";
 import paymentService from "@/services/payment.service";
 import documentService from "@/services/document.service";
+import supplierPaymentMethodService from "@/services/supplier-payment-method.service";
+import { supplierMethodsToPaymentMethods } from "@/lib/payment-method-utils";
+import type { PaymentMethod, SupplierPaymentMethodInfo } from "@/types/payment.types";
 
 interface CartPageProps {
   config: CartConfig;
@@ -64,6 +67,8 @@ export const CartPage: React.FC<CartPageProps> = ({ config }) => {
   const [promoCode, setPromoCode] = useState("");
   const [promoApplied, setPromoApplied] = useState(false);
   const [checkoutDialogOpen, setCheckoutDialogOpen] = useState(false);
+  const [supplierAllowedMethods, setSupplierAllowedMethods] = useState<PaymentMethod[]>([]);
+  const [supplierPaymentMethods, setSupplierPaymentMethods] = useState<SupplierPaymentMethodInfo[]>([]);
   const [itemSelection, setItemSelection] = useState<Record<string, boolean>>(
     {},
   );
@@ -306,6 +311,58 @@ export const CartPage: React.FC<CartPageProps> = ({ config }) => {
   useEffect(() => {
     fetchCart();
   }, [fetchCart]);
+
+  useEffect(() => {
+    if (!checkoutDialogOpen) return;
+    let cancelled = false;
+
+    const loadMethods = async () => {
+      const supplierIds = Array.from(
+        new Set(
+          selectedItems
+            .map((item) => item.product?.supplier_id)
+            .filter(Boolean) as string[],
+        ),
+      );
+      if (supplierIds.length === 0) {
+        setSupplierAllowedMethods([]);
+        setSupplierPaymentMethods([]);
+        return;
+      }
+
+      try {
+        const methodGroups = await Promise.all(
+          supplierIds.map(async (supplierId) => {
+            const response =
+              await supplierPaymentMethodService.getActiveBySupplierId(supplierId);
+            return response.data || response || [];
+          }),
+        );
+        if (cancelled) return;
+        const allMethods = methodGroups.flat();
+        const allowedBySupplier = methodGroups.map((methods) =>
+          supplierMethodsToPaymentMethods(methods),
+        );
+        const sharedMethods = allowedBySupplier.reduce<PaymentMethod[]>(
+          (shared, methods) =>
+            shared.filter((method) => methods.includes(method)),
+          allowedBySupplier[0] || [],
+        );
+        setSupplierPaymentMethods(allMethods);
+        setSupplierAllowedMethods(sharedMethods);
+      } catch (error) {
+        if (cancelled) return;
+        console.error("Failed to load supplier payment methods", error);
+        setSupplierAllowedMethods([]);
+        setSupplierPaymentMethods([]);
+      }
+    };
+
+    void loadMethods();
+    return () => {
+      cancelled = true;
+    };
+  }, [checkoutDialogOpen, selectedItems]);
 
   useEffect(() => {
     if (cartItems.length > 0) {
@@ -932,6 +989,8 @@ export const CartPage: React.FC<CartPageProps> = ({ config }) => {
         onPlaceOrder={handlePlaceOrder}
         onProcessPayment={handleProcessPayment as any}
         isPlacing={orderLoading}
+        supplierAllowedMethods={supplierAllowedMethods}
+        supplierPaymentMethods={supplierPaymentMethods}
       />
     </div>
   );

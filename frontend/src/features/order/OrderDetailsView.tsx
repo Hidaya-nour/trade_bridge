@@ -470,7 +470,7 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
     setReportSubmitting(true);
     try {
       await reportService.create({
-        reported_user_id: order.party.id,
+        reported_user_id: String(order.party.id),
         reason,
         description: details,
         order_id: order.id,
@@ -1773,7 +1773,7 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                 : 0,
           }}
           config={{
-            role,
+            role: role === "factory" ? "distributor" : role,
             ordersPath: ordersPath || "/orders",
           }}
           onPlaceOrder={onReorderPlaceOrder}

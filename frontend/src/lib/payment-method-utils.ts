@@ -10,6 +10,8 @@ export const supplierMethodTypeToPaymentMethod = (
     case 'credit_card':
     case 'chapa':
       return 'app_payment';
+    case 'credit':
+      return 'credit';
     default:
       return null;
   }
@@ -35,6 +37,8 @@ export const getPaymentMethodLabel = (
       return "App Payment";
     case "mobile_banking":
       return "Mobile Banking";
+    case "credit":
+      return "Buy on Credit";
     case undefined:
     case null:
     case "":

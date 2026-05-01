@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import {
   CreditCard,
   Smartphone,
+  BadgeDollarSign,
   Upload,
   CheckCircle2,
   AlertCircle,
@@ -46,6 +47,14 @@ const PAYMENT_METHODS: PaymentMethodConfig[] = [
     requiresDocument: true,
     enabled: true,
   },
+  {
+    id: "credit",
+    name: "Buy on Credit",
+    icon: BadgeDollarSign,
+    description: "Request supplier approval to pay later within their credit terms",
+    requiresApproval: true,
+    enabled: true,
+  },
 ];
 
 const DEFAULT_MOBILE_PROVIDERS = [
@@ -77,6 +86,8 @@ const getSupplierMethodLabel = (methodType: string) => {
     case "mobile_money":
     case "mobile_banking":
       return "Mobile Banking";
+    case "credit":
+      return "Buy on Credit";
     default:
       return methodType;
   }
@@ -91,7 +102,9 @@ const getMethodSpecificSupplierDetails = (
   return config.supplierPaymentMethods.filter((method) =>
     selectedMethod === "app_payment"
       ? isSupplierAppMethodType(method.method_type)
-      : isSupplierMobileMethodType(method.method_type),
+      : selectedMethod === "credit"
+        ? method.method_type === "credit"
+        : isSupplierMobileMethodType(method.method_type),
   );
 };
 
@@ -441,6 +454,36 @@ export const PaymentDialog: React.FC<PaymentDialogProps> = ({
               </div>
             </div>
           )}
+
+          {selectedMethod === "credit" && (
+            <div className="space-y-3 rounded-lg border p-4">
+              <p className="font-medium">Buy on Credit</p>
+              <p className="text-sm text-muted-foreground">
+                The supplier will review your order history and either approve
+                or reject this credit order.
+              </p>
+              {supplierMethodDetails[0] && (
+                <div className="rounded-md bg-muted/40 p-3 text-sm">
+                  Due in {supplierMethodDetails[0].credit_due_days || "N/A"} days · Limit ETB{" "}
+                  {Number(supplierMethodDetails[0].credit_limit || 0).toLocaleString()}
+                </div>
+              )}
+              <div className="space-y-2">
+                <Label htmlFor="credit-notes">Notes for supplier</Label>
+                <Textarea
+                  id="credit-notes"
+                  placeholder="Optional credit request note"
+                  value={paymentDetails.notes || ""}
+                  onChange={(event) =>
+                    setPaymentDetails((prev) => ({
+                      ...prev,
+                      notes: event.target.value,
+                    }))
+                  }
+                />
+              </div>
+            </div>
+          )}
         </div>
 
         <DialogFooter>
@@ -456,6 +499,8 @@ export const PaymentDialog: React.FC<PaymentDialogProps> = ({
               ? "Processing..."
               : selectedMethod === "app_payment"
                 ? "Continue to App Payment"
+                : selectedMethod === "credit"
+                  ? "Request Credit"
                 : "Submit Payment"}
           </Button>
         </DialogFooter>

@@ -1,7 +1,7 @@
 // components/shared/PlaceOrderDialog.tsx
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { CreditCard, Smartphone, Truck, Plus, Minus } from "lucide-react";
+import { CreditCard, Smartphone, Truck, Plus, Minus, BadgeDollarSign } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -124,6 +124,8 @@ export const PlaceOrderDialog: React.FC<PlaceOrderDialogProps> = ({
   const [createdOrderTotal, setCreatedOrderTotal] = React.useState<number>(
     summary.total,
   );
+  const [selectedPaymentMethod, setSelectedPaymentMethod] =
+    React.useState<PaymentMethod>("app_payment");
 
   const toFinite = (value: any) => {
     const parsed = Number(value);
@@ -403,6 +405,19 @@ export const PlaceOrderDialog: React.FC<PlaceOrderDialogProps> = ({
 
   const isPlacing =
     externalIsPlacing !== undefined ? externalIsPlacing : internalIsPlacing;
+
+  const availablePaymentMethods = React.useMemo(() => {
+    const methods = supplierAllowedMethods?.length
+      ? supplierAllowedMethods
+      : (["app_payment", "mobile_banking"] as PaymentMethod[]);
+    return Array.from(new Set(methods));
+  }, [supplierAllowedMethods]);
+
+  React.useEffect(() => {
+    if (!availablePaymentMethods.includes(selectedPaymentMethod)) {
+      setSelectedPaymentMethod(availablePaymentMethods[0] || "app_payment");
+    }
+  }, [availablePaymentMethods, selectedPaymentMethod]);
  
 
   const handlePlaceOrder = async () => {
@@ -416,7 +431,7 @@ export const PlaceOrderDialog: React.FC<PlaceOrderDialogProps> = ({
         }
 
         const result = await onPlaceOrder(
-          undefined,
+          selectedPaymentMethod,
           deliveryOption,
           normalizedAddress,
         );
@@ -600,6 +615,52 @@ export const PlaceOrderDialog: React.FC<PlaceOrderDialogProps> = ({
             </div>
 
             <Separator />
+
+            <div className="space-y-3">
+              <h4 className="text-sm font-medium">Payment Method</h4>
+              <div className="grid gap-3 md:grid-cols-3">
+                {availablePaymentMethods.map((method) => {
+                  const Icon =
+                    method === "app_payment"
+                      ? CreditCard
+                      : method === "credit"
+                        ? BadgeDollarSign
+                        : Smartphone;
+                  const label =
+                    method === "app_payment"
+                      ? "App Payment"
+                      : method === "credit"
+                        ? "Buy on Credit"
+                        : "Mobile Banking";
+                  const detail =
+                    method === "credit"
+                      ? "Supplier approval required"
+                      : method === "app_payment"
+                        ? "Pay after approval"
+                        : "Upload proof after approval";
+                  return (
+                    <button
+                      key={method}
+                      type="button"
+                      onClick={() => setSelectedPaymentMethod(method)}
+                      className={`rounded-lg border p-3 text-left text-sm ${
+                        selectedPaymentMethod === method
+                          ? "border-primary bg-primary/5"
+                          : "hover:border-primary/50"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 font-medium">
+                        <Icon className="h-4 w-4" />
+                        {label}
+                      </div>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {detail}
+                      </p>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
 
             {/* Delivery Options */}
             <div className="space-y-3">

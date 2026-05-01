@@ -23,12 +23,13 @@ const DEFAULT_VAT_RATE = 0.15;
 
 const supplierPaymentToOrderMethodMap: Record<
   string,
-  'app_payment' | 'mobile_banking' | null
+  'app_payment' | 'mobile_banking' | 'credit' | null
 > = {
   mobile_money: 'mobile_banking',
   mobile_banking: 'mobile_banking',
   credit_card: 'app_payment',
   chapa: 'app_payment',
+  credit: 'credit',
 };
 
 export class OrderService {
@@ -235,7 +236,7 @@ export class OrderService {
     const activeMethods = await this.supplierPaymentMethodService.getActiveSupplierPaymentMethods(supplier_id);
     const mappedMethods = activeMethods
       .map((m: any) => supplierPaymentToOrderMethodMap[m.method_type])
-      .filter(Boolean) as Array<'app_payment' | 'mobile_banking'>;
+      .filter(Boolean) as Array<'app_payment' | 'mobile_banking' | 'credit'>;
     const availablePaymentMethods = Array.from(new Set(mappedMethods));
 
     if (availablePaymentMethods.length === 0) {
@@ -380,6 +381,10 @@ export class OrderService {
     await Payment.update(
       { total_amount: newTotal as any },
       { where: { order_id: orderId, payment_status: 'pending' } as any },
+    );
+    await Payment.update(
+      { payment_status: 'processing' as any },
+      { where: { order_id: orderId, payment_method: 'credit' } as any },
     );
 
     logger.info(`Order ${orderId} approved by supplier ${supplierId} with delivery fee ${fee}`);

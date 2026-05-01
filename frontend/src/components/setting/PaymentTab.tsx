@@ -1,4 +1,4 @@
-import React from "react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -7,11 +7,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { TabsContent } from "@/components/ui/tabs";
 import {
   Select,
   SelectContent,
@@ -19,6 +16,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { TabsContent } from "@/components/ui/tabs";
+import React from "react";
 
 type NewPaymentMethod = {
   method_type: string;
@@ -26,6 +26,8 @@ type NewPaymentMethod = {
   account_holder_name: string;
   account_identifier: string;
   account_display: string;
+  credit_due_days: string;
+  credit_limit: string;
   is_primary: boolean;
 };
 
@@ -35,6 +37,8 @@ type SupplierPaymentMethod = {
   provider_name: string;
   account_holder_name: string;
   account_display: string;
+  credit_due_days?: number | null;
+  credit_limit?: number | null;
   is_primary: boolean;
 };
 
@@ -63,6 +67,38 @@ const PaymentTab: React.FC<PaymentTabProps> = ({
   handleSetPrimaryPaymentMethod,
   handleDeletePaymentMethod,
 }) => {
+  const appPaymentProviders = [
+    "Telebirr",
+    "M-Pesa",
+    "Amole",
+    "Awash Bank",
+    "Coopay Ebirr",
+    "CBE Birr",
+    "HelloCash",
+  ];
+  const mobileBankingProviders = [
+    "Commercial Bank of Ethiopia",
+    "Bank of Abyssinia",
+    "Awash Bank",
+    "Dashen Bank",
+    "Wegagen Bank",
+    "Hibret Bank",
+    "Nib International Bank",
+    "Zemen Bank",
+    "Cooperative Bank of Oromia",
+    "Oromia Bank",
+    "Berhan Bank",
+    "Bunna Bank",
+    "Abay Bank",
+    "Enat Bank",
+    "ZamZam Bank",
+  ];
+  const isCreditMethod = newPaymentMethod.method_type === "credit";
+  const providerOptions =
+    newPaymentMethod.method_type === "chapa"
+      ? appPaymentProviders
+      : mobileBankingProviders;
+
   return (
     <TabsContent value="payment" className="mt-0">
       <Card>
@@ -91,6 +127,11 @@ const PaymentTab: React.FC<PaymentTabProps> = ({
                         setNewPaymentMethod((prev) => ({
                           ...prev,
                           method_type: value,
+                          provider_name:
+                            value === "credit" ? "Supplier Credit" : "",
+                          account_identifier:
+                            value === "credit" ? "credit" : "",
+                          account_display: "",
                         }))
                       }
                     >
@@ -101,27 +142,40 @@ const PaymentTab: React.FC<PaymentTabProps> = ({
                         <SelectItem value="mobile_money">
                           Mobile Banking
                         </SelectItem>
-                        <SelectItem value="credit_card">
-                          App Payment
-                        </SelectItem>
+                        <SelectItem value="chapa">App Payment</SelectItem>
+                        <SelectItem value="credit">Buy on Credit</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                   <div className="space-y-2">
                     <Label>Provider Name</Label>
-                    <Input
-                      value={newPaymentMethod.provider_name}
-                      onChange={(e) =>
-                        setNewPaymentMethod((prev) => ({
-                          ...prev,
-                          provider_name: e.target.value,
-                        }))
-                      }
-                      placeholder="e.g. Telebirr, TradeBridge Pay"
-                    />
+                    {isCreditMethod ? (
+                      <Input value="Supplier Credit" disabled />
+                    ) : (
+                      <Select
+                        value={newPaymentMethod.provider_name}
+                        onValueChange={(value) =>
+                          setNewPaymentMethod((prev) => ({
+                            ...prev,
+                            provider_name: value,
+                          }))
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select provider" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {providerOptions.map((provider) => (
+                            <SelectItem key={provider} value={provider}>
+                              {provider}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
                   </div>
                   <div className="space-y-2">
-                    <Label>Account Holder</Label>
+                    <Label>{isCreditMethod ? "Credit Policy Name" : "Account Holder"}</Label>
                     <Input
                       value={newPaymentMethod.account_holder_name}
                       onChange={(e) =>
@@ -132,6 +186,7 @@ const PaymentTab: React.FC<PaymentTabProps> = ({
                       }
                     />
                   </div>
+                  {!isCreditMethod && (
                   <div className="space-y-2">
                     <Label>Account Identifier</Label>
                     <Input
@@ -145,6 +200,46 @@ const PaymentTab: React.FC<PaymentTabProps> = ({
                       placeholder="Account number / phone"
                     />
                   </div>
+                  )}
+                  {isCreditMethod && (
+                    <>
+                      <div className="space-y-2">
+                        <Label>Due Days</Label>
+                        <Input
+                          type="number"
+                          min="1"
+                          value={newPaymentMethod.credit_due_days || ""}
+                          onChange={(e) =>
+                            setNewPaymentMethod((prev) => ({
+                              ...prev,
+                              provider_name: "Supplier Credit",
+                              account_identifier: "credit",
+                              credit_due_days: e.target.value,
+                            }))
+                          }
+                          placeholder="e.g. 30"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Max Credit Limit (ETB)</Label>
+                        <Input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={newPaymentMethod.credit_limit || ""}
+                          onChange={(e) =>
+                            setNewPaymentMethod((prev) => ({
+                              ...prev,
+                              provider_name: "Supplier Credit",
+                              account_identifier: "credit",
+                              credit_limit: e.target.value,
+                            }))
+                          }
+                          placeholder="e.g. 50000"
+                        />
+                      </div>
+                    </>
+                  )}
                 </div>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -183,14 +278,23 @@ const PaymentTab: React.FC<PaymentTabProps> = ({
                       <div>
                         <p className="text-sm font-medium">
                           {method.provider_name} (
-                          {method.method_type === "credit_card"
+                          {method.method_type === "credit_card" ||
+                          method.method_type === "chapa"
                             ? "App Payment"
+                            : method.method_type === "credit"
+                              ? "Buy on Credit"
                             : "Mobile Banking"}
                           )
                         </p>
                         <p className="text-xs text-muted-foreground">
                           {method.account_display}
                         </p>
+                        {method.method_type === "credit" && (
+                          <p className="text-xs text-muted-foreground">
+                            Due in {method.credit_due_days} days · Limit ETB{" "}
+                            {Number(method.credit_limit || 0).toLocaleString()}
+                          </p>
+                        )}
                       </div>
                       <div className="flex items-center gap-2">
                         {method.is_primary ? (

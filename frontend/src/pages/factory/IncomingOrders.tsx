@@ -27,7 +27,20 @@ const mapPaymentStatus = (status?: string) => {
   }
 };
 
-const mapOrderToIncoming = (order: Order): IncomingOrder => {
+const buildBuyerStats = (orders: Order[], buyerId: string) => {
+  const buyerOrders = orders.filter((order) => order.buyer_id === buyerId);
+  const completed = buyerOrders.filter((order) =>
+    ["delivered", "closed"].includes(order.order_status),
+  );
+  return {
+    customerTotalOrders: buyerOrders.length,
+    customerCompletedOrders: completed.length,
+    customerCancelledOrders: buyerOrders.filter((order) => order.order_status === "cancelled").length,
+    customerTotalSpend: completed.reduce((sum, order) => sum + Number(order.total_price || 0), 0),
+  };
+};
+
+const mapOrderToIncoming = (order: Order, allOrders: Order[]): IncomingOrder => {
   const items =
     order.items?.map((item) => ({
       name: item.product?.name || "Item",
@@ -87,7 +100,8 @@ const mapOrderToIncoming = (order: Order): IncomingOrder => {
     cancelledDate: undefined,
     cancellationReason: undefined,
     customerRating: null,
-    previousOrders: 0,
+    previousOrders: buildBuyerStats(allOrders, order.buyer_id).customerCompletedOrders,
+    ...buildBuyerStats(allOrders, order.buyer_id),
   };
 };
 
@@ -106,7 +120,7 @@ const FactoryIncomingOrdersPage: React.FC = () => {
   }, [fetchOrdersAsSupplier]);
 
   const orders = useMemo(
-    () => (storeOrders as Order[]).map(mapOrderToIncoming),
+    () => (storeOrders as Order[]).map((order) => mapOrderToIncoming(order, storeOrders as Order[])),
     [storeOrders],
   );
 

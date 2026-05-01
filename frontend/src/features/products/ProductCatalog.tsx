@@ -168,7 +168,7 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
   const [supplierAllowedMethods, setSupplierAllowedMethods] = useState<
     PaymentMethod[]
   >([]);
-  const [supplierPaymentMethods] = useState<any[]>([]);
+  const [supplierPaymentMethods, setSupplierPaymentMethods] = useState<any[]>([]);
 
   const { createOrder, isLoading: orderLoading } = useOrderStore();
 
@@ -176,6 +176,7 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
     const loadSupplierPaymentMethods = async () => {
       if (!selectedProduct?.supplier_id) {
         setSupplierAllowedMethods([]);
+        setSupplierPaymentMethods([]);
         return;
       }
 
@@ -185,12 +186,14 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
             selectedProduct.supplier_id,
           );
         const activeMethods = response.data || response;
+        setSupplierPaymentMethods(Array.isArray(activeMethods) ? activeMethods : []);
         setSupplierAllowedMethods(
           supplierMethodsToPaymentMethods(activeMethods),
         );
       } catch (error) {
         console.error("Unable to load supplier payment methods", error);
         setSupplierAllowedMethods([]);
+        setSupplierPaymentMethods([]);
       }
     };
 

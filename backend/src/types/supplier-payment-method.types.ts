@@ -3,7 +3,8 @@ export type PaymentMethodType =
   | 'mobile_money'
   | 'credit_card'
   | 'mobile_banking'
-  | 'chapa';
+  | 'chapa'
+  | 'credit';
 
 export interface ISupplierPaymentMethod {
   id: string;
@@ -13,6 +14,8 @@ export interface ISupplierPaymentMethod {
   account_holder_name: string;
   account_identifier: string;
   account_display: string;
+  credit_due_days?: number | null;
+  credit_limit?: number | null;
   is_primary: boolean;
   is_active: boolean;
   created_at: Date;
@@ -27,6 +30,8 @@ export interface CreateSupplierPaymentMethodDTO {
   account_holder_name: string;
   account_identifier: string;
   account_display?: string;
+  credit_due_days?: number | null;
+  credit_limit?: number | null;
   is_primary?: boolean;
 }
 

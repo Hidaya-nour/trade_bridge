@@ -56,6 +56,18 @@ const mapPaymentStatus = (paymentStatus?: string) => {
   }
 };
 
+const hasNoSupplierDelivery = (order?: Order | null) =>
+  Boolean(
+    order?.items?.some((item: any) => {
+      const raw = item?.product?.delivery_available;
+      if (raw === false || raw === 0) return true;
+      if (typeof raw === "string" && raw.trim().toLowerCase() === "false") {
+        return true;
+      }
+      return false;
+    }),
+  );
+
 const mapOrderToDetails = (order: Order): OrderDetailsData => {
   const items =
     order.items?.map((item) => ({
@@ -239,15 +251,7 @@ const OrderDetailsPage: React.FC = () => {
         <div className="p-6 text-sm text-muted-foreground">{resolvedError}</div>
       }
     >
-      {currentOrder &&
-      Array.isArray(currentOrder.products) &&
-      currentOrder.products.some((product: any) => {
-        const raw = (product as any)?.delivery_available;
-        if (raw === false || raw === 0) return true;
-        if (typeof raw === "string" && raw.trim().toLowerCase() === "false")
-          return true;
-        return false;
-      }) ? (
+      {hasNoSupplierDelivery(currentOrder) ? (
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-lg border bg-muted/30 p-3">
           <div className="text-sm text-muted-foreground">
             This supplier did not provide delivery for this order. You can
@@ -255,6 +259,7 @@ const OrderDetailsPage: React.FC = () => {
           </div>
           <Button
             onClick={() =>
+              currentOrder &&
               navigate(`/retailer/orders/${currentOrder.id}/request-driver`)
             }
           >

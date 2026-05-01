@@ -205,6 +205,15 @@ const startServer = async () => {
       await sequelize.query(
         "UPDATE `products` SET `delivery_pricing`=NULL WHERE `delivery_available`=false",
       );
+      await sequelize.query(
+        "ALTER TABLE `supplier_payment_methods` ADD COLUMN IF NOT EXISTS `credit_due_days` INT NULL",
+      );
+      await sequelize.query(
+        "ALTER TABLE `supplier_payment_methods` ADD COLUMN IF NOT EXISTS `credit_limit` DECIMAL(12,2) NULL",
+      );
+      await sequelize.query(
+        "ALTER TABLE `payments` MODIFY `payment_method` ENUM('mobile_banking','chapa','credit') NOT NULL",
+      );
     } catch (error) {
       logger.warn(
         'Skipping development database normalization (tables may not exist yet)',

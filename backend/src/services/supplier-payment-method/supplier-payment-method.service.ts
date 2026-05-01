@@ -1,8 +1,8 @@
-import { SupplierPaymentMethodRepository } from '../../repositories/supplier-payment-method.repository';
-import { AppError } from '../../utils/errors';
-import { ISupplierPaymentMethod, CreateSupplierPaymentMethodDTO, UpdateSupplierPaymentMethodDTO } from '../../types/supplier-payment-method.types';
-import logger from '../../utils/logger';
 import { Product } from '../../models/product.model';
+import { SupplierPaymentMethodRepository } from '../../repositories/supplier-payment-method.repository';
+import { CreateSupplierPaymentMethodDTO, ISupplierPaymentMethod, UpdateSupplierPaymentMethodDTO } from '../../types/supplier-payment-method.types';
+import { AppError } from '../../utils/errors';
+import logger from '../../utils/logger';
 
 export class SupplierPaymentMethodService {
   private paymentMethodRepo = new SupplierPaymentMethodRepository();
@@ -18,13 +18,32 @@ export class SupplierPaymentMethodService {
   }
 
   async createPaymentMethod(data: CreateSupplierPaymentMethodDTO): Promise<ISupplierPaymentMethod> {
-    if (!data.supplier_id || !data.method_type || !data.provider_name ||
-        !data.account_holder_name || !data.account_identifier) {
-      throw new AppError('Missing required fields', 400);
+   // In SupplierPaymentMethodService.createPaymentMethod
+if (!data.supplier_id) throw new AppError('Supplier ID is missing', 400);
+if (!data.method_type) throw new AppError('Method type is required', 400);
+if (!data.provider_name) throw new AppError('Provider name is required', 400);
+if (!data.account_holder_name) throw new AppError('Account holder name is required', 400);
+if (data.method_type !== 'credit' && !data.account_identifier) {
+  throw new AppError('Account identifier is required for non-credit methods', 400);
+}
+
+    if (data.method_type === 'credit') {
+      const dueDays = Number(data.credit_due_days || 0);
+      const limit = Number(data.credit_limit || 0);
+      if (!Number.isFinite(dueDays) || dueDays <= 0) {
+        throw new AppError('Credit due days must be greater than 0', 400);
+      }
+      if (!Number.isFinite(limit) || limit <= 0) {
+        throw new AppError('Credit limit must be greater than 0', 400);
+      }
+      data.account_identifier = data.account_identifier || 'credit';
     }
 
     if (!data.account_display) {
-      data.account_display = `${data.provider_name} - ${data.account_identifier}`;
+      data.account_display =
+        data.method_type === 'credit'
+          ? `${Number(data.credit_due_days)} days, max ETB ${Number(data.credit_limit).toLocaleString()}`
+          : `${data.provider_name} - ${data.account_identifier}`;
     }
 
     // If this is set as primary, unset other primary methods for this supplier

@@ -21,7 +21,7 @@ export interface CreditSummary {
   nextPaymentDate: string;
 }
 
-export type PaymentMethod = "app_payment" | "mobile_banking";
+export type PaymentMethod = "app_payment" | "mobile_banking" | "credit";
 
 export interface PaymentMethodConfig {
   id: PaymentMethod;
@@ -40,6 +40,8 @@ export interface SupplierPaymentMethodInfo {
   account_holder_name: string;
   account_identifier?: string;
   account_display?: string;
+  credit_due_days?: number | null;
+  credit_limit?: number | null;
   is_primary?: boolean;
   is_active?: boolean;
 }

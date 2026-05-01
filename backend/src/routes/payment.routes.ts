@@ -18,6 +18,7 @@ router.use(authenticate);
 const paymentMethodValues = [
   'app_payment',
   'mobile_banking',
+  'credit',
 ];
 
 const paymentStatusValues = [

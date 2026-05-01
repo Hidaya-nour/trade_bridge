@@ -13,6 +13,8 @@ export class SupplierPaymentMethod extends Model<ISupplierPaymentMethod, Supplie
   public account_holder_name!: string;
   public account_identifier!: string;
   public account_display!: string;
+  public credit_due_days?: number | null;
+  public credit_limit?: number | null;
   public is_primary!: boolean;
   public is_active!: boolean;
   public created_at!: Date;
@@ -58,6 +60,20 @@ SupplierPaymentMethod.init(
     account_display: {
       type: DataTypes.STRING(100),
       allowNull: false
+    },
+    credit_due_days: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      validate: {
+        min: 1,
+      },
+    },
+    credit_limit: {
+      type: DataTypes.DECIMAL(12, 2),
+      allowNull: true,
+      validate: {
+        min: 0,
+      },
     },
     is_primary: {
       type: DataTypes.BOOLEAN,

@@ -1,7 +1,7 @@
 import api from './api';
 
 export interface SubmitOrderPaymentData {
-  payment_method: 'app_payment' | 'mobile_banking';
+  payment_method: 'app_payment' | 'mobile_banking' | 'credit';
   amount_paid?: number;
   notes?: string;
   proof_document_id?: string;

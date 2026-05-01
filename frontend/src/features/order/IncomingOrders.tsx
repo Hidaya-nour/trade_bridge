@@ -518,6 +518,20 @@ export const IncomingOrders: React.FC<IncomingOrdersProps> = ({
                   </div>
                 </div>
 
+                {String(order.paymentMethod).toLowerCase().includes("credit") && (
+                  <div className="mb-4 rounded-lg border bg-muted/40 p-3">
+                    <p className="text-xs font-medium text-muted-foreground">
+                      Credit review snapshot
+                    </p>
+                    <div className="mt-2 grid grid-cols-2 gap-2 text-xs md:grid-cols-4">
+                      <span>Total orders: {order.customerTotalOrders ?? order.previousOrders}</span>
+                      <span>Completed: {order.customerCompletedOrders ?? order.previousOrders}</span>
+                      <span>Cancelled: {order.customerCancelledOrders ?? 0}</span>
+                      <span>Total spend: {formatPrice(order.customerTotalSpend || 0)}</span>
+                    </div>
+                  </div>
+                )}
+
                 {/* Order Items Preview */}
                 <div className="bg-muted/50 rounded-lg p-3 mb-4">
                   <div className="flex items-center justify-between mb-2">

@@ -1,10 +1,10 @@
 import { Request, Response } from 'express';
-import { SupplierPaymentMethodService } from '../services/supplier-payment-method/supplier-payment-method.service';
-import { AppError } from '../utils/errors';
-import logger from '../utils/logger';
 import { body, param } from 'express-validator';
 import { createChapaSubaccount } from '../config/chapa';
 import User from '../models/user.model';
+import { SupplierPaymentMethodService } from '../services/supplier-payment-method/supplier-payment-method.service';
+import { AppError } from '../utils/errors';
+import logger from '../utils/logger';
 
 const paymentMethodService = new SupplierPaymentMethodService();
 
@@ -186,11 +186,13 @@ export class SupplierPaymentMethodController {
   }
 
   static createValidation = [
-    body('method_type').isIn(['mobile_money', 'credit_card', 'mobile_banking', 'chapa']),
+    body('method_type').isIn(['mobile_money', 'credit_card', 'mobile_banking', 'chapa', 'credit']),
     body('provider_name').isString().notEmpty(),
     body('account_holder_name').isString().notEmpty(),
-    body('account_identifier').isString().notEmpty(),
+    body('account_identifier').if(body('method_type').not().equals('credit')).isString().notEmpty(),
     body('account_display').optional().isString(),
+    body('credit_due_days').optional({ nullable: true }).isInt({ min: 1 }),
+    body('credit_limit').optional({ nullable: true }).isFloat({ min: 0 }),
     body('is_primary').optional().isBoolean()
   ];
 

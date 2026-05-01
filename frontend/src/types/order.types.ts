@@ -225,6 +225,10 @@ export interface IncomingOrder {
   cancellationReason?: string;
   customerRating: number | null;
   previousOrders: number;
+  customerTotalOrders?: number;
+  customerCompletedOrders?: number;
+  customerCancelledOrders?: number;
+  customerTotalSpend?: number;
 }
 
 export interface IncomingOrdersConfig {

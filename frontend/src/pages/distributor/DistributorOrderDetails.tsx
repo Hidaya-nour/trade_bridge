@@ -58,6 +58,18 @@ const mapPaymentStatus = (paymentStatus?: string) => {
   }
 };
 
+const hasNoSupplierDelivery = (order?: Order | null) =>
+  Boolean(
+    order?.items?.some((item: any) => {
+      const raw = item?.product?.delivery_available;
+      if (raw === false || raw === 0) return true;
+      if (typeof raw === "string" && raw.trim().toLowerCase() === "false") {
+        return true;
+      }
+      return false;
+    }),
+  );
+
 const mapOrderToDetails = (
   order: Order,
   mode: "incoming" | "outgoing",
@@ -304,7 +316,7 @@ const DistributorOrderDetailsPage: React.FC = () => {
         <div className="p-6 text-sm text-muted-foreground">{resolvedError}</div>
       }
     >
-      {mode === "outgoing" && currentOrder && !currentOrder.delivery ? (
+      {mode === "outgoing" && currentOrder && hasNoSupplierDelivery(currentOrder) ? (
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-lg border bg-muted/30 p-3">
           <div className="text-sm text-muted-foreground">
             This supplier did not provide delivery for this order. You can request an independent driver.

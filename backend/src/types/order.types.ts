@@ -94,7 +94,7 @@ export interface OrderItemWithProduct extends IOrderItems {
 export interface IPayment {
   id: string;
   order_id: string;
-  payment_method:  'mobile_banking' | 'chapa';
+  payment_method:  'mobile_banking' | 'chapa' | 'credit';
   total_amount: number;
   amount_paid: number;
   payment_status: PaymentStatus;
