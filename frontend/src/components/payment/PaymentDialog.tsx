@@ -293,7 +293,7 @@ export const PaymentDialog: React.FC<PaymentDialogProps> = ({
             </div>
           </div>
 
-          {supplierMethodDetails.length > 0 && (
+          {supplierMethodDetails.length > 0 && selectedMethod !== "chapa" &&  (
             <div className="space-y-3 rounded-lg border p-4">
               <div className="flex items-center gap-2">
                 <AlertCircle className="h-4 w-4 text-muted-foreground" />

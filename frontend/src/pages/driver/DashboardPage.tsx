@@ -164,7 +164,7 @@ const mapApiDelivery = (delivery: any): Delivery => {
       delivery?.estimated_delivery ||
       delivery?.updated_at ||
       new Date().toISOString(),
-    distance: Number(delivery?.distance_km || 0),
+    distance: Number(delivery?.distance_km || 'NA'),
     priority: items.length > 8 ? "high" : items.length > 3 ? "medium" : "low",
     notes: delivery?.notes,
     supplierName:
@@ -222,7 +222,6 @@ export const DriverDashboard: React.FC = () => {
   const [selectedDelivery, setSelectedDelivery] = useState<Delivery | null>(
     null,
   );
-  const [showDetailsDialog, setShowDetailsDialog] = useState(false);
   const [showStatusDialog, setShowStatusDialog] = useState(false);
   const [newStatus, setNewStatus] = useState<DeliveryStatus>("assigned");
   const [issueReport, setIssueReport] = useState("");
@@ -530,10 +529,7 @@ export const DriverDashboard: React.FC = () => {
                             <Navigation className="h-3 w-3 mr-1" />
                             {delivery.distance} km
                           </span>
-                          <span className="flex items-center">
-                            <Clock className="h-3 w-3 mr-1" />
-                            Est: {formatTime(delivery.estimatedDelivery)}
-                          </span>
+                          
                           <span className="flex items-center">
                             <Calendar className="h-3 w-3 mr-1" />
                             Assigned: {formatTime(delivery.assignedAt)}
@@ -551,18 +547,7 @@ export const DriverDashboard: React.FC = () => {
 
                       {/* Action Buttons */}
                       <div className="flex flex-col gap-2 min-w-[120px]">
-                        <Button
-                          size="sm"
-                          className="w-full"
-                          onClick={() => {
-                            setSelectedDelivery(delivery);
-                            setShowDetailsDialog(true);
-                          }}
-                        >
-                          <Eye className="h-4 w-4 mr-2" />
-                          Details
-                        </Button>
-
+                        
                         {delivery.status === "pending" && (
                           <Button
                             size="sm"
@@ -612,6 +597,7 @@ export const DriverDashboard: React.FC = () => {
                         )}
 
                         {delivery.status !== "delivered" &&
+                          delivery.status !== "pending" &&
                           delivery.status !== "failed" && (
                             <Button
                               size="sm"
@@ -680,7 +666,6 @@ export const DriverDashboard: React.FC = () => {
                         variant="ghost"
                         onClick={() => {
                           setSelectedDelivery(delivery);
-                          setShowDetailsDialog(true);
                         }}
                       >
                         <Eye className="h-4 w-4 mr-2" />
@@ -695,173 +680,7 @@ export const DriverDashboard: React.FC = () => {
         </TabsContent>
       </Tabs>
 
-      {/* Delivery Details Dialog */}
-      <Dialog open={showDetailsDialog} onOpenChange={setShowDetailsDialog}>
-        <DialogContent className="max-w-2xl max-h-[85vh] overflow-hidden">
-          <DialogHeader>
-            <DialogTitle>Delivery Details</DialogTitle>
-            <DialogDescription>
-              {selectedDelivery?.deliveryNumber} - Order #
-              {selectedDelivery?.orderNumber}
-            </DialogDescription>
-          </DialogHeader>
-
-          {selectedDelivery && (
-            <ScrollArea className="max-h-[70vh] pr-4">
-              <div className="space-y-4">
-                {/* Status */}
-                <div className="flex gap-2">
-                  <Badge className={statusColors[selectedDelivery.status]}>
-                    {statusLabels[selectedDelivery.status]}
-                  </Badge>
-                  <Badge
-                    className={cn(
-                      selectedDelivery.priority === "high"
-                        ? "bg-red-100 text-red-800"
-                        : selectedDelivery.priority === "medium"
-                          ? "bg-yellow-100 text-yellow-800"
-                          : "bg-green-100 text-green-800",
-                    )}
-                  >
-                    {selectedDelivery.priority} priority
-                  </Badge>
-                </div>
-
-                {/* Pickup Details */}
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm flex items-center gap-2">
-                      <div className="h-2 w-2 rounded-full bg-green-500" />
-                      Pickup Location
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="font-medium">
-                      {selectedDelivery.pickupLocation}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {selectedDelivery.pickupAddress}
-                    </p>
-                    <div className="flex items-center gap-4 mt-2 text-sm">
-                      <span className="flex items-center gap-1">
-                        <User className="h-3 w-3" />
-                        {selectedDelivery.pickupContact}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Phone className="h-3 w-3" />
-                        {formatPhone(selectedDelivery.pickupPhone)}
-                      </span>
-                    </div>
-                    {selectedDelivery.pickedUpAt && (
-                      <p className="text-xs text-muted-foreground mt-2">
-                        Picked up: {formatDateTime(selectedDelivery.pickedUpAt)}
-                      </p>
-                    )}
-                  </CardContent>
-                </Card>
-
-                {/* Dropoff Details */}
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm flex items-center gap-2">
-                      <div className="h-2 w-2 rounded-full bg-red-500" />
-                      Delivery Location
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="font-medium">
-                      {selectedDelivery.dropoffLocation}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {selectedDelivery.dropoffAddress}
-                    </p>
-                    <div className="flex items-center gap-4 mt-2 text-sm">
-                      <span className="flex items-center gap-1">
-                        <User className="h-3 w-3" />
-                        {selectedDelivery.dropoffContact}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Phone className="h-3 w-3" />
-                        {formatPhone(selectedDelivery.dropoffPhone)}
-                      </span>
-                    </div>
-                    {selectedDelivery.deliveredAt && (
-                      <p className="text-xs text-muted-foreground mt-2">
-                        Delivered:{" "}
-                        {formatDateTime(selectedDelivery.deliveredAt)}
-                      </p>
-                    )}
-                  </CardContent>
-                </Card>
-
-                {/* Items */}
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm">Items</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2">
-                      {selectedDelivery.items.map((item, idx) => (
-                        <div key={idx} className="flex justify-between text-sm">
-                          <span>{item.name}</span>
-                          <span className="font-medium">
-                            {item.quantity} {item.unit}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Delivery Info */}
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <p className="text-muted-foreground">Distance</p>
-                    <p className="font-medium">
-                      {selectedDelivery.distance} km
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground">Estimated Delivery</p>
-                    <p className="font-medium">
-                      {formatTime(selectedDelivery.estimatedDelivery)}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground">Assigned</p>
-                    <p className="font-medium">
-                      {formatTime(selectedDelivery.assignedAt)}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground">Supplier</p>
-                    <p className="font-medium">
-                      {selectedDelivery.supplierName}
-                    </p>
-                  </div>
-                </div>
-
-                {selectedDelivery.notes && (
-                  <div className="p-3 bg-yellow-50 rounded-lg">
-                    <p className="text-xs text-yellow-700">
-                      {selectedDelivery.notes}
-                    </p>
-                  </div>
-                )}
-              </div>
-            </ScrollArea>
-          )}
-
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setShowDetailsDialog(false)}
-            >
-              Close
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+    
 
       {/* Update Status Dialog */}
       <Dialog open={showStatusDialog} onOpenChange={setShowStatusDialog}>

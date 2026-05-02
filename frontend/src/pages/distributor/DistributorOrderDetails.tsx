@@ -203,8 +203,7 @@ const mapOrderToDetails = (
     },
     party,
     drivers: mode === "incoming" ? drivers : undefined,
-    canAssignDriver: mode === "incoming",
-    canCancel: true,
+canAssignDriver: mode === "incoming" && items.some(item => item.deliveryAvailable === true),    canCancel: true,
     canReview: mode === "outgoing",
     canReorder: mode === "outgoing",
     creditDueDate, // this will be included in the returned object
@@ -395,24 +394,26 @@ const DistributorOrderDetailsPage: React.FC = () => {
       }
     >
       {mode === "outgoing" &&
-      currentOrder &&
-      hasNoSupplierDelivery(currentOrder) ? (
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-lg border bg-muted/30 p-3">
-          <div className="text-sm text-muted-foreground">
-            This supplier did not provide delivery for this order. You can
-            request an independent driver.
-          </div>
-          <Button
-            onClick={() =>
-              navigate(
-                `/distributor/purchase-orders/${currentOrder.id}/request-driver`,
-              )
-            }
-          >
-            Request Driver
-          </Button>
-        </div>
-      ) : null}
+  currentOrder &&
+  hasNoSupplierDelivery(currentOrder) &&
+  !currentOrder.delivery?.driver_id &&  // Only show if no driver is assigned
+  !currentOrder.delivery?.driver ? (   // Alternative check for driver object
+  <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-lg border bg-muted/30 p-3">
+    <div className="text-sm text-muted-foreground">
+      This supplier did not provide delivery for this order. You can
+      request an independent driver.
+    </div>
+    <Button
+      onClick={() =>
+        navigate(
+          `/distributor/purchase-orders/${currentOrder.id}/request-driver`,
+        )
+      }
+    >
+      Request Driver
+    </Button>
+  </div>
+) : null}
       <OrderDetailsView
         key={`${mode}-${orderDetails?.id}`}
         initialOrder={orderDetails as OrderDetailsData}

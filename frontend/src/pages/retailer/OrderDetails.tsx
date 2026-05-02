@@ -251,22 +251,22 @@ const OrderDetailsPage: React.FC = () => {
         <div className="p-6 text-sm text-muted-foreground">{resolvedError}</div>
       }
     >
-      {hasNoSupplierDelivery(currentOrder) ? (
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-lg border bg-muted/30 p-3">
-          <div className="text-sm text-muted-foreground">
-            This supplier did not provide delivery for this order. You can
-            request an independent driver.
-          </div>
-          <Button
-            onClick={() =>
-              currentOrder &&
-              navigate(`/retailer/orders/${currentOrder.id}/request-driver`)
-            }
-          >
-            Request Driver
-          </Button>
-        </div>
-      ) : null}
+      {hasNoSupplierDelivery(currentOrder) && !currentOrder?.delivery?.driver_id && !currentOrder?.delivery?.driver ? (
+  <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-lg border bg-muted/30 p-3">
+    <div className="text-sm text-muted-foreground">
+      This supplier did not provide delivery for this order. You can
+      request an independent driver.
+    </div>
+    <Button
+      onClick={() =>
+        currentOrder &&
+        navigate(`/retailer/orders/${currentOrder.id}/request-driver`)
+      }
+    >
+      Request Driver
+    </Button>
+  </div>
+) : null}
       <OrderDetailsView
         key={orderDetails?.id}
         initialOrder={orderDetails as OrderDetailsData}

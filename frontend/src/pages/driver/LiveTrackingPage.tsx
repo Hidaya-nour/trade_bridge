@@ -23,6 +23,7 @@ import { Separator } from "@/components/ui/separator";
 import deliveryService from "@/services/delivery.service";
 import driverLocationService from "@/services/driver-location.service";
 import { formatDateTime } from "@/lib/formatters";
+import { cn } from "@/lib/utils";
 
 type DriverDelivery = {
   id: string;
@@ -82,6 +83,18 @@ const buildGoogleMapsSearchUrl = (lat: number, lng: number) =>
 
 const buildGoogleMapsDirectionsUrl = (destination: string) =>
   `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destination)}`;
+
+const statusColorMap: Record<string, string> = {
+  pending: "bg-yellow-100 text-yellow-800",
+  assigned: "bg-blue-100 text-blue-800",
+  picked_up: "bg-purple-100 text-purple-800",
+  delivered: "bg-green-100 text-green-800",
+  failed: "bg-red-100 text-red-800",
+  cancelled: "bg-red-100 text-red-800",
+};
+
+const formatStatus = (status: string) =>
+  status.replace("_", " ").replace(/\b\w/g, (char) => char.toUpperCase());
 
 const DriverLiveTrackingPage: React.FC = () => {
   const [deliveries, setDeliveries] = useState<DriverDelivery[]>([]);
@@ -266,8 +279,6 @@ const DriverLiveTrackingPage: React.FC = () => {
     }
 
     try {
-     
-
       const initialPosition = await new Promise<GeolocationPosition>(
         (resolve, reject) => {
           navigator.geolocation.getCurrentPosition(resolve, reject, {
@@ -320,191 +331,175 @@ const DriverLiveTrackingPage: React.FC = () => {
     }
   };
 
+  const stats = {
+    totalDeliveries: deliveries.length,
+    activeTracking: isSharing ? 1 : 0,
+    routePoints: locations.length,
+  };
+
   return (
     <div className="space-y-6">
-      <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
-        <div className="grid gap-6 p-6 lg:grid-cols-[1.15fr_0.85fr] lg:p-8">
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-sky-600">
-                Driver Workspace
-              </p>
-              <h1 className="text-3xl font-bold tracking-tight">
-                Live Tracking
-              </h1>
-              <p className="max-w-2xl text-sm leading-6 text-slate-600">
-                Share your current vehicle position, monitor the route being
-                recorded, and jump into Google Maps whenever you need turn-by-turn
-                navigation.
-              </p>
-            </div>
-
-            <div className="grid gap-3 sm:grid-cols-3">
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <p className="text-xs uppercase tracking-wide text-slate-500">
-                  Tracking status
-                </p>
-                <p className="mt-2 text-lg font-semibold text-slate-950">
-                  {isSharing ? "Live GPS active" : "Standing by"}
-                </p>
-              </div>
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <p className="text-xs uppercase tracking-wide text-slate-500">
-                  Last sync
-                </p>
-                <p className="mt-2 text-lg font-semibold text-slate-950">
-                  {lastSentAt ? formatDateTime(lastSentAt) : "No updates yet"}
-                </p>
-              </div>
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <p className="text-xs uppercase tracking-wide text-slate-500">
-                  Route points
-                </p>
-                <p className="mt-2 text-lg font-semibold text-slate-950">
-                  {locations.length}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="rounded-3xl border border-sky-200 bg-sky-50 p-5">
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-sky-700">
-              Current Run
-            </p>
-            {activeDelivery ? (
-              <div className="mt-4 space-y-4">
-                <div>
-                  <p className="text-2xl font-bold text-slate-950">
-                    Order {activeDelivery.order_id.slice(-8)}
-                  </p>
-                  <p className="mt-1 text-sm text-slate-600">
-                    {activeDelivery.pickup_location} to{" "}
-                    {activeDelivery.dropoff_location}
-                  </p>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <Badge variant="outline" className="capitalize bg-white">
-                    {activeDelivery.status.replace("_", " ")}
-                  </Badge>
-                 
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    onClick={startSharing}
-                    disabled={isSharing}
-                    className="rounded-2xl bg-sky-600 hover:bg-sky-700"
-                  >
-                    <Play className="mr-2 h-4 w-4" />
-                    Start live sharing
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={stopSharing}
-                    disabled={!isSharing}
-                    className="rounded-2xl border-slate-200"
-                  >
-                    <Square className="mr-2 h-4 w-4" />
-                    Stop sharing
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <p className="mt-4 text-sm text-slate-600">
-                Pick one of your assigned deliveries to begin tracking.
-              </p>
-            )}
-          </div>
+      {/* Header */}
+      <div>
+        <div className="flex items-center gap-3">
+          <h1 className="text-3xl font-bold tracking-tight">Live Tracking</h1>
+          <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+            <Truck className="h-3 w-3 mr-1" />
+            Driver Workspace
+          </Badge>
         </div>
-      </section>
+        <p className="text-muted-foreground mt-1">
+          Share your current vehicle position, monitor the route being recorded,
+          and jump into Google Maps whenever you need turn-by-turn navigation.
+        </p>
+      </div>
 
-      <div className="grid gap-6 xl:grid-cols-[0.92fr_1.08fr]">
-        <Card className="rounded-3xl border-slate-200 shadow-sm">
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Truck className="h-4 w-4" />
-              Delivery Selection
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                onClick={loadMyDeliveries}
-                disabled={loadingDeliveries}
-                className="rounded-2xl border-slate-200"
-              >
-                <RefreshCw className="mr-2 h-4 w-4" />
-                Refresh deliveries
-              </Button>
-            </div>
-
-            {error && (
-              <p className="rounded-2xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">
-                {error}
-              </p>
-            )}
-
-            {loadingDeliveries && (
-              <p className="text-sm text-slate-500">Loading your deliveries...</p>
-            )}
-
-            {!loadingDeliveries && deliveries.length === 0 && !error && (
-              <p className="text-sm text-slate-500">
-                No driver deliveries are assigned right now.
-              </p>
-            )}
-
-            <div className="space-y-3">
-              {deliveries.map((delivery) => (
-                <button
-                  key={delivery.id}
-                  type="button"
-                  onClick={() => setActiveDeliveryId(delivery.id)}
-                  className={`w-full rounded-2xl border p-4 text-left transition ${
-                    activeDeliveryId === delivery.id
-                      ? "border-sky-500 bg-sky-50 shadow-sm"
-                      : "border-slate-200 bg-white hover:border-slate-300"
-                  }`}
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="space-y-1">
-                      <p className="font-semibold text-slate-950">
-                        Order {delivery.order_id.slice(-8)}
-                      </p>
-                      <p className="text-sm text-slate-500">
-                        {delivery.pickup_location}
-                      </p>
-                      <p className="text-sm text-slate-500">
-                        {delivery.dropoff_location}
-                      </p>
-                    </div>
-                    <Badge variant="outline" className="capitalize">
-                      {delivery.status.replace("_", " ")}
-                    </Badge>
-                  </div>
-                </button>
-              ))}
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Total Deliveries</p>
+                <p className="text-2xl font-bold">{stats.totalDeliveries}</p>
+              </div>
+              <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
+                <Truck className="h-5 w-5 text-blue-600" />
+              </div>
             </div>
           </CardContent>
         </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Tracking Status</p>
+                <p className="text-2xl font-bold">{isSharing ? "Live GPS" : "Standby"}</p>
+              </div>
+              <div className={cn(
+                "h-10 w-10 rounded-full flex items-center justify-center",
+                isSharing ? "bg-green-100" : "bg-gray-100"
+              )}>
+                <Navigation className={cn("h-5 w-5", isSharing ? "text-green-600" : "text-gray-600")} />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Last Sync</p>
+                <p className="text-lg font-semibold truncate">
+                  {lastSentAt ? formatDateTime(lastSentAt) : "No updates yet"}
+                </p>
+              </div>
+              <div className="h-10 w-10 rounded-full bg-purple-100 flex items-center justify-center">
+                <Clock className="h-5 w-5 text-purple-600" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        
+      </div>
 
-        <div className="space-y-6">
-          <Card className="overflow-hidden rounded-3xl border-slate-200 shadow-sm">
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-base">
-                <Route className="h-4 w-4" />
-                Live Vehicle Map
-              </CardTitle>
+      <div className="grid gap-6 lg:grid-cols-2">
+        {/* Left Column - Deliveries List */}
+        <div className="space-y-4">
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle>Delivery Selection</CardTitle>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={loadMyDeliveries}
+                  disabled={loadingDeliveries}
+                >
+                  <RefreshCw className={cn("h-4 w-4 mr-2", loadingDeliveries && "animate-spin")} />
+                  Refresh
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {error && (
+                <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700 mb-4">
+                  {error}
+                </div>
+              )}
+
+              {loadingDeliveries && (
+                <div className="flex justify-center items-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                </div>
+              )}
+
+              {!loadingDeliveries && deliveries.length === 0 && !error && (
+                <div className="text-center py-8">
+                  <Truck className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <p className="text-muted-foreground">No driver deliveries are assigned right now.</p>
+                </div>
+              )}
+
+              <div className="space-y-3">
+                {deliveries.map((delivery) => (
+                  <div
+                    key={delivery.id}
+                    onClick={() => setActiveDeliveryId(delivery.id)}
+                    className={cn(
+                      "rounded-lg border p-4 cursor-pointer transition-all hover:shadow-md",
+                      activeDeliveryId === delivery.id
+                        ? "border-primary bg-primary/5"
+                        : "border-border hover:border-primary/50"
+                    )}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="space-y-2 flex-1">
+                        <div>
+                          <p className="font-semibold">Order {delivery.order_id.slice(-8)}</p>
+                          <div className="flex items-start gap-2 mt-2 text-sm">
+                            <MapPin className="h-3 w-3 text-muted-foreground mt-0.5" />
+                            <div>
+                              <p className="text-xs text-muted-foreground">Pickup</p>
+                              <p className="text-sm">{delivery.pickup_location}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-start gap-2 mt-1 text-sm">
+                            <MapPin className="h-3 w-3 text-destructive mt-0.5" />
+                            <div>
+                              <p className="text-xs text-muted-foreground">Dropoff</p>
+                              <p className="text-sm">{delivery.dropoff_location}</p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <Badge className={cn("shrink-0", statusColorMap[delivery.status])}>
+                        {formatStatus(delivery.status)}
+                      </Badge>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Right Column - Map and Controls */}
+        <div className="space-y-4">
+          {/* Map Card */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Live Vehicle Map</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               {activeDelivery ? (
                 <>
-                  <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white">
+                  <div className="overflow-hidden rounded-lg border border-border">
                     <MapContainer
                       center={currentCenter}
                       zoom={13}
                       scrollWheelZoom
-                      className="h-[420px] w-full"
+                      className="h-[400px] w-full"
                     >
                       <TileLayer
                         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -514,7 +509,7 @@ const DriverLiveTrackingPage: React.FC = () => {
                       {routePositions.length > 1 && (
                         <Polyline
                           positions={routePositions}
-                          pathOptions={{ color: "#0284c7", weight: 5 }}
+                          pathOptions={{ color: "hsl(var(--primary))", weight: 5 }}
                         />
                       )}
                       {latestLocation && (
@@ -529,34 +524,43 @@ const DriverLiveTrackingPage: React.FC = () => {
                     </MapContainer>
                   </div>
 
-                  <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-2">
-                    
-                   
-                    <div className="rounded-2xl bg-slate-50 p-3">
-                      <p className="text-xs uppercase tracking-wide text-slate-500">
-                        Pickup
-                      </p>
-                      <p className="mt-2 text-sm font-semibold text-slate-950">
-                        {activeDelivery.pickup_location}
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="rounded-lg bg-muted/50 p-3">
+                      <p className="text-xs text-muted-foreground">Current Run</p>
+                      <p className="font-semibold mt-1">Order {activeDelivery.order_id.slice(-8)}</p>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {activeDelivery.pickup_location} → {activeDelivery.dropoff_location}
                       </p>
                     </div>
-                    <div className="rounded-2xl bg-slate-50 p-3">
-                      <p className="text-xs uppercase tracking-wide text-slate-500">
-                        Dropoff
-                      </p>
-                      <p className="mt-2 text-sm font-semibold text-slate-950">
-                        {activeDelivery.dropoff_location}
-                      </p>
+                    <div className="rounded-lg bg-muted/50 p-3">
+                      <p className="text-xs text-muted-foreground">Tracking Controls</p>
+                      <div className="flex gap-2 mt-2">
+                        <Button
+                          onClick={startSharing}
+                          disabled={isSharing}
+                          size="sm"
+                          className="flex-1"
+                        >
+                          <Play className="mr-1 h-3 w-3" />
+                          Start
+                        </Button>
+                        <Button
+                          variant="outline"
+                          onClick={stopSharing}
+                          disabled={!isSharing}
+                          size="sm"
+                          className="flex-1"
+                        >
+                          <Square className="mr-1 h-3 w-3" />
+                          Stop
+                        </Button>
+                      </div>
                     </div>
                   </div>
 
                   <div className="flex flex-wrap gap-2">
                     {latestLocation && (
-                      <Button
-                        asChild
-                        variant="outline"
-                        className="rounded-2xl border-slate-200"
-                      >
+                      <Button asChild variant="outline" size="sm">
                         <a
                           href={buildGoogleMapsSearchUrl(
                             latestLocation.latitude,
@@ -565,62 +569,35 @@ const DriverLiveTrackingPage: React.FC = () => {
                           target="_blank"
                           rel="noreferrer"
                         >
-                          <LocateFixed className="mr-2 h-4 w-4" />
-                          Open current point in Google Maps
+                          <LocateFixed className="mr-2 h-3 w-3" />
+                          Current Point
                         </a>
                       </Button>
                     )}
-                    <Button
-                      asChild
-                      variant="outline"
-                      className="rounded-2xl border-slate-200"
-                    >
+                    <Button asChild variant="outline" size="sm">
                       <a
-                        href={buildGoogleMapsDirectionsUrl(
-                          activeDelivery.dropoff_location,
-                        )}
+                        href={buildGoogleMapsDirectionsUrl(activeDelivery.dropoff_location)}
                         target="_blank"
                         rel="noreferrer"
                       >
-                        <Navigation className="mr-2 h-4 w-4" />
-                        Navigate to dropoff
+                        <Navigation className="mr-2 h-3 w-3" />
+                        Navigate to Dropoff
                       </a>
                     </Button>
                   </div>
                 </>
               ) : (
-                <p className="text-sm text-slate-500">
-                  Select a delivery to see its live tracking map.
-                </p>
+                <div className="text-center py-12">
+                  <Route className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <p className="text-muted-foreground">
+                    Select a delivery to see its live tracking map.
+                  </p>
+                </div>
               )}
             </CardContent>
           </Card>
 
-          <Card className="rounded-3xl border-slate-200 shadow-sm">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base">Tracking Feed</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid gap-3 md:grid-cols-2">
-                <div className="flex items-center gap-2 text-sm text-slate-600">
-                  <Navigation className="h-4 w-4 text-sky-600" />
-                  <span>{isSharing ? "Sharing live GPS" : "Not sharing yet"}</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm text-slate-600">
-                  <Clock className="h-4 w-4 text-sky-600" />
-                  <span>
-                    {lastSentAt
-                      ? `Last sync ${formatDateTime(lastSentAt)}`
-                      : "No GPS sync recorded"}
-                  </span>
-                </div>
-              </div>
-
-              <Separator />
-
-             
-            </CardContent>
-          </Card>
+          
         </div>
       </div>
     </div>
