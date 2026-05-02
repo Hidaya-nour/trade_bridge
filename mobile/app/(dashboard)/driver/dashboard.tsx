@@ -1,5 +1,6 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  ActivityIndicator,
   View,
   Text,
   StyleSheet,
@@ -7,7 +8,7 @@ import {
   Pressable,
   ScrollView,
   Linking,
-  Alert,
+  RefreshControl,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
@@ -15,15 +16,11 @@ import { useRouter } from "expo-router";
 import ScreenWrapper from "@/components/layout/ScreenWrapper";
 import { useAuthStore } from "@/features/auth/auth.store";
 import { useNotificationStore } from "@/features/notifications/notification.store";
+import deliveryService from "@/features/driver-deliveries/delivery.service";
+import { type DriverDelivery, type DeliveryStatus } from "@/features/driver-deliveries/delivery.types";
+import driverIssueService from "@/features/driver-issues/driver-issue.service";
 import { useRoleShell } from "@/navigation/RoleShellContext";
 import { useScrollDirection } from "@/hooks/useScrollDirection";
-
-import {
-  ACTIVE_DELIVERIES,
-  DELIVERY_HISTORY,
-  DRIVER_DELIVERIES,
-  type DeliveryStatus,
-} from "./driverData";
 
 const formatStatus = (status: DeliveryStatus) =>
   status.replace("_", " ").toUpperCase();
@@ -52,19 +49,58 @@ export default function DriverDashboardScreen() {
   });
 
   const [isOnline, setIsOnline] = useState(false);
+  const [deliveries, setDeliveries] = useState<DriverDelivery[]>([]);
+  const [issueCount, setIssueCount] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    void fetchNotificationCounts();
+  const loadDashboard = useCallback(async () => {
+    setError(null);
+
+    try {
+      const [deliveryRows, issues] = await Promise.all([
+        deliveryService.getMyDeliveries(),
+        driverIssueService.getMyReports(20),
+        fetchNotificationCounts(),
+      ]);
+
+      setDeliveries(deliveryRows);
+      setIssueCount(Array.isArray(issues) ? issues.length : 0);
+    } catch (loadError: any) {
+      setDeliveries([]);
+      setIssueCount(0);
+      setError(loadError?.response?.data?.message || "Failed to load dashboard data.");
+    }
   }, [fetchNotificationCounts]);
 
-  const activeDeliveries = ACTIVE_DELIVERIES;
-  const activeRoute = ACTIVE_DELIVERIES[0];
-  const completedToday = DELIVERY_HISTORY.length;
+  useEffect(() => {
+    const bootstrap = async () => {
+      setIsLoading(true);
+      await loadDashboard();
+      setIsLoading(false);
+    };
+
+    void bootstrap();
+  }, [loadDashboard]);
+
+  const activeDeliveries = deliveries.filter(
+    (delivery) =>
+      !["delivered", "failed", "cancelled"].includes(delivery.status),
+  );
+  const activeRoute = activeDeliveries[0];
+  const completedToday = deliveries.filter((delivery) => delivery.status === "delivered").length;
 
   const unreadNotifications = useMemo(
     () => notificationCounts.unread,
     [notificationCounts.unread],
   );
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await loadDashboard();
+    setRefreshing(false);
+  }, [loadDashboard]);
 
   const handleOpenMaps = () => {
     if (!activeRoute) return;
@@ -76,18 +112,21 @@ export default function DriverDashboardScreen() {
     Linking.openURL(url);
   };
 
-  const handleAction = (action: string) => {
-    Alert.alert("Action", `${action} pressed`);
-  };
-
   return (
-    <ScreenWrapper title="Driver Dashboard">
+    <ScreenWrapper title="Driver Dashboard" subtitle={user?.business_name || "Driver workspace"}>
       <ScrollView
         style={styles.container}
         contentContainerStyle={styles.contentContainer}
         onScroll={onScroll}
         scrollEventThrottle={16}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
+        {error ? (
+          <View style={styles.errorBox}>
+            <Text style={styles.errorText}>{error}</Text>
+          </View>
+        ) : null}
+
         <View style={styles.card}>
           <View style={styles.rowBetween}>
             <Text style={styles.statusText}>
@@ -101,7 +140,7 @@ export default function DriverDashboardScreen() {
           <StatCard label="Active Routes" value={activeDeliveries.length} />
           <StatCard label="Completed Today" value={completedToday} />
           <StatCard label="Unread Alerts" value={unreadNotifications} />
-          <StatCard label="Total Orders" value={DRIVER_DELIVERIES.length} />
+          <StatCard label="Issue Reports" value={issueCount} />
         </View>
 
         <Pressable style={styles.mapsButton} onPress={handleOpenMaps}>
@@ -126,7 +165,12 @@ export default function DriverDashboardScreen() {
           </View>
         </View>
 
-        {activeRoute ? (
+        {isLoading ? (
+          <View style={styles.card}>
+            <ActivityIndicator size="small" color="#1d4ed8" />
+            <Text style={styles.subtitle}>Loading active assignments...</Text>
+          </View>
+        ) : activeRoute ? (
           <View style={styles.card}>
             <Text style={styles.sectionTitle}>Current Delivery</Text>
 
@@ -170,9 +214,9 @@ export default function DriverDashboardScreen() {
 
               <Pressable
                 style={styles.acceptButton}
-                onPress={() => handleAction("Accept")}
+                onPress={() => router.push(`/driver/deliveries/${activeRoute.id}` as never)}
               >
-                <Text style={styles.buttonText}>Accept</Text>
+                <Text style={styles.buttonText}>Open</Text>
               </Pressable>
             </View>
           </View>
@@ -240,6 +284,18 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   mapsText: { color: "#fff", marginLeft: 6 },
+  errorBox: {
+    borderWidth: 1,
+    borderColor: "#fecaca",
+    backgroundColor: "#fee2e2",
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 16,
+  },
+  errorText: {
+    color: "#b91c1c",
+    fontSize: 12,
+  },
   section: { marginBottom: 16 },
   sectionTitle: { fontSize: 16, fontWeight: "600", marginBottom: 10 },
   actionRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },

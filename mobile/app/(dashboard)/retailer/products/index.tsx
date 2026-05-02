@@ -33,6 +33,7 @@ import { useScrollDirection } from "@/hooks/useScrollDirection";
 const FETCH_LIMIT = 120;
 const VISIBLE_BATCH_SIZE = 12;
 const DEFAULT_MAX_PRICE = 10000;
+const SEARCH_DEBOUNCE_MS = 350;
 
 const sortOptions = [
   { key: "recommended", label: "Recommended" },
@@ -75,6 +76,8 @@ export default function RetailerProductsScreen() {
   const [minPriceInput, setMinPriceInput] = useState("0");
   const [maxPriceInput, setMaxPriceInput] = useState(String(DEFAULT_MAX_PRICE));
   const [buyingProductId, setBuyingProductId] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const { onScroll } = useScrollDirection({
     onDirectionChange: (direction) => setTabBarVisible(direction === "up"),
   });
@@ -86,6 +89,9 @@ export default function RetailerProductsScreen() {
     fetchProducts,
     fetchCategories,
     categories,
+    totalProducts,
+    totalPages,
+    currentPage: storePage,
   } = useProductStore();
   const {
     items: cartItems,
@@ -103,29 +109,86 @@ export default function RetailerProductsScreen() {
   const minPrice = Number(minPriceInput || 0);
   const maxPrice = Number(maxPriceInput || DEFAULT_MAX_PRICE);
 
-  const loadProducts = useCallback(async () => {
-    await Promise.all([
-      fetchProducts({ is_available: true, limit: FETCH_LIMIT }, { replace: true }),
-      fetchCategories(),
-      fetchCart(),
-    ]);
-  }, [fetchCart, fetchCategories, fetchProducts]);
+  const sortConfig = useMemo(() => {
+    switch (sortBy) {
+      case "price-low":
+        return { sortBy: "price", sortOrder: "ASC" as const };
+      case "price-high":
+        return { sortBy: "price", sortOrder: "DESC" as const };
+      case "rating":
+        return { sortBy: "rating", sortOrder: "DESC" as const };
+      case "name":
+        return { sortBy: "name", sortOrder: "ASC" as const };
+      default:
+        return { sortBy: "created_at", sortOrder: "DESC" as const };
+    }
+  }, [sortBy]);
+
+  const loadProducts = useCallback(
+    async (page: number) => {
+      await Promise.all([
+        fetchProducts(
+          {
+            is_available: true,
+            limit: FETCH_LIMIT,
+            page,
+            search: debouncedSearch.trim() || undefined,
+            category: selectedCategory === "All Categories" ? undefined : selectedCategory,
+            supplier_id: selectedSupplier || undefined,
+            minPrice: Number.isFinite(minPrice) ? minPrice : 0,
+            maxPrice: Number.isFinite(maxPrice) ? maxPrice : DEFAULT_MAX_PRICE,
+            sortBy: sortConfig.sortBy,
+            sortOrder: sortConfig.sortOrder,
+          },
+          { replace: true },
+        ),
+        fetchCart(),
+      ]);
+    },
+    [
+      debouncedSearch,
+      fetchCart,
+      fetchProducts,
+      maxPrice,
+      minPrice,
+      selectedCategory,
+      selectedSupplier,
+      sortConfig.sortBy,
+      sortConfig.sortOrder,
+    ],
+  );
 
   useEffect(() => {
-    void loadProducts();
-  }, [loadProducts]);
+    void Promise.all([fetchCategories(), fetchCart()]);
+  }, [fetchCart, fetchCategories]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+    }, SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   useEffect(() => {
     if (params.supplierId) {
       setSelectedSupplier(String(params.supplierId));
+      setCurrentPage(1);
     }
   }, [params.supplierId]);
 
+  useEffect(() => {
+    void loadProducts(currentPage);
+  }, [currentPage, loadProducts]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [debouncedSearch, selectedCategory, selectedSupplier, minPriceInput, maxPriceInput, sortBy]);
+
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await loadProducts();
+    await loadProducts(currentPage);
     setRefreshing(false);
-  }, [loadProducts]);
+  }, [currentPage, loadProducts]);
 
   const supplierOptions = useMemo(() => {
     return Array.from(
@@ -164,62 +227,26 @@ export default function RetailerProductsScreen() {
 
   const filteredProducts = useMemo(() => {
     return products.filter((product) => {
+      const supplierRole = String(product.supplier?.role || "").toLowerCase();
+      if (supplierRole === "factory") return false;
+
       const supplierName = getSupplierName(product.supplier);
       const locationLabel = getProductLocationLabel(product);
-      const normalizedSearch = searchQuery.trim().toLowerCase();
       const productPrice = Number(product.price || 0);
-
-      const matchesSearch =
-        normalizedSearch === "" ||
-        product.name.toLowerCase().includes(normalizedSearch) ||
-        supplierName.toLowerCase().includes(normalizedSearch) ||
-        product.category.toLowerCase().includes(normalizedSearch);
-
-      const matchesCategory =
-        selectedCategory === "All Categories" || product.category === selectedCategory;
-      const matchesSupplier = !selectedSupplier || product.supplier_id === selectedSupplier;
       const matchesLocation =
         selectedLocation === "All Locations" || locationLabel === selectedLocation;
       const matchesPrice = productPrice >= minPrice && productPrice <= maxPrice;
-
-      return (
-        matchesSearch &&
-        matchesCategory &&
-        matchesSupplier &&
-        matchesLocation &&
-        matchesPrice
-      );
+      return matchesLocation && matchesPrice && Boolean(product.is_available);
     });
-  }, [
-    maxPrice,
-    minPrice,
-    products,
-    searchQuery,
-    selectedCategory,
-    selectedLocation,
-    selectedSupplier,
-  ]);
+  }, [maxPrice, minPrice, products, selectedLocation]);
 
   const sortedProducts = useMemo(() => {
-    const cloned = [...filteredProducts];
-
-    switch (sortBy) {
-      case "price-low":
-        return cloned.sort((a, b) => Number(a.price) - Number(b.price));
-      case "price-high":
-        return cloned.sort((a, b) => Number(b.price) - Number(a.price));
-      case "rating":
-        return cloned.sort((a, b) => Number(b.rating || 0) - Number(a.rating || 0));
-      case "name":
-        return cloned.sort((a, b) => a.name.localeCompare(b.name));
-      default:
-        return cloned.sort((a, b) => Number(b.rating || 0) - Number(a.rating || 0));
-    }
-  }, [filteredProducts, sortBy]);
+    return filteredProducts;
+  }, [filteredProducts]);
 
   useEffect(() => {
     setVisibleCount(VISIBLE_BATCH_SIZE);
-  }, [searchQuery, selectedCategory, selectedSupplier, selectedLocation, sortBy, minPriceInput, maxPriceInput]);
+  }, [currentPage, selectedLocation, sortedProducts.length]);
 
   const visibleProducts = useMemo(
     () => sortedProducts.slice(0, visibleCount),
@@ -322,12 +349,14 @@ export default function RetailerProductsScreen() {
     setMinPriceInput("0");
     setMaxPriceInput(String(DEFAULT_MAX_PRICE));
     setSearchQuery("");
+    setDebouncedSearch("");
+    setCurrentPage(1);
   }, [params.supplierId]);
 
   const activeFilters = useMemo(() => {
     const chips: string[] = [];
 
-    if (searchQuery.trim()) chips.push(`Search: ${searchQuery.trim()}`);
+    if (debouncedSearch.trim()) chips.push(`Search: ${debouncedSearch.trim()}`);
     if (selectedCategory !== "All Categories") chips.push(selectedCategory);
     if (selectedSupplier) {
       const supplier = supplierOptions.find((item) => item.id === selectedSupplier);
@@ -339,7 +368,7 @@ export default function RetailerProductsScreen() {
     }
 
     return chips;
-  }, [maxPrice, minPrice, searchQuery, selectedCategory, selectedLocation, selectedSupplier, supplierOptions]);
+  }, [debouncedSearch, maxPrice, minPrice, selectedCategory, selectedLocation, selectedSupplier, supplierOptions]);
 
   const hasActiveFilters = activeFilters.length > 0;
 
@@ -380,7 +409,7 @@ export default function RetailerProductsScreen() {
         </View>
 
         <View style={styles.cartSummaryRow}>
-          <Text style={styles.resultCountText}>{sortedProducts.length} products</Text>
+          <Text style={styles.resultCountText}>{totalProducts || sortedProducts.length} products</Text>
           <Text style={styles.cartSummaryText}>Cart value {formatCurrency(cartTotalPrice)}</Text>
         </View>
       </View>
@@ -414,6 +443,28 @@ export default function RetailerProductsScreen() {
           <Text style={styles.errorText}>{productsError || cartError}</Text>
         </View>
       ) : null}
+
+      <View style={styles.pageBar}>
+        <Pressable
+          style={[styles.pageButton, currentPage <= 1 && styles.pageButtonDisabled]}
+          onPress={() => setCurrentPage((page) => Math.max(1, page - 1))}
+          disabled={currentPage <= 1}
+        >
+          <Ionicons name="chevron-back-outline" size={14} color="#334155" />
+          <Text style={styles.pageButtonText}>Prev</Text>
+        </Pressable>
+        <Text style={styles.pageIndicator}>
+          Page {storePage} of {Math.max(1, totalPages)}
+        </Text>
+        <Pressable
+          style={[styles.pageButton, currentPage >= Math.max(1, totalPages) && styles.pageButtonDisabled]}
+          onPress={() => setCurrentPage((page) => Math.min(Math.max(1, totalPages), page + 1))}
+          disabled={currentPage >= Math.max(1, totalPages)}
+        >
+          <Text style={styles.pageButtonText}>Next</Text>
+          <Ionicons name="chevron-forward-outline" size={14} color="#334155" />
+        </Pressable>
+      </View>
     </View>
   );
 
@@ -714,6 +765,38 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 8,
+  },
+  pageBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+  },
+  pageButton: {
+    minHeight: 36,
+    minWidth: 82,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#cbd5e1",
+    backgroundColor: "#ffffff",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 4,
+    paddingHorizontal: 10,
+  },
+  pageButtonDisabled: {
+    opacity: 0.45,
+  },
+  pageButtonText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#334155",
+  },
+  pageIndicator: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#64748b",
   },
   activeFilterPill: {
     borderRadius: 999,

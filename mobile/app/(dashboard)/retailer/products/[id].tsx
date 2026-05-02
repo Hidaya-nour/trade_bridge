@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Pressable,
+  RefreshControl,
+  Share,
   ScrollView,
   StyleSheet,
   Text,
@@ -11,7 +14,10 @@ import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import ScreenWrapper from "@/components/layout/ScreenWrapper";
 import { useCartStore } from "@/features/cart/cart.store";
+import { useOrderStore } from "@/features/orders/order.store";
 import { useProductStore } from "@/features/products/product.store";
+import { useRetailerCompareStore } from "@/features/retailer-marketplace/compare.store";
+import { getLocationLabel } from "@/features/retailer-marketplace/marketplace.utils";
 
 const formatCurrency = (value: number) => {
   return new Intl.NumberFormat("en-US", {
@@ -61,35 +67,51 @@ export default function RetailerProductDetailScreen() {
   const [activeTab, setActiveTab] = useState<"description" | "specifications" | "reviews">(
     "description",
   );
+  const [refreshing, setRefreshing] = useState(false);
+  const [isBuyingNow, setIsBuyingNow] = useState(false);
 
   const { product, products, isLoading, error, fetchProductById, fetchProducts } = useProductStore();
   const { items, addToCart, updateQuantity, fetchCart } = useCartStore();
+  const { createOrder } = useOrderStore();
+  const toggleCompareSupplier = useRetailerCompareStore((state) => state.toggleSupplier);
+
+  const loadProduct = useCallback(async () => {
+    if (!id) return;
+    const fetched = await fetchProductById(id);
+    if (fetched) {
+      setQuantity(Math.max(fetched.min_order_amount, 1));
+    }
+    if (!products.length) {
+      await fetchProducts({ is_available: true, limit: 40 }, { replace: true });
+    }
+    await fetchCart();
+  }, [fetchCart, fetchProductById, fetchProducts, id, products.length]);
 
   useEffect(() => {
-    if (!id) return;
+    void loadProduct();
+  }, [loadProduct]);
 
-    const load = async () => {
-      const fetched = await fetchProductById(id);
-      if (fetched) {
-        setQuantity(Math.max(fetched.min_order_amount, 1));
-      }
-      if (!products.length) {
-        await fetchProducts({ is_available: true, limit: 40 }, { replace: true });
-      }
-      await fetchCart();
-    };
-
-    load();
-  }, [fetchCart, fetchProductById, fetchProducts, id, products.length]);
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await loadProduct();
+    setRefreshing(false);
+  }, [loadProduct]);
 
   const currentCartItem = useMemo(() => {
     if (!product) return null;
     return items.find((item) => item.product_id === product.id) ?? null;
   }, [items, product]);
+  const supplierName =
+    product?.supplier?.business_name || product?.supplier?.full_name || "Unknown Supplier";
+  const supplierLocation = getLocationLabel(product?.supplier?.addresses);
+  const isInStock = Number(product?.stock_quantity || 0) > 0;
 
   const relatedProducts = useMemo(() => {
     if (!product) return [];
-    return products.filter((p) => p.id !== product.id && p.category === product.category).slice(0, 4);
+    return products
+      .filter((p) => p.id !== product.id && p.category === product.category)
+      .filter((p) => String(p.supplier?.role || "").toLowerCase() !== "factory")
+      .slice(0, 4);
   }, [product, products]);
 
   const specifications = useMemo(() => parseSpecifications(product?.specifications), [product]);
@@ -106,6 +128,11 @@ export default function RetailerProductDetailScreen() {
 
   const handleAddToCart = useCallback(async () => {
     if (!product) return;
+    const inStock = Number(product.stock_quantity || 0) > 0;
+    if (!inStock) {
+      Alert.alert("Out of stock", "This product is currently unavailable.");
+      return;
+    }
 
     if (currentCartItem) {
       await updateQuantity(currentCartItem.id, currentCartItem.quantity + quantity);
@@ -113,6 +140,61 @@ export default function RetailerProductDetailScreen() {
       await addToCart(product.id, quantity);
     }
   }, [addToCart, currentCartItem, product, quantity, updateQuantity]);
+
+  const handleBuyNow = useCallback(async () => {
+    if (!product) return;
+    const inStock = Number(product.stock_quantity || 0) > 0;
+    if (!inStock) {
+      Alert.alert("Out of stock", "This product is currently unavailable.");
+      return;
+    }
+
+    setIsBuyingNow(true);
+    try {
+      const order = await createOrder({
+        supplier_id: product.supplier_id,
+        items: [{ product_id: product.id, quantity, unit_price: Number(product.price) }],
+        notes: `Quick order from product details for ${product.name}`,
+      });
+
+      if (order) {
+        Alert.alert("Order placed", "Your order was placed successfully.", [
+          { text: "View Orders", onPress: () => router.push("/retailer/orders") },
+          { text: "Done", style: "cancel" },
+        ]);
+        return;
+      }
+
+      Alert.alert("Order failed", "Unable to place order right now. Please try again.");
+    } finally {
+      setIsBuyingNow(false);
+    }
+  }, [createOrder, product, quantity, router]);
+
+  const handleShare = useCallback(async () => {
+    if (!product) return;
+    await Share.share({
+      message: `${product.name} - ${formatCurrency(Number(product.price))}/${product.unit_type}`,
+      title: product.name,
+    });
+  }, [product]);
+
+  const handleCompareSupplier = useCallback(() => {
+    if (!product) return;
+    const result = toggleCompareSupplier(product.supplier_id);
+    if (result === "limit") {
+      Alert.alert("Compare limit reached", "You can compare up to 4 suppliers.");
+      return;
+    }
+    Alert.alert(
+      result === "added" ? "Added to compare" : "Removed from compare",
+      `${supplierName} has been ${result === "added" ? "added to" : "removed from"} compare.`,
+      [
+        { text: "Stay Here", style: "cancel" },
+        { text: "Open Compare", onPress: () => router.push("/retailer/compare") },
+      ],
+    );
+  }, [product, router, supplierName, toggleCompareSupplier]);
 
   if (isLoading && !product) {
     return (
@@ -138,16 +220,16 @@ export default function RetailerProductDetailScreen() {
     );
   }
 
-  const supplierName =
-    product.supplier?.business_name || product.supplier?.full_name || "Unknown Supplier";
   const rating = Number(product.rating || 0);
   const reviews = product.reviews || [];
-  const isInStock = product.stock_quantity > 0;
   const isLowStock = product.stock_quantity > 0 && product.stock_quantity <= product.min_order_amount * 2;
 
   return (
     <ScreenWrapper title={product.name} subtitle="Retailer">
-      <ScrollView contentContainerStyle={styles.container}>
+      <ScrollView
+        contentContainerStyle={styles.container}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      >
         <View style={styles.breadcrumbRow}>
           <Pressable onPress={() => router.push("/retailer/products")}>
             <Text style={styles.linkText}>Products</Text>
@@ -226,23 +308,28 @@ export default function RetailerProductDetailScreen() {
           </View>
 
           <View style={styles.actionRow}>
-            <Pressable style={styles.primaryButton} onPress={handleAddToCart}>
+            <Pressable style={[styles.primaryButton, !isInStock && styles.disabledButton]} onPress={handleAddToCart} disabled={!isInStock}>
               <Ionicons name="cart-outline" size={16} color="#ffffff" />
               <Text style={styles.primaryButtonText}>
                 Add to Cart {currentCartItem ? `(${currentCartItem.quantity})` : ""}
               </Text>
             </Pressable>
-            <Pressable style={styles.iconOnlyButton}>
-              <Ionicons name="heart-outline" size={18} color="#334155" />
+            <Pressable style={styles.iconOnlyButton} onPress={handleCompareSupplier}>
+              <Ionicons name="git-compare-outline" size={18} color="#334155" />
             </Pressable>
-            <Pressable style={styles.iconOnlyButton}>
+            <Pressable style={styles.iconOnlyButton} onPress={() => void handleShare()}>
               <Ionicons name="share-social-outline" size={18} color="#334155" />
             </Pressable>
           </View>
 
-          <Pressable style={styles.compareButton} onPress={() => router.push(`/retailer/compare?product=${id}`)}>
+          <Pressable style={[styles.compareButton, (!isInStock || isBuyingNow) && styles.disabledButton]} onPress={() => void handleBuyNow()} disabled={!isInStock || isBuyingNow}>
+            <Ionicons name="flash-outline" size={15} color="#1d4ed8" />
+            <Text style={styles.compareButtonText}>{isBuyingNow ? "Placing order..." : "Buy now"}</Text>
+          </Pressable>
+
+          <Pressable style={styles.compareButton} onPress={() => router.push("/retailer/cart")}>
             <Ionicons name="git-compare-outline" size={15} color="#1d4ed8" />
-            <Text style={styles.compareButtonText}>Compare with similar products</Text>
+            <Text style={styles.compareButtonText}>Go to cart</Text>
           </Pressable>
         </View>
 
@@ -257,7 +344,7 @@ export default function RetailerProductDetailScreen() {
                 <Ionicons name="star" size={12} color="#f59e0b" />
                 <Text style={styles.supplierMetaText}>{Number(product.supplier?.rating || 4.5).toFixed(1)}</Text>
                 <Text style={styles.dot}>•</Text>
-                <Text style={styles.supplierMetaText}>Addis Ababa</Text>
+                <Text style={styles.supplierMetaText}>{supplierLocation}</Text>
               </View>
             </View>
             <Pressable
@@ -291,8 +378,17 @@ export default function RetailerProductDetailScreen() {
               </Text>
               <View style={styles.deliveryBox}>
                 <Text style={styles.deliveryTitle}>Delivery Information</Text>
-                <Text style={styles.deliveryText}>Estimated delivery: 2-3 days</Text>
-                <Text style={styles.deliveryText}>Pickup available: Yes</Text>
+                <Text style={styles.deliveryText}>
+                  Delivery available: {product.delivery_available === false ? "No" : "Yes"}
+                </Text>
+                <Text style={styles.deliveryText}>
+                  Delivery pricing: {product.delivery_pricing || "free"}
+                </Text>
+                {product.delivery_fee_per_km ? (
+                  <Text style={styles.deliveryText}>
+                    Fee per km: {formatCurrency(Number(product.delivery_fee_per_km))}
+                  </Text>
+                ) : null}
               </View>
             </View>
           ) : null}
@@ -544,6 +640,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     flexDirection: "row",
     gap: 6,
+  },
+  disabledButton: {
+    opacity: 0.55,
   },
   primaryButtonText: {
     color: "#ffffff",
