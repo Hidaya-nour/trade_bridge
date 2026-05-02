@@ -59,29 +59,16 @@ cd ml
 python preprocess.py
 ```
 
-### Build feature datasets
+# Build feature datasets
+python -m src.features.build_demand_features
+python -m src.features.build_recommendation_features
 
-```bash
-cd ml
-python build_features.py
-```
+# Train models
+python -m src.models.train_forecast
+python -m src.models.train_recommendation
 
-### Train supplier recommendation model
-
-```bash
-cd ml
-python train_recommendation.py
-```
-
-### Train demand forecast model
-
-```bash
-cd ml
-python train_forecast.py
-```
-
-### Run API
-
+# Run API
+uvicorn src.api.app:app --reload
 ```bash
 cd ml
 uvicorn app:app --reload

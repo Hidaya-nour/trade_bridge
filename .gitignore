@@ -1,50 +1,6 @@
-ml/data/raw/
-ml/data/processed/
-# Node / frontend / mobile
-node_modules/
-dist/
-build/
-.expo/
-.expo-shared/
-
-# Python
-.venv/
-__pycache__/
-*.py[cod]
-
-# Environment files
-.env
-.env.*
-!.env.example
-
-# OS / editor
-.DS_Store
-Thumbs.db
-.vscode/
-.idea/
-
-# Logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# ML raw and generated data
-ml/data/raw/
-ml/data/processed/
-
-# Trained model artifacts
-ml/models/*.joblib
-ml/models/*.pkl
-ml/models/*.pickle
-ml/models/*.h5
-ml/models/*.pt
-ml/models/*.onnx
-
-# Jupyter checkpoints
-.ipynb_checkpoints/
-
-# Node / frontend / mobile
+# ============================================
+# Node / Frontend / Mobile
+# ============================================
 node_modules/
 dist/
 build/
@@ -52,46 +8,101 @@ build/
 .expo-shared/
 mobile/dist-web/
 
+# ============================================
 # Python
+# ============================================
 .venv/
+venv/
+env/
+ENV/
 __pycache__/
 *.py[cod]
+*.pyo
+*.so
+.Python
 
+# ============================================
 # Environment files
+# ============================================
 .env
 .env.*
 !.env.example
 
-# OS / editor
+# ============================================
+# OS / Editor
+# ============================================
 .DS_Store
 Thumbs.db
 .vscode/
 .idea/
+*.swp
+*.swo
+*~
 
+# ============================================
 # Logs
+# ============================================
 *.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+pip-log.txt
+pip-delete-this-directory.txt
 
-# ML raw data
+# ============================================
+# ML Raw Data (NEVER COMMIT RAW DATA)
+# ============================================
 ml/data/raw/
+ml/data/raw/*.csv
+ml/data/raw/*.zip
+ml/data/raw/*.tar.gz
 
-# ML processed outputs
+# ============================================
+# ML Processed Data (Derived, can be regenerated)
+# ============================================
 ml/data/processed/*.csv
+ml/data/processed/*.json
 ml/data/processed/*_report.json
 ml/data/processed/*metrics.json
 
-# Trained model artifacts
+# Keep processed folder structure but not files
+!ml/data/processed/.gitkeep
+
+# ============================================
+# Trained Model Artifacts (CAN BE RE-TRAINED)
+# ============================================
 ml/models/*.joblib
 ml/models/*.pkl
 ml/models/*.pickle
 ml/models/*.h5
 ml/models/*.pt
 ml/models/*.onnx
+ml/models/*.pth
 
-# Python cache inside ml scripts
-ml/scripts/__pycache__/
+# Keep models folder structure
+!ml/models/.gitkeep
 
-# Jupyter checkpoints
+# ============================================
+# Jupyter / Notebooks
+# ============================================
 .ipynb_checkpoints/
+*.ipynb
+*.html
+
+# ============================================
+# Python cache inside ml scripts
+# ============================================
+ml/scripts/__pycache__/
+ml/src/__pycache__/
+ml/src/**/__pycache__/
+
+# ============================================
+# IDE / Project specific
+# ============================================
+*.bak
+*.tmp
+*.cache
+.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
