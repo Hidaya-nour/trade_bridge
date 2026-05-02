@@ -21,99 +21,13 @@ import { useAuthStore } from "@/features/auth/auth.store";
 import { useOrderStore } from "@/features/orders/order.store";
 import { useNotificationStore } from "@/features/notifications/notification.store";
 import { useCartStore } from "@/features/cart/cart.store";
+import { useProductStore } from "@/features/products/product.store";
+import { useSupplierStore } from "@/features/suppliers/supplier.store";
 import { type Order, type OrderStats, type OrderStatus } from "@/features/orders/order.types";
+import { type Product } from "@/features/products/product.types";
+import { type Supplier } from "@/features/suppliers/supplier.types";
 import { useRoleShell } from "@/navigation/RoleShellContext";
 import { useScrollDirection } from "@/hooks/useScrollDirection";
-
-const recommendedSuppliers = [
-  {
-    id: 101,
-    name: "Ethiopia Coffee Export",
-    category: "Beverages",
-    rating: 4.9,
-    reviews: 128,
-    deliveryTime: "2-3 days",
-    price: "$$",
-    match: "98%",
-    avatar: "EC",
-    verified: true,
-  },
-  {
-    id: 102,
-    name: "Adama Wholesalers",
-    category: "Groceries",
-    rating: 4.7,
-    reviews: 95,
-    deliveryTime: "1-2 days",
-    price: "$$",
-    match: "95%",
-    avatar: "AW",
-    verified: true,
-  },
-  {
-    id: 103,
-    name: "Ethiopian Textile",
-    category: "Fabrics",
-    rating: 4.5,
-    reviews: 67,
-    deliveryTime: "3-5 days",
-    price: "$$$",
-    match: "89%",
-    avatar: "ET",
-    verified: false,
-  },
-  {
-    id: 104,
-    name: "Bahir Dar Honey",
-    category: "Food",
-    rating: 4.8,
-    reviews: 42,
-    deliveryTime: "2-4 days",
-    price: "$$",
-    match: "87%",
-    avatar: "BH",
-    verified: true,
-  },
-];
-
-const frequentProducts = [
-  {
-    id: 1,
-    name: "Yirgacheffe Coffee",
-    supplier: "Ethiopia Coffee Export",
-    supplierId: 101,
-    price: 450,
-    unit: "kg",
-    orders: 24,
-  },
-  {
-    id: 2,
-    name: "White Teff Flour",
-    supplier: "Adama Wholesalers",
-    supplierId: 102,
-    price: 120,
-    unit: "kg",
-    orders: 18,
-  },
-  {
-    id: 3,
-    name: "Cotton Fabric",
-    supplier: "Ethiopian Textile",
-    supplierId: 103,
-    price: 320,
-    unit: "meter",
-    orders: 15,
-  },
-  {
-    id: 4,
-    name: "Pure Honey",
-    supplier: "Bahir Dar Honey",
-    supplierId: 104,
-    price: 280,
-    unit: "jar",
-    orders: 12,
-  },
-];
 
 type DashboardFeedTab = "recent" | "frequent";
 
@@ -154,6 +68,9 @@ const getStatusColors = (status: OrderStatus) => {
       return { bg: "#fef3c7", text: "#b45309" };
   }
 };
+
+const getSupplierDisplayName = (supplier?: Supplier | null) =>
+  supplier?.business_name || supplier?.full_name || "Supplier";
 
 function EmptyBlock({
   icon,
@@ -224,22 +141,24 @@ function FrequentProductCard({
   product,
   onPress,
 }: {
-  product: (typeof frequentProducts)[number];
+  product: Product;
   onPress: () => void;
 }) {
+  const supplierName = product.supplier?.business_name || product.supplier?.full_name || "Supplier";
+  const orderCount = Number(product.review_count || 0);
   return (
     <Pressable style={styles.horizontalCard} onPress={onPress}>
-      <Text style={styles.horizontalCardEyebrow}>Frequent order</Text>
+      <Text style={styles.horizontalCardEyebrow}>Catalog product</Text>
       <Text style={styles.horizontalCardTitle} numberOfLines={2}>
         {product.name}
       </Text>
-      <Text style={styles.horizontalCardMeta}>{product.supplier}</Text>
+      <Text style={styles.horizontalCardMeta}>{supplierName}</Text>
       <Text style={styles.horizontalCardMeta}>
-        {formatCurrency(product.price)} / {product.unit}
+        {formatCurrency(product.price)} / {product.unit_type}
       </Text>
       <View style={styles.ordersPill}>
         <Ionicons name="repeat-outline" size={12} color="#2563eb" />
-        <Text style={styles.ordersPillText}>{product.orders} repeat orders</Text>
+        <Text style={styles.ordersPillText}>{orderCount} reviews</Text>
       </View>
     </Pressable>
   );
@@ -249,27 +168,37 @@ function SupplierRecommendationCard({
   supplier,
   onPress,
 }: {
-  supplier: (typeof recommendedSuppliers)[number];
+  supplier: Supplier;
   onPress: () => void;
 }) {
+  const supplierName = getSupplierDisplayName(supplier);
+  const initials = supplierName
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join("");
+  const rating = Number(supplier.rating || 0).toFixed(1);
+  const location = supplier.addresses?.[0]
+    ? [supplier.addresses[0].city, supplier.addresses[0].region].filter(Boolean).join(", ")
+    : "Location unavailable";
+  const verified = Boolean(supplier.verified || supplier.is_verified);
+
   return (
     <Pressable style={styles.supplierCard} onPress={onPress}>
       <View style={styles.supplierHeader}>
         <View style={styles.supplierAvatar}>
-          <Text style={styles.supplierAvatarText}>{supplier.avatar}</Text>
-        </View>
-        <View style={styles.matchChip}>
-          <Text style={styles.matchChipText}>{supplier.match}</Text>
+          <Text style={styles.supplierAvatarText}>{initials || "SU"}</Text>
         </View>
       </View>
       <Text style={styles.supplierName} numberOfLines={1}>
-        {supplier.name}
+        {supplierName}
       </Text>
       <Text style={styles.supplierMeta} numberOfLines={2}>
-        {supplier.category} - {supplier.deliveryTime}
+        {location}
       </Text>
       <Text style={styles.supplierMeta}>
-        {supplier.rating} stars ({supplier.reviews}) {supplier.verified ? "- Verified" : ""}
+        {rating} stars {verified ? "- Verified" : ""}
       </Text>
     </Pressable>
   );
@@ -304,6 +233,8 @@ export default function RetailerDashboardScreen() {
   const { stats, orders, isLoading, error, fetchOrderStats, fetchRecentOrders } = useOrderStore();
   const { counts, fetchCounts } = useNotificationStore();
   const { totalItems, fetchCart } = useCartStore();
+  const { suppliers, fetchSuppliers, error: suppliersError } = useSupplierStore();
+  const { products, fetchProducts, error: productsError } = useProductStore();
 
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -315,8 +246,15 @@ export default function RetailerDashboardScreen() {
   });
 
   const loadDashboard = useCallback(async () => {
-    await Promise.all([fetchOrderStats(), fetchRecentOrders(), fetchCounts(), fetchCart()]);
-  }, [fetchCart, fetchCounts, fetchOrderStats, fetchRecentOrders]);
+    await Promise.all([
+      fetchOrderStats(),
+      fetchRecentOrders(),
+      fetchCounts(),
+      fetchCart(),
+      fetchSuppliers(),
+      fetchProducts({ sortBy: "created_at", sortOrder: "DESC", limit: 12 }, { replace: true }),
+    ]);
+  }, [fetchCart, fetchCounts, fetchOrderStats, fetchProducts, fetchRecentOrders, fetchSuppliers]);
 
   useEffect(() => {
     void loadDashboard();
@@ -342,24 +280,25 @@ export default function RetailerDashboardScreen() {
   }, [normalizedSearch, orders]);
 
   const filteredFrequentProducts = useMemo(() => {
-    if (!normalizedSearch) return frequentProducts;
-
-    return frequentProducts.filter((product) =>
-      [product.name, product.supplier].some((value) =>
-        value.toLowerCase().includes(normalizedSearch),
-      ),
+    if (!normalizedSearch) return products.slice(0, 8);
+    return products.filter((product) =>
+      [
+        product.name,
+        product.supplier?.business_name || "",
+        product.supplier?.full_name || "",
+        product.category,
+      ].some((value) => value.toLowerCase().includes(normalizedSearch)),
     );
-  }, [normalizedSearch]);
+  }, [normalizedSearch, products]);
 
   const filteredSuppliers = useMemo(() => {
-    if (!normalizedSearch) return recommendedSuppliers;
-
-    return recommendedSuppliers.filter((supplier) =>
-      [supplier.name, supplier.category].some((value) =>
+    if (!normalizedSearch) return suppliers.slice(0, 8);
+    return suppliers.filter((supplier) =>
+      [getSupplierDisplayName(supplier), supplier.role || ""].some((value) =>
         value.toLowerCase().includes(normalizedSearch),
       ),
     );
-  }, [normalizedSearch]);
+  }, [normalizedSearch, suppliers]);
 
   const orderSummary = useMemo(() => {
     const s = (stats || {}) as Partial<OrderStats>;
@@ -466,9 +405,9 @@ export default function RetailerDashboardScreen() {
           />
         </View>
 
-        {error ? (
+        {error || suppliersError || productsError ? (
           <View style={styles.errorBox}>
-            <Text style={styles.errorText}>{error}</Text>
+            <Text style={styles.errorText}>{error || suppliersError || productsError}</Text>
           </View>
         ) : null}
 
