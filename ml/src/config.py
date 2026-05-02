@@ -9,11 +9,14 @@ RAW_DATA_DIR = DATA_DIR / "raw"
 PROCESSED_DATA_DIR = DATA_DIR / "processed"
 MODELS_DIR = ML_ROOT / "models"
 
+# Dataset paths
 PREPROCESSED_DATA_PATH = PROCESSED_DATA_DIR / "olist_merged.csv"
-SUPPLIER_FEATURES_PATH = PROCESSED_DATA_DIR / "supplier_features.csv"
 DEMAND_DATASET_PATH = PROCESSED_DATA_DIR / "demand_dataset.csv"
-RECOMMENDATION_MODEL_PATH = MODELS_DIR / "supplier_recommendation_model.pkl"
-FORECAST_MODEL_PATH = MODELS_DIR / "demand_forecast_model.pkl"
+RECOMMENDATION_DATASET_PATH = PROCESSED_DATA_DIR / "recommendation_dataset.csv"
+
+# Model paths - using your actual saved model files
+RECOMMENDATION_MODEL_PATH = MODELS_DIR / "supplier_random_forest.joblib"
+FORECAST_MODEL_PATH = MODELS_DIR / "demand_random_forest.joblib"
 
 REQUIRED_OLIST_FILES = {
     "customers": "olist_customers_dataset.csv",

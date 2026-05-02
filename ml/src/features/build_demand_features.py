@@ -15,22 +15,21 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--interactions-file",
         type=Path,
-        default=Path(__file__).resolve().parents[1] / "data" / "processed" / "recommendation_dataset.csv",
+        default=Path(__file__).resolve().parents[2] / "data" / "processed" / "recommendation_dataset.csv",  # Fixed: parents[2]
     )
     parser.add_argument(
         "--output-file",
         type=Path,
-        default=Path(__file__).resolve().parents[1] / "data" / "processed" / "demand_dataset.csv",
+        default=Path(__file__).resolve().parents[2] / "data" / "processed" / "demand_dataset.csv",  # Fixed: parents[2]
     )
     parser.add_argument(
         "--report-file",
         type=Path,
-        default=Path(__file__).resolve().parents[1] / "data" / "processed" / "demand_dataset_report.json",
+        default=Path(__file__).resolve().parents[2] / "data" / "processed" / "demand_dataset_report.json",  # Fixed: parents[2]
     )
     parser.add_argument("--train-ratio", type=float, default=0.70)
     parser.add_argument("--valid-ratio", type=float, default=0.15)
     return parser.parse_args()
-
 
 def build_supplier_daily_frame(interactions: pd.DataFrame) -> pd.DataFrame:
     interactions = interactions.copy()
