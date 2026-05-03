@@ -23,7 +23,7 @@ import { Textarea } from "@/components/ui/textarea";
 import productService from "@/services/product.service";
 import type { Product } from "@/types/product.types";
 import { X } from "lucide-react";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import toast from "react-hot-toast";
 
 // Ethiopian context product categories – ALWAYS use these, ignore props
@@ -59,9 +59,120 @@ interface EditProductDialogProps {
   onSave?: (productId: string, updatedProduct: Partial<Product>) => void;
   mode: "add" | "edit";
   onAdd?: (product: any) => void;
-  categories?: string[]; // Kept for API compatibility, but IGNORED for dropdown
-  unitTypes?: string[]; // Kept for API compatibility, but IGNORED for dropdown
+  categories?: string[];
+  unitTypes?: string[];
 }
+
+// Autocomplete component for product names
+interface ProductNameAutocompleteProps {
+  value: string;
+  onChange: (value: string) => void;
+  category: string;
+  disabled?: boolean;
+}
+
+const ProductNameAutocomplete: React.FC<ProductNameAutocompleteProps> = ({
+  value,
+  onChange,
+  category,
+  disabled,
+}) => {
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const debounceTimer = useRef<NodeJS.Timeout>();
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const fetchSuggestions = async (searchTerm: string) => {
+    if (!searchTerm.trim() || searchTerm.length < 2 || !category) {
+      setSuggestions([]);
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      // Fetch product names filtered by category
+      const response = await productService.getProductNamesByCategory(category, searchTerm);
+      setSuggestions(response.data.slice(0, 8));
+    } catch (error) {
+      console.error("Failed to fetch product suggestions", error);
+      setSuggestions([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    debounceTimer.current = setTimeout(() => {
+      if (category) {
+        fetchSuggestions(value);
+      }
+    }, 300);
+    
+    return () => {
+      if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    };
+  }, [value, category]);
+
+  // Clear suggestions when category changes
+  useEffect(() => {
+    setSuggestions([]);
+    setShowSuggestions(false);
+  }, [category]);
+
+  return (
+    <div className="relative">
+      <Input
+        ref={inputRef}
+        id="name"
+        placeholder={category ? "Enter product name" : "First select a category"}
+        value={value}
+        onChange={(e) => {
+          onChange(e.target.value);
+          setShowSuggestions(true);
+        }}
+        onFocus={() => {
+          if (value.trim() && category && suggestions.length > 0) {
+            setShowSuggestions(true);
+          }
+        }}
+        onBlur={() => {
+          setTimeout(() => setShowSuggestions(false), 200);
+        }}
+        disabled={disabled || !category}
+        required
+      />
+      
+      {showSuggestions && suggestions.length > 0 && (
+        <div className="absolute z-50 w-full mt-1 bg-white border rounded-md shadow-lg max-h-60 overflow-auto">
+          {isLoading ? (
+            <div className="px-3 py-2 text-sm text-gray-500">Loading...</div>
+          ) : (
+            suggestions.map((suggestion, idx) => (
+              <div
+                key={idx}
+                className="px-3 py-2 text-sm hover:bg-gray-100 cursor-pointer"
+                onClick={() => {
+                  onChange(suggestion);
+                  setShowSuggestions(false);
+                }}
+              >
+                {suggestion}
+              </div>
+            ))
+          )}
+        </div>
+      )}
+      
+      {!category && value && (
+        <p className="text-xs text-amber-600 mt-1">
+          Please select a category first to see product suggestions
+        </p>
+      )}
+    </div>
+  );
+};
 
 export const EditProductDialog: React.FC<EditProductDialogProps> = ({
   open,
@@ -70,7 +181,6 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
   onSave,
   mode,
   onAdd,
-  // categories and unitTypes props are deliberately not used
 }) => {
   const initialFormData = {
     name: "",
@@ -102,7 +212,6 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
     if (mode === "edit" && product) {
       setFormData({
         name: product.name || "",
-        // Use product's category if it exists and is in our list, otherwise fallback to first default
         category:
           product.category && DEFAULT_CATEGORIES.includes(product.category)
             ? product.category
@@ -305,29 +414,15 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
 
         <ScrollArea className="h-[500px] pr-4">
           <div className="space-y-4 py-2">
-            {/* Product Name */}
-            <div className="space-y-2">
-              <Label htmlFor="name">Product Name *</Label>
-              <Input
-                id="name"
-                placeholder="Enter product name"
-                value={formData.name}
-                onChange={(e) =>
-                  setFormData({ ...formData, name: e.target.value })
-                }
-                required
-              />
-            </div>
-
-            {/* Category and Unit Type */}
+            {/* Category and Unit Type - Category must be selected first */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="category">Category *</Label>
                 <Select
                   value={formData.category}
-                  onValueChange={(value) =>
-                    setFormData({ ...formData, category: value })
-                  }
+                  onValueChange={(value) => {
+                    setFormData({ ...formData, category: value, name: "" });
+                  }}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select category" />
@@ -340,6 +435,9 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
                     ))}
                   </SelectContent>
                 </Select>
+                <p className="text-xs text-muted-foreground">
+                  Select category first to get product name suggestions
+                </p>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="unit_type">Unit Type *</Label>
@@ -361,6 +459,22 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+
+            {/* Product Name with Category-Filtered Autocomplete */}
+            <div className="space-y-2">
+              <Label htmlFor="name">Product Name *</Label>
+              <ProductNameAutocomplete
+                value={formData.name}
+                onChange={(value) => setFormData({ ...formData, name: value })}
+                category={formData.category}
+                disabled={mode === "edit"}
+              />
+              {mode === "add" && formData.category && (
+                <p className="text-xs text-muted-foreground">
+                  Start typing to see existing {formData.category} product names
+                </p>
+              )}
             </div>
 
             {/* Price and Stock */}

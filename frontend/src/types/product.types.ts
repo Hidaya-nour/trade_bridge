@@ -178,6 +178,15 @@ export interface CategoriesResponse {
   };
 }
 
+// src/types/product.types.ts (add this interface)
+
+export interface ProductNamesResponse {
+  data: {
+    productNames: string[];
+    category: string;
+    total: number;
+  };
+}
 // ============================================================================
 // Create/Update Types
 // ============================================================================

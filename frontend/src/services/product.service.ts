@@ -1,3 +1,4 @@
+// src/services/product.service.ts
 import type { CreateProductData, ProductFilters, ProductResponse, ProductsResponse, UpdateProductData } from '@/types/product.types';
 import api from './api';
 
@@ -39,6 +40,17 @@ class ProductService {
   async getCategories(): Promise<string[]> {
     const response = await api.get('/products/categories');
     return response.data.data.categories;
+  }
+
+  // NEW: Get product names by category for autocomplete
+  async getProductNamesByCategory(category: string, searchTerm: string): Promise<{ data: string[] }> {
+    const params = new URLSearchParams();
+    params.append('category', category);
+    if (searchTerm) params.append('search', searchTerm);
+    params.append('limit', '8');
+    
+    const response = await api.get(`/products/names/by-category?${params.toString()}`);
+    return { data: response.data.data?.productNames || response.data || [] };
   }
 
   // Create new product (for distributors/factories)
@@ -97,6 +109,7 @@ class ProductService {
 
     return response.data?.data?.images || [];
   }
+  
 }
 
 export default new ProductService();
