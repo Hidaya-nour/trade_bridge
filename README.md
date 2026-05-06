@@ -50,31 +50,49 @@ npm run dev
 ### Backend (`backend/.env`)
 
 ```env
+
+# Server
 PORT=5000
 NODE_ENV=development
 
+# Database
 DB_HOST=localhost
 DB_PORT=3306
 DB_USER=root
-DB_PASSWORD=your_password
-DB_NAME=tradebridge
-DB_SSL=false
+DB_PASSWORD=root
+DB_NAME=trade_bridge
+DB_SSL=true
 
+# Redis
 REDIS_HOST=localhost
 REDIS_PORT=6379
 REDIS_PASSWORD=
 
-JWT_SECRET=change_me
+# JWT
+JWT_SECRET=7ccb3b287f555093d86a9d47e6f093e84f1a5a5a10f6bf8c56b8192d635f533de968698cfa28941db49dc0b0484cfc1c29a76d62ba9c950a3139912ab33ab212
 JWT_EXPIRES_IN=7d
 
+CLOUDINARY_CLOUD_NAME=dayjl9ogj
+CLOUDINARY_API_KEY=444433731322691
+CLOUDINARY_API_SECRET=-P7kxHrnpEk16PS_aQVaTLvLeqw
+
+CHAPA_SECRET_KEY=CHASECK_TEST-xenTTutGFZh4KpqJxRW7XJJ0eermkVns
+CHAPA_BASE_URL=https://api.chapa.co/v1
+CHAPA_CURRENCY=ETB
+CHAPA_CALLBACK_URL=http://localhost:5000/api/payments/chapa/callback
+CHAPA_RETURN_URL=http://localhost:5173/retailer/orders
+
+# Email (SMTP)
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
 SMTP_SECURE=false
-SMTP_USER=
-SMTP_PASSWORD=
+SMTP_USER=your-email@gmail.com
+SMTP_PASSWORD=your-app-password
 SMTP_FROM=noreply@tradebridge.com
 
+# Frontend
 FRONTEND_URL=http://localhost:5173
+BACKEND_URL=http://localhost:5000
 ```
 
 ### Frontend (`frontend/.env`)
