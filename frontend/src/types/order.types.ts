@@ -232,6 +232,8 @@ export interface IncomingOrder {
   customerCompletedOrders?: number;
   customerCancelledOrders?: number;
   customerTotalSpend?: number;
+  isFromFactoryAgent?: boolean;
+  factoryAgentName?: string;
 }
 
 export interface IncomingOrdersConfig {

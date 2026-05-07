@@ -3,6 +3,7 @@ import { IncomingOrders } from "@/features/order/IncomingOrders";
 import { Factory } from "lucide-react";
 
 import { useOrderStore } from "@/stores/order.store";
+import factoryAgentService from "@/services/factory-agent.service";
 import { getPaymentMethodLabel } from "@/lib/payment-method-utils";
 import type {
   Order,
@@ -10,6 +11,7 @@ import type {
   IncomingOrder,
 } from "@/types/order.types";
 import { WithAsync } from "@/components/shared/WithAsync";
+import toast from "react-hot-toast";
 
 const mapPaymentStatus = (status?: string) => {
   switch (status) {
@@ -27,6 +29,30 @@ const mapPaymentStatus = (status?: string) => {
   }
 };
 
+type FactoryAgentContract = {
+  id?: string;
+  agent_id?: string;
+  end_date?: string | null;
+  termination_reason?: string | null;
+  agent?: {
+    id?: string;
+    full_name?: string;
+    business_name?: string;
+  };
+};
+
+const normalizeId = (value: unknown) => String(value ?? "").trim().toLowerCase();
+
+const isContractActive = (contract: FactoryAgentContract) => {
+  const contractAgentId = normalizeId(contract?.agent_id || contract?.agent?.id);
+  if (!contractAgentId) return false;
+  if (contract.termination_reason) return false;
+  if (!contract.end_date) return true;
+  const endTs = new Date(contract.end_date).getTime();
+  if (Number.isNaN(endTs)) return true;
+  return endTs >= Date.now();
+};
+
 const buildBuyerStats = (orders: Order[], buyerId: string) => {
   const buyerOrders = orders.filter((order) => order.buyer_id === buyerId);
   const completed = buyerOrders.filter((order) =>
@@ -40,7 +66,11 @@ const buildBuyerStats = (orders: Order[], buyerId: string) => {
   };
 };
 
-const mapOrderToIncoming = (order: Order, allOrders: Order[]): IncomingOrder => {
+const mapOrderToIncoming = (
+  order: Order,
+  allOrders: Order[],
+  agentContractsByAgentId: Map<string, FactoryAgentContract>,
+): IncomingOrder => {
   const items =
     order.items?.map((item) => ({
       name: item.product?.name || "Item",
@@ -57,6 +87,14 @@ const mapOrderToIncoming = (order: Order, allOrders: Order[]): IncomingOrder => 
 
   const customerName =
     order.buyer?.business_name || order.buyer?.full_name || "Customer";
+  const buyerId = normalizeId(order.buyer_id || order.buyer?.id);
+  const agentContract = buyerId
+    ? agentContractsByAgentId.get(buyerId)
+    : undefined;
+  const factoryAgentName =
+    agentContract?.agent?.business_name ||
+    agentContract?.agent?.full_name ||
+    undefined;
 
   return {
     id: order.id,
@@ -102,6 +140,8 @@ const mapOrderToIncoming = (order: Order, allOrders: Order[]): IncomingOrder => 
     customerRating: null,
     previousOrders: buildBuyerStats(allOrders, order.buyer_id).customerCompletedOrders,
     ...buildBuyerStats(allOrders, order.buyer_id),
+    isFromFactoryAgent: Boolean(agentContract),
+    factoryAgentName,
   };
 };
 
@@ -114,14 +154,47 @@ const FactoryIncomingOrdersPage: React.FC = () => {
     isLoading,
     error,
   } = useOrderStore();
+  const [agentContracts, setAgentContracts] = React.useState<FactoryAgentContract[]>([]);
 
   useEffect(() => {
     fetchOrdersAsSupplier();
   }, [fetchOrdersAsSupplier]);
 
+  useEffect(() => {
+    const loadAgentContracts = async () => {
+      try {
+        const response = await factoryAgentService.getFactoryAgents();
+        const data = Array.isArray(response?.data) ? response.data : [];
+        setAgentContracts(data as FactoryAgentContract[]);
+      } catch {
+        setAgentContracts([]);
+      }
+    };
+
+    loadAgentContracts();
+  }, []);
+
+  const activeAgentContractsByAgentId = useMemo(() => {
+    const map = new Map<string, FactoryAgentContract>();
+    agentContracts.filter(isContractActive).forEach((contract) => {
+      const contractAgentId = normalizeId(contract.agent_id || contract.agent?.id);
+      if (contractAgentId) {
+        map.set(contractAgentId, contract);
+      }
+    });
+    return map;
+  }, [agentContracts]);
+
   const orders = useMemo(
-    () => (storeOrders as Order[]).map((order) => mapOrderToIncoming(order, storeOrders as Order[])),
-    [storeOrders],
+    () =>
+      (storeOrders as Order[]).map((order) =>
+        mapOrderToIncoming(
+          order,
+          storeOrders as Order[],
+          activeAgentContractsByAgentId,
+        ),
+      ),
+    [storeOrders, activeAgentContractsByAgentId],
   );
 
   const stats = useMemo(() => {

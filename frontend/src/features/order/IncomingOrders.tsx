@@ -177,7 +177,14 @@ export const IncomingOrders: React.FC<IncomingOrdersProps> = ({
 
   // Sort orders by date (newest first)
   const sortedOrders = [...filteredOrders].sort(
-    (a, b) => new Date(b.orderDate).getTime() - new Date(a.orderDate).getTime(),
+    (a, b) => {
+      const aAgentPriority = a.isFromFactoryAgent ? 1 : 0;
+      const bAgentPriority = b.isFromFactoryAgent ? 1 : 0;
+      if (aAgentPriority !== bAgentPriority) {
+        return bAgentPriority - aAgentPriority;
+      }
+      return new Date(b.orderDate).getTime() - new Date(a.orderDate).getTime();
+    },
   );
 
   // Pagination
@@ -483,6 +490,14 @@ export const IncomingOrders: React.FC<IncomingOrdersProps> = ({
                           >
                             {order.customerName}
                           </Link>
+                          {order.isFromFactoryAgent && (
+                            <Badge
+                              variant="outline"
+                              className="bg-orange-50 text-orange-700 border-orange-200"
+                            >
+                              Factory Agent
+                            </Badge>
+                          )}
                         </div>
                         <span className="text-xs text-muted-foreground">•</span>
                         <span className="text-xs text-muted-foreground flex items-center">

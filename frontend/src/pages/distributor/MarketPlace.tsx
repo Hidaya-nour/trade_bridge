@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { ProductCatalog } from "@/features/products/ProductCatalog";
 import { useProductStore } from "@/stores/product.store";
@@ -24,6 +24,32 @@ const locations = [
   "Hawassa",
   "Dire Dawa",
 ];
+
+// Helper function to map promotion to product link
+const getPromotionProductLink = (promotion: BroadcastRecord): string | null => {
+  // If the broadcast has a direct product ID in metadata
+  if (promotion.metadata?.product_id) {
+    return `/distributor/marketplace/product/${promotion.metadata.product_id}`;
+  }
+  
+  // If it has a category filter
+  if (promotion.target_audience === 'segment' && promotion.audience_segments?.length) {
+    const categorySegment = promotion.audience_segments.find(seg => 
+      categories.includes(seg)
+    );
+    if (categorySegment) {
+      return `/distributor/marketplace?category=${encodeURIComponent(categorySegment)}`;
+    }
+  }
+  
+  // If it has a supplier/owner ID
+  if (promotion.owner_id) {
+    return `/distributor/marketplace?supplier=${promotion.owner_id}`;
+  }
+  
+  // Default - navigate to marketplace
+  return `/distributor/marketplace?promo=${promotion.code || promotion.id}`;
+};
 
 const DistributorMarketplacePage: React.FC = () => {
   const navigate = useNavigate();
@@ -96,7 +122,6 @@ const DistributorMarketplacePage: React.FC = () => {
   } = useCartStore();
 
   // Fetch products and cart on component mount
-
   useEffect(() => {
     fetchProducts(
       {
@@ -108,6 +133,7 @@ const DistributorMarketplacePage: React.FC = () => {
     fetchCart();
   }, [fetchProducts, fetchCart, user?.id]);
 
+  // Load promotions
   useEffect(() => {
     const loadPromotions = async () => {
       try {
@@ -126,6 +152,21 @@ const DistributorMarketplacePage: React.FC = () => {
     };
 
     loadPromotions();
+  }, []);
+
+  // Handle promotion product click for analytics
+  const handlePromotionClick = useCallback((promotion: BroadcastRecord) => {
+    console.log('Promotion clicked:', {
+      id: promotion.id,
+      title: promotion.title,
+      type: promotion.type,
+    });
+    
+    // Optional: Track analytics
+    // analytics.track('promotion_clicked', { promotion_id: promotion.id });
+    
+    // Optional: Show toast
+    toast.success(`Viewing ${promotion.title}`);
   }, []);
 
   // Transform store products to match ProductCatalog expected format
@@ -329,11 +370,14 @@ const DistributorMarketplacePage: React.FC = () => {
     <div className="space-y-6">
       {promotions.length > 0 && (
         <ActivePromotionsPanel
-          title="Marketplace Promotions"
-          description="Active offers from factories and other distributors while you source inventory."
+          title="🔥 Hot Deals & Promotions"
+          description="Limited time offers from verified suppliers. Click to shop now!"
           items={promotions}
           emptyTitle="No active marketplace promotions"
           emptyDescription="Factory and distributor offers will show up here when they go live."
+          getProductLink={getPromotionProductLink}
+          onProductClick={handlePromotionClick}
+          scrollable={true}
         />
       )}
       <ProductCatalog
