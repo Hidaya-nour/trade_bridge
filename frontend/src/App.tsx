@@ -5,7 +5,6 @@ import {
   Routes,
 } from "react-router-dom";
 import DashboardLayout from "@/components/layout/DashboardLayout";
-import HomePage from "./pages/Home";
 import AboutPage from "./pages/About";
 import ContactSupportPage from "./pages/ContactSupport";
 import WorkspacesPage from "./pages/Workspaces";
@@ -56,9 +55,6 @@ import DistributorMyProductDetailPage from "./pages/distributor/MyProductDetails
 import DistributorFactoryProfilePage from "./pages/distributor/FactoryProfile";
 import FactoryMyProductDetailPage from "./pages/factory/ProductDetails";
 import AgentsPage from "./pages/factory/Agents";
-import LandingLayout from "./components/landing/layout/LandingLayout";
-import About from "./pages/landing/About";
-import HowItWorks from "./pages/landing/HowItWorks";
 import { LoginPage } from "./pages/auth/Login";
 import { RegisterPage } from "./pages/auth/Register";
 import { AccountSuspendedPage } from "./pages/auth/AccountSuspended";
@@ -70,17 +66,16 @@ import OrderReceiptPage from "./pages/shared/OrderReceipt";
 import VerifyReceiptPage from "./pages/shared/VerifyReceipt";
 import ExportReportsPage from "./pages/shared/ExportReports";
 import RequestDriverPage from "./pages/shared/RequestDriver";
+import HomePage from "./pages/Home";
+import NotificationsTab from "./components/setting/NotificationsTab";
+import Notifications from "./pages/shared/Notifications";
 
 function App() {
   return (
     <>
       <Router>
         <Routes>
-          <Route element={<LandingLayout />}>
-            <Route path="/about" element={<About />} />
-            <Route path="/how-it-works" element={<HowItWorks />} />
-          </Route>
-
+         
           {/* Landing */}
           <Route path="/" element={<HomePage />} />
           <Route path="/about" element={<AboutPage />} />
@@ -652,6 +647,14 @@ function App() {
             element={
               <DashboardLayout>
                 <DriverDashboard />
+              </DashboardLayout>
+            }
+          />
+           <Route
+            path="/driver/notifications"
+            element={
+              <DashboardLayout>
+                <Notifications />
               </DashboardLayout>
             }
           />
