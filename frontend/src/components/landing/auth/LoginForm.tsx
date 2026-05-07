@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { useState } from "react";
-import { LandingButton, LandingCheckbox, LandingInput } from "../shared";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 const GoogleIcon = () => (
   <svg className="h-5 w-5" viewBox="0 0 24 24" aria-hidden="true">
@@ -102,7 +103,7 @@ const LoginForm = ({ onSubmit, isLoading = false, error }: LoginFormProps) => {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6" noValidate>
-      <LandingInput
+      <Input
         label="Email Address"
         name="email"
         type="email"
@@ -114,7 +115,7 @@ const LoginForm = ({ onSubmit, isLoading = false, error }: LoginFormProps) => {
       />
 
       <div>
-        <LandingInput
+        <Input
           label="Password"
           name="password"
           type={showPassword ? "text" : "password"}
@@ -144,21 +145,21 @@ const LoginForm = ({ onSubmit, isLoading = false, error }: LoginFormProps) => {
       </div>
 
       <div className="space-y-3">
-        <LandingButton
+        <Button
           type="submit"
           variant="primary"
           fullWidth
           disabled={isLoading}
         >
           {isLoading ? "Signing in..." : "Sign In"}
-        </LandingButton>
+        </Button>
 
-        <LandingButton type="button" variant="outline" fullWidth>
+        <Button type="button" variant="outline" fullWidth>
           <span className="flex items-center justify-center gap-2">
             <GoogleIcon />
             <span>Sign in with Google</span>
           </span>
-        </LandingButton>
+        </Button>
       </div>
     </form>
   );

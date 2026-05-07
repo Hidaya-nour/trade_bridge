@@ -9,7 +9,6 @@ import {
 } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import { Check, Shield } from "lucide-react";
-import LandingInput from "@/components/landing/shared/LandingInput";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -259,7 +258,7 @@ const BusinessTab: React.FC<BusinessTabProps> = ({
               </Select>
             </div>
             <div className="space-y-2">
-              <LandingInput
+              <Input
                 label={`TIN Number${isSupplier ? " *" : ""}`}
                 name="tin_number"
                 value={profileForm.tin_number}
