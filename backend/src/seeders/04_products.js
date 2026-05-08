@@ -1,15 +1,36 @@
 // src/seeders/04_products.js
 import { faker } from '@faker-js/faker';
-import { Product } from '../models/product.model.js';
+import fs from 'fs';
+import path from 'path';
+import { Product } from '../models/product.model.ts';
 import { 
-  productCategories, unitTypes, generateProductImages, 
-  getRandomItems, getRandomStatus, generateFoodProductData
+  unitTypes, generateProductImages, 
+  getRandomStatus, generateFoodProductData
 } from './seedHelpers.js';
+
+const FOOD_DRINK_CATEGORIES = ['Food', 'Drink'];
+const docsProductDir = path.resolve(process.cwd(), '..', 'docs', 'products');
+const localProductImages = fs.existsSync(docsProductDir)
+  ? fs.readdirSync(docsProductDir)
+      .filter(file => /\.(jpe?g|png|webp)$/i.test(file))
+      .map(file => ({
+        file,
+        url: `https://picsum.photos/seed/${encodeURIComponent(file)}/400/400`,
+      }))
+  : [];
 
 const generateSKU = (category, index) => {
   const prefix = category.substring(0, 3).toUpperCase();
   return `${prefix}-${String(index + 1).padStart(6, '0')}`;
 };
+
+const sanitizeFileNameAsTitle = (fileName) =>
+  fileName
+    .replace(/\.[^.]+$/, '')
+    .replace(/[_-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 80);
 
 export default async function seedProducts(seededData, options = {}) {
   const users = seededData.users;
@@ -28,15 +49,25 @@ export default async function seedProducts(seededData, options = {}) {
       : faker.number.int({ min: 5, max: 20 });
     
     for (let i = 0; i < numProducts && productCounter < 500; i++) {
-      const category = faker.helpers.arrayElement(productCategories);
-      const productData = generateFoodProductData(category);
-      const unitType = faker.helpers.arrayElement(unitTypes);
+      const category = faker.helpers.arrayElement(FOOD_DRINK_CATEGORIES);
+      const productData = generateFoodProductData(category === 'Drink' ? 'Beverages' : 'Processed Foods');
+      const docImage = localProductImages.length > 0
+        ? localProductImages[productCounter % localProductImages.length]
+        : null;
+      const productName = docImage
+        ? sanitizeFileNameAsTitle(docImage.file)
+        : productData.name;
+      const unitType = category === 'Drink'
+        ? faker.helpers.arrayElement(['liter', 'ml', 'box', 'carton'])
+        : faker.helpers.arrayElement(unitTypes.filter(u => !['liter', 'ml'].includes(u)));
       const basePrice = parseFloat(faker.commerce.price({ min: 50, max: 5000 }));
       const isAvailable = getRandomStatus([true, false], [0.85, 0.15]);
       
       let productImages = [];
       if (!options.skipCloudinary) {
         productImages = await generateProductImages(productCounter, productCounter);
+      } else if (docImage) {
+        productImages = [{ url: docImage.url, is_primary: true }];
       } else {
         productImages = [{ url: `https://picsum.photos/id/${productCounter % 1000}/400/400`, is_primary: true }];
       }
@@ -44,7 +75,7 @@ export default async function seedProducts(seededData, options = {}) {
       products.push({
         id: faker.string.uuid(),
         supplier_id: supplier.id,
-        name: productData.name,
+        name: productName,
         category: category,
         sku: generateSKU(category, productCounter),
         description: productData.description,
@@ -79,3 +110,4 @@ export default async function seedProducts(seededData, options = {}) {
   await Product.bulkCreate(products, { ignoreDuplicates: true });
   return products;
 }
+

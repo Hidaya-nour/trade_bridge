@@ -1,6 +1,6 @@
 // src/seeders/03_addresses.js
 import { faker } from '@faker-js/faker';
-import { Address } from '../models/address.model.js';
+import { Address } from '../models/address.model.ts';
 import { regions, cities } from './seedHelpers.js';
 
 export default async function seedAddresses(seededData) {

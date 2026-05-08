@@ -1,7 +1,7 @@
 // src/seeders/13_inventory_movements.js
 import { faker } from '@faker-js/faker';
-import { InventoryMovement } from '../models/inventory-movement.model.js';
-import { Product } from '../models/product.model.js';
+import { InventoryMovement } from '../models/inventory-movement.model.ts';
+import { Product } from '../models/product.model.ts';
 
 const MOVEMENT_TYPES = ['in', 'out', 'adjustment'];
 const MOVEMENT_REASONS = {

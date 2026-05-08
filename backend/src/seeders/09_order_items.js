@@ -1,7 +1,7 @@
 // src/seeders/09_order_items.js
 import { faker } from '@faker-js/faker';
-import { OrderItems } from '../models/order-item.model.js';
-import { Order } from '../models/order.model.js';
+import { OrderItems } from '../models/order-item.model.ts';
+import { Order } from '../models/order.model.ts';
 import { getRandomItems } from './seedHelpers.js';
 
 export default async function seedOrderItems(seededData) {

@@ -1,6 +1,6 @@
 // src/seeders/15_driver_reviews.js
 import { faker } from '@faker-js/faker';
-import { DriverReview } from '../models/driver-review.model.js';
+import { DriverReview } from '../models/driver-review.model.ts';
 
 export default async function seedDriverReviews(seededData) {
   const deliveries = seededData.deliveries;

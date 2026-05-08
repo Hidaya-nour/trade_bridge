@@ -1,6 +1,6 @@
 // src/seeders/05_payment_methods.js
 import { faker } from '@faker-js/faker';
-import { SupplierPaymentMethod } from '../models/supplier-payment-method.model.js';
+import { SupplierPaymentMethod } from '../models/supplier-payment-method.model.ts';
 
 const METHOD_TYPES = ['bank_transfer', 'mobile_money', 'cash', 'credit'];
 const PROVIDERS = {

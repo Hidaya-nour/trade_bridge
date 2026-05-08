@@ -1,6 +1,6 @@
 // src/seeders/16_notifications.js
 import { faker } from '@faker-js/faker';
-import { Notification } from '../models/notification.model.js';
+import { Notification } from '../models/notification.model.ts';
 
 const NOTIFICATION_TYPES = ['order', 'payment', 'delivery', 'system', 'promotion', 'alert'];
 const TITLES = {

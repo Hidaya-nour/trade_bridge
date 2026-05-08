@@ -1,6 +1,6 @@
 // src/seeders/01_users.js
 import { faker } from '@faker-js/faker';
-import { User } from '../models/user.model.js';
+import { User } from '../models/user.model.ts';
 import { hashPassword } from './seedHelpers.js';
 
 const toMax = (value, max) => String(value ?? '').slice(0, max);
@@ -13,6 +13,20 @@ const randomPhone = () => {
 
 const uniqueEmail = (prefix, domain, i) =>
   `${prefix}${i + 1}_${faker.string.alphanumeric(6).toLowerCase()}@${domain}`;
+
+const FOOD_DRINK_BUSINESS_TYPES = ['Food', 'Drink'];
+const FOOD_FACTORY_NAMES = [
+  'Fresh Harvest Foods',
+  'Golden Grain Foods',
+  'Daily Table Foods',
+  'Urban Pantry Foods',
+];
+const DRINK_FACTORY_NAMES = [
+  'Pure Spring Drinks',
+  'Highland Drinks',
+  'Blue Nile Drinks',
+  'Refresh House Drinks',
+];
 
 const generateUsers = async () => {
   const users = [];
@@ -46,6 +60,10 @@ const generateUsers = async () => {
   // Factories (20)
   for (let i = 0; i < 20; i++) {
     const status = faker.helpers.arrayElement(['active', 'pending']);
+    const businessType = faker.helpers.arrayElement(FOOD_DRINK_BUSINESS_TYPES);
+    const businessBase = businessType === 'Food'
+      ? faker.helpers.arrayElement(FOOD_FACTORY_NAMES)
+      : faker.helpers.arrayElement(DRINK_FACTORY_NAMES);
     users.push({
       id: faker.string.uuid(),
       email: uniqueEmail('factory', 'factory.com', i),
@@ -54,7 +72,7 @@ const generateUsers = async () => {
       status,
       phone: randomPhone(),
       password_hash: await hashPassword('Factory@123'),
-      business_name: toMax(`${faker.company.name()} Factory`, 100),
+      business_name: toMax(`${businessBase} Factory`, 100),
       tin_number: faker.string.numeric(10),
       is_vat_registered: faker.datatype.boolean(0.8),
       vat_rate: 0.15,
@@ -72,6 +90,10 @@ const generateUsers = async () => {
   // Distributors (25)
   for (let i = 0; i < 25; i++) {
     const status = faker.helpers.arrayElement(['active', 'pending', 'suspended']);
+    const businessType = faker.helpers.arrayElement(FOOD_DRINK_BUSINESS_TYPES);
+    const businessBase = businessType === 'Food'
+      ? faker.helpers.arrayElement(FOOD_FACTORY_NAMES)
+      : faker.helpers.arrayElement(DRINK_FACTORY_NAMES);
     users.push({
       id: faker.string.uuid(),
       email: uniqueEmail('distributor', 'distributor.com', i),
@@ -80,7 +102,7 @@ const generateUsers = async () => {
       status,
       phone: randomPhone(),
       password_hash: await hashPassword('Distributor@123'),
-      business_name: toMax(`${faker.company.name()} Distribution`, 100),
+      business_name: toMax(`${businessBase} Distribution`, 100),
       tin_number: faker.string.numeric(10),
       is_vat_registered: faker.datatype.boolean(0.7),
       vat_rate: 0.15,
@@ -164,3 +186,4 @@ export default async function seedUsers() {
   }
   return users;
 }
+

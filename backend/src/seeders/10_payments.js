@@ -1,6 +1,6 @@
 // src/seeders/10_payments.js
 import { faker } from '@faker-js/faker';
-import { Payment } from '../models/payment.model.js';
+import { Payment } from '../models/payment.model.ts';
 import { getRandomStatus } from './seedHelpers.js';
 
 const PAYMENT_METHODS = ['mobile_banking', 'chapa', 'credit'];
@@ -65,3 +65,4 @@ export default async function seedPayments(seededData) {
   await Payment.bulkCreate(payments, { ignoreDuplicates: true });
   return payments;
 }
+

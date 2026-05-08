@@ -1,6 +1,6 @@
 // src/seeders/22_audit_logs.js
 import { faker } from '@faker-js/faker';
-import { AuditLog } from '../models/audit-log.model.js';
+import { AuditLog } from '../models/audit-log.model.ts';
 
 const ACTIONS = ['create', 'update', 'delete', 'approve', 'reject', 'suspend', 'activate'];
 const ENTITY_TYPES = ['user', 'product', 'order', 'payment', 'delivery', 'document', 'dispute'];

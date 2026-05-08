@@ -1,6 +1,6 @@
 // src/seeders/08_orders.js
 import { faker } from '@faker-js/faker';
-import { Order } from '../models/order.model.js';
+import { Order } from '../models/order.model.ts';
 import { getRandomItems, getRandomStatus, getOrderStatusTimeline } from './seedHelpers.js';
 
 const ORDER_STATUSES = ['pending', 'approved', 'processing', 'shipped', 'delivered', 'closed', 'cancelled'];

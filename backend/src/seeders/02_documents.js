@@ -1,6 +1,6 @@
 // src/seeders/02_documents.js
 import { faker } from '@faker-js/faker';
-import { Document } from '../models/document.model.js';
+import { Document } from '../models/document.model.ts';
 import { uploadDocument, getRandomItems } from './seedHelpers.js';
 
 const DOCUMENT_TYPES = ['id_card', 'business_license', 'tax_certificate', 'other'];

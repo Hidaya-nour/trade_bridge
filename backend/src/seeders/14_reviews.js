@@ -1,7 +1,7 @@
 // src/seeders/14_reviews.js
 import { faker } from '@faker-js/faker';
-import { Review } from '../models/rating-reviews.model.js';
-import { Product } from '../models/product.model.js';
+import { Review } from '../models/rating-reviews.model.ts';
+import { Product } from '../models/product.model.ts';
 
 export default async function seedReviews(seededData) {
   const products = seededData.products;

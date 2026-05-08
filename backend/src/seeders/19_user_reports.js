@@ -1,6 +1,6 @@
 // src/seeders/19_user_reports.js
 import { faker } from '@faker-js/faker';
-import { UserReport } from '../models/user-report.model.js';
+import { UserReport } from '../models/user-report.model.ts';
 
 const REPORT_REASONS = [
   'fraud', 'harassment', 'spam', 'counterfeit_products', 

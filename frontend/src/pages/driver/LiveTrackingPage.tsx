@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import L from "leaflet";
-import { MapContainer, Marker, Polyline, TileLayer, useMap } from "react-leaflet";
+import { CircleMarker, MapContainer, Marker, Polyline, TileLayer, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import {
   Clock,
@@ -52,6 +52,7 @@ type DriverLocationPoint = {
 const MIN_POST_INTERVAL_MS = 5000;
 const POLL_INTERVAL_MS = 5000;
 const DEFAULT_CENTER = { lat: 9.03, lng: 38.74 };
+const MIN_MOVEMENT_METERS = 20;
 
 const markerIcon = new L.Icon({
   iconUrl: new URL("leaflet/dist/images/marker-icon.png", import.meta.url).toString(),
@@ -84,6 +85,24 @@ const buildGoogleMapsSearchUrl = (lat: number, lng: number) =>
 const buildGoogleMapsDirectionsUrl = (destination: string) =>
   `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destination)}`;
 
+const hasUsableDropoff = (value?: string | null) => {
+  const normalized = String(value || "").trim().toLowerCase();
+  if (!normalized) return false;
+  const blocked = new Set([
+    "n/a",
+    "na",
+    "none",
+    "unknown",
+    "not provided",
+    "not available",
+    "null",
+    "undefined",
+    "-",
+    "--",
+  ]);
+  return !blocked.has(normalized);
+};
+
 const statusColorMap: Record<string, string> = {
   pending: "bg-yellow-100 text-yellow-800",
   assigned: "bg-blue-100 text-blue-800",
@@ -95,6 +114,39 @@ const statusColorMap: Record<string, string> = {
 
 const formatStatus = (status: string) =>
   status.replace("_", " ").replace(/\b\w/g, (char) => char.toUpperCase());
+
+const toRadians = (deg: number) => (deg * Math.PI) / 180;
+
+const distanceMeters = (
+  a: { lat: number; lng: number },
+  b: { lat: number; lng: number },
+) => {
+  const earthRadius = 6371000;
+  const dLat = toRadians(b.lat - a.lat);
+  const dLng = toRadians(b.lng - a.lng);
+  const lat1 = toRadians(a.lat);
+  const lat2 = toRadians(b.lat);
+
+  const x =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1) *
+      Math.cos(lat2) *
+      Math.sin(dLng / 2) *
+      Math.sin(dLng / 2);
+  const y = 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
+  return earthRadius * y;
+};
+
+const parseLatLngFromText = (value?: string | null) => {
+  if (!value) return null;
+  const match = value.match(/(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)/);
+  if (!match) return null;
+  const lat = Number(match[1]);
+  const lng = Number(match[2]);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+  if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return null;
+  return { lat, lng };
+};
 
 const DriverLiveTrackingPage: React.FC = () => {
   const [deliveries, setDeliveries] = useState<DriverDelivery[]>([]);
@@ -130,14 +182,73 @@ const DriverLiveTrackingPage: React.FC = () => {
     [locations],
   );
 
-  const latestLocation = sortedLocations[sortedLocations.length - 1] ?? null;
+  const filteredLocations = useMemo(() => {
+    if (sortedLocations.length <= 1) return sortedLocations;
+    const kept: DriverLocationPoint[] = [sortedLocations[0]];
+
+    for (let i = 1; i < sortedLocations.length; i += 1) {
+      const prev = kept[kept.length - 1];
+      const curr = sortedLocations[i];
+      const moved = distanceMeters(
+        { lat: prev.latitude, lng: prev.longitude },
+        { lat: curr.latitude, lng: curr.longitude },
+      );
+      if (moved >= MIN_MOVEMENT_METERS) {
+        kept.push(curr);
+      }
+    }
+
+    if (kept[kept.length - 1]?.id !== sortedLocations[sortedLocations.length - 1]?.id) {
+      kept.push(sortedLocations[sortedLocations.length - 1]);
+    }
+
+    return kept;
+  }, [sortedLocations]);
+
+  const latestLocation = filteredLocations[filteredLocations.length - 1] ?? null;
+  const sharingStartLocation = filteredLocations[0] ?? null;
+  const pickupCoords = parseLatLngFromText(activeDelivery?.pickup_location);
+  const hasDropoff = hasUsableDropoff(activeDelivery?.dropoff_location);
+  const dropoffCoords = hasDropoff
+    ? parseLatLngFromText(activeDelivery?.dropoff_location)
+    : null;
+  const startPoint =
+    pickupCoords ||
+    (sharingStartLocation
+      ? {
+          lat: sharingStartLocation.latitude,
+          lng: sharingStartLocation.longitude,
+        }
+      : null);
+
+  const movedDistance =
+    startPoint && latestLocation
+      ? distanceMeters(
+          startPoint,
+          { lat: latestLocation.latitude, lng: latestLocation.longitude },
+        )
+      : 0;
+
   const currentCenter = latestLocation
     ? { lat: latestLocation.latitude, lng: latestLocation.longitude }
     : lastCoords || DEFAULT_CENTER;
-  const routePositions = sortedLocations.map((location) => [
-    location.latitude,
-    location.longitude,
-  ]) as [number, number][];
+
+  const traveledRoutePositions = (
+    startPoint && latestLocation
+      ? ([
+          [startPoint.lat, startPoint.lng],
+          [latestLocation.latitude, latestLocation.longitude],
+        ] as [number, number][])
+      : []
+  );
+
+  const remainingRoutePositions =
+    latestLocation && dropoffCoords
+      ? ([
+          [latestLocation.latitude, latestLocation.longitude],
+          [dropoffCoords.lat, dropoffCoords.lng],
+        ] as [number, number][])
+      : [];
 
   const loadMyDeliveries = async () => {
     try {
@@ -506,10 +617,39 @@ const DriverLiveTrackingPage: React.FC = () => {
                         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                       />
                       <MapCenterUpdater center={currentCenter} />
-                      {routePositions.length > 1 && (
+                      {traveledRoutePositions.length > 1 && movedDistance >= MIN_MOVEMENT_METERS && (
                         <Polyline
-                          positions={routePositions}
-                          pathOptions={{ color: "hsl(var(--primary))", weight: 5 }}
+                          positions={traveledRoutePositions}
+                          pathOptions={{
+                            color: "hsl(var(--primary))",
+                            weight: 4,
+                            opacity: 0.3,
+                          }}
+                        />
+                      )}
+                      {remainingRoutePositions.length === 2 && (
+                        <Polyline
+                          positions={remainingRoutePositions}
+                          pathOptions={{
+                            color: "hsl(var(--primary))",
+                            weight: 6,
+                            opacity: 0.9,
+                          }}
+                        />
+                      )}
+                      {startPoint && (
+                        <CircleMarker
+                          center={{
+                            lat: startPoint.lat,
+                            lng: startPoint.lng,
+                          }}
+                          radius={6}
+                          pathOptions={{
+                            color: "#16a34a",
+                            fillColor: "#22c55e",
+                            fillOpacity: 0.9,
+                            weight: 2,
+                          }}
                         />
                       )}
                       {latestLocation && (
@@ -519,6 +659,18 @@ const DriverLiveTrackingPage: React.FC = () => {
                             lng: latestLocation.longitude,
                           }}
                           icon={markerIcon}
+                        />
+                      )}
+                      {dropoffCoords && (
+                        <CircleMarker
+                          center={dropoffCoords}
+                          radius={7}
+                          pathOptions={{
+                            color: "#dc2626",
+                            fillColor: "#ef4444",
+                            fillOpacity: 0.9,
+                            weight: 2,
+                          }}
                         />
                       )}
                     </MapContainer>
@@ -574,16 +726,18 @@ const DriverLiveTrackingPage: React.FC = () => {
                         </a>
                       </Button>
                     )}
-                    <Button asChild variant="outline" size="sm">
-                      <a
-                        href={buildGoogleMapsDirectionsUrl(activeDelivery.dropoff_location)}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        <Navigation className="mr-2 h-3 w-3" />
-                        Navigate to Dropoff
-                      </a>
-                    </Button>
+                    {hasDropoff && (
+                      <Button asChild variant="outline" size="sm">
+                        <a
+                          href={buildGoogleMapsDirectionsUrl(activeDelivery.dropoff_location)}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          <Navigation className="mr-2 h-3 w-3" />
+                          Navigate to Dropoff
+                        </a>
+                      </Button>
+                    )}
                   </div>
                 </>
               ) : (

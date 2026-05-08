@@ -1,6 +1,6 @@
 // src/seeders/20_broadcasts.js
 import { faker } from '@faker-js/faker';
-import { Broadcast } from '../models/broadcast.model.js';
+import { Broadcast } from '../models/broadcast.model.ts';
 
 const BROADCAST_TYPES = ['discount', 'bogo', 'free-shipping', 'bundle', 'clearance'];
 const BROADCAST_STATUSES = ['draft', 'scheduled', 'active', 'expired', 'cancelled'];

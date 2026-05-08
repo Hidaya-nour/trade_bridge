@@ -1,6 +1,6 @@
 // src/seeders/17_chat_messages.js
 import { faker } from '@faker-js/faker';
-import { ChatMessage } from '../models/chat-message.model.js';
+import { ChatMessage } from '../models/chat-message.model.ts';
 
 export default async function seedChatMessages(seededData) {
   const users = seededData.users;

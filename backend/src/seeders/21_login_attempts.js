@@ -1,6 +1,6 @@
 // src/seeders/21_login_attempts.js
 import { faker } from '@faker-js/faker';
-import { LoginAttempt } from '../models/login-attempt.model.js';
+import { LoginAttempt } from '../models/login-attempt.model.ts';
 
 export default async function seedLoginAttempts(seededData) {
   const users = seededData.users;

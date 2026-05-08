@@ -1,6 +1,6 @@
 // src/seeders/11_deliveries.js
 import { faker } from '@faker-js/faker';
-import { Delivery } from '../models/delivery.model.js';
+import { Delivery } from '../models/delivery.model.ts';
 
 const DELIVERY_STATUSES = ['pending', 'assigned', 'picked_up', 'delivered', 'failed', 'cancelled'];
 const STATUS_WEIGHTS = [0.1, 0.2, 0.25, 0.35, 0.05, 0.05];

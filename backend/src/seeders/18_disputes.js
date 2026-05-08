@@ -1,6 +1,6 @@
 // src/seeders/18_disputes.js
 import { faker } from '@faker-js/faker';
-import { Dispute } from '../models/dispute.model.js';
+import { Dispute } from '../models/dispute.model.ts';
 
 const DISPUTE_STATUSES = ['open', 'under_review', 'resolved', 'rejected'];
 const STATUS_WEIGHTS = [0.3, 0.3, 0.25, 0.15];

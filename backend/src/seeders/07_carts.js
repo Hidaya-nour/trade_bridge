@@ -1,7 +1,7 @@
 // src/seeders/07_carts.js
 import { faker } from '@faker-js/faker';
-import { Cart } from '../models/cart.model.js';
-import { CartItem } from '../models/cart-item.model.js';
+import { Cart } from '../models/cart.model.ts';
+import { CartItem } from '../models/cart-item.model.ts';
 import { getRandomItems } from './seedHelpers.js';
 
 export default async function seedCarts(seededData) {

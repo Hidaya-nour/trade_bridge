@@ -1,5 +1,5 @@
 // src/seeders/index.js
-import sequelize from '../config/database.js';
+import sequelize from '../config/database.ts';
 import seedUsers from './01_users.js';
 import seedDocuments from './02_documents.js';
 import seedAddresses from './03_addresses.js';

@@ -1,6 +1,6 @@
 // src/seeders/12_delivery_events.js
 import { faker } from '@faker-js/faker';
-import { DeliveryEvent } from '../models/DeliveryEvent.model.js';
+import { DeliveryEvent } from '../models/DeliveryEvent.model.ts';
 
 const EVENT_TYPES = ['assigned', 'picked_up', 'in_transit', 'arrived_at_region', 'out_for_delivery', 'delivered', 'issue_reported'];
 

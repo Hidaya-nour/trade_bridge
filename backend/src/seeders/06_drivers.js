@@ -1,6 +1,6 @@
 // src/seeders/06_drivers.js
 import { faker } from '@faker-js/faker';
-import { Driver } from '../models/driver.model.js';
+import { Driver } from '../models/driver.model.ts';
 
 const VEHICLE_TYPES = ['Truck', 'Van', 'Pickup', 'Motorcycle', 'Cargo Bike', 'Mini-Truck'];
 const DRIVER_TYPES = ['full-time', 'part-time', 'contractor', 'freelance'];
