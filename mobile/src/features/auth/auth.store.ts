@@ -1,7 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
-import { API_BASE_URL } from "@/lib/api";
+import { API_BASE_URL } from "@/lib/constants";
 import { authService } from "./auth.service";
 import {
   type ChangePasswordPayload,

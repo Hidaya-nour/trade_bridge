@@ -1,31 +1,6 @@
 import axios from "axios";
-import { Platform } from "react-native";
-import Constants from "expo-constants";
+import { API_BASE_URL } from "./constants";
 import { useAuthStore } from "@/features/auth/auth.store";
-
-const getDefaultApiUrl = () => {
-  if (Platform.OS === "android") {
-    return "http://10.0.2.2:5000/api";
-  }
-
-  if (Platform.OS === "ios") {
-    return "http://localhost:5000/api";
-  }
-
-  const hostUri = Constants.expoConfig?.hostUri ?? "";
-  const host = hostUri.split(":")[0];
-
-  if (host) {
-    return `http://${host}:5000/api`;
-  }
-
-  return "http://localhost:5000/api";
-};
-
-const API_BASE_URL =
-  (process.env.EXPO_PUBLIC_API_URL ?? getDefaultApiUrl()).replace(/\/+$/, "");
-
-export { API_BASE_URL };
 
 const api = axios.create({
   baseURL: API_BASE_URL,
