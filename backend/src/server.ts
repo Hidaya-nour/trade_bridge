@@ -240,9 +240,9 @@ const startServer = async () => {
     logger.warn('Failed to ensure suspension_appeals table exists', error);
   }
 
-  app.listen(PORT, () => {
-    logger.info(`🚀 Server running on port ${PORT}`);
-  });
+  app.listen(Number(PORT), "0.0.0.0", () => {
+  logger.info(`🚀 Server running on port ${PORT}`);
+});
 };
 
 startServer();
