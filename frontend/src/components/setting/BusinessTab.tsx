@@ -53,15 +53,14 @@ type AddressForm = {
   latitude: string;
   longitude: string;
 };
-
 type ExtraDoc = {
   id: string;
   document_type: "tax_certificate" | "id_card" | "other";
+  custom_document_type?: string;
   file: File | null;
   issued_date: string;
   expiry_date: string;
 };
-
 type BusinessFieldErrors = {
   business_name?: string | null;
   tin_number?: string | null;
@@ -489,11 +488,18 @@ const BusinessTab: React.FC<BusinessTabProps> = ({
                   >
                     {isLoading ? "Saving..." : "Save Changes"}
                   </Button>
+                  
                 </div>
-              </div>
+                
+             </div>
             </div>
+            
           </div>
-
+ {businessMessage && (
+          <p className="px-1 pb-2 text-sm text-muted-foreground">
+            {businessMessage}
+          </p>
+        )}
           {isSupplier && (
             <div
               className={
@@ -748,9 +754,10 @@ const BusinessTab: React.FC<BusinessTabProps> = ({
                           onClick={() =>
                             setExtraDocs((prev) => [
                               ...prev,
-                              {
+                                {
                                 id: `${Date.now()}-${Math.random()}`,
                                 document_type: "tax_certificate",
+                                custom_document_type: "",
                                 file: null,
                                 issued_date: "",
                                 expiry_date: "",
@@ -788,6 +795,9 @@ const BusinessTab: React.FC<BusinessTabProps> = ({
                                               | "tax_certificate"
                                               | "id_card"
                                               | "other",
+                                            custom_document_type: value === "other"
+                                              ? item.custom_document_type || ""
+                                              : "",
                                           }
                                         : item,
                                     ),
@@ -809,6 +819,30 @@ const BusinessTab: React.FC<BusinessTabProps> = ({
                                   </SelectItem>
                                 </SelectContent>
                               </Select>
+                              {doc.document_type === "other" && (
+                              <div className="space-y-2 mt-3">
+                                <Label htmlFor={`customDocType-${doc.id}`}>
+                                  Specify Document Type
+                                </Label>
+                                <Input
+                                  id={`customDocType-${doc.id}`}
+                                  placeholder="Enter document type"
+                                  value={doc.custom_document_type || ""}
+                                  onChange={(e) =>
+                                    setExtraDocs((prev) =>
+                                      prev.map((item) =>
+                                        item.id === doc.id
+                                          ? {
+                                              ...item,
+                                              custom_document_type: e.target.value,
+                                            }
+                                          : item,
+                                      ),
+                                    )
+                                  }
+                                />
+                              </div>
+                            )}
                             </div>
                             <div className="space-y-2">
                               <Label htmlFor={`docFile-${doc.id}`}>
@@ -923,11 +957,7 @@ const BusinessTab: React.FC<BusinessTabProps> = ({
           )}
         </CardContent>
 
-        {businessMessage && (
-          <p className="px-6 pb-6 text-sm text-muted-foreground">
-            {businessMessage}
-          </p>
-        )}
+       
       </Card>
     </TabsContent>
   );
