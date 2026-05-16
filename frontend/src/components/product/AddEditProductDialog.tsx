@@ -126,7 +126,7 @@ const ProductNameAutocomplete: React.FC<ProductNameAutocompleteProps> = ({
       <Input
         ref={inputRef}
         id="name"
-        placeholder={category ? "Enter product name" : "First select a category"}
+        placeholder={category ? "What is the name of the  product? eg: water, chocolate.." : "First select a category"}
         value={value}
         onChange={(e) => {
           onChange(e.target.value);

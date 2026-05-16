@@ -494,12 +494,7 @@ const SupplierDirectoryPage: React.FC = () => {
                         <ChevronRight className="h-4 w-4 ml-2" />
                       </Link>
                     </Button>
-                    <Button variant="outline" className="flex-1" asChild>
-                      <Link to={`/retailer/products?supplier=${supplier.id}`}>
-                        <Package className="h-4 w-4 mr-2" />
-                        Products
-                      </Link>
-                    </Button>
+                    
                   </div>
                 </CardContent>
               </Card>
