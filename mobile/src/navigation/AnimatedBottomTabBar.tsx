@@ -3,6 +3,7 @@ import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import { useEffect, useMemo, useRef } from "react";
 import {
   Animated,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -122,11 +123,18 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    shadowColor: "#0f172a",
-    shadowOpacity: 0.08,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: -4 },
-    elevation: 12,
+    ...Platform.select({
+      web: {
+        boxShadow: "0 -4px 16px rgba(15, 23, 42, 0.08)",
+      },
+      default: {
+        shadowColor: "#0f172a",
+        shadowOpacity: 0.08,
+        shadowRadius: 16,
+        shadowOffset: { width: 0, height: -4 },
+        elevation: 12,
+      },
+    }),
   },
   item: {
     flex: 1,
