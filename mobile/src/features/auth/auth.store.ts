@@ -38,6 +38,21 @@ interface AuthState {
   logout: () => Promise<void>;
 }
 
+let initializePromise: Promise<void> | null = null;
+
+const waitForPersistHydration = () =>
+  new Promise<void>((resolve) => {
+    if (useAuthStore.persist.hasHydrated()) {
+      resolve();
+      return;
+    }
+
+    const unsubscribe = useAuthStore.persist.onFinishHydration(() => {
+      unsubscribe();
+      resolve();
+    });
+  });
+
 export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
@@ -73,19 +88,34 @@ export const useAuthStore = create<AuthState>()(
       },
 
       initialize: async () => {
-        const { accessToken } = useAuthStore.getState();
-
-        if (!accessToken) {
-          set({ isInitialized: true });
+        if (initializePromise) {
+          await initializePromise;
           return;
         }
 
+        initializePromise = (async () => {
+          await waitForPersistHydration();
+
+          const { accessToken } = useAuthStore.getState();
+
+          if (!accessToken) {
+            set({ isInitialized: true, error: null });
+            return;
+          }
+
+          try {
+            await useAuthStore.getState().fetchUser();
+            set({ isInitialized: true, error: null });
+          } catch {
+            await useAuthStore.getState().logout();
+            set({ isInitialized: true });
+          }
+        })();
+
         try {
-          await useAuthStore.getState().fetchUser();
-          set({ isInitialized: true, error: null });
-        } catch {
-          await useAuthStore.getState().logout();
-          set({ isInitialized: true });
+          await initializePromise;
+        } finally {
+          initializePromise = null;
         }
       },
 

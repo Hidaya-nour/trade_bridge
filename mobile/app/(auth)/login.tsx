@@ -22,7 +22,7 @@ export default function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [localError, setLocalError] = useState("");
 
-  const { login, isLoading, error, clearError } = useAuthStore();
+  const { login, logout, isLoading, error, clearError } = useAuthStore();
 
   const handleLogin = async () => {
     setLocalError("");
@@ -35,6 +35,11 @@ export default function LoginScreen() {
 
     try {
       const { user } = await login(email.trim(), password);
+      if (user.status !== "active") {
+        await logout();
+        setLocalError("Your account is not active yet. Please wait for approval or contact support.");
+        return;
+      }
       const nextRoute = roleNavigation[user.role];
       router.replace(nextRoute);
     } catch {

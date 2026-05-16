@@ -22,13 +22,15 @@
         "ACCESS_COARSE_LOCATION",
         "ACCESS_FINE_LOCATION",
         "android.permission.ACCESS_COARSE_LOCATION",
-        "android.permission.ACCESS_FINE_LOCATION",
-        "ACCESS_COARSE_LOCATION",
-        "ACCESS_FINE_LOCATION",
-        "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_FINE_LOCATION"
       ],
       "package": "com.anonymous.tradebridgemobile"
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "439fd354-eda5-4508-8773-0e0c254b062f"
+      }
     }
   }
 }
