@@ -4,6 +4,7 @@ import { SupplierPaymentMethodService } from '../supplier-payment-method/supplie
 import { AppError } from '../../utils/errors';
 import { IProductFilters } from '../../types/product.types';
 import logger from '../../utils/logger';
+import { InventoryMovementRepository } from '../../repositories/inventory-movement.repository';
 import { isCloudinaryConfigured, uploadBufferToCloudinary } from '../../config/cloudinary';
 import Address from '../../models/address.model';
 
@@ -11,6 +12,7 @@ export class ProductService {
   private productRepo = new ProductRepository();
   private userRepo = new UserRepository();
   private supplierPaymentMethodService = new SupplierPaymentMethodService();
+  private inventoryMovementRepo = new InventoryMovementRepository();
 
   private parseBoolean(input: any): boolean | undefined {
     if (input === undefined || input === null) return undefined;
@@ -315,9 +317,21 @@ export class ProductService {
       throw new AppError('Stock quantity cannot be negative', 400);
     }
 
+    const previousStock = product.stock_quantity;
     const updated = await this.productRepo.updateStock(productId, quantity);
     if (!updated) {
       throw new AppError('Failed to update stock', 500);
+    }
+
+    const delta = quantity - previousStock;
+    if (delta !== 0) {
+      await this.inventoryMovementRepo.createMovement({
+        product_id: productId,
+        movement_type: delta > 0 ? 'in' : 'out',
+        quantity: Math.abs(delta),
+        reason: 'manual_stock_update',
+        user_id: userId,
+      });
     }
 
     logger.info(`Stock updated for product: ${productId} to ${quantity}`);
@@ -350,6 +364,14 @@ export class ProductService {
       throw new AppError('Failed to reserve stock', 500);
     }
 
+    await this.inventoryMovementRepo.createMovement({
+      product_id: productId,
+      movement_type: 'out',
+      quantity,
+      reason: 'stock_reserved',
+      user_id: product.supplier_id,
+    });
+
     logger.info(`Stock reserved: ${quantity} units for product: ${productId}`);
     return true;
   }
@@ -358,6 +380,17 @@ export class ProductService {
     const updated = await this.productRepo.incrementStock(productId, quantity);
     if (!updated) {
       throw new AppError('Failed to release stock', 500);
+    }
+
+    const product = await this.productRepo.findById(productId);
+    if (product) {
+      await this.inventoryMovementRepo.createMovement({
+        product_id: productId,
+        movement_type: 'in',
+        quantity,
+        reason: 'stock_released',
+        user_id: product.supplier_id,
+      });
     }
 
     logger.info(`Stock released: ${quantity} units for product: ${productId}`);

@@ -8,7 +8,8 @@
     "db:seed": "node src/scripts/run-seed-runner.cjs",
     "db:seed:dev": "node src/scripts/run-seed-runner.cjs --skip-cloudinary",
     "db:seed:no-truncate": "node src/scripts/run-seed-runner.cjs --no-truncate",
-    "db:refresh": "npm run db:reset && npm run db:seed"
+    "db:refresh": "npm run db:reset && npm run db:seed",
+    "ml:export": "ts-node --transpile-only src/utils/export-ml-data.ts"
   },
   "keywords": [],
   "author": "",

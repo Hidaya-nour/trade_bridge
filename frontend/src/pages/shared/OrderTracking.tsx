@@ -1,8 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useParams } from "react-router-dom";
-import L from "leaflet";
-import { MapContainer, Marker, Polyline, TileLayer, useMap } from "react-leaflet";
-import "leaflet/dist/leaflet.css";
 import { ArrowLeft, Clock, MapPin, Navigation, Package, Truck } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -10,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import LiveRouteMap from "@/components/tracking/LiveRouteMap";
 import { formatDateTime } from "@/lib/formatters";
 import orderService from "@/services/order.service";
 import driverLocationService from "@/services/driver-location.service";
@@ -24,31 +22,100 @@ type DriverLocationPoint = {
   recorded_at: string;
 };
 
+type AddressRow = {
+  common_name?: string | null;
+  subcity?: string | null;
+  city?: string | null;
+  latitude?: number | string | null;
+  longitude?: number | string | null;
+  created_at?: string;
+};
+
+type OrderWithAddressContext = Order & {
+  buyer?: Order["buyer"] & { addresses?: AddressRow[] };
+  supplier?: Order["supplier"] & { addresses?: AddressRow[] };
+};
+
 const POLL_INTERVAL_MS = 5000;
+const MIN_MOVEMENT_METERS = 20;
 
-const mapMarkerIcon = new L.Icon({
-  iconUrl: new URL("leaflet/dist/images/marker-icon.png", import.meta.url).toString(),
-  iconRetinaUrl: new URL(
-    "leaflet/dist/images/marker-icon-2x.png",
-    import.meta.url,
-  ).toString(),
-  shadowUrl: new URL("leaflet/dist/images/marker-shadow.png", import.meta.url).toString(),
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41],
-});
+const buildGoogleMapsSearchUrl = (lat: number, lng: number) =>
+  `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
 
-const MapCenterUpdater: React.FC<{ center: { lat: number; lng: number } }> = ({
-  center,
-}) => {
-  const map = useMap();
+const getErrorMessage = (err: unknown, fallback: string) => {
+  if (
+    typeof err === "object" &&
+    err !== null &&
+    "response" in err &&
+    typeof (err as { response?: { data?: { message?: unknown } } }).response?.data
+      ?.message === "string"
+  ) {
+    return (err as { response: { data: { message: string } } }).response.data
+      .message;
+  }
 
-  useEffect(() => {
-    map.setView(center);
-  }, [center, map]);
+  return fallback;
+};
+
+const parseLatLngFromText = (value?: string | null) => {
+  if (!value) return null;
+  const match = value.match(/(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)/);
+  if (!match) return null;
+  const lat = Number(match[1]);
+  const lng = Number(match[2]);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+  if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return null;
+  return { lat, lng };
+};
+
+const hasUsableDropoff = (value?: string | null) => {
+  const normalized = String(value || "").trim().toLowerCase();
+  if (!normalized) return false;
+  const blocked = new Set([
+    "n/a",
+    "na",
+    "none",
+    "unknown",
+    "not provided",
+    "not available",
+    "null",
+    "undefined",
+    "-",
+    "--",
+  ]);
+  return !blocked.has(normalized);
+};
+
+const parseCoord = (value: unknown) => {
+  const parsed = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
+const latestAddressCoords = (addresses?: AddressRow[]) => {
+  if (!Array.isArray(addresses) || !addresses.length) return null;
+  const sorted = addresses.slice().sort(
+    (a, b) =>
+      new Date(b?.created_at || 0).getTime() -
+      new Date(a?.created_at || 0).getTime(),
+  );
+
+  for (const row of sorted) {
+    const lat = parseCoord(row?.latitude);
+    const lng = parseCoord(row?.longitude);
+    if (lat === null || lng === null) continue;
+    if (lat < -90 || lat > 90 || lng < -180 || lng > 180) continue;
+    return { lat, lng };
+  }
 
   return null;
+};
+
+const addressLabel = (addresses?: AddressRow[]) => {
+  const first = Array.isArray(addresses) && addresses.length ? addresses[0] : null;
+  return [first?.common_name, first?.subcity, first?.city]
+    .map((entry) => String(entry || "").trim())
+    .filter(Boolean)
+    .join(", ");
 };
 
 const resolveFallbackBackPath = (pathname: string, orderId: string) => {
@@ -56,6 +123,52 @@ const resolveFallbackBackPath = (pathname: string, orderId: string) => {
   if (pathname.startsWith("/distributor/")) return `/distributor/orders/${orderId}`;
   if (pathname.startsWith("/factory/")) return `/factory/orders/${orderId}`;
   return "/";
+};
+
+const toRadians = (deg: number) => (deg * Math.PI) / 180;
+
+const distanceMeters = (
+  a: { lat: number; lng: number },
+  b: { lat: number; lng: number },
+) => {
+  const earthRadius = 6371000;
+  const dLat = toRadians(b.lat - a.lat);
+  const dLng = toRadians(b.lng - a.lng);
+  const lat1 = toRadians(a.lat);
+  const lat2 = toRadians(b.lat);
+
+  const x =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1) *
+      Math.cos(lat2) *
+      Math.sin(dLng / 2) *
+      Math.sin(dLng / 2);
+  const y = 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
+  return earthRadius * y;
+};
+
+const filterMeaningfulLocations = (rows: DriverLocationPoint[]) => {
+  if (rows.length <= 1) return rows;
+  const kept: DriverLocationPoint[] = [rows[0]];
+
+  for (let i = 1; i < rows.length; i += 1) {
+    const prev = kept[kept.length - 1];
+    const curr = rows[i];
+    const moved = distanceMeters(
+      { lat: prev.latitude, lng: prev.longitude },
+      { lat: curr.latitude, lng: curr.longitude },
+    );
+
+    if (moved >= MIN_MOVEMENT_METERS) {
+      kept.push(curr);
+    }
+  }
+
+  if (kept[kept.length - 1]?.id !== rows[rows.length - 1]?.id) {
+    kept.push(rows[rows.length - 1]);
+  }
+
+  return kept;
 };
 
 const OrderTrackingPage: React.FC = () => {
@@ -67,18 +180,8 @@ const OrderTrackingPage: React.FC = () => {
   const [isLoadingOrder, setIsLoadingOrder] = useState(false);
   const [isLoadingLocations, setIsLoadingLocations] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const orderWithAddresses = order as OrderWithAddressContext | null;
 
-  const latestLocation = useMemo(
-    () =>
-      locations.length
-        ? locations.reduce((latest, current) =>
-            new Date(current.recorded_at) > new Date(latest.recorded_at)
-              ? current
-              : latest,
-          )
-        : null,
-    [locations],
-  );
   const sortedLocations = useMemo(
     () =>
       locations
@@ -89,11 +192,42 @@ const OrderTrackingPage: React.FC = () => {
         ),
     [locations],
   );
-  const startLocation = sortedLocations[0] ?? null;
-  const routePositions = sortedLocations.map((loc) => [loc.latitude, loc.longitude]) as [
+  const filteredLocations = useMemo(
+    () => filterMeaningfulLocations(sortedLocations),
+    [sortedLocations],
+  );
+  const latestLocation = filteredLocations[filteredLocations.length - 1] ?? null;
+  const startLocation = filteredLocations[0] ?? null;
+  const pickupCoords =
+    parseLatLngFromText(order?.delivery?.pickup_location) ||
+    latestAddressCoords(orderWithAddresses?.supplier?.addresses);
+  const hasDropoff = hasUsableDropoff(order?.delivery?.dropoff_location);
+  const dropoffCoords =
+    parseLatLngFromText(order?.delivery?.dropoff_location) ||
+    latestAddressCoords(orderWithAddresses?.buyer?.addresses);
+  const resolvedDropoffLabel = hasDropoff
+    ? order?.delivery?.dropoff_location
+    : addressLabel(orderWithAddresses?.buyer?.addresses) || "Not provided";
+  const routePositions = filteredLocations.map((loc) => [loc.latitude, loc.longitude]) as [
     number,
     number,
   ][];
+  const remainingRoutePositions =
+    latestLocation && dropoffCoords
+      ? ([
+          [latestLocation.latitude, latestLocation.longitude],
+          [dropoffCoords.lat, dropoffCoords.lng],
+        ] as [number, number][])
+      : [];
+  const startPoint =
+    pickupCoords ||
+    (startLocation
+      ? { lat: startLocation.latitude, lng: startLocation.longitude }
+      : null);
+  const currentCenter =
+    latestLocation
+      ? { lat: latestLocation.latitude, lng: latestLocation.longitude }
+      : (startPoint || dropoffCoords || null);
 
   const backFrom = new URLSearchParams(location.search).get("from");
   const backPath = backFrom || resolveFallbackBackPath(location.pathname, orderId);
@@ -111,9 +245,9 @@ const OrderTrackingPage: React.FC = () => {
         if (!cancelled) {
           setOrder(fetchedOrder);
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         if (!cancelled) {
-          setError(err?.response?.data?.message || "Failed to load order details.");
+          setError(getErrorMessage(err, "Failed to load order details."));
         }
       } finally {
         if (!cancelled) {
@@ -131,7 +265,6 @@ const OrderTrackingPage: React.FC = () => {
   useEffect(() => {
     if (!orderId) return;
     let cancelled = false;
-    let intervalId: number | undefined;
 
     const fetchLocations = async () => {
       try {
@@ -141,11 +274,13 @@ const OrderTrackingPage: React.FC = () => {
         if (!cancelled && Array.isArray(data)) {
           setLocations(data as DriverLocationPoint[]);
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         if (!cancelled) {
           setError(
-            err?.response?.data?.message ||
+            getErrorMessage(
+              err,
               "Failed to load driver location for this order.",
+            ),
           );
         }
       } finally {
@@ -156,7 +291,7 @@ const OrderTrackingPage: React.FC = () => {
     };
 
     fetchLocations();
-    intervalId = window.setInterval(fetchLocations, POLL_INTERVAL_MS);
+    const intervalId = window.setInterval(fetchLocations, POLL_INTERVAL_MS);
 
     return () => {
       cancelled = true;
@@ -166,7 +301,7 @@ const OrderTrackingPage: React.FC = () => {
     };
   }, [orderId]);
 
-  const showEmpty = !isLoadingLocations && !latestLocation && !error;
+  const showEmpty = !isLoadingLocations && !currentCenter && !error;
 
   return (
     <div className="space-y-6">
@@ -229,96 +364,77 @@ const OrderTrackingPage: React.FC = () => {
             </p>
           )}
 
-          {latestLocation && (
+          {currentCenter && (
             <div className="space-y-3">
               <div className="rounded-lg overflow-hidden border bg-white">
-                <MapContainer
-                  center={{
-                    lat: latestLocation.latitude,
-                    lng: latestLocation.longitude,
-                  }}
-                  zoom={14}
-                  scrollWheelZoom
+                <LiveRouteMap
+                  center={currentCenter}
+                  startPoint={startPoint}
+                  currentPoint={
+                    latestLocation
+                      ? {
+                          lat: latestLocation.latitude,
+                          lng: latestLocation.longitude,
+                        }
+                      : null
+                  }
+                  dropoffPoint={dropoffCoords}
+                  traveledRoute={routePositions}
+                  remainingRoute={remainingRoutePositions}
                   className="h-80 w-full"
-                >
-                  <TileLayer
-                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                  />
-                  <MapCenterUpdater
-                    center={{
-                      lat: latestLocation.latitude,
-                      lng: latestLocation.longitude,
-                    }}
-                  />
-                  {routePositions.length > 1 && (
-                    <Polyline positions={routePositions} pathOptions={{ color: "#2563eb", weight: 4 }} />
-                  )}
-                  {startLocation && (
-                    <Marker
-                      position={{
-                        lat: startLocation.latitude,
-                        lng: startLocation.longitude,
-                      }}
-                      icon={mapMarkerIcon}
-                    />
-                  )}
-                  <Marker
-                    position={{
-                      lat: latestLocation.latitude,
-                      lng: latestLocation.longitude,
-                    }}
-                    icon={mapMarkerIcon}
-                  />
-                </MapContainer>
+                />
               </div>
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <MapPin className="h-4 w-4" />
-                <span>
-                  Last updated at {formatDateTime(latestLocation.recorded_at)}
-                </span>
-                <Navigation className="ml-2 h-4 w-4" />
-                <span>
-                  {latestLocation.latitude}, {latestLocation.longitude}
-                </span>
-              </div>
+              {latestLocation && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <MapPin className="h-4 w-4" />
+                  <span>
+                    Last updated at {formatDateTime(latestLocation.recorded_at)}
+                  </span>
+                  <Navigation className="ml-2 h-4 w-4" />
+                  <span>
+                    {latestLocation.latitude}, {latestLocation.longitude}
+                  </span>
+                </div>
+              )}
               <p className="text-xs text-muted-foreground">
-                Blue line shows the path from first recorded GPS point to current location.
-                Destination line-to-dropoff requires dropoff latitude/longitude.
+                Pickup: {order?.delivery?.pickup_location || "Not provided"} {"->"} {resolvedDropoffLabel}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Markers: S is start/pickup, D is driver, E is drop-off. Blue
+                line shows traveled route; light blue shows current-to-drop-off.
               </p>
 
-              {locations.length > 1 && (
-                <>
-                  <Separator />
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium">Recent Location Points</p>
-                    <ScrollArea className="h-48 pr-3">
-                      <div className="space-y-2">
-                        {locations
-                          .slice()
-                          .sort(
-                            (a, b) =>
-                              new Date(b.recorded_at).getTime() -
-                              new Date(a.recorded_at).getTime(),
-                          )
-                          .map((loc) => (
-                            <div
-                              key={loc.id}
-                              className="flex items-center justify-between rounded-md border bg-background px-3 py-2 text-xs"
-                            >
-                              <span>
-                                Lat {loc.latitude}, Lng {loc.longitude}
-                              </span>
-                              <span className="text-muted-foreground">
-                                {formatDateTime(loc.recorded_at)}
-                              </span>
-                            </div>
-                          ))}
-                      </div>
-                    </ScrollArea>
-                  </div>
-                </>
-              )}
+              <div className="flex flex-wrap gap-2">
+                {latestLocation && (
+                  <Button asChild variant="outline" size="sm">
+                    <a
+                      href={buildGoogleMapsSearchUrl(
+                        latestLocation.latitude,
+                        latestLocation.longitude,
+                      )}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      <Navigation className="mr-2 h-3 w-3" />
+                      Current Point
+                    </a>
+                  </Button>
+                )}
+                {dropoffCoords && (
+                  <Button asChild variant="outline" size="sm">
+                    <a
+                      href={buildGoogleMapsSearchUrl(dropoffCoords.lat, dropoffCoords.lng)}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      <MapPin className="mr-2 h-3 w-3" />
+                      Open Drop-off
+                    </a>
+                  </Button>
+                )}
+              </div>
+
+             
             </div>
           )}
         </CardContent>

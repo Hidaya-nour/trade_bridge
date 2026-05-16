@@ -28,7 +28,13 @@ def parse_args() -> argparse.Namespace:
         type=Path,
         default=Path(__file__).resolve().parents[2] / "data" / "processed" / "recommendation_dataset_report.json",  # Fixed: parents[2]
     )
-    # ... rest of arguments stay the same
+    parser.add_argument("--train-ratio", type=float, default=0.70)
+    parser.add_argument("--valid-ratio", type=float, default=0.15)
+    parser.add_argument("--sla-days", type=float, default=14)
+    parser.add_argument("--negatives-per-positive", type=int, default=3)
+    parser.add_argument("--min-product-suppliers", type=int, default=2)
+    parser.add_argument("--seed", type=int, default=42)
+    return parser.parse_args()
 
 def _clip_outliers(df: pd.DataFrame, col: str) -> pd.DataFrame:
     q1 = df[col].quantile(0.25)
@@ -250,24 +256,94 @@ def _build_candidates(interactions: pd.DataFrame, negatives_per_positive: int, m
 
 
 def main() -> None:
-    args = parse_args()  # This should work, but apparently returns None
-    
-    # Add this debug check
-    if args is None or not hasattr(args, 'raw_dir'):
-        print("No arguments provided, using defaults")
-        # Create default args manually
-        args = argparse.Namespace()
-        args.raw_dir = Path(__file__).resolve().parents[2] / "data" / "raw"
-        args.output_file = Path(__file__).resolve().parents[2] / "data" / "processed" / "recommendation_dataset.csv"
-        args.report_file = Path(__file__).resolve().parents[2] / "data" / "processed" / "recommendation_dataset_report.json"
-        args.train_ratio = 0.70
-        args.valid_ratio = 0.15
-        args.sla_days = 14
-        args.negatives_per_positive = 3
-        args.min_product_suppliers = 2
-        args.seed = 42
-    
-    # Rest of your code...
+    args = parse_args()
+
+    interactions = _build_interactions(args.raw_dir)
+    candidates = _build_candidates(
+        interactions=interactions,
+        negatives_per_positive=args.negatives_per_positive,
+        min_product_suppliers=args.min_product_suppliers,
+        seed=args.seed,
+    )
+    if candidates.empty:
+        raise ValueError(
+            "No recommendation candidates were generated. Lower --min-product-suppliers or check raw data."
+        )
+
+    supplier_stats = (
+        interactions.assign(
+            supplier_on_time=lambda frame: (frame["delivery_time"] <= args.sla_days).astype(float)
+        )
+        .groupby("supplier_id", as_index=False)
+        .agg(
+            supplier_avg_rating=("supplier_avg_rating", "mean"),
+            supplier_on_time_rate=("supplier_on_time", "mean"),
+            supplier_avg_fulfillment_days=("delivery_time", "mean"),
+            supplier_avg_unit_price=("unit_price", "mean"),
+            supplier_total_orders=("order_id", "nunique"),
+        )
+    )
+    supplier_product_price = (
+        interactions.groupby(["supplier_id", "product_id"], as_index=False)["unit_price"]
+        .mean()
+        .rename(columns={"unit_price": "supplier_product_avg_price"})
+    )
+    product_price = (
+        interactions.groupby("product_id", as_index=False)["unit_price"]
+        .median()
+        .rename(columns={"unit_price": "product_median_price"})
+    )
+
+    dataset = (
+        candidates.merge(supplier_stats, on="supplier_id", how="left")
+        .merge(supplier_product_price, on=["supplier_id", "product_id"], how="left")
+        .merge(product_price, on="product_id", how="left")
+    )
+    dataset["supplier_product_avg_price"] = dataset["supplier_product_avg_price"].fillna(
+        dataset["supplier_avg_unit_price"]
+    )
+    dataset["product_median_price"] = dataset["product_median_price"].fillna(
+        dataset["supplier_product_avg_price"]
+    )
+    dataset["price_competitiveness"] = (
+        dataset["product_median_price"] / dataset["supplier_product_avg_price"].replace(0, np.nan)
+    ).replace([np.inf, -np.inf], np.nan)
+    dataset["price_competitiveness"] = dataset["price_competitiveness"].fillna(1.0).clip(0, 2)
+    dataset["communication_responsiveness_score"] = (
+        0.6 * dataset["supplier_on_time_rate"].fillna(0.5)
+        + 0.4 * ((dataset["supplier_avg_rating"].fillna(3.0) - 1.0) / 4.0).clip(0, 1)
+    ).clip(0, 1)
+
+    for col in [
+        "delivery_time",
+        "supplier_avg_fulfillment_days",
+        "supplier_avg_unit_price",
+        "supplier_product_avg_price",
+        "product_median_price",
+    ]:
+        dataset = _clip_outliers(dataset, col)
+
+    dataset = _compute_history_features(dataset)
+    dataset["split"] = _assign_splits(dataset, args.train_ratio, args.valid_ratio)
+    dataset = dataset.sort_values(["order_purchase_timestamp", "interaction_id", "label"], ascending=[True, True, False])
+
+    args.output_file.parent.mkdir(parents=True, exist_ok=True)
+    dataset.to_csv(args.output_file, index=False)
+
+    report = {
+        "rows": int(len(dataset)),
+        "positive_rows": int(dataset["label"].sum()),
+        "unique_retailers": int(dataset["retailer_id"].nunique()),
+        "unique_products": int(dataset["product_id"].nunique()),
+        "unique_suppliers": int(dataset["supplier_id"].nunique()),
+        "date_min": str(dataset["order_purchase_timestamp"].min()),
+        "date_max": str(dataset["order_purchase_timestamp"].max()),
+        "split_rows": dataset["split"].value_counts().to_dict(),
+        "positive_rate": float(dataset["label"].mean()),
+    }
+    args.report_file.parent.mkdir(parents=True, exist_ok=True)
+    args.report_file.write_text(json.dumps(report, indent=2), encoding="utf-8")
+    print(json.dumps(report, indent=2))
 
 if __name__ == "__main__":
     main()

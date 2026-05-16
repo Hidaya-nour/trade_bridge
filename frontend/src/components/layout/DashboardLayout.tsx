@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/auth.store";
 import { AccountSuspendedNotice } from "@/components/auth/AccountSuspendedNotice";
 import { SupplierPaymentSetupBanner } from "@/components/supplier/SupplierPaymentSetupBanner";
+import { RealtimeStatusSync } from "@/components/realtime/RealtimeStatusSync";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -45,6 +46,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
 
   return (
     <div className="min-h-screen bg-background">
+      <RealtimeStatusSync />
       {/* Desktop Sidebar - Collapsible */}
       <aside className={cn(
         "fixed inset-y-0 left-0 hidden lg:flex flex-col border-r bg-card transition-all duration-300 z-30",

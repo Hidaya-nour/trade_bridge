@@ -5,7 +5,7 @@ const roles = [
   {
     title: 'For Retailers',
     description: 'Discover products from verified distributors and factories.',
-    benefits: ['Browse & compare suppliers', 'Place orders with ease', 'Track deliveries live', 'Request drivers'],
+    benefits: ['Browse & compare products', 'Place orders with ease', 'Track deliveries live', 'Request drivers'],
     icon: '🛒',
     cta: 'Start Buying',
     color: 'blue',

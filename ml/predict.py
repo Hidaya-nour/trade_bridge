@@ -9,6 +9,8 @@ def main() -> None:
 
     recommend_parser = subparsers.add_parser("recommend-supplier")
     recommend_parser.add_argument("--top-k", type=int, default=5)
+    recommend_parser.add_argument("--retailer-id")
+    recommend_parser.add_argument("--product-id")
     recommend_parser.add_argument("--seller-state")
     recommend_parser.add_argument("--product-category-name")
 
@@ -23,6 +25,8 @@ def main() -> None:
         print(
             recommend_suppliers(
                 top_k=args.top_k,
+                retailer_id=args.retailer_id,
+                product_id=args.product_id,
                 seller_state=args.seller_state,
                 product_category_name=args.product_category_name,
             )

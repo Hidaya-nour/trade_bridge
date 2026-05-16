@@ -1,10 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import L from "leaflet";
-import { CircleMarker, MapContainer, Marker, Polyline, TileLayer, useMap } from "react-leaflet";
-import "leaflet/dist/leaflet.css";
 import {
   Clock,
-  ExternalLink,
   LocateFixed,
   MapPin,
   Navigation,
@@ -19,7 +15,7 @@ import toast from "react-hot-toast";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
+import LiveRouteMap from "@/components/tracking/LiveRouteMap";
 import deliveryService from "@/services/delivery.service";
 import driverLocationService from "@/services/driver-location.service";
 import { formatDateTime } from "@/lib/formatters";
@@ -38,6 +34,28 @@ type DriverDelivery = {
     | "cancelled"
     | "pending";
   updated_at: string;
+  order?: {
+    buyer?: {
+      addresses?: Array<{
+        common_name?: string | null;
+        subcity?: string | null;
+        city?: string | null;
+        latitude?: number | string | null;
+        longitude?: number | string | null;
+        created_at?: string;
+      }>;
+    };
+    supplier?: {
+      addresses?: Array<{
+        common_name?: string | null;
+        subcity?: string | null;
+        city?: string | null;
+        latitude?: number | string | null;
+        longitude?: number | string | null;
+        created_at?: string;
+      }>;
+    };
+  };
 };
 
 type DriverLocationPoint = {
@@ -51,39 +69,25 @@ type DriverLocationPoint = {
 
 const MIN_POST_INTERVAL_MS = 5000;
 const POLL_INTERVAL_MS = 5000;
-const DEFAULT_CENTER = { lat: 9.03, lng: 38.74 };
 const MIN_MOVEMENT_METERS = 20;
-
-const markerIcon = new L.Icon({
-  iconUrl: new URL("leaflet/dist/images/marker-icon.png", import.meta.url).toString(),
-  iconRetinaUrl: new URL(
-    "leaflet/dist/images/marker-icon-2x.png",
-    import.meta.url,
-  ).toString(),
-  shadowUrl: new URL("leaflet/dist/images/marker-shadow.png", import.meta.url).toString(),
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41],
-});
-
-const MapCenterUpdater: React.FC<{ center: { lat: number; lng: number } }> = ({
-  center,
-}) => {
-  const map = useMap();
-
-  useEffect(() => {
-    map.setView(center, Math.max(map.getZoom(), 14));
-  }, [center, map]);
-
-  return null;
-};
 
 const buildGoogleMapsSearchUrl = (lat: number, lng: number) =>
   `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
 
-const buildGoogleMapsDirectionsUrl = (destination: string) =>
-  `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destination)}`;
+const getErrorMessage = (err: unknown, fallback: string) => {
+  if (
+    typeof err === "object" &&
+    err !== null &&
+    "response" in err &&
+    typeof (err as { response?: { data?: { message?: unknown } } }).response?.data
+      ?.message === "string"
+  ) {
+    return (err as { response: { data: { message: string } } }).response.data
+      .message;
+  }
+
+  return fallback;
+};
 
 const hasUsableDropoff = (value?: string | null) => {
   const normalized = String(value || "").trim().toLowerCase();
@@ -148,15 +152,58 @@ const parseLatLngFromText = (value?: string | null) => {
   return { lat, lng };
 };
 
+const parseCoord = (value: unknown) => {
+  const parsed = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
+const latestAddressCoords = (
+  addresses?: Array<{
+    latitude?: number | string | null;
+    longitude?: number | string | null;
+    created_at?: string;
+  }>,
+) => {
+  if (!Array.isArray(addresses) || !addresses.length) return null;
+  const sorted = addresses.slice().sort(
+    (a, b) =>
+      new Date(b?.created_at || 0).getTime() -
+      new Date(a?.created_at || 0).getTime(),
+  );
+  for (const row of sorted) {
+    const lat = parseCoord(row?.latitude);
+    const lng = parseCoord(row?.longitude);
+    if (lat === null || lng === null) continue;
+    if (lat < -90 || lat > 90 || lng < -180 || lng > 180) continue;
+    return { lat, lng };
+  }
+  return null;
+};
+
+const addressLabel = (
+  addresses?: Array<{
+    common_name?: string | null;
+    subcity?: string | null;
+    city?: string | null;
+  }>,
+) => {
+  const first = Array.isArray(addresses) && addresses.length ? addresses[0] : null;
+  return [first?.common_name, first?.subcity, first?.city]
+    .map((entry) => String(entry || "").trim())
+    .filter(Boolean)
+    .join(", ");
+};
+
 const DriverLiveTrackingPage: React.FC = () => {
   const [deliveries, setDeliveries] = useState<DriverDelivery[]>([]);
   const [locations, setLocations] = useState<DriverLocationPoint[]>([]);
   const [loadingDeliveries, setLoadingDeliveries] = useState(false);
-  const [loadingLocations, setLoadingLocations] = useState(false);
+  const [, setLoadingLocations] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [activeDeliveryId, setActiveDeliveryId] = useState<string | null>(null);
   const [isSharing, setIsSharing] = useState(false);
+  const [isStartingSharing, setIsStartingSharing] = useState(false);
   const [lastSentAt, setLastSentAt] = useState<string | null>(null);
   const [lastCoords, setLastCoords] = useState<{
     lat: number;
@@ -207,11 +254,13 @@ const DriverLiveTrackingPage: React.FC = () => {
 
   const latestLocation = filteredLocations[filteredLocations.length - 1] ?? null;
   const sharingStartLocation = filteredLocations[0] ?? null;
-  const pickupCoords = parseLatLngFromText(activeDelivery?.pickup_location);
+  const pickupCoords =
+    parseLatLngFromText(activeDelivery?.pickup_location) ||
+    latestAddressCoords(activeDelivery?.order?.supplier?.addresses);
   const hasDropoff = hasUsableDropoff(activeDelivery?.dropoff_location);
-  const dropoffCoords = hasDropoff
-    ? parseLatLngFromText(activeDelivery?.dropoff_location)
-    : null;
+  const dropoffCoords =
+    parseLatLngFromText(activeDelivery?.dropoff_location) ||
+    latestAddressCoords(activeDelivery?.order?.buyer?.addresses);
   const startPoint =
     pickupCoords ||
     (sharingStartLocation
@@ -231,16 +280,14 @@ const DriverLiveTrackingPage: React.FC = () => {
 
   const currentCenter = latestLocation
     ? { lat: latestLocation.latitude, lng: latestLocation.longitude }
-    : lastCoords || DEFAULT_CENTER;
+    : lastCoords ||
+      (sharingStartLocation
+        ? { lat: sharingStartLocation.latitude, lng: sharingStartLocation.longitude }
+        : startPoint) ||
+      dropoffCoords ||
+      null;
 
-  const traveledRoutePositions = (
-    startPoint && latestLocation
-      ? ([
-          [startPoint.lat, startPoint.lng],
-          [latestLocation.latitude, latestLocation.longitude],
-        ] as [number, number][])
-      : []
-  );
+  const traveledRoutePositions = filteredLocations.map((row) => [row.latitude, row.longitude]) as [number, number][];
 
   const remainingRoutePositions =
     latestLocation && dropoffCoords
@@ -249,6 +296,9 @@ const DriverLiveTrackingPage: React.FC = () => {
           [dropoffCoords.lat, dropoffCoords.lng],
         ] as [number, number][])
       : [];
+  const resolvedDropoffLabel = hasDropoff
+    ? activeDelivery?.dropoff_location
+    : addressLabel(activeDelivery?.order?.buyer?.addresses) || "Not provided";
 
   const loadMyDeliveries = async () => {
     try {
@@ -270,9 +320,9 @@ const DriverLiveTrackingPage: React.FC = () => {
           ? current
           : rows[0].id,
       );
-    } catch (err: any) {
+    } catch (err: unknown) {
       setError(
-        err?.response?.data?.message || "Failed to load your deliveries.",
+        getErrorMessage(err, "Failed to load your deliveries."),
       );
     } finally {
       setLoadingDeliveries(false);
@@ -301,9 +351,9 @@ const DriverLiveTrackingPage: React.FC = () => {
       } else {
         setLocations([]);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       setError(
-        err?.response?.data?.message || "Failed to load live driver location.",
+        getErrorMessage(err, "Failed to load live driver location."),
       );
     } finally {
       setLoadingLocations(false);
@@ -321,15 +371,13 @@ const DriverLiveTrackingPage: React.FC = () => {
     }
 
     let cancelled = false;
-    let intervalId: number | undefined;
-
     const fetchLoop = async () => {
       if (cancelled) return;
       await loadLocations(activeDelivery.order_id);
     };
 
     fetchLoop();
-    intervalId = window.setInterval(fetchLoop, POLL_INTERVAL_MS);
+    const intervalId = window.setInterval(fetchLoop, POLL_INTERVAL_MS);
 
     return () => {
       cancelled = true;
@@ -390,6 +438,7 @@ const DriverLiveTrackingPage: React.FC = () => {
     }
 
     try {
+      setIsStartingSharing(true);
       const initialPosition = await new Promise<GeolocationPosition>(
         (resolve, reject) => {
           navigator.geolocation.getCurrentPosition(resolve, reject, {
@@ -436,9 +485,11 @@ const DriverLiveTrackingPage: React.FC = () => {
       toast.success("Transit started. Live location sharing is now active.");
       await loadMyDeliveries();
       await loadLocations(activeDelivery.order_id);
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message || "Failed to start transit.");
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err, "Failed to start transit."));
       stopSharing();
+    } finally {
+      setIsStartingSharing(false);
     }
   };
 
@@ -579,7 +630,11 @@ const DriverLiveTrackingPage: React.FC = () => {
                             <MapPin className="h-3 w-3 text-destructive mt-0.5" />
                             <div>
                               <p className="text-xs text-muted-foreground">Dropoff</p>
-                              <p className="text-sm">{delivery.dropoff_location}</p>
+                              <p className="text-sm">
+                                {hasUsableDropoff(delivery.dropoff_location)
+                                  ? delivery.dropoff_location
+                                  : addressLabel(delivery.order?.buyer?.addresses) || "Not provided"}
+                              </p>
                             </div>
                           </div>
                         </div>
@@ -606,74 +661,32 @@ const DriverLiveTrackingPage: React.FC = () => {
               {activeDelivery ? (
                 <>
                   <div className="overflow-hidden rounded-lg border border-border">
-                    <MapContainer
-                      center={currentCenter}
-                      zoom={13}
-                      scrollWheelZoom
-                      className="h-[400px] w-full"
-                    >
-                      <TileLayer
-                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                    {currentCenter ? (
+                      <LiveRouteMap
+                        center={currentCenter}
+                        startPoint={startPoint}
+                        currentPoint={
+                          latestLocation
+                            ? {
+                                lat: latestLocation.latitude,
+                                lng: latestLocation.longitude,
+                              }
+                            : null
+                        }
+                        dropoffPoint={dropoffCoords}
+                        traveledRoute={
+                          movedDistance >= MIN_MOVEMENT_METERS
+                            ? traveledRoutePositions
+                            : []
+                        }
+                        remainingRoute={remainingRoutePositions}
+                        className="h-[400px] w-full"
                       />
-                      <MapCenterUpdater center={currentCenter} />
-                      {traveledRoutePositions.length > 1 && movedDistance >= MIN_MOVEMENT_METERS && (
-                        <Polyline
-                          positions={traveledRoutePositions}
-                          pathOptions={{
-                            color: "hsl(var(--primary))",
-                            weight: 4,
-                            opacity: 0.3,
-                          }}
-                        />
-                      )}
-                      {remainingRoutePositions.length === 2 && (
-                        <Polyline
-                          positions={remainingRoutePositions}
-                          pathOptions={{
-                            color: "hsl(var(--primary))",
-                            weight: 6,
-                            opacity: 0.9,
-                          }}
-                        />
-                      )}
-                      {startPoint && (
-                        <CircleMarker
-                          center={{
-                            lat: startPoint.lat,
-                            lng: startPoint.lng,
-                          }}
-                          radius={6}
-                          pathOptions={{
-                            color: "#16a34a",
-                            fillColor: "#22c55e",
-                            fillOpacity: 0.9,
-                            weight: 2,
-                          }}
-                        />
-                      )}
-                      {latestLocation && (
-                        <Marker
-                          position={{
-                            lat: latestLocation.latitude,
-                            lng: latestLocation.longitude,
-                          }}
-                          icon={markerIcon}
-                        />
-                      )}
-                      {dropoffCoords && (
-                        <CircleMarker
-                          center={dropoffCoords}
-                          radius={7}
-                          pathOptions={{
-                            color: "#dc2626",
-                            fillColor: "#ef4444",
-                            fillOpacity: 0.9,
-                            weight: 2,
-                          }}
-                        />
-                      )}
-                    </MapContainer>
+                    ) : (
+                      <div className="h-[400px] w-full flex items-center justify-center bg-muted/40 text-sm text-muted-foreground">
+                        Waiting for GPS or registered pickup/dropoff coordinates.
+                      </div>
+                    )}
                   </div>
 
                   <div className="grid gap-3 sm:grid-cols-2">
@@ -681,7 +694,10 @@ const DriverLiveTrackingPage: React.FC = () => {
                       <p className="text-xs text-muted-foreground">Current Run</p>
                       <p className="font-semibold mt-1">Order {activeDelivery.order_id.slice(-8)}</p>
                       <p className="text-sm text-muted-foreground mt-1">
-                        {activeDelivery.pickup_location} → {activeDelivery.dropoff_location}
+                        {activeDelivery.pickup_location} {"->"} {resolvedDropoffLabel}
+                      </p>
+                      <p className="mt-2 text-xs text-muted-foreground">
+                        Markers: S is start/pickup, D is driver, E is drop-off.
                       </p>
                     </div>
                     <div className="rounded-lg bg-muted/50 p-3">
@@ -689,12 +705,16 @@ const DriverLiveTrackingPage: React.FC = () => {
                       <div className="flex gap-2 mt-2">
                         <Button
                           onClick={startSharing}
-                          disabled={isSharing}
+                          disabled={isSharing || isStartingSharing}
                           size="sm"
                           className="flex-1"
                         >
-                          <Play className="mr-1 h-3 w-3" />
-                          Start
+                          {isStartingSharing ? (
+                            <RefreshCw className="mr-1 h-3 w-3 animate-spin" />
+                          ) : (
+                            <Play className="mr-1 h-3 w-3" />
+                          )}
+                          {isStartingSharing ? "Starting..." : "Start"}
                         </Button>
                         <Button
                           variant="outline"
@@ -726,10 +746,10 @@ const DriverLiveTrackingPage: React.FC = () => {
                         </a>
                       </Button>
                     )}
-                    {hasDropoff && (
+                    {dropoffCoords && (
                       <Button asChild variant="outline" size="sm">
                         <a
-                          href={buildGoogleMapsDirectionsUrl(activeDelivery.dropoff_location)}
+                          href={buildGoogleMapsSearchUrl(dropoffCoords.lat, dropoffCoords.lng)}
                           target="_blank"
                           rel="noreferrer"
                         >

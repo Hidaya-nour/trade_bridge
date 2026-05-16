@@ -47,6 +47,7 @@ import { useSupplierStore } from "@/stores/supplier.store";
 import { useProductStore } from "@/stores/product.store";
 import orderService from "@/services/order.service";
 import broadcastService from "@/services/broadcast.service";
+import mlService from "@/services/ml.service";
 import type { BroadcastRecord } from "@/types/broadcast.types";
 
 const RetailerDashboard: React.FC = () => {
@@ -75,6 +76,36 @@ const RetailerDashboard: React.FC = () => {
 
   useEffect(() => {
     const loadTopSuppliers = async () => {
+      try {
+        // Personalized ML demo: retailer_id is the logged-in user id, product_id is a recent product if available.
+        const mlRes = await mlService.recommendSuppliers({
+          top_k: 6,
+          retailer_id: authUser?.id ? String(authUser.id) : null,
+          product_id: products?.[0]?.id ? String(products[0].id) : null,
+        });
+
+        const normalized = (mlRes.recommendations || []).map((rec) => ({
+          id: rec.seller_id,
+          name: rec.name || `Recommended Distributor ${String(rec.seller_id).slice(0, 8)}`,
+          category: rec.product_count ? `${rec.product_count} matching products` : "distributor",
+          rating: 4.5,
+          reviews: 0,
+          deliveryTime: rec.state ? `${rec.state}` : "N/A",
+          price: "$$",
+          match: `${Math.round((rec.recommendation_score || 0) * 100)}%`,
+          avatar: getInitials(`S${String(rec.seller_id).slice(0, 2)}`),
+          verified: true,
+          profileLink: `/retailer/suppliers/${rec.seller_id}`,
+        }));
+
+        if (normalized.length > 0) {
+          setRecommendedSuppliers(normalized);
+          return;
+        }
+      } catch (error) {
+        console.warn("ML recommendations unavailable, falling back to top suppliers:", error);
+      }
+
       const suppliers = await getTopSuppliers(6);
       const normalized = (suppliers || []).map((supplier) => ({
         id: supplier.id,
@@ -85,16 +116,15 @@ const RetailerDashboard: React.FC = () => {
         deliveryTime: "2-5 days",
         price: "$$",
         match: `${Math.min(99, 80 + (supplier.total_products || 0))}%`,
-        avatar: getInitials(
-          supplier.business_name || supplier.full_name || "SP",
-        ),
+        avatar: getInitials(supplier.business_name || supplier.full_name || "SP"),
         verified: supplier.is_verified,
+        profileLink: `/retailer/suppliers/${supplier.id}`,
       }));
       setRecommendedSuppliers(normalized);
     };
 
     loadTopSuppliers();
-  }, [getTopSuppliers]);
+  }, [getTopSuppliers, authUser?.id, products]);
 
   useEffect(() => {
     const loadPromotions = async () => {
@@ -528,7 +558,7 @@ const RetailerDashboard: React.FC = () => {
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-1">
                             <Link
-                              to={`/retailer/suppliers/${supplier.id}`}
+                              to={supplier.profileLink || `/retailer/suppliers/${supplier.id}`}
                               className="text-sm font-medium hover:text-primary"
                             >
                               {supplier.name}
@@ -573,7 +603,7 @@ const RetailerDashboard: React.FC = () => {
                             className="h-7 text-xs"
                             asChild
                           >
-                            <Link to={`/retailer/suppliers/${supplier.id}`}>
+                            <Link to={supplier.profileLink || `/retailer/suppliers/${supplier.id}`}>
                               View Profile
                             </Link>
                           </Button>

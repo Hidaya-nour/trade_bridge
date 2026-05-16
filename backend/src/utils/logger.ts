@@ -1,4 +1,11 @@
 import winston from 'winston';
+import fs from 'fs';
+import path from 'path';
+
+const logsDir = path.resolve(process.cwd(), 'logs');
+if (!fs.existsSync(logsDir)) {
+  fs.mkdirSync(logsDir, { recursive: true });
+}
 
 const logger = winston.createLogger({
   level: process.env.LOG_LEVEL || 'info',

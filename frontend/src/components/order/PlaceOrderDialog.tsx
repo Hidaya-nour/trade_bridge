@@ -116,6 +116,27 @@ export const PlaceOrderDialog: React.FC<PlaceOrderDialogProps> = ({
   // Credit request flag – defaults to false (normal order, no upfront payment method)
   const [requestCredit, setRequestCredit] = React.useState(false);
 
+  const creditAllowed = React.useMemo(() => {
+    if (Array.isArray(supplierAllowedMethods) && supplierAllowedMethods.length) {
+      return supplierAllowedMethods.includes("credit");
+    }
+
+    if (Array.isArray(supplierPaymentMethods) && supplierPaymentMethods.length) {
+      return supplierPaymentMethods.some(
+        (method) =>
+          String((method as any)?.method_type || "").toLowerCase() === "credit",
+      );
+    }
+
+    // If methods are not provided, default to blocking credit (cannot verify).
+    return false;
+  }, [supplierAllowedMethods, supplierPaymentMethods]);
+
+  React.useEffect(() => {
+    if (!open) return;
+    if (!creditAllowed) setRequestCredit(false);
+  }, [creditAllowed, open]);
+
   const toFinite = (value: any) => {
     const parsed = Number(value);
     return Number.isFinite(parsed) ? parsed : null;
@@ -420,7 +441,7 @@ export const PlaceOrderDialog: React.FC<PlaceOrderDialogProps> = ({
         }
 
         // Determine payment method: only send 'credit' if requested, otherwise undefined
-        const paymentMethod = requestCredit ? "credit" : undefined;
+        const paymentMethod = requestCredit && creditAllowed ? "credit" : undefined;
 
         const result = await onPlaceOrder(
           paymentMethod,
@@ -612,15 +633,28 @@ export const PlaceOrderDialog: React.FC<PlaceOrderDialogProps> = ({
                 <Checkbox
                   id="requestCredit"
                   checked={requestCredit}
-                  onCheckedChange={(checked) => setRequestCredit(!!checked)}
+                  disabled={!creditAllowed || isPlacing}
+                  onCheckedChange={(checked) => {
+                    if (!creditAllowed) return;
+                    setRequestCredit(!!checked);
+                  }}
                 />
                 <Label
                   htmlFor="requestCredit"
-                  className="text-sm font-medium cursor-pointer"
+                  className={`text-sm font-medium ${
+                    creditAllowed && !isPlacing
+                      ? "cursor-pointer"
+                      : "cursor-not-allowed opacity-60"
+                  }`}
                 >
                   Request Credit (pay later after supplier approval)
                 </Label>
               </div>
+              {!creditAllowed ? (
+                <div className="text-xs text-muted-foreground">
+                  Credit is not available for the selected supplier(s).
+                </div>
+              ) : null}
               {requestCredit && (
                 <div className="rounded-md border bg-muted/40 p-3 text-sm text-muted-foreground">
                   <BadgeDollarSign className="inline h-4 w-4 mr-1" />

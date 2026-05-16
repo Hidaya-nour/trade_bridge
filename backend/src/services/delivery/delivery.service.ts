@@ -118,11 +118,27 @@ class DeliveryService {
               model: User,
               as: 'buyer',
               attributes: ['id', 'full_name', 'business_name', 'phone', 'email'],
+              include: [
+                {
+                  model: Address,
+                  as: 'addresses',
+                  attributes: ['id', 'city', 'subcity', 'common_name', 'latitude', 'longitude', 'created_at'],
+                  required: false,
+                },
+              ],
             },
             {
               model: User,
               as: 'supplier',
               attributes: ['id', 'full_name', 'business_name', 'phone', 'email'],
+              include: [
+                {
+                  model: Address,
+                  as: 'addresses',
+                  attributes: ['id', 'city', 'subcity', 'common_name', 'latitude', 'longitude', 'created_at'],
+                  required: false,
+                },
+              ],
             },
             {
               model: OrderItems,
@@ -265,6 +281,14 @@ class DeliveryService {
                 'phone',
                 'email',
               ],
+              include: [
+                {
+                  model: Address,
+                  as: 'addresses',
+                  attributes: ['id', 'city', 'subcity', 'common_name', 'latitude', 'longitude', 'created_at'],
+                  required: false,
+                },
+              ],
             },
             {
               model: User,
@@ -275,6 +299,14 @@ class DeliveryService {
                 'business_name',
                 'phone',
                 'email',
+              ],
+              include: [
+                {
+                  model: Address,
+                  as: 'addresses',
+                  attributes: ['id', 'city', 'subcity', 'common_name', 'latitude', 'longitude', 'created_at'],
+                  required: false,
+                },
               ],
             },
             {

@@ -6,6 +6,7 @@ import { OrderRepository } from '../../repositories/order.repository';
 import { ProductRepository } from '../../repositories/product.repository';
 import { UserRepository } from '../../repositories/user.repository';
 import notificationService from '../../services/notification/notification.service';
+import { InventoryMovementRepository } from '../../repositories/inventory-movement.repository';
 import {
   CreateOrderDTO,
   OrderFilters,
@@ -38,6 +39,7 @@ export class OrderService {
   private userRepo = new UserRepository();
   private broadcastRepo = new BroadcastRepository();
   private supplierPaymentMethodService = new SupplierPaymentMethodService();
+  private inventoryMovementRepo = new InventoryMovementRepository();
 
   // ========================================================================
   // GET ORDERS
@@ -539,6 +541,22 @@ export class OrderService {
     const items = orderWithDetails?.items || [];
     for (const item of items) {
       await this.productRepo.incrementStock(item.product_id, item.quantity);
+
+      // Best-effort inventory movement record (stock comes back into available inventory).
+      try {
+        const product = await this.productRepo.findById(item.product_id);
+        if (product) {
+          await this.inventoryMovementRepo.createMovement({
+            product_id: item.product_id,
+            movement_type: 'in',
+            quantity: item.quantity,
+            reason: `order_cancelled:${orderId}`,
+            user_id: product.supplier_id,
+          });
+        }
+      } catch (err) {
+        logger.error('Failed to record inventory movement for cancelled order item', err);
+      }
     }
 
     const updated = await this.orderRepo.updateOrderStatus(orderId, 'cancelled');

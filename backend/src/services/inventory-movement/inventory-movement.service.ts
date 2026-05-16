@@ -18,7 +18,13 @@ export class InventoryMovementService {
     user_id: string;
   }): Promise<IInventoryMovement> {
     // Validate quantity
-    if (data.quantity <= 0) {
+    // - 'in'/'out' must be positive
+    // - 'adjustment' can be negative/positive but not 0
+    if (data.movement_type === 'adjustment') {
+      if (data.quantity === 0) {
+        throw new AppError('Quantity must not be 0 for adjustment movements', 400);
+      }
+    } else if (data.quantity <= 0) {
       throw new AppError('Quantity must be greater than 0', 400);
     }
 

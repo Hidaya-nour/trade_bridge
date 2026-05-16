@@ -74,6 +74,8 @@ InventoryMovement.init(
     modelName: 'InventoryMovement',
     tableName: 'inventory_movements',
     timestamps: true,
+    createdAt: 'created_at',
+    updatedAt: 'updated_at',
     paranoid: false,
   }
 );

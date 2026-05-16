@@ -25,7 +25,7 @@ async function exportDemandForecastingData() {
       },
     ],
     where: {
-      order_status: ['delivered', 'completed'], // Only completed orders
+      order_status: ['delivered', 'closed'], // Only completed orders in TradeBridge
       created_at: {
         [Op.lt]: new Date(), // All past orders
       },
@@ -49,21 +49,23 @@ async function exportDemandForecastingData() {
 
   // Write to CSV
   const csv = 'date,product_id,quantity_sold\n' + data.map(row => `${row.date},${row.product_id},${row.quantity_sold}`).join('\n');
-  fs.writeFileSync(path.join(__dirname, '../../../ml/data/demand_data.csv'), csv);
+  const outputDir = path.join(__dirname, '../../../ml/data');
+  fs.mkdirSync(outputDir, { recursive: true });
+  fs.writeFileSync(path.join(outputDir, 'demand_data.csv'), csv);
   console.log(`Exported ${data.length} demand records to ml/data/demand_data.csv`);
 }
 
 async function exportSupplierRecommendationData() {
-  console.log('Exporting supplier recommendation data...');
+  console.log('Exporting distributor recommendation data...');
 
-  // Get all suppliers
-  const suppliers = await User.findAll({
-    where: { role: 'supplier' },
+  // Retailers should be recommended distributors, not factories.
+  const distributors = await User.findAll({
+    where: { role: 'distributor', status: 'active' },
   });
 
   const data = [];
-  for (const supplier of suppliers) {
-    // Get products for this supplier
+  for (const supplier of distributors) {
+    // Get products for this distributor.
     const products = await Product.findAll({
       where: { supplier_id: supplier.id },
     });
@@ -93,7 +95,7 @@ async function exportSupplierRecommendationData() {
 
       for (const orderItem of orderItems) {
         const order = orderItem.order;
-        if (order && ['delivered', 'completed'].includes(order.order_status)) {
+        if (order && ['delivered', 'closed'].includes(order.order_status)) {
           totalOrders++;
           if (order.delivery) {
             totalDeliveries++;
@@ -153,8 +155,122 @@ async function exportSupplierRecommendationData() {
   // Write to CSV
   const csv = 'supplier_id,on_time_delivery_rate,quality_rating,order_fulfillment_time,price_competitiveness,total_orders,suitability_score\n' +
     data.map(row => `${row.supplier_id},${row.on_time_delivery_rate},${row.quality_rating},${row.order_fulfillment_time},${row.price_competitiveness},${row.total_orders},${row.suitability_score}`).join('\n');
-  fs.writeFileSync(path.join(__dirname, '../../../ml/data/supplier_data.csv'), csv);
-  console.log(`Exported ${data.length} supplier records to ml/data/supplier_data.csv`);
+  const outputDir = path.join(__dirname, '../../../ml/data');
+  fs.mkdirSync(outputDir, { recursive: true });
+  fs.writeFileSync(path.join(outputDir, 'supplier_data.csv'), csv);
+  console.log(`Exported ${data.length} distributor records to ml/data/supplier_data.csv`);
+}
+
+async function exportTradeBridgeSnapshot() {
+  console.log('Exporting TradeBridge ML snapshot...');
+
+  const outputDir = path.join(__dirname, '../../../ml/data/processed');
+  fs.mkdirSync(outputDir, { recursive: true });
+
+  const users = await User.findAll({
+    where: {
+      role: ['retailer', 'distributor'],
+      status: 'active',
+    },
+    attributes: [
+      'id',
+      'full_name',
+      'business_name',
+      'role',
+      'status',
+      'verified',
+      'created_at',
+    ],
+  });
+
+  const products = await Product.findAll({
+    attributes: [
+      'id',
+      'supplier_id',
+      'name',
+      'category',
+      'price',
+      'stock_quantity',
+      'min_order_amount',
+      'unit_type',
+      'pickup_location',
+      'rating',
+      'review_count',
+      'is_available',
+      'created_at',
+    ],
+  });
+
+  const orders = await Order.findAll({
+    include: [
+      {
+        model: OrderItems,
+        as: 'items',
+        include: [{ model: Product, as: 'product' }],
+      },
+    ],
+    attributes: [
+      'id',
+      'buyer_id',
+      'supplier_id',
+      'total_price',
+      'order_status',
+      'created_at',
+    ],
+    order: [['created_at', 'ASC']],
+  });
+
+  const snapshot = {
+    exported_at: new Date().toISOString(),
+    users: users.map((user) => ({
+      id: user.id,
+      full_name: user.full_name,
+      business_name: user.business_name,
+      role: user.role,
+      status: user.status,
+      verified: user.verified,
+      created_at: user.created_at?.toISOString?.() ?? user.created_at,
+    })),
+    products: products.map((product) => ({
+      id: product.id,
+      supplier_id: product.supplier_id,
+      name: product.name,
+      category: product.category,
+      price: Number(product.price || 0),
+      stock_quantity: Number(product.stock_quantity || 0),
+      min_order_amount: Number(product.min_order_amount || 1),
+      unit_type: product.unit_type,
+      pickup_location: product.pickup_location,
+      rating: Number(product.rating || 0),
+      review_count: Number(product.review_count || 0),
+      is_available: product.is_available,
+      created_at: product.created_at?.toISOString?.() ?? product.created_at,
+    })),
+    orders: orders.map((order) => ({
+      id: order.id,
+      buyer_id: order.buyer_id,
+      supplier_id: order.supplier_id,
+      total_price: Number(order.total_price || 0),
+      order_status: order.order_status,
+      created_at: order.created_at?.toISOString?.() ?? order.created_at,
+      items: (order.items || []).map((item) => ({
+        product_id: item.product_id,
+        quantity: Number(item.quantity || 0),
+        unit_price: Number(item.unit_price || 0),
+        name: item.product?.name,
+        category: item.product?.category,
+      })),
+    })),
+  };
+
+  fs.writeFileSync(
+    path.join(outputDir, 'tradebridge_snapshot.json'),
+    JSON.stringify(snapshot, null, 2),
+    'utf8',
+  );
+  console.log(
+    `Exported ${snapshot.users.length} users, ${snapshot.products.length} products, and ${snapshot.orders.length} orders to ml/data/processed/tradebridge_snapshot.json`,
+  );
 }
 
 async function main() {
@@ -164,6 +280,7 @@ async function main() {
 
     await exportDemandForecastingData();
     await exportSupplierRecommendationData();
+    await exportTradeBridgeSnapshot();
 
     console.log('Data export completed!');
   } catch (error) {

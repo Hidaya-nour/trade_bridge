@@ -46,6 +46,8 @@ interface OrderState {
   error: string | null;
   filters: OrderFilters;
   stats: any;
+  lastFetchMode: "my" | "buyer" | "supplier" | null;
+  lastFetchFilters: OrderFilters;
 
   // Actions - Buyer
   fetchMyOrders: (filters?: OrderFilters) => Promise<void>;
@@ -62,6 +64,12 @@ interface OrderState {
   cancelOrder: (id: string, reason?: string) => Promise<boolean>;
   fetchOrderSummary: (id: string) => Promise<any>;
   fetchOrderStats: () => Promise<void>;
+
+  // Realtime helpers
+  upsertOrders: (orders: Order[]) => void;
+  setCurrentOrder: (order: Order | null) => void;
+  refreshLastOrdersSilent: () => Promise<void>;
+  refreshOrderByIdSilent: (id: string) => Promise<Order | null>;
   
   setFilters: (filters: OrderFilters) => void;
   clearFilters: () => void;
@@ -78,6 +86,80 @@ export const useOrderStore = create<OrderState>((set, get) => ({
   error: null,
   filters: {},
   stats: null,
+  lastFetchMode: null,
+  lastFetchFilters: {},
+
+  upsertOrders: (incoming: Order[]) => {
+    if (!Array.isArray(incoming) || incoming.length === 0) return;
+    const existing = get().orders || [];
+    const byId = new Map(existing.map((order) => [String(order.id), order]));
+
+    for (const nextOrder of incoming) {
+      const id = String(nextOrder.id);
+      const prev = byId.get(id);
+      const merged: Order = prev
+        ? ({
+            ...prev,
+            ...nextOrder,
+            payment: nextOrder.payment ?? prev.payment,
+          } as Order)
+        : nextOrder;
+      byId.set(id, merged);
+    }
+
+    // Preserve existing order list ordering; append any truly new items at end.
+    const kept = existing.map((o) => byId.get(String(o.id))!).filter(Boolean);
+    const appended = incoming
+      .filter((o) => !existing.some((e) => String(e.id) === String(o.id)))
+      .map((o) => byId.get(String(o.id))!)
+      .filter(Boolean);
+
+    set({ orders: [...kept, ...appended] });
+  },
+
+  setCurrentOrder: (order: Order | null) => set({ currentOrder: order }),
+
+  refreshLastOrdersSilent: async () => {
+    const mode = get().lastFetchMode;
+    if (!mode) return;
+    const filters = get().lastFetchFilters || get().filters || {};
+
+    try {
+      const response =
+        mode === "my"
+          ? await orderService.getMyOrders(filters)
+          : mode === "buyer"
+            ? await orderService.getOrdersAsBuyer(filters)
+            : await orderService.getOrdersAsSupplier(filters);
+
+      const rawOrders: Order[] = response?.data?.orders || [];
+      const normalized = rawOrders.map(normalizeOrder);
+      get().upsertOrders(normalized);
+    } catch {
+      // Silent refresh: do not surface errors or flip loading state.
+    }
+  },
+
+  refreshOrderByIdSilent: async (id: string) => {
+    try {
+      const response = await orderService.getOrderById(id);
+      const normalizedOrder = normalizeOrder(response.data.order);
+      const current = get().currentOrder;
+      set({
+        currentOrder: current
+          ? ({
+              ...current,
+              ...normalizedOrder,
+              payment: normalizedOrder.payment ?? current.payment,
+            } as Order)
+          : normalizedOrder,
+      });
+      get().upsertOrders([normalizedOrder]);
+      return normalizedOrder;
+    } catch {
+      return null;
+    }
+  },
 
   // ========================================================================
   // Buyer Actions
@@ -98,6 +180,8 @@ export const useOrderStore = create<OrderState>((set, get) => ({
         currentPage: response.data.page,
         totalPages: response.data.totalPages,
         filters: mergedFilters,
+        lastFetchMode: "my",
+        lastFetchFilters: mergedFilters,
         isLoading: false,
       });
     } catch (error: any) {
@@ -123,6 +207,8 @@ export const useOrderStore = create<OrderState>((set, get) => ({
         currentPage: response.data.page,
         totalPages: response.data.totalPages,
         filters: mergedFilters,
+        lastFetchMode: "buyer",
+        lastFetchFilters: mergedFilters,
         isLoading: false,
       });
     } catch (error: any) {
@@ -165,6 +251,8 @@ export const useOrderStore = create<OrderState>((set, get) => ({
         currentPage: response.data.page,
         totalPages: response.data.totalPages,
         filters: mergedFilters,
+        lastFetchMode: "supplier",
+        lastFetchFilters: mergedFilters,
         isLoading: false,
       });
     } catch (error: any) {
