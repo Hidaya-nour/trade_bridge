@@ -18,7 +18,7 @@ export default function DashboardLayout() {
     );
   }
 
-  if (!user) {
+  if (!user || user.status !== "active") {
     return <Redirect href="/login" />;
   }
 

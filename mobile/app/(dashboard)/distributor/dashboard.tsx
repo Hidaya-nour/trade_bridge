@@ -14,7 +14,6 @@ import { useRouter } from "expo-router";
 
 import ScreenWrapper from "@/components/layout/ScreenWrapper";
 import CompactStatCard from "@/components/shared/CompactStatCard";
-import DashboardTopBar from "@/components/shared/DashboardTopBar";
 import SearchBar from "@/components/shared/SearchBar";
 import SectionHeader from "@/components/shared/SectionHeader";
 import { useAuthStore } from "@/features/auth/auth.store";
@@ -370,22 +369,7 @@ export default function DistributorDashboardScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.headerCard}>
-          <DashboardTopBar
-            greeting={`Hello, ${firstName}`}
-            title={user?.full_name || "Distributor"}
-            businessLabel={user?.business_name || "Distribution business"}
-            verified={user?.verified}
-            notificationCount={counts.unread}
-            onNotificationsPress={() => router.push("/distributor/notifications")}
-          />
-          <SearchBar
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            onClear={() => setSearchQuery("")}
-            placeholder="Search orders, inventory, deliveries..."
-          />
-        </View>
+       
 
         {error ? (
           <View style={styles.errorBox}>

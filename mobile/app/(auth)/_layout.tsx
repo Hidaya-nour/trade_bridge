@@ -19,7 +19,7 @@ export default function AuthLayout() {
     );
   }
 
-  if (user) {
+  if (user?.status === "active") {
     return <Redirect href={roleNavigation[user.role]} />;
   }
 

@@ -161,6 +161,12 @@ export const mapApiDeliveryToDriverDelivery = (delivery: any): DriverDelivery =>
       "Buyer",
     destination: delivery?.dropoff_location || "Dropoff not provided",
     pickupPoint: delivery?.pickup_location || "Pickup not provided",
+    buyerAddresses: Array.isArray(delivery?.order?.buyer?.addresses)
+      ? delivery.order.buyer.addresses
+      : [],
+    supplierAddresses: Array.isArray(delivery?.order?.supplier?.addresses)
+      ? delivery.order.supplier.addresses
+      : [],
     etaMinutes: inferEtaMinutes(status),
     routeProgress: inferProgress(status),
     status,

@@ -14,7 +14,6 @@ import { useRouter } from "expo-router";
 
 import ScreenWrapper from "@/components/layout/ScreenWrapper";
 import SearchBar from "@/components/shared/SearchBar";
-import DashboardTopBar from "@/components/shared/DashboardTopBar";
 import CompactStatCard from "@/components/shared/CompactStatCard";
 import SectionHeader from "@/components/shared/SectionHeader";
 import { useAuthStore } from "@/features/auth/auth.store";
@@ -387,23 +386,7 @@ export default function RetailerDashboardScreen() {
         scrollEventThrottle={16}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
-        <View style={styles.headerCard}>
-          <DashboardTopBar
-            greeting={`Hello, ${firstName}`}
-            title={user.full_name}
-            businessLabel={user.business_name || "Retail business"}
-            verified={user.verified}
-            notificationCount={counts.unread}
-            onNotificationsPress={() => router.push("/retailer/notifications" as never)}
-            onCartPress={() => router.push("/retailer/cart" as never)}
-          />
-          <SearchBar
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            onClear={() => setSearchQuery("")}
-            placeholder="Search orders, suppliers, products..."
-          />
-        </View>
+       
 
         {error || suppliersError || productsError ? (
           <View style={styles.errorBox}>

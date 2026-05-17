@@ -323,22 +323,7 @@ export const roleNavigationConfig: Record<UserRole, RoleNavigationConfig> = {
     ],
     drawer: [
       ...sharedDrawerItems("driver"),
-      {
-        key: "history",
-        label: "History",
-        icon: "time-outline",
-        href: "/driver/history",
-        screen: "history",
-        kind: "drawer",
-      },
-      {
-        key: "active",
-        label: "Active Route",
-        icon: "location-outline",
-        href: "/driver/active",
-        screen: "active",
-        kind: "drawer",
-      },
+      
     ],
     hiddenScreens: ["notifications", "messages", "support", "settings", "history", "active"],
   },

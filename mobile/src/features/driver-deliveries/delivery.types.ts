@@ -20,6 +20,15 @@ export interface DeliveryTimelineItem {
   complete: boolean;
 }
 
+export interface LatLngAddress {
+  latitude?: number | string | null;
+  longitude?: number | string | null;
+  common_name?: string | null;
+  subcity?: string | null;
+  city?: string | null;
+  created_at?: string;
+}
+
 export interface DriverDelivery {
   id: string;
   orderId: string;
@@ -28,6 +37,8 @@ export interface DriverDelivery {
   buyerName: string;
   destination: string;
   pickupPoint: string;
+  buyerAddresses?: LatLngAddress[];
+  supplierAddresses?: LatLngAddress[];
   etaMinutes: number;
   routeProgress: number;
   status: DeliveryStatus;

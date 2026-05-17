@@ -133,13 +133,7 @@ export default function DriverDeliveryDetailScreen() {
                 {delivery.supplierName} to {delivery.buyerName}
               </Text>
             </View>
-            <Pressable
-              style={styles.inlineButton}
-              onPress={() => router.replace("/driver/deliveries" as never)}
-            >
-              <Ionicons name="list-outline" size={16} color="#0f172a" />
-              <Text style={styles.inlineButtonText}>All deliveries</Text>
-            </Pressable>
+           
           </View>
 
           <View style={styles.badgeRow}>
@@ -155,49 +149,15 @@ export default function DriverDeliveryDetailScreen() {
             >
               {formatStatus(delivery.status)}
             </Text>
-            <Text
-              style={[
-                styles.badge,
-                {
-                  backgroundColor: priorityColors.bg,
-                  color: priorityColors.text,
-                  borderColor: "transparent",
-                },
-              ]}
-            >
-              {delivery.priority.toUpperCase()}
-            </Text>
+           
           </View>
 
           <View style={styles.metricRow}>
-            <View style={styles.metricCard}>
-              <Text style={styles.metricLabel}>
-                {delivery.status === "delivered" ? "Delivered" : "ETA"}
-              </Text>
-              <Text style={styles.metricValue}>
-                {delivery.status === "delivered"
-                  ? delivery.deliveredAt
-                  : `${delivery.etaMinutes} min`}
-              </Text>
-            </View>
-            <View style={styles.metricCard}>
-              <Text style={styles.metricLabel}>Distance</Text>
-              <Text style={styles.metricValue}>{delivery.distanceKm} km</Text>
-            </View>
-            <View style={styles.metricCard}>
-              <Text style={styles.metricLabel}>Load</Text>
-              <Text style={styles.metricValue}>{totalUnits} units</Text>
-            </View>
+                     
+          
           </View>
 
-          <View style={styles.progressTrack}>
-            <View
-              style={[styles.progressFill, { width: `${delivery.routeProgress}%` }]}
-            />
-          </View>
-          <Text style={styles.progressLabel}>
-            {delivery.routeProgress}% route complete
-          </Text>
+          
         </View>
 
         <View style={styles.sectionCard}>
@@ -214,10 +174,7 @@ export default function DriverDeliveryDetailScreen() {
             <Text style={styles.detailLabel}>Delivery window</Text>
             <Text style={styles.detailValue}>{delivery.scheduledWindow}</Text>
           </View>
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Vehicle</Text>
-            <Text style={styles.detailValue}>{delivery.vehiclePlate}</Text>
-          </View>
+          
         </View>
 
         <View style={styles.sectionCard}>

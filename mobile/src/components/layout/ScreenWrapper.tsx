@@ -1,17 +1,22 @@
 import { PropsWithChildren, useMemo, useState } from "react";
 import { Modal, Pressable, SafeAreaView, StyleSheet, View } from "react-native";
 import { usePathname } from "expo-router";
-import AppHeader from "./AppHeader";
+
 import DrawerContent from "../../navigation/DrawerContent";
 import { getRouteTitle } from "../../navigation/roleNavigation";
 import { useRoleShell } from "../../navigation/RoleShellContext";
+import MobileHeader from "@/navigation/MobileHeader";
 
 interface ScreenWrapperProps extends PropsWithChildren {
   title?: string;
   subtitle?: string;
 }
 
-export default function ScreenWrapper({ children, title, subtitle }: ScreenWrapperProps) {
+export default function ScreenWrapper({
+  children,
+  title,
+  subtitle,
+}: ScreenWrapperProps) {
   const pathname = usePathname();
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const { openDrawer, tabBarInset, hasRoleShell } = useRoleShell();
@@ -20,19 +25,29 @@ export default function ScreenWrapper({ children, title, subtitle }: ScreenWrapp
     return title || getRouteTitle(pathname);
   }, [pathname, title]);
 
+  const handleMenuPress = () => {
+    if (hasRoleShell) openDrawer();
+    else setIsDrawerOpen(true);
+  };
+
   return (
     <SafeAreaView style={styles.safeArea}>
-      <AppHeader
+      <MobileHeader
         title={resolvedTitle}
         subtitle={subtitle}
-        onMenuPress={hasRoleShell ? openDrawer : () => setIsDrawerOpen(true)}
+        onMenuPress={handleMenuPress}
       />
 
-      <View style={[styles.content, tabBarInset > 0 && { paddingBottom: tabBarInset }]}>
+      <View
+        style={[
+          styles.content,
+          tabBarInset > 0 && { paddingBottom: tabBarInset },
+        ]}
+      >
         {children}
       </View>
 
-      {!hasRoleShell ? (
+      {!hasRoleShell && (
         <Modal
           animationType="slide"
           transparent
@@ -40,11 +55,17 @@ export default function ScreenWrapper({ children, title, subtitle }: ScreenWrapp
           onRequestClose={() => setIsDrawerOpen(false)}
         >
           <View style={styles.modalRoot}>
-            <DrawerContent currentPath={pathname} onClose={() => setIsDrawerOpen(false)} />
-            <Pressable style={styles.overlay} onPress={() => setIsDrawerOpen(false)} />
+            <DrawerContent
+              currentPath={pathname}
+              onClose={() => setIsDrawerOpen(false)}
+            />
+            <Pressable
+              style={styles.overlay}
+              onPress={() => setIsDrawerOpen(false)}
+            />
           </View>
         </Modal>
-      ) : null}
+      )}
     </SafeAreaView>
   );
 }

@@ -10,7 +10,9 @@ import {
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from "react-native-maps";
+// react-native-maps can crash the app in Expo Go if the native provider
+// isn't available. Lazy-load it at runtime and show a safe fallback UI
+// when it cannot be required.
 import * as Location from "expo-location";
 
 import ScreenWrapper from "@/components/layout/ScreenWrapper";
@@ -61,13 +63,64 @@ const buildGoogleMapsSearchUrl = (lat: number, lng: number) =>
 const buildGoogleMapsDirectionsUrl = (destination: string) =>
   `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destination)}`;
 
+const toRadians = (deg: number) => (deg * Math.PI) / 180;
+
+const distanceMeters = (
+  a: { lat: number; lng: number },
+  b: { lat: number; lng: number },
+) => {
+  const earthRadius = 6371000;
+  const dLat = toRadians(b.lat - a.lat);
+  const dLng = toRadians(b.lng - a.lng);
+  const lat1 = toRadians(a.lat);
+  const lat2 = toRadians(b.lat);
+
+  const x =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1) *
+      Math.cos(lat2) *
+      Math.sin(dLng / 2) *
+      Math.sin(dLng / 2);
+  const y = 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
+  return earthRadius * y;
+};
+
+const parseLatLngFromText = (value?: string | null) => {
+  if (!value) return null;
+  const match = value.match(/(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)/);
+  if (!match) return null;
+  const lat = Number(match[1]);
+  const lng = Number(match[2]);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+  if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return null;
+  return { lat, lng };
+};
+
+const hasUsableDropoff = (value?: string | null) => {
+  const normalized = String(value || "").trim().toLowerCase();
+  if (!normalized) return false;
+  const blocked = new Set([
+    "n/a",
+    "na",
+    "none",
+    "unknown",
+    "not provided",
+    "not available",
+    "null",
+    "undefined",
+    "-",
+    "--",
+  ]);
+  return !blocked.has(normalized);
+};
+
 const getStatusTone = (status: DeliveryStatus) => {
   switch (status) {
     case "assigned":
       return { bg: "#eff6ff", text: "#1d4ed8", border: "#bfdbfe" };
     case "picked_up":
       return { bg: "#ede9fe", text: "#6d28d9", border: "#ddd6fe" };
-   case "delivered":
+    case "delivered":
       return { bg: "#ecfdf3", text: "#15803d", border: "#bbf7d0" };
     case "pending":
       return { bg: "#fef3c7", text: "#d97706", border: "#fcd34d" };
@@ -78,14 +131,63 @@ const getStatusTone = (status: DeliveryStatus) => {
 };
 
 const openExternalUrl = async (url: string) => {
-  const supported = await Linking.canOpenURL(url);
-  if (supported) {
+  try {
+    const supported = await Linking.canOpenURL(url);
+    if (!supported) {
+      await Linking.openURL(url);
+      return;
+    }
     await Linking.openURL(url);
+  } catch (err) {
+    Alert.alert(
+      "Unable to open map",
+      "Google Maps could not be opened from this device. Please try again later.",
+    );
   }
 };
 
+const latestAddressCoords = (
+  addresses?: Array<{
+    latitude?: number | string | null;
+    longitude?: number | string | null;
+    created_at?: string | number | null;
+  }>,
+) => {
+  if (!Array.isArray(addresses) || !addresses.length) return null;
+  const sorted = addresses.slice().sort(
+    (a, b) =>
+      new Date(b?.created_at || 0).getTime() -
+      new Date(a?.created_at || 0).getTime(),
+  );
+  for (const row of sorted) {
+    const lat = typeof row?.latitude === "number" ? row.latitude : Number(row?.latitude);
+    const lng = typeof row?.longitude === "number" ? row.longitude : Number(row?.longitude);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
+    if (lat < -90 || lat > 90 || lng < -180 || lng > 180) continue;
+    return { lat, lng };
+  }
+  return null;
+};
+
+const addressLabel = (
+  addresses?: Array<{
+    common_name?: string | null;
+    subcity?: string | null;
+    city?: string | null;
+  }>,
+) => {
+  const first = Array.isArray(addresses) && addresses.length ? addresses[0] : null;
+  return [first?.common_name, first?.subcity, first?.city]
+    .map((entry) => String(entry || "").trim())
+    .filter(Boolean)
+    .join(", ");
+};
+
 export default function DriverTrackingScreen() {
-  const mapRef = useRef<MapView | null>(null);
+  const mapRef = useRef<any | null>(null);
+  const [mapLib, setMapLib] = useState<any | null>(null);
+  const [mapLoadError, setMapLoadError] = useState<string | null>(null);
+  const [mapReady, setMapReady] = useState(false);
   const locationSubscriptionRef = useRef<Location.LocationSubscription | null>(null);
   const lastPostMsRef = useRef(0);
 
@@ -128,6 +230,26 @@ export default function DriverTrackingScreen() {
       })),
     [sortedLocations],
   );
+
+  const pickupCoords =
+    parseLatLngFromText(activeDelivery?.pickupPoint) ||
+    latestAddressCoords(activeDelivery?.supplierAddresses);
+  const dropoffCoords =
+    parseLatLngFromText(activeDelivery?.destination) ||
+    latestAddressCoords(activeDelivery?.buyerAddresses);
+
+  const startPoint = pickupCoords
+    ? { latitude: pickupCoords.lat, longitude: pickupCoords.lng }
+    : routeCoordinates[0] ?? null;
+
+  const traveledCoordinates = routeCoordinates;
+
+  const remainingCoordinates = latestLocation && dropoffCoords
+    ? [
+        { latitude: latestLocation.latitude, longitude: latestLocation.longitude },
+        { latitude: dropoffCoords.lat, longitude: dropoffCoords.lng },
+      ]
+    : [];
 
   const currentCoordinate = latestLocation
     ? {
@@ -240,6 +362,48 @@ export default function DriverTrackingScreen() {
       locationSubscriptionRef.current = null;
     };
   }, []);
+
+  useEffect(() => {
+    let mounted = true;
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const RNMaps = require("react-native-maps");
+      if (mounted) {
+        setMapLib(RNMaps?.default || RNMaps);
+        setMapLoadError(null);
+        setMapReady(false);
+      }
+    } catch (err: any) {
+      if (mounted) {
+        setMapLib(null);
+        setMapLoadError("Native map unavailable in this environment.");
+        setMapReady(false);
+      }
+    }
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!mapLib) {
+      setMapReady(false);
+      return;
+    }
+
+    try {
+      // Probe for MapView access safely; accessing may throw in some environments
+      // so wrap in try/catch and treat any error as map unavailable.
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const Probe = mapLib.MapView || mapLib;
+      setMapReady(true);
+      setMapLoadError(null);
+    } catch (err: any) {
+      setMapReady(false);
+      setMapLoadError(err?.message || "Failed to initialize native map module.");
+    }
+  }, [mapLib]);
 
   const pushLocation = async (
     delivery: DriverDelivery,
@@ -462,56 +626,125 @@ export default function DriverTrackingScreen() {
           {activeDelivery ? (
             <>
               <View style={styles.mapWrap}>
-                <MapView
-                  ref={mapRef}
-                  provider={PROVIDER_GOOGLE}
-                  style={styles.map}
-                  initialRegion={
-                    currentCoordinate
-                      ? {
-                          ...currentCoordinate,
-                          latitudeDelta: 0.02,
-                          longitudeDelta: 0.02,
+                {mapLib ? (
+                  (() => {
+                    const MapComp = mapLib.MapView || mapLib;
+                    const MarkerComp = mapLib.Marker;
+                    const PolylineComp = mapLib.Polyline;
+
+                    return (
+                      <MapComp
+                        ref={mapRef}
+                        style={styles.map}
+                        initialRegion={
+                          currentCoordinate
+                            ? { ...currentCoordinate, latitudeDelta: 0.02, longitudeDelta: 0.02 }
+                            : startPoint
+                              ? { ...startPoint, latitudeDelta: 0.02, longitudeDelta: 0.02 }
+                              : dropoffCoords
+                                ? { latitude: dropoffCoords.lat, longitude: dropoffCoords.lng, latitudeDelta: 0.02, longitudeDelta: 0.02 }
+                                : DEFAULT_REGION
                         }
-                      : DEFAULT_REGION
-                  }
-                  showsUserLocation={isSharing}
-                  showsMyLocationButton
-                  showsCompass
-                >
-                  {routeCoordinates.length > 1 && (
-                    <Polyline
-                      coordinates={routeCoordinates}
-                      strokeColor="#2563eb"
-                      strokeWidth={5}
-                    />
-                  )}
-                  {routeCoordinates.length > 0 && (
-                    <Marker
-                      coordinate={routeCoordinates[0]}
-                      title="Route start"
-                      pinColor="#16a34a"
-                    />
-                  )}
-                  {currentCoordinate && (
-                    <Marker
-                      coordinate={currentCoordinate}
-                      title="Current driver position"
-                      description={formatDateTime(lastSentAt)}
-                      pinColor="#2563eb"
-                    />
-                  )}
-                </MapView>
+                        showsUserLocation={isSharing}
+                        showsMyLocationButton
+                        showsCompass
+                      >
+                        {traveledCoordinates.length > 1 && (
+                          <PolylineComp coordinates={traveledCoordinates} strokeColor="#2563eb" strokeWidth={5} />
+                        )}
+
+                        {remainingCoordinates.length === 2 && (
+                          <PolylineComp coordinates={remainingCoordinates} strokeColor="#93c5fd" strokeWidth={5} />
+                        )}
+
+                        {startPoint && (
+                          <MarkerComp coordinate={startPoint} anchor={{ x: 0.5, y: 0.5 }} tracksViewChanges={false}>
+                            <View style={styles.routeIconStart}>
+                              <Text style={styles.routeIconText}>S</Text>
+                            </View>
+                          </MarkerComp>
+                        )}
+
+                        {currentCoordinate && (
+                          <MarkerComp coordinate={currentCoordinate} anchor={{ x: 0.5, y: 0.5 }} tracksViewChanges={false}>
+                            <View style={styles.routeIconCurrent}>
+                              <Text style={styles.routeIconText}>D</Text>
+                            </View>
+                          </MarkerComp>
+                        )}
+
+                        {dropoffCoords && (
+                          <MarkerComp coordinate={{ latitude: dropoffCoords.lat, longitude: dropoffCoords.lng }} anchor={{ x: 0.5, y: 0.5 }} tracksViewChanges={false}>
+                            <View style={styles.routeIconDropoff}>
+                              <Text style={styles.routeIconText}>E</Text>
+                            </View>
+                          </MarkerComp>
+                        )}
+                      </MapComp>
+                    );
+                  })()
+                ) : (
+                  <View style={[styles.map, styles.mapFallback]}>
+                    <Text style={{ color: "#0f172a", fontWeight: "700", marginBottom: 8 }}>
+                      Map is unavailable in this environment.
+                    </Text>
+                    <Text style={{ color: "#475569", marginBottom: 12 }}>
+                      Expo Go may not include the native map provider. Try in a native build or retry loading.
+                    </Text>
+                    <View style={{ flexDirection: "row", gap: 8 }}>
+                      <Pressable
+                        style={[styles.inlineButton, { marginRight: 8 }]}
+                        onPress={() => {
+                          // retry loading map library
+                          try {
+                            // eslint-disable-next-line @typescript-eslint/no-var-requires
+                            const RNMaps = require("react-native-maps");
+                            setMapLib(RNMaps?.default || RNMaps);
+                            setMapLoadError(null);
+                          } catch (e) {
+                            setMapLoadError("Still unavailable");
+                          }
+                        }}
+                      >
+                        <Ionicons name="refresh-outline" size={16} color="#0f172a" />
+                        <Text style={styles.inlineButtonText}>Retry</Text>
+                      </Pressable>
+
+                      <Pressable
+                        style={styles.inlineButton}
+                        onPress={() =>
+                          openExternalUrl(
+                            buildGoogleMapsDirectionsUrl(activeDelivery.destination),
+                          )
+                        }
+                      >
+                        <Ionicons name="open-outline" size={16} color="#0f172a" />
+                        <Text style={styles.inlineButtonText}>Open in Google Maps</Text>
+                      </Pressable>
+                    </View>
+                    {mapLoadError ? <Text style={[styles.errorText, { marginTop: 8 }]}>{mapLoadError}</Text> : null}
+                  </View>
+                )}
               </View>
 
               <View style={styles.infoGrid}>
                 <View style={styles.infoItem}>
                   <Text style={styles.infoLabel}>Pickup</Text>
                   <Text style={styles.infoValue}>{activeDelivery.pickupPoint}</Text>
+                  {pickupCoords ? (
+                    <Text style={styles.infoHint}>
+                      Start location found from order coordinates.
+                    </Text>
+                  ) : null}
                 </View>
                 <View style={styles.infoItem}>
                   <Text style={styles.infoLabel}>Dropoff</Text>
                   <Text style={styles.infoValue}>{activeDelivery.destination}</Text>
+                  {dropoffCoords ? (
+                    <Text style={styles.infoHint}>
+                      Drop-off location mapped from order data.
+                    </Text>
+                  ) : null}
                 </View>
                 <View style={styles.infoItem}>
                   <Text style={styles.infoLabel}>Current point</Text>
@@ -560,6 +793,25 @@ export default function DriverTrackingScreen() {
                     <Ionicons name="location-outline" size={16} color="#334155" />
                     <Text style={styles.secondaryButtonText}>
                       Open current point in Google Maps
+                    </Text>
+                  </Pressable>
+                ) : null}
+
+                {pickupCoords ? (
+                  <Pressable
+                    style={styles.secondaryButton}
+                    onPress={() =>
+                      openExternalUrl(
+                        buildGoogleMapsSearchUrl(
+                          pickupCoords.lat,
+                          pickupCoords.lng,
+                        ),
+                      )
+                    }
+                  >
+                    <Ionicons name="location-outline" size={16} color="#334155" />
+                    <Text style={styles.secondaryButtonText}>
+                      Open pickup location in Google Maps
                     </Text>
                   </Pressable>
                 ) : null}
@@ -777,6 +1029,11 @@ const styles = StyleSheet.create({
     width: "100%",
     height: 320,
   },
+  mapFallback: {
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 18,
+  },
   infoGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -891,5 +1148,54 @@ const styles = StyleSheet.create({
     textAlign: "center",
     color: "#64748b",
     lineHeight: 18,
+  },
+  infoHint: {
+    marginTop: 6,
+    fontSize: 11,
+    color: "#475569",
+  },
+  routeIconStart: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: "#16a34a",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 3,
+    borderColor: "#ffffff",
+    shadowColor: "#0f172a",
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+  },
+  routeIconCurrent: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: "#2563eb",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 3,
+    borderColor: "#ffffff",
+    shadowColor: "#0f172a",
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+  },
+  routeIconDropoff: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: "#dc2626",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 3,
+    borderColor: "#ffffff",
+    shadowColor: "#0f172a",
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+  },
+  routeIconText: {
+    color: "#ffffff",
+    fontWeight: "800",
+    fontSize: 11,
   },
 });

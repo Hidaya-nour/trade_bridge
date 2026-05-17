@@ -17,213 +17,216 @@ import ScreenWrapper from "@/components/layout/ScreenWrapper";
 import { useAuthStore } from "@/features/auth/auth.store";
 import { useNotificationStore } from "@/features/notifications/notification.store";
 import deliveryService from "@/features/driver-deliveries/delivery.service";
-import { type DriverDelivery, type DeliveryStatus } from "@/features/driver-deliveries/delivery.types";
 import driverIssueService from "@/features/driver-issues/driver-issue.service";
 import { useRoleShell } from "@/navigation/RoleShellContext";
-import { useScrollDirection } from "@/hooks/useScrollDirection";
 
-const formatStatus = (status: DeliveryStatus) =>
-  status.replace("_", " ").toUpperCase();
+// ================= STATUS =================
 
-const getStatusStyle = (status: DeliveryStatus) => {
-  switch (status) {
-    case "assigned":
-      return { bg: "#eff6ff", border: "#bfdbfe", text: "#1d4ed8" };
-    case "picked_up":
-      return { bg: "#ede9fe", border: "#ddd6fe", text: "#6d28d9" };
-    case "delivered":
-      return { bg: "#ecfdf3", border: "#bbf7d0", text: "#15803d" };
-    default:
-      return { bg: "#f8fafc", border: "#e2e8f0", text: "#475569" };
-  }
+const statusColors = {
+  pending: "#f59e0b",
+  assigned: "#3b82f6",
+  picked_up: "#8b5cf6",
+  delivered: "#22c55e",
+  failed: "#ef4444",
+  cancelled: "#6b7280",
 };
+
+// ================= MAIN =================
 
 export default function DriverDashboardScreen() {
   const router = useRouter();
   const { setTabBarVisible } = useRoleShell();
-  const user = useAuthStore((state) => state.user);
-  const notificationCounts = useNotificationStore((state) => state.counts);
-  const fetchNotificationCounts = useNotificationStore((state) => state.fetchCounts);
-  const { onScroll } = useScrollDirection({
-    onDirectionChange: (direction) => setTabBarVisible(direction === "up"),
-  });
+
+  const user = useAuthStore((s) => s.user);
+  const { counts } = useNotificationStore();
 
   const [isOnline, setIsOnline] = useState(false);
-  const [deliveries, setDeliveries] = useState<DriverDelivery[]>([]);
-  const [issueCount, setIssueCount] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
+  const [deliveries, setDeliveries] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
-  const loadDashboard = useCallback(async () => {
-    setError(null);
+  // ================= LOAD =================
 
+  const load = useCallback(async () => {
     try {
-      const [deliveryRows, issues] = await Promise.all([
-        deliveryService.getMyDeliveries(),
-        driverIssueService.getMyReports(20),
-        fetchNotificationCounts(),
-      ]);
+      const rows = await deliveryService.getMyDeliveries();
+      const issues = await driverIssueService.getMyReports(20);
 
-      setDeliveries(deliveryRows);
-      setIssueCount(Array.isArray(issues) ? issues.length : 0);
-    } catch (loadError: any) {
+      setDeliveries(rows || []);
+    } catch (e) {
       setDeliveries([]);
-      setIssueCount(0);
-      setError(loadError?.response?.data?.message || "Failed to load dashboard data.");
     }
-  }, [fetchNotificationCounts]);
+  }, []);
 
   useEffect(() => {
-    const bootstrap = async () => {
-      setIsLoading(true);
-      await loadDashboard();
-      setIsLoading(false);
-    };
+    (async () => {
+      setLoading(true);
+      await load();
+      setLoading(false);
+    })();
+  }, [load]);
 
-    void bootstrap();
-  }, [loadDashboard]);
+  // ================= DERIVED (WEB MATCHED) =================
 
-  const activeDeliveries = deliveries.filter(
-    (delivery) =>
-      !["delivered", "failed", "cancelled"].includes(delivery.status),
-  );
-  const activeRoute = activeDeliveries[0];
-  const completedToday = deliveries.filter((delivery) => delivery.status === "delivered").length;
-
-  const unreadNotifications = useMemo(
-    () => notificationCounts.unread,
-    [notificationCounts.unread],
+  const active = deliveries.filter(
+    (d) => !["delivered", "failed", "cancelled"].includes(d.status),
   );
 
-  const onRefresh = useCallback(async () => {
-    setRefreshing(true);
-    await loadDashboard();
-    setRefreshing(false);
-  }, [loadDashboard]);
+  const completed = deliveries.filter(
+    (d) => d.status === "delivered",
+  );
 
-  const handleOpenMaps = () => {
-    if (!activeRoute) return;
+  const pending = deliveries.filter(
+    (d) => d.status === "pending",
+  );
 
-    const url = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(
-      activeRoute.destination,
-    )}`;
+  const activeRoute = active[0];
 
-    Linking.openURL(url);
+  const vehicleLabel =
+    activeRoute?.vehicleType || "Vehicle not assigned";
+  const plateLabel =
+    activeRoute?.licensePlate || "Plate not assigned";
+
+  const stats = {
+    total: deliveries.length,
+    today: completed.length,
+    pending: pending.length,
+    unread: counts?.unread ?? 0,
   };
 
+  // ================= MAP =================
+
+  const openMaps = () => {
+    if (!activeRoute) return;
+
+    Linking.openURL(
+      `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(
+        activeRoute.dropoffLocation || "",
+      )}`,
+    );
+  };
+
+  // ================= UI =================
+
   return (
-    <ScreenWrapper title="Driver Dashboard" subtitle={user?.business_name || "Driver workspace"}>
+    <ScreenWrapper
+      title="Driver Dashboard"
+      subtitle={user?.business_name || "Driver workspace"}
+    >
       <ScrollView
         style={styles.container}
-        contentContainerStyle={styles.contentContainer}
-        onScroll={onScroll}
-        scrollEventThrottle={16}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        contentContainerStyle={styles.content}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={load} />
+        }
       >
-        {error ? (
-          <View style={styles.errorBox}>
-            <Text style={styles.errorText}>{error}</Text>
-          </View>
-        ) : null}
-
+        {/* ONLINE STATUS (web equivalent missing piece) */}
         <View style={styles.card}>
           <View style={styles.rowBetween}>
-            <Text style={styles.statusText}>
+            <Text style={styles.title}>
               You are {isOnline ? "Online" : "Offline"}
             </Text>
             <Switch value={isOnline} onValueChange={setIsOnline} />
           </View>
         </View>
 
+        {/* ================= STATS (MATCH WEB) ================= */}
+        <Text style={styles.sectionTitle}>Overview</Text>
+
         <View style={styles.statsGrid}>
-          <StatCard label="Active Routes" value={activeDeliveries.length} />
-          <StatCard label="Completed Today" value={completedToday} />
-          <StatCard label="Unread Alerts" value={unreadNotifications} />
-          <StatCard label="Issue Reports" value={issueCount} />
+          <Stat label="Total Deliveries" value={stats.total} />
+          <Stat label="Completed Today" value={stats.today} />
+          <Stat label="Pending" value={stats.pending} />
+          <Stat label="Unread Alerts" value={stats.unread} />
         </View>
 
-        <Pressable style={styles.mapsButton} onPress={handleOpenMaps}>
-          <Ionicons name="map" size={20} color="#fff" />
-          <Text style={styles.mapsText}>Open in Maps</Text>
+        {/* ================= VEHICLE INFO (WEB MATCH) ================= */}
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>Vehicle Info</Text>
+
+          <Text style={styles.meta}>Vehicle: {vehicleLabel}</Text>
+          <Text style={styles.meta}>Plate: {plateLabel}</Text>
+        </View>
+
+        {/* ================= MAP ACTION ================= */}
+        <Pressable style={styles.mapBtn} onPress={openMaps}>
+          <Ionicons name="navigate" size={18} color="#fff" />
+          <Text style={styles.mapText}>Open Navigation</Text>
         </Pressable>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Quick Actions</Text>
+        {/* ================= ACTIVE DELIVERY (WEB MATCH STRUCTURE) ================= */}
+        <Text style={styles.sectionTitle}>Active Delivery</Text>
 
-          <View style={styles.actionRow}>
-            {ACTIONS.map((action) => (
-              <Pressable
-                key={action.route}
-                style={styles.actionChip}
-                onPress={() => router.push(action.route as never)}
-              >
-                <Ionicons name={action.icon as any} size={16} color="#1d4ed8" />
-                <Text style={styles.actionText}>{action.label}</Text>
-              </Pressable>
-            ))}
-          </View>
-        </View>
-
-        {isLoading ? (
-          <View style={styles.card}>
-            <ActivityIndicator size="small" color="#1d4ed8" />
-            <Text style={styles.subtitle}>Loading active assignments...</Text>
-          </View>
+        {loading ? (
+          <ActivityIndicator />
         ) : activeRoute ? (
           <View style={styles.card}>
-            <Text style={styles.sectionTitle}>Current Delivery</Text>
-
-            <Text style={styles.subtitle}>{activeRoute.orderCode}</Text>
-
-            <Text style={styles.meta}>Pickup: {activeRoute.pickupPoint}</Text>
-            <Text style={styles.meta}>Dropoff: {activeRoute.destination}</Text>
-
-            <View style={styles.progressTrack}>
-              <View
-                style={[
-                  styles.progressFill,
-                  { width: `${activeRoute.routeProgress}%` },
-                ]}
-              />
-            </View>
-
-            <Text style={styles.progressLabel}>
-              {activeRoute.routeProgress}% completed
-            </Text>
-
+            {/* HEADER */}
             <View style={styles.rowBetween}>
+              <Text style={styles.subtitle}>
+                #{activeRoute.orderNumber || activeRoute.id}
+              </Text>
+
               <View
                 style={[
-                  styles.statusBadge,
+                  styles.badge,
                   {
-                    backgroundColor: getStatusStyle(activeRoute.status).bg,
-                    borderColor: getStatusStyle(activeRoute.status).border,
+                    backgroundColor:
+                      statusColors[activeRoute.status] + "20",
                   },
                 ]}
               >
                 <Text
                   style={{
-                    color: getStatusStyle(activeRoute.status).text,
-                    fontWeight: "600",
+                    color: statusColors[activeRoute.status],
+                    fontWeight: "700",
                   }}
                 >
-                  {formatStatus(activeRoute.status)}
+                  {activeRoute.status}
                 </Text>
               </View>
+            </View>
 
+            {/* PICKUP */}
+            <Text style={styles.meta}>
+              Pickup: {activeRoute.pickupLocation}
+            </Text>
+
+            {/* DROPOFF */}
+            <Text style={styles.meta}>
+              Dropoff: {activeRoute.dropoffLocation}
+            </Text>
+
+            {/* ITEMS (WEB MATCH) */}
+            <View style={{ marginTop: 10 }}>
+              {activeRoute.items?.map((i: any, idx: number) => (
+                <Text key={idx} style={styles.small}>
+                  • {i.name} ({i.quantity} {i.unit})
+                </Text>
+              ))}
+            </View>
+
+            {/* ACTIONS */}
+            <View style={styles.rowBetween}>
               <Pressable
-                style={styles.acceptButton}
-                onPress={() => router.push(`/driver/deliveries/${activeRoute.id}` as never)}
+                style={styles.primaryBtn}
+                onPress={() =>
+                  router.push(
+                    `/driver/deliveries/${activeRoute.id}` as never,
+                  )
+                }
               >
-                <Text style={styles.buttonText}>Open</Text>
+                <Text style={styles.btnText}>Open</Text>
+              </Pressable>
+
+              <Pressable style={styles.secondaryBtn} onPress={openMaps}>
+                <Text>Navigate</Text>
               </Pressable>
             </View>
           </View>
         ) : (
           <View style={styles.card}>
-            <Text style={styles.sectionTitle}>No active route</Text>
-            <Text style={styles.subtitle}>Waiting for assignment...</Text>
+            <Text>No active deliveries</Text>
           </View>
         )}
       </ScrollView>
@@ -231,107 +234,93 @@ export default function DriverDashboardScreen() {
   );
 }
 
-const StatCard = ({ label, value }: { label: string; value: number }) => (
+// ================= STAT COMPONENT =================
+
+const Stat = ({ label, value }: any) => (
   <View style={styles.statCard}>
     <Text style={styles.statLabel}>{label}</Text>
     <Text style={styles.statValue}>{value}</Text>
   </View>
 );
 
-const ACTIONS = [
-  { label: "Notifications", route: "/driver/notifications", icon: "notifications-outline" },
-  { label: "Messages", route: "/driver/messages", icon: "chatbubble-ellipses-outline" },
-  { label: "Deliveries", route: "/driver/deliveries", icon: "car-outline" },
-  { label: "Issues", route: "/driver/issues", icon: "alert-circle-outline" },
-];
+// ================= STYLES =================
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#f8fafc" },
-  contentContainer: { padding: 16 },
+  content: { padding: 16, gap: 12 },
+
   card: {
     backgroundColor: "#fff",
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 16,
+    padding: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
   },
+
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    marginTop: 10,
+  },
+
   rowBetween: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
-  statusText: { fontSize: 16, fontWeight: "600" },
+
+  title: { fontSize: 16, fontWeight: "600" },
+  subtitle: { color: "#64748b" },
+  meta: { fontSize: 13, marginTop: 4 },
+  small: { fontSize: 12, color: "#475569" },
+
   statsGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 10,
-    marginBottom: 16,
   },
+
   statCard: {
     width: "48%",
     backgroundColor: "#fff",
-    padding: 12,
-    borderRadius: 10,
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
   },
-  statLabel: { fontSize: 12, color: "#6b7280" },
+
+  statLabel: { fontSize: 12, color: "#64748b" },
   statValue: { fontSize: 18, fontWeight: "700" },
-  mapsButton: {
-    backgroundColor: "#1f2937",
+
+  mapBtn: {
+    backgroundColor: "#111827",
+    padding: 14,
+    borderRadius: 12,
     flexDirection: "row",
     justifyContent: "center",
-    alignItems: "center",
-    padding: 14,
-    borderRadius: 10,
-    marginBottom: 16,
+    gap: 6,
   },
-  mapsText: { color: "#fff", marginLeft: 6 },
-  errorBox: {
-    borderWidth: 1,
-    borderColor: "#fecaca",
-    backgroundColor: "#fee2e2",
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 16,
-  },
-  errorText: {
-    color: "#b91c1c",
-    fontSize: 12,
-  },
-  section: { marginBottom: 16 },
-  sectionTitle: { fontSize: 16, fontWeight: "600", marginBottom: 10 },
-  actionRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  actionChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#e0edff",
-    padding: 8,
-    borderRadius: 8,
-  },
-  actionText: { marginLeft: 6 },
-  subtitle: { color: "#6b7280", marginBottom: 8 },
-  meta: { fontSize: 13, marginBottom: 4 },
-  progressTrack: {
-    height: 6,
-    backgroundColor: "#e5e7eb",
-    borderRadius: 4,
-    marginVertical: 10,
-  },
-  progressFill: {
-    height: 6,
-    backgroundColor: "#10b981",
-    borderRadius: 4,
-  },
-  progressLabel: { fontSize: 12, marginBottom: 10 },
-  statusBadge: {
+
+  mapText: { color: "#fff", fontWeight: "600" },
+
+  badge: {
     paddingHorizontal: 10,
-    paddingVertical: 5,
+    paddingVertical: 4,
     borderRadius: 20,
+  },
+
+  primaryBtn: {
+    backgroundColor: "#1d4ed8",
+    padding: 10,
+    borderRadius: 10,
+  },
+
+  secondaryBtn: {
     borderWidth: 1,
+    borderColor: "#cbd5e1",
+    padding: 10,
+    borderRadius: 10,
   },
-  acceptButton: {
-    backgroundColor: "#10b981",
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 8,
-  },
-  buttonText: { color: "#fff", fontWeight: "600" },
+
+  btnText: { color: "#fff", fontWeight: "600" },
 });
