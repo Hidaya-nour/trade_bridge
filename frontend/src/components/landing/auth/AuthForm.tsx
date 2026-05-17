@@ -25,7 +25,11 @@ const AuthForm = ({
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4">
       <div className="max-w-md w-full">
-        <LandingCard title={title} subtitle={subtitle} headerContent={headerContent}>
+        <LandingCard
+          title={title}
+          subtitle={subtitle}
+          headerContent={headerContent}
+        >
           <div className="space-y-6">{children}</div>
 
           <p className="text-center mt-6 text-gray-600">

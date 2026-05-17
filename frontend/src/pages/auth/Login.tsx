@@ -2,7 +2,7 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../../stores/auth.store";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
-import Login from "@/components/landing/Login";
+import Login from "@/pages/landing/Login";
 
 export const LoginPage: React.FC = () => {
   const { isLoading } = useAuthStore();

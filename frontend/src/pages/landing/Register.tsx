@@ -1,8 +1,7 @@
-// Register.tsx
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "@/stores/auth.store";
-import AuthForm from "./auth/AuthForm";
-import RegisterForm from "./auth/RegisterForm";
+import AuthForm from "@/components/landing/auth/AuthForm";
+import RegisterForm from "@/components/landing/auth/RegisterForm";
 
 const Register = () => {
   const navigate = useNavigate();

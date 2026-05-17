@@ -1,10 +1,9 @@
-// Login.tsx
 import { useMemo } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuthStore } from "@/stores/auth.store";
 import { WelcomeHeader } from "@/components/shared/WelcomeHeader";
 import { PageBackground } from "@/components/shared/PageBackground";
-import LoginForm from "./auth/LoginForm";
+import LoginForm from "@/components/landing/auth/LoginForm";
 import tradebridgeLogo from "@/assets/image/logo.png";
 
 const Login = () => {
@@ -80,6 +79,7 @@ const Login = () => {
               className="h-20 object-contain drop-shadow-lg transform hover:scale-110 transition-transform duration-300"
             />
           </div>
+
           <WelcomeHeader
             user={{
               name: "",
@@ -121,3 +121,4 @@ const Login = () => {
 };
 
 export default Login;
+

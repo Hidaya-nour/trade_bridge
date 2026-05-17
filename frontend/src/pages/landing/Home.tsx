@@ -1,6 +1,5 @@
-// Home.tsx
 import { Link } from "react-router-dom";
-import { LandingButton } from "../../components/landing/shared";
+import { LandingButton } from "@/components/landing/shared";
 
 const Home = () => {
   return (
@@ -39,3 +38,4 @@ const Home = () => {
 };
 
 export default Home;
+
