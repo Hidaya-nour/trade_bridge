@@ -146,9 +146,9 @@ const mapOrderToDetails = (
     timeline: buildTimeline(order),
     delivery: {
       deliveryId: order.delivery?.id,
-      pickupLocation: (order.delivery as any)?.pickup_location,
-      status: (order.delivery as any)?.status,
-      address,
+ pickupLocation: order.delivery?.pickup_location || order.delivery?.dropoff_location || "Not provided",
+  address: order.delivery?.dropoff_location || "Not provided",
+        status: (order.delivery as any)?.status,
       recipient: recipientName,
       phone: (order.buyer as any)?.phone || undefined || "N/A",
       requestedDate: undefined,
@@ -167,7 +167,7 @@ const mapOrderToDetails = (
     party,
     drivers,
     canAssignDriver: true,
-    canCancel: true,
+    canCancel: order.order_status !== "cancelled" && order.order_status !== "closed" && order.payment?.payment_status !== "completed" ? true : false,
     canReview: false, // not relevant for supplier
     canReorder: false, // not relevant for supplier
     creditDueDate,
@@ -265,6 +265,20 @@ const FactoryOrderDetailsPage: React.FC = () => {
 
   const resolvedError =
     !isLoading && !orderDetails ? error || "Order not found." : null;
+const handleCancelOrder = async (orderId: string, reason: string): Promise<boolean> => {
+  try {
+    // Call your order cancellation API – adjust endpoint as needed
+    await orderService.cancelOrder(orderId, reason);
+    // Alternatively, if your store has a cancel method:
+    // await useOrderStore.getState().cancelOrder(orderId, reason);
+    await fetchOrderById(orderId); // refresh order
+    toast.success("Order cancelled successfully");
+    return true;
+  } catch (err: any) {
+    toast.error(err?.response?.data?.message || "Failed to cancel order.");
+    return false;
+  }
+};
 
   return (
     <WithAsync
@@ -280,59 +294,50 @@ const FactoryOrderDetailsPage: React.FC = () => {
       }
     >
       <OrderDetailsView
-        initialOrder={orderDetails as OrderDetailsData}
-        mode="incoming"
-        partyLabel="Customer"
-        role="factory"
-        ordersPath="/factory/orders"
-        onUpdateStatus={async (status) => {
-          const ok = await updateOrderStatus(orderDetails!.id, { status });
-          if (ok) {
-            await fetchOrderById(orderDetails!.id);
-          }
-          return ok;
-        }}
-        onApprovePayment={async (paymentId, amountPaid) => {
-          try {
-            await paymentService.updateStatus(
-              paymentId,
-              "completed",
-              amountPaid,
-            );
-            await fetchOrderById(orderDetails!.id);
-            toast.success("Payment approved.");
-            return true;
-          } catch (err: any) {
-            toast.error(
-              err?.response?.data?.message ||
-                "Failed to approve payment. Please try again.",
-            );
-            return false;
-          }
-        }}
-        onAssignDriver={async (deliveryId, driverId) => {
-          try {
-            await deliveryService.assignDriver(deliveryId, driverId);
-            await fetchOrderById(orderDetails!.id);
-          } catch (err: any) {
-            toast.error(
-              err?.response?.data?.message ||
-                "Failed to assign driver. Please try again.",
-            );
-            throw err;
-          }
-        }}
-        links={{
-          party: (buyerId) => `/factory/distributors/${buyerId}`,
-        }}
-        cancelReasonOptions={[
-          "Out of stock",
-          "Customer request",
-          "Payment issue",
-          "Other",
-        ]}
-        buyerOrderHistory={buyerOrderHistory} // <-- pass history for credit orders
-      />
+  initialOrder={orderDetails as OrderDetailsData}
+  mode="incoming"
+  partyLabel="Customer"
+  role="factory"
+  ordersPath="/factory/orders"
+  onCancelOrder={handleCancelOrder}
+  onUpdateStatus={async (status) => {
+    const ok = await updateOrderStatus(orderDetails!.id, { status });
+    if (ok) {
+      await fetchOrderById(orderDetails!.id);
+    }
+    return ok;
+  }}
+  onApprovePayment={async (paymentId, amountPaid) => {
+    try {
+      await paymentService.updateStatus(paymentId, "completed", amountPaid);
+      await fetchOrderById(orderDetails!.id);
+      toast.success("Payment approved.");
+      return true;
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || "Failed to approve payment. Please try again.");
+      return false;
+    }
+  }}
+  onAssignDriver={async (deliveryId, driverId) => {
+    try {
+      await deliveryService.assignDriver(deliveryId, driverId);
+      await fetchOrderById(orderDetails!.id);
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || "Failed to assign driver. Please try again.");
+      throw err;
+    }
+  }}
+  links={{
+    party: (buyerId) => `/factory/distributors/${buyerId}`,
+  }}
+  cancelReasonOptions={[
+    "Out of stock",
+    "Customer request",
+    "Payment issue",
+    "Other",
+  ]}
+  buyerOrderHistory={buyerOrderHistory}
+/>
     </WithAsync>
   );
 };

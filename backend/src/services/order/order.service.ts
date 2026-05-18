@@ -533,6 +533,7 @@ export class OrderService {
 
     // Only pending or approved orders can be cancelled
     if (!['pending', 'approved'].includes(order.order_status)) {
+      console.log(order.order_status);
       throw new AppError(`Cannot cancel order in ${order.order_status} status`, 400);
     }
 

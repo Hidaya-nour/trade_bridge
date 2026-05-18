@@ -86,6 +86,8 @@ type OrderDetailsViewProps = {
   onAssignDriver?: (deliveryId: string, driverId: string) => Promise<void>;
   onUpdateStatus?: (status: OrderStatus) => Promise<boolean> | boolean | void;
   onApproveOrder?: (deliveryFee: number) => Promise<boolean> | boolean | void;
+    onCancelOrder?: (orderId: string, reason: string) => Promise<boolean> | void;
+
   onApprovePayment?: (
     paymentId: string,
     amountPaid?: number,
@@ -129,6 +131,8 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
   onApprovePayment,
   onReorderPlaceOrder,
   onProcessPayment,
+    onCancelOrder,
+
   ordersPath,
   role = "retailer",
   buyerOrderHistory = [],
@@ -168,7 +172,7 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
   const [driverRating, setDriverRating] = useState(5);
   const [driverReviewComment, setDriverReviewComment] = useState("");
   const [driverReviewSubmitting, setDriverReviewSubmitting] = useState(false);
-
+const [cancelling, setCancelling] = useState(false);
   const availableDrivers = (order.drivers || []).filter(
     (d) => d && d.available !== false,
   );
@@ -552,10 +556,31 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
     setShowAssignDialog(false);
   };
 
-  const handleCancelOrder = () => {
-    setOrder({ ...order, status: "cancelled" });
+ const handleCancelOrder = async () => {
+  if (!order) return;
+  const orderId = order.id;
+
+  if (!onCancelOrder) {
+    // Fallback: local update only (no API call)
+    setOrder((prev) => ({ ...prev, status: "cancelled" }));
     setShowCancelDialog(false);
-  };
+    return;
+  }
+
+  setCancelling(true);
+  try {
+    const result = await onCancelOrder(orderId, cancellationReason);
+    if (result === false) return; // cancellation prevented by parent
+    setOrder((prev) => ({ ...prev, status: "cancelled" }));
+    toast.success("Order cancelled successfully");
+  } catch (error) {
+    toast.error("Failed to cancel order. Please try again.");
+  } finally {
+    setCancelling(false);
+    setShowCancelDialog(false);
+    setCancellationReason("");
+  }
+};
 
   const getTimelineIcon = (status: string, completed: boolean) => {
     if (!completed) return <Clock className="h-5 w-5 text-gray-300" />;
@@ -601,10 +626,24 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
     },
   ].filter((item) => Boolean(item.value));
 
-  const effectivePickupLocation =
-    deliveryRecord?.pickup_location ||
-    (order.delivery as any)?.pickupLocation ||
-    "Not provided";
+  const effectivePickupLocation = (() => {
+  // 1. Prefer explicit pickup location from delivery or order
+  const explicit =
+    deliveryRecord?.pickup_location || (order.delivery as any)?.pickupLocation;
+  if (explicit) return explicit;
+
+  // 2. Fallback: use party's city/region if available
+  if (order.party?.location?.city || order.party?.location?.region) {
+    const parts = [
+      order.party.location.city,
+      order.party.location.region,
+    ].filter(Boolean);
+    return `${parts.join(", ")} (estimated pickup location)`;
+  }
+
+  // 3. Last resort – actionable message
+  return "Pickup location not set – please contact supplier";
+})();
   const effectiveDeliveryStatus =
     deliveryRecord?.status || (order.delivery as any)?.status || "pending";
   const effectiveDriverName =
@@ -1496,14 +1535,14 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
           <AlertDialogFooter>
             <AlertDialogCancel>Keep Order</AlertDialogCancel>
             <AlertDialogAction
-              className="bg-red-600 hover:bg-red-700"
-              disabled={
-                Boolean(cancelReasonOptions?.length) && !cancellationReason
-              }
-              onClick={handleCancelOrder}
-            >
-              Yes, Cancel Order
-            </AlertDialogAction>
+  className="bg-red-600 hover:bg-red-700"
+  disabled={
+    (Boolean(cancelReasonOptions?.length) && !cancellationReason) || cancelling
+  }
+  onClick={handleCancelOrder}
+>
+  {cancelling ? "Cancelling..." : "Yes, Cancel Order"}
+</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

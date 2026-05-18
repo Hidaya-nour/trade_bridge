@@ -10,7 +10,7 @@ import paymentService from "@/services/payment.service";
 import { useOrderStore } from "@/stores/order.store";
 import type { Order, OrderDetailsData, OrderStatus } from "@/types/order.types";
 import toast from "react-hot-toast";
-
+import orderService from "@/services/order.service";
 const statusIndex: Record<OrderStatus, number> = {
   pending: 0,
   approved: 1,
@@ -122,9 +122,9 @@ const mapOrderToDetails = (order: Order): OrderDetailsData => {
     timeline: buildTimeline(order),
     delivery: {
       deliveryId: order.delivery?.id,
-      pickupLocation: order.delivery?.pickup_location,
-      status: order.delivery?.status,
-      address: order.delivery?.dropoff_location || "Not provided",
+ pickupLocation: order.delivery?.pickup_location || order.delivery?.dropoff_location || "Not provided",
+  address: order.delivery?.dropoff_location || "Not provided",
+        status: order.delivery?.status,
       recipient: recipientName,
       phone: recipientPhone || "N/A",
       requestedDate: undefined,
@@ -151,7 +151,7 @@ const mapOrderToDetails = (order: Order): OrderDetailsData => {
     },
     canReview: order.order_status == "closed" ? true : false,
     canReorder: true,
-    canCancel: order.order_status !== "cancelled" ? true : false,
+    canCancel: order.order_status !== "cancelled" && order.order_status !== "closed" && order.payment?.payment_status !== "completed" ? true : false,
   };
 };
 
@@ -237,7 +237,20 @@ const OrderDetailsPage: React.FC = () => {
       return false;
     }
   };
-
+const handleCancelOrder = async (orderId: string, reason: string): Promise<boolean> => {
+  try {
+    // Call your order cancellation API – adjust endpoint as needed
+    await orderService.cancelOrder(orderId, reason);
+    // Alternatively, if your store has a cancel method:
+    // await useOrderStore.getState().cancelOrder(orderId, reason);
+    await fetchOrderById(orderId); // refresh order
+    toast.success("Order cancelled successfully");
+    return true;
+  } catch (err: any) {
+    toast.error(err?.response?.data?.message || "Failed to cancel order.");
+    return false;
+  }
+};
   return (
     <WithAsync
       isLoading={isLoading && !orderDetails}
@@ -276,6 +289,8 @@ const OrderDetailsPage: React.FC = () => {
         onReorderPlaceOrder={handleReorderPlaceOrder}
         onProcessPayment={handleProcessPayment}
         ordersPath="/retailer/orders"
+          onCancelOrder={handleCancelOrder}
+
         links={{
           party: (supplierId) => `/retailer/supplier/${supplierId}`,
           product: (productId) => `/retailer/products/${productId}`,

@@ -72,7 +72,18 @@ const hasNoSupplierDelivery = (order?: Order | null) =>
       return false;
     }),
   );
-
+const handleCancelOrder = async (orderId: string, reason: string): Promise<boolean> => {
+  try {
+    await orderService.cancelOrder(orderId, reason);
+    toast.success("Order cancelled successfully");
+    // Refresh order data to reflect updated status
+    await useOrderStore.getState().fetchOrderById(orderId);
+    return true;
+  } catch (err: any) {
+    toast.error(err?.response?.data?.message || "Failed to cancel order.");
+    return false;
+  }
+};
 const mapOrderToDetails = (
   order: Order,
   mode: "incoming" | "outgoing",
@@ -203,7 +214,8 @@ const mapOrderToDetails = (
     },
     party,
     drivers: mode === "incoming" ? drivers : undefined,
-canAssignDriver: mode === "incoming" && items.some(item => item.deliveryAvailable === true),    canCancel: true,
+canAssignDriver: mode === "incoming" && items.some(item => item.deliveryAvailable === true),   
+ canCancel: order.order_status !== "cancelled" && order.order_status !== "closed"&& order.payment?.payment_status !== "completed",
     canReview: mode === "outgoing",
     canReorder: mode === "outgoing",
     creditDueDate, // this will be included in the returned object
@@ -431,6 +443,8 @@ const DistributorOrderDetailsPage: React.FC = () => {
         onProcessPayment={
           mode === "outgoing" ? handleProcessPayment : undefined
         }
+          onCancelOrder={handleCancelOrder}
+
         onApproveOrder={
           mode === "incoming"
             ? async (deliveryFee) => {
