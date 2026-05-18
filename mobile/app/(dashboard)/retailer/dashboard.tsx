@@ -13,7 +13,6 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 
 import ScreenWrapper from "@/components/layout/ScreenWrapper";
-import SearchBar from "@/components/shared/SearchBar";
 import CompactStatCard from "@/components/shared/CompactStatCard";
 import SectionHeader from "@/components/shared/SectionHeader";
 import { useAuthStore } from "@/features/auth/auth.store";
@@ -22,13 +21,24 @@ import { useNotificationStore } from "@/features/notifications/notification.stor
 import { useCartStore } from "@/features/cart/cart.store";
 import { useProductStore } from "@/features/products/product.store";
 import { useSupplierStore } from "@/features/suppliers/supplier.store";
-import { type Order, type OrderStats, type OrderStatus } from "@/features/orders/order.types";
-import { type Product } from "@/features/products/product.types";
+import { type OrderStats, type OrderStatus } from "@/features/orders/order.types";
 import { type Supplier } from "@/features/suppliers/supplier.types";
 import { useRoleShell } from "@/navigation/RoleShellContext";
 import { useScrollDirection } from "@/hooks/useScrollDirection";
+import orderService from "@/features/orders/order.service";
 
 type DashboardFeedTab = "recent" | "frequent";
+
+interface FrequentProduct {
+  id: string;
+  name: string;
+  supplier: string;
+  supplierId?: string;
+  price: number;
+  unit: string;
+  orders: number;
+  quantity: number;
+}
 
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat("en-US", {
@@ -94,29 +104,27 @@ function RecentOrderCard({
   onPress,
   onTrack,
 }: {
-  order: Order;
+  order: any;
   onPress: () => void;
   onTrack: () => void;
 }) {
-  const supplierName = order.supplier?.business_name || order.supplier?.full_name || "Supplier";
-  const itemsCount = order.items?.length ?? 0;
-  const statusStyle = getStatusColors(order.order_status);
+  const statusStyle = getStatusColors(order.status);
 
   return (
     <Pressable style={styles.horizontalCard} onPress={onPress}>
       <View style={styles.horizontalCardTop}>
         <Text style={styles.horizontalCardEyebrow}>#{order.id.slice(0, 8)}</Text>
         <Text style={[styles.statusBadge, { backgroundColor: statusStyle.bg, color: statusStyle.text }]}>
-          {order.order_status}
+          {order.status}
         </Text>
       </View>
       <Text style={styles.horizontalCardTitle} numberOfLines={1}>
-        {supplierName}
+        {order.supplier}
       </Text>
       <Text style={styles.horizontalCardMeta}>
-        {itemsCount} items - {formatCurrency(order.total_price)}
+        {order.items} items - {formatCurrency(order.total)}
       </Text>
-      <Text style={styles.horizontalCardMeta}>{formatDate(order.created_at)}</Text>
+      <Text style={styles.horizontalCardMeta}>{formatDate(order.date)}</Text>
       <View style={styles.horizontalCardFooter}>
         <Pressable style={styles.inlineActionButton} onPress={onPress}>
           <Text style={styles.inlineActionText}>View</Text>
@@ -124,10 +132,10 @@ function RecentOrderCard({
         <Pressable
           style={[
             styles.inlinePrimaryButton,
-            order.order_status !== "shipped" && styles.inlinePrimaryButtonDisabled,
+            order.status !== "shipped" && styles.inlinePrimaryButtonDisabled,
           ]}
           onPress={onTrack}
-          disabled={order.order_status !== "shipped"}
+          disabled={order.status !== "shipped"}
         >
           <Text style={styles.inlinePrimaryText}>Track</Text>
         </Pressable>
@@ -139,25 +147,34 @@ function RecentOrderCard({
 function FrequentProductCard({
   product,
   onPress,
+  onReorder,
 }: {
-  product: Product;
+  product: FrequentProduct;
   onPress: () => void;
+  onReorder: () => void;
 }) {
-  const supplierName = product.supplier?.business_name || product.supplier?.full_name || "Supplier";
-  const orderCount = Number(product.review_count || 0);
   return (
     <Pressable style={styles.horizontalCard} onPress={onPress}>
-      <Text style={styles.horizontalCardEyebrow}>Catalog product</Text>
+      <Text style={styles.horizontalCardEyebrow}>Frequently ordered</Text>
       <Text style={styles.horizontalCardTitle} numberOfLines={2}>
         {product.name}
       </Text>
-      <Text style={styles.horizontalCardMeta}>{supplierName}</Text>
+      <Text style={styles.horizontalCardMeta}>{product.supplier}</Text>
       <Text style={styles.horizontalCardMeta}>
-        {formatCurrency(product.price)} / {product.unit_type}
+        {formatCurrency(product.price)} / {product.unit}
       </Text>
       <View style={styles.ordersPill}>
         <Ionicons name="repeat-outline" size={12} color="#2563eb" />
-        <Text style={styles.ordersPillText}>{orderCount} reviews</Text>
+        <Text style={styles.ordersPillText}>{product.orders} orders</Text>
+      </View>
+      <View style={styles.horizontalCardFooter}>
+        <Pressable style={styles.inlineActionButton} onPress={onPress}>
+          <Text style={styles.inlineActionText}>View</Text>
+        </Pressable>
+        <Pressable style={styles.inlinePrimaryButton} onPress={onReorder}>
+          <Ionicons name="cart-outline" size={14} color="#ffffff" />
+          <Text style={[styles.inlinePrimaryText, { marginLeft: 4 }]}>Reorder</Text>
+        </Pressable>
       </View>
     </Pressable>
   );
@@ -229,34 +246,170 @@ export default function RetailerDashboardScreen() {
   const router = useRouter();
   const { setTabBarVisible } = useRoleShell();
   const user = useAuthStore((state) => state.user);
-  const { stats, orders, isLoading, error, fetchOrderStats, fetchRecentOrders } = useOrderStore();
-  const { counts, fetchCounts } = useNotificationStore();
+  const { stats, error, fetchOrderStats } = useOrderStore();
+  const { fetchCounts } = useNotificationStore();
   const { totalItems, fetchCart } = useCartStore();
   const { suppliers, fetchSuppliers, error: suppliersError } = useSupplierStore();
-  const { products, fetchProducts, error: productsError } = useProductStore();
+  const { fetchProducts, error: productsError } = useProductStore();
 
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFeedTab, setActiveFeedTab] = useState<DashboardFeedTab>("recent");
   const [summaryExpanded, setSummaryExpanded] = useState(false);
+  const [recentOrders, setRecentOrders] = useState<any[]>([]);
+  const [recentOrdersLoading, setRecentOrdersLoading] = useState(false);
+  const [buyerOrders, setBuyerOrders] = useState<any[]>([]);
+  const [buyerOrdersLoading, setBuyerOrdersLoading] = useState(false);
 
   const { onScroll } = useScrollDirection({
     onDirectionChange: (direction) => setTabBarVisible(direction === "up"),
   });
 
+  const fetchRecentOrdersForDashboard = useCallback(async () => {
+    setRecentOrdersLoading(true);
+    try {
+      const response = await orderService.getMyOrders({
+        limit: 4,
+        sortBy: "created_at",
+        sortOrder: "DESC",
+      });
+      
+      let orders = response?.data?.orders || [];
+      const normalizedOrders = orders.map((order: any) => {
+        const supplierObj = order.supplier;
+        const supplierName = supplierObj?.business_name || supplierObj?.full_name || order.supplier_name || "Unknown Supplier";
+
+        return {
+          id: order.id,
+          status: order.order_status || order.status || "pending",
+          supplierId: order.supplier_id || supplierObj?.id,
+          supplier: supplierName,
+          items: order.items?.length ?? order.item_count ?? 0,
+          total: parseFloat(order.total_price || order.total || 0),
+          date: order.created_at || order.date || new Date().toISOString(),
+        };
+      });
+      
+      setRecentOrders(normalizedOrders);
+    } catch (error) {
+      console.error("Failed to fetch recent orders:", error);
+      setRecentOrders([]);
+    } finally {
+      setRecentOrdersLoading(false);
+    }
+  }, []);
+
+  const fetchBuyerOrders = useCallback(async () => {
+    setBuyerOrdersLoading(true);
+    try {
+      const response = await orderService.getOrdersAsBuyer({
+        limit: 100,
+        sortBy: "created_at",
+        sortOrder: "DESC",
+      });
+      
+      let orders = response?.data?.orders || [];
+      const ordersWithItems = await Promise.all(
+        orders.map(async (order: any) => {
+          if (order.items && order.items.length > 0) {
+            return order;
+          }
+          try {
+            const fullOrder = await orderService.getOrderById(order.id);
+            return fullOrder?.data?.order || fullOrder?.order || order;
+          } catch {
+            return order;
+          }
+        })
+      );
+      
+      const enhancedOrders = ordersWithItems.map((order: any) => ({
+        ...order,
+        supplier_name: order.supplier?.business_name || order.supplier?.full_name || order.supplier_name || "Supplier",
+        items: order.items || [],
+      }));
+      
+      setBuyerOrders(enhancedOrders);
+    } catch (error) {
+      console.error("Failed to fetch buyer orders:", error);
+      setBuyerOrders([]);
+    } finally {
+      setBuyerOrdersLoading(false);
+    }
+  }, []);
+
+  const frequentProducts = useMemo(() => {
+    const counts = new Map<string, FrequentProduct>();
+
+    for (const order of buyerOrders) {
+      const supplierName = order.supplier_name || order.supplier?.business_name || order.supplier?.full_name || "Supplier";
+      const supplierId = order.supplier_id || order.supplier?.id;
+      const orderItems = order.items || [];
+      
+      if (orderItems.length === 0) continue;
+      
+      const seen = new Set<string>();
+      
+      for (const item of orderItems) {
+        const productObj = item.product;
+        const productId = String(item.product_id || productObj?.id || "");
+        if (!productId) continue;
+
+        const existing = counts.get(productId) || {
+          id: productId,
+          name: productObj?.name || item.product_name || "Product",
+          supplier: supplierName,
+          supplierId: supplierId,
+          price: parseFloat(item.unit_price || item.price || 0),
+          unit: productObj?.unit_type || item.unit_type || "unit",
+          orders: 0,
+          quantity: 0,
+        };
+
+        existing.quantity += parseFloat(item.quantity || 0);
+        
+        if (!seen.has(productId)) {
+          existing.orders += 1;
+          seen.add(productId);
+        }
+
+        if ((!existing.name || existing.name === "Product") && (productObj?.name || item.product_name)) {
+          existing.name = productObj?.name || item.product_name;
+        }
+        if ((!existing.unit || existing.unit === "unit") && (productObj?.unit_type || item.unit_type)) {
+          existing.unit = productObj?.unit_type || item.unit_type;
+        }
+        if (!existing.price && (item.unit_price || item.price)) {
+          existing.price = parseFloat(item.unit_price || item.price);
+        }
+
+        counts.set(productId, existing);
+      }
+    }
+
+    const ranked = Array.from(counts.values()).sort((a, b) => {
+      if (b.orders !== a.orders) return b.orders - a.orders;
+      if (b.quantity !== a.quantity) return b.quantity - a.quantity;
+      return a.name.localeCompare(b.name);
+    });
+
+    return ranked.slice(0, 4);
+  }, [buyerOrders]);
+
   const loadDashboard = useCallback(async () => {
     await Promise.all([
       fetchOrderStats(),
-      fetchRecentOrders(),
+      fetchRecentOrdersForDashboard(),
+      fetchBuyerOrders(),
       fetchCounts(),
       fetchCart(),
       fetchSuppliers(),
       fetchProducts({ sortBy: "created_at", sortOrder: "DESC", limit: 12 }, { replace: true }),
     ]);
-  }, [fetchCart, fetchCounts, fetchOrderStats, fetchProducts, fetchRecentOrders, fetchSuppliers]);
+  }, [fetchCart, fetchCounts, fetchOrderStats, fetchProducts, fetchRecentOrdersForDashboard, fetchBuyerOrders, fetchSuppliers]);
 
   useEffect(() => {
-    void loadDashboard();
+    loadDashboard();
   }, [loadDashboard]);
 
   const onRefresh = useCallback(async () => {
@@ -267,28 +420,23 @@ export default function RetailerDashboardScreen() {
 
   const normalizedSearch = searchQuery.trim().toLowerCase();
 
-  const filteredOrders = useMemo(() => {
-    if (!normalizedSearch) return orders;
-
-    return orders.filter((order) => {
-      const supplierName = order.supplier?.business_name || order.supplier?.full_name || "";
-      return [order.id, supplierName, order.order_status].some((value) =>
-        value.toLowerCase().includes(normalizedSearch),
+  const filteredRecentOrders = useMemo(() => {
+    if (!normalizedSearch) return recentOrders;
+    return recentOrders.filter((order) => {
+      return [order.id, order.supplier, order.status].some((value) =>
+        String(value).toLowerCase().includes(normalizedSearch),
       );
     });
-  }, [normalizedSearch, orders]);
+  }, [normalizedSearch, recentOrders]);
 
   const filteredFrequentProducts = useMemo(() => {
-    if (!normalizedSearch) return products.slice(0, 8);
-    return products.filter((product) =>
-      [
-        product.name,
-        product.supplier?.business_name || "",
-        product.supplier?.full_name || "",
-        product.category,
-      ].some((value) => value.toLowerCase().includes(normalizedSearch)),
+    if (!normalizedSearch) return frequentProducts;
+    return frequentProducts.filter((product) =>
+      [product.name, product.supplier].some((value) =>
+        value.toLowerCase().includes(normalizedSearch),
+      ),
     );
-  }, [normalizedSearch, products]);
+  }, [normalizedSearch, frequentProducts]);
 
   const filteredSuppliers = useMemo(() => {
     if (!normalizedSearch) return suppliers.slice(0, 8);
@@ -368,6 +516,10 @@ export default function RetailerDashboardScreen() {
     [router, totalItems],
   );
 
+  const handleQuickReorder = (product: FrequentProduct) => {
+    router.push(`/retailer/products/${product.id}` as never);
+  };
+
   if (!user) {
     return (
       <View style={styles.centeredScreen}>
@@ -375,8 +527,6 @@ export default function RetailerDashboardScreen() {
       </View>
     );
   }
-
-  const firstName = user.full_name.split(" ")[0] || user.full_name;
 
   return (
     <ScreenWrapper title="Dashboard" subtitle={user.business_name || "Retailer"}>
@@ -386,8 +536,6 @@ export default function RetailerDashboardScreen() {
         scrollEventThrottle={16}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
-       
-
         {error || suppliersError || productsError ? (
           <View style={styles.errorBox}>
             <Text style={styles.errorText}>{error || suppliersError || productsError}</Text>
@@ -449,15 +597,15 @@ export default function RetailerDashboardScreen() {
           </View>
 
           {activeFeedTab === "recent" ? (
-            isLoading && orders.length === 0 ? (
+            recentOrdersLoading && recentOrders.length === 0 ? (
               <View style={styles.loadingBlock}>
                 <ActivityIndicator size="small" color="#2563eb" />
                 <Text style={styles.loadingText}>Loading recent orders</Text>
               </View>
-            ) : filteredOrders.length ? (
+            ) : filteredRecentOrders.length ? (
               <FlatList
                 horizontal
-                data={filteredOrders.slice(0, 6)}
+                data={filteredRecentOrders}
                 keyExtractor={(item) => item.id}
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.carouselList}
@@ -476,6 +624,11 @@ export default function RetailerDashboardScreen() {
                 subtitle="Recent order activity will show up here once you place orders."
               />
             )
+          ) : buyerOrdersLoading && frequentProducts.length === 0 ? (
+            <View style={styles.loadingBlock}>
+              <ActivityIndicator size="small" color="#2563eb" />
+              <Text style={styles.loadingText}>Loading order history</Text>
+            </View>
           ) : filteredFrequentProducts.length ? (
             <FlatList
               horizontal
@@ -487,6 +640,7 @@ export default function RetailerDashboardScreen() {
                 <FrequentProductCard
                   product={item}
                   onPress={() => router.push(`/retailer/products/${item.id}` as never)}
+                  onReorder={() => handleQuickReorder(item)}
                 />
               )}
             />
@@ -502,7 +656,7 @@ export default function RetailerDashboardScreen() {
         <View style={styles.panel}>
           <SectionHeader
             title="Recommended Suppliers"
-            subtitle="Quick shortlist inspired by the web dashboard"
+            subtitle="Based on your purchase history"
             actionLabel="View all"
             onActionPress={() => router.push("/retailer/suppliers" as never)}
           />
@@ -531,16 +685,13 @@ export default function RetailerDashboardScreen() {
         </View>
 
         <View style={styles.panel}>
-          <SectionHeader title="Quick Actions" subtitle="Common tasks without leaving the dashboard" />
+          <SectionHeader
+            title="Quick Actions"
+            subtitle="Frequently used features"
+          />
           <View style={styles.quickActionsGrid}>
-            {quickActions.map((action) => (
-              <QuickActionTile
-                key={action.label}
-                icon={action.icon}
-                label={action.label}
-                caption={action.caption}
-                onPress={action.onPress}
-              />
+            {quickActions.map((action, index) => (
+              <QuickActionTile key={index} {...action} />
             ))}
           </View>
         </View>
@@ -600,14 +751,6 @@ const styles = StyleSheet.create({
   container: {
     padding: 16,
     paddingBottom: 40,
-    gap: 14,
-  },
-  headerCard: {
-    backgroundColor: "#f8fbff",
-    borderRadius: 24,
-    borderWidth: 1,
-    borderColor: "#dbe3ef",
-    padding: 16,
     gap: 14,
   },
   errorBox: {
@@ -735,6 +878,9 @@ const styles = StyleSheet.create({
     backgroundColor: "#2563eb",
     paddingHorizontal: 12,
     paddingVertical: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
   },
   inlinePrimaryButtonDisabled: {
     backgroundColor: "#bfdbfe",
@@ -786,17 +932,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "800",
     color: "#1d4ed8",
-  },
-  matchChip: {
-    backgroundColor: "#f3e8ff",
-    borderRadius: 999,
-    paddingHorizontal: 9,
-    paddingVertical: 5,
-  },
-  matchChipText: {
-    fontSize: 10,
-    fontWeight: "800",
-    color: "#6b21a8",
   },
   supplierName: {
     fontSize: 15,

@@ -144,9 +144,10 @@ export interface OrderStats {
 }
 
 export interface MyOrdersResult {
+  limit: number;
+  items: Order[];
   orders: Order[];
   total: number;
   page: number;
   totalPages: number;
 }
-

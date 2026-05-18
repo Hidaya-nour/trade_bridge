@@ -54,6 +54,7 @@ export interface AuthResponseData {
 }
 
 export interface ApiResponse<T> {
+  order: import("../orders/order.types").Order;
   success: boolean;
   message?: string;
   data: T;
