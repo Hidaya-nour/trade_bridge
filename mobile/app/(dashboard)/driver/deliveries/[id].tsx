@@ -148,68 +148,12 @@ export default function DriverDeliveryDetailScreen() {
               ]}
             >
               {formatStatus(delivery.status)}
-            </Text>
-           
+            </Text>           
           </View>
 
           <View style={styles.metricRow}>
-                     
-          
-          </View>
-
-          
         </View>
-
-        <View style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>Route Information</Text>
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Pickup</Text>
-            <Text style={styles.detailValue}>{delivery.pickupPoint}</Text>
-          </View>
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Dropoff</Text>
-            <Text style={styles.detailValue}>{delivery.destination}</Text>
-          </View>
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Delivery window</Text>
-            <Text style={styles.detailValue}>{delivery.scheduledWindow}</Text>
-          </View>
-          
         </View>
-
-        <View style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>Recipient Details</Text>
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Contact person</Text>
-            <Text style={styles.detailValue}>{delivery.contactPerson}</Text>
-          </View>
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Phone</Text>
-            <Text style={styles.detailValue}>{delivery.contactPhone}</Text>
-          </View>
-          <View style={styles.noteBox}>
-            <Text style={styles.noteLabel}>Driver note</Text>
-            <Text style={styles.noteText}>{delivery.notes}</Text>
-          </View>
-        </View>
-
-        <View style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>Load Details</Text>
-          {delivery.products.map((product) => (
-            <View key={`${delivery.id}-${product.name}`} style={styles.productRow}>
-              <View style={styles.productIcon}>
-                <Ionicons name="cube-outline" size={16} color="#1d4ed8" />
-              </View>
-              <View style={styles.productTextWrap}>
-                <Text style={styles.productName}>{product.name}</Text>
-                <Text style={styles.productMeta}>
-                  {product.quantity} {product.unit}
-                </Text>
-              </View>
-            </View>
-          ))}
-        </View>
-
         <View style={styles.sectionCard}>
           <Text style={styles.sectionTitle}>Delivery Timeline</Text>
           {delivery.timeline.map((item) => (
@@ -250,6 +194,58 @@ export default function DriverDeliveryDetailScreen() {
             </Text>
           </Pressable>
         </View>
+ <View style={styles.sectionCard}>
+          <Text style={styles.sectionTitle}>Load Details</Text>
+          {delivery.products.map((product) => (
+            <View key={`${delivery.id}-${product.name}`} style={styles.productRow}>
+              <View style={styles.productIcon}>
+                <Ionicons name="cube-outline" size={16} color="#1d4ed8" />
+              </View>
+              <View style={styles.productTextWrap}>
+                <Text style={styles.productName}>{product.name}</Text>
+                <Text style={styles.productMeta}>
+                  {product.quantity} {product.unit}
+                </Text>
+              </View>
+            </View>
+          ))}
+        </View>
+        <View style={styles.sectionCard}>
+          <Text style={styles.sectionTitle}>Route Information</Text>
+          <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>Pickup</Text>
+            <Text style={styles.detailValue}>{delivery.pickupPoint}</Text>
+          </View>
+          <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>Dropoff</Text>
+            <Text style={styles.detailValue}>{delivery.destination}</Text>
+          </View>
+          <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>Delivery window</Text>
+            <Text style={styles.detailValue}>{delivery.scheduledWindow}</Text>
+          </View>
+          
+        </View>
+
+        <View style={styles.sectionCard}>
+          <Text style={styles.sectionTitle}>Recipient Details</Text>
+          <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>Contact person</Text>
+            <Text style={styles.detailValue}>{delivery.contactPerson}</Text>
+          </View>
+          <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>Phone</Text>
+            <Text style={styles.detailValue}>{delivery.contactPhone}</Text>
+          </View>
+          <View style={styles.noteBox}>
+            <Text style={styles.noteLabel}>Driver note</Text>
+            <Text style={styles.noteText}>{delivery.notes}</Text>
+          </View>
+        </View>
+
+       
+
+       
       </ScrollView>
     </ScreenWrapper>
   );

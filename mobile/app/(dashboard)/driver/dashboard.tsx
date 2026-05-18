@@ -219,9 +219,6 @@ export default function DriverDashboardScreen() {
                 <Text style={styles.btnText}>Open</Text>
               </Pressable>
 
-              <Pressable style={styles.secondaryBtn} onPress={openMaps}>
-                <Text>Navigate</Text>
-              </Pressable>
             </View>
           </View>
         ) : (

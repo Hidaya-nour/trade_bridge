@@ -325,8 +325,7 @@ export const roleNavigationConfig: Record<UserRole, RoleNavigationConfig> = {
       ...sharedDrawerItems("driver"),
       
     ],
-    hiddenScreens: ["notifications", "messages", "support", "settings", "history", "active"],
-  },
+    hiddenScreens: ["notifications", "messages", "support", "settings"],  },
   admin: {
     tabs: [
       {

@@ -14,6 +14,11 @@ export const authService = {
     return response.data;
   },
 
+  async register(payload: any) {
+    const response = await api.post<ApiResponse<AuthResponseData>>("/auth/register", payload);
+    return response.data;
+  },
+
   async getCurrentUser() {
     const response = await api.get<ApiResponse<{ user: User }>>("/auth/me");
     return response.data;

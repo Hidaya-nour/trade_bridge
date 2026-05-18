@@ -1,3 +1,3 @@
-import DriverTrackingScreen from "@/features/driver-tracking/DriverTrackingScreen";
+import DriverTrackingScreen from "@/features/driver-tracking/DriverTrackingScreen.web";
 
 export default DriverTrackingScreen;

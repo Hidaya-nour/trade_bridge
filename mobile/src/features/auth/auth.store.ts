@@ -30,6 +30,14 @@ interface AuthState {
   isLoading: boolean;
   error: string | null;
   login: (email: string, password: string) => Promise<{ user: User; tokens: Tokens }>;
+  register: (payload: {
+  email: string;
+  password: string;
+  full_name: string;
+  role: string;
+  phone?: string;
+  business_name?: string;
+}) => Promise<any>;
   initialize: () => Promise<void>;
   fetchUser: () => Promise<void>;
   updateProfile: (payload: UpdateProfilePayload) => Promise<void>;
@@ -87,6 +95,32 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
+register: async (payload) => {
+  set({ isLoading: true, error: null });
+
+  try {
+    const response = await authService.register(payload);
+
+    set({
+      isLoading: false,
+      error: null,
+    });
+
+    return response.data;
+  } catch (error: any) {
+    const message =
+      error?.response?.data?.message ??
+      error?.message ??
+      "Registration failed";
+
+    set({
+      isLoading: false,
+      error: message,
+    });
+
+    throw new Error(message);
+  }
+},
       initialize: async () => {
         if (initializePromise) {
           await initializePromise;
