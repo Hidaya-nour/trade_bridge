@@ -1,46 +1,83 @@
-import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { useAuthStore } from "../../stores/auth.store";
+import React, { useState, useEffect } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useAuthStore } from "@/stores/auth.store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+
+/* ==========================================================================
+   Types & Interfaces
+   ========================================================================== */
+interface RegisterFormData {
+  fullName: string;
+  email: string;
+  password: string;
+  confirmPassword: string;
+  role: "retailer" | "distributor" | "factory" | "driver";
+  agreeTerms: boolean;
+}
 
 export const RegisterPage: React.FC = () => {
-  const [formData, setFormData] = useState({
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { register, isLoading, error, clearError } = useAuthStore();
+
+  const [formData, setFormData] = useState<RegisterFormData>({
+    fullName: "",
     email: "",
     password: "",
     confirmPassword: "",
-    full_name: "",
     role: "retailer",
-    phone: "",
-    business_name: "",
+    agreeTerms: false,
   });
-  const [confirmError, setConfirmError] = useState<string | null>(null);
-  const { register, isLoading, error, clearError } = useAuthStore();
-  const navigate = useNavigate();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const [passwordError, setPasswordError] = useState<string>("");
+
+  useEffect(() => {
     clearError();
-    setConfirmError(null);
+  }, [clearError, location.pathname]);
+
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
+    const { name, value, type } = e.target;
+    const checked = (e.target as HTMLInputElement).checked;
+
+    setFormData((prev) => ({
+      ...prev,
+      [name]: type === "checkbox" ? checked : value,
+    }));
+
+    if (name === "password" || name === "confirmPassword") {
+      setPasswordError("");
+    }
+  };
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    clearError();
+    setPasswordError("");
 
     if (formData.password !== formData.confirmPassword) {
-      setConfirmError("Passwords do not match.");
+      setPasswordError("Passwords do not match");
       return;
     }
 
+    if (!formData.agreeTerms) return;
+
     try {
-      const { confirmPassword: _confirmPassword, ...payload } = formData;
-      await register(payload);
+      await register({
+        email: formData.email,
+        password: formData.password,
+        full_name: formData.fullName,
+        role: formData.role,
+        phone: "",
+        business_name: "",
+      });
+
       const needsApproval =
         formData.role === "factory" || formData.role === "distributor";
+
       navigate("/login", {
         state: {
           message: needsApproval
@@ -48,144 +85,169 @@ export const RegisterPage: React.FC = () => {
             : "Registration successful.",
         },
       });
-    } catch (err) {
-      // Error is handled by store
+    } catch {
+      // Error state is handled automatically by the auth store
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle className="text-2xl text-center">Create Account</CardTitle>
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4 py-12">
+      <Card className="w-full max-w-md shadow-lg overflow-hidden">
+        <CardHeader className="bg-white px-8 py-6">
+          <CardTitle className="text-3xl font-semibold text-slate-900 text-center">
+            Create Account
+          </CardTitle>
+          <p className="text-sm text-slate-500 text-center mt-1">
+            Join TradeBridge today
+          </p>
         </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
+        
+        <CardContent className="bg-slate-50 px-8 py-6">
+          <form onSubmit={handleSubmit} className="space-y-5">
+            
+            {/* Global Store Validation Error */}
             {error && (
-              <div className="bg-red-50 text-red-600 p-3 rounded-md text-sm">
+              <div className="rounded-xl bg-rose-50 border border-rose-200 p-4 text-sm text-rose-700">
                 {error}
               </div>
             )}
-            {confirmError && (
-              <div className="bg-red-50 text-red-600 p-3 rounded-md text-sm">
-                {confirmError}
+
+            {/* Local Password Mismatch Error */}
+            {passwordError && (
+              <div className="rounded-xl bg-rose-50 border border-rose-200 p-4 text-sm text-rose-700">
+                {passwordError}
               </div>
             )}
 
+            {/* Full Name Input */}
             <div>
-              <label className="block text-sm font-medium mb-1">
+              <label htmlFor="fullName" className="block text-sm font-medium text-slate-700 mb-2">
                 Full Name
               </label>
               <Input
-                value={formData.full_name}
-                onChange={(e) =>
-                  setFormData({ ...formData, full_name: e.target.value })
-                }
+                id="fullName"
+                name="fullName"
+                type="text"
+                value={formData.fullName}
+                onChange={handleChange}
+                placeholder="John Doe"
                 required
                 disabled={isLoading}
               />
             </div>
 
+            {/* Email Input */}
             <div>
-              <label className="block text-sm font-medium mb-1">Email</label>
+              <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-2">
+                Email address
+              </label>
               <Input
+                id="email"
+                name="email"
                 type="email"
                 value={formData.email}
-                onChange={(e) =>
-                  setFormData({ ...formData, email: e.target.value })
-                }
+                onChange={handleChange}
+                placeholder="you@example.com"
                 required
                 disabled={isLoading}
               />
             </div>
 
+            {/* Role Select Dropdown */}
             <div>
-              <label className="block text-sm font-medium mb-1">Password</label>
+              <label htmlFor="role" className="block text-sm font-medium text-slate-700 mb-2">
+                I am a
+              </label>
+              <select
+                id="role"
+                name="role"
+                value={formData.role}
+                onChange={handleChange}
+                disabled={isLoading}
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <option value="retailer">Retailer</option>
+                <option value="distributor">Distributor</option>
+                <option value="factory">Factory</option>
+                <option value="driver">Driver</option>
+              </select>
+            </div>
+
+            {/* Password Input */}
+            <div>
+              <label htmlFor="password" className="block text-sm font-medium text-slate-700 mb-2">
+                Password
+              </label>
               <Input
+                id="password"
+                name="password"
                 type="password"
                 value={formData.password}
-                onChange={(e) =>
-                  setFormData({ ...formData, password: e.target.value })
-                }
+                onChange={handleChange}
+                placeholder="Enter your password"
                 required
                 disabled={isLoading}
-                placeholder="Min. 8 characters with uppercase, number & special char"
               />
             </div>
 
+            {/* Confirm Password Input */}
             <div>
-              <label className="block text-sm font-medium mb-1">
+              <label htmlFor="confirmPassword" className="block text-sm font-medium text-slate-700 mb-2">
                 Confirm Password
               </label>
               <Input
+                id="confirmPassword"
+                name="confirmPassword"
                 type="password"
                 value={formData.confirmPassword}
-                onChange={(e) => {
-                  setConfirmError(null);
-                  setFormData({ ...formData, confirmPassword: e.target.value });
-                }}
+                onChange={handleChange}
+                placeholder="Confirm your password"
                 required
                 disabled={isLoading}
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium mb-1">Phone</label>
-              <Input
-                value={formData.phone}
-                onChange={(e) =>
-                  setFormData({ ...formData, phone: e.target.value })
-                }
+            {/* Terms and Conditions Checkbox */}
+            <div className="flex items-start gap-3 text-sm text-slate-600">
+              <input
+                id="agreeTerms"
+                name="agreeTerms"
+                type="checkbox"
+                checked={formData.agreeTerms}
+                onChange={handleChange}
                 required
                 disabled={isLoading}
+                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 mt-0.5"
               />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Account Type
+              <label htmlFor="agreeTerms" className="leading-tight select-none">
+                I agree to the{" "}
+                <Link to="/terms" className="text-blue-600 hover:underline">
+                  Terms of Service
+                </Link>{" "}
+                and{" "}
+                <Link to="/privacy" className="text-blue-600 hover:underline">
+                  Privacy Policy
+                </Link>
               </label>
-              <Select
-                value={formData.role}
-                onValueChange={(value: any) =>
-                  setFormData({ ...formData, role: value })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select role" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="retailer">Retailer</SelectItem>
-                  <SelectItem value="distributor">Distributor</SelectItem>
-                  <SelectItem value="factory">Factory</SelectItem>
-                  <SelectItem value="driver">Driver</SelectItem>
-                </SelectContent>
-              </Select>
             </div>
-            {formData.role !== "driver" && (
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Business Name (Optional)
-                </label>
-                <Input
-                  value={formData.business_name}
-                  onChange={(e) =>
-                    setFormData({ ...formData, business_name: e.target.value })
-                  }
-                  disabled={isLoading}
-                />
-              </div>
-            )}
+
+            {/* Submit Button */}
             <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? "Creating account..." : "Register"}
+              {isLoading ? "Creating Account..." : "Create Account"}
             </Button>
 
-            <p className="text-center text-sm text-gray-600">
-              Already have an account?{" "}
-              <Link to="/login" className="text-blue-600 hover:underline">
-                Login here
+            {/* Footer Navigation Links */}
+            <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-slate-600">
+              <p>
+                Already have an account?{" "}
+                <Link to="/login" className="text-blue-600 hover:underline">
+                  Sign in
+                </Link>
+              </p>
+              <Link to="/" className="text-blue-600 hover:underline">
+                Back to home
               </Link>
-            </p>
+            </div>
           </form>
         </CardContent>
       </Card>
