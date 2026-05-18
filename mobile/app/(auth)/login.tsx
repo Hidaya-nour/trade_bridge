@@ -13,9 +13,9 @@ import {
   TextInput,
   View,
   ScrollView,
+  Image,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { LinearGradient } from "expo-linear-gradient";
 import { useAuthStore } from "@/features/auth/auth.store";
 import { roleNavigation } from "@/navigation/roleNavigation";
 
@@ -55,11 +55,8 @@ export default function LoginScreen() {
   const isSuspended = displayError?.toLowerCase().includes("suspended");
 
   return (
-    <LinearGradient
-      colors={["#0b63f6", "#052e75"]}
-      style={styles.gradientBackground}
-    >
-      <StatusBar barStyle="light-content" />
+    <View style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="#F8FAFC" />
       <SafeAreaView style={styles.safeArea}>
         <KeyboardAvoidingView
           style={styles.keyboardRoot}
@@ -72,29 +69,43 @@ export default function LoginScreen() {
           >
             {/* Header / Brand Area */}
             <View style={styles.headerContainer}>
-              <View style={styles.logoBadge}>
-                <Ionicons name="git-merge-outline" size={32} color="#0b63f6" />
+              <View style={styles.logoWrapper}>
+                <View style={styles.logoBadge}>
+                  <Image
+                    source={require("@/assets/image/logo.png")}
+                    style={styles.logoImage}
+                    resizeMode="contain"
+                  />
+                </View>
               </View>
               <Text style={styles.brandText}>TradeBridge</Text>
               <Text style={styles.welcomeText}>Welcome Back!</Text>
-              <Text style={styles.subtitleText}>Access your account to continue</Text>
+              <Text style={styles.subtitleText}>
+                Access your account to continue
+              </Text>
             </View>
 
             {/* Form Container Card */}
             <View style={styles.containerCard}>
-              
               {/* Error Box matching web criteria */}
               {displayError ? (
                 <View style={styles.errorBox}>
-                  <Ionicons name="alert-circle-outline" size={18} color="#b91c1c" style={styles.errorIcon} />
+                  <Ionicons
+                    name="alert-circle-outline"
+                    size={18}
+                    color="#DC2626"
+                    style={styles.errorIcon}
+                  />
                   <View style={styles.errorTextContainer}>
                     <Text style={styles.errorText}>{displayError}</Text>
                     {isSuspended && (
-                      <Pressable 
+                      <Pressable
                         onPress={() => router.push("/account-suspended")}
                         style={styles.appealLink}
                       >
-                        <Text style={styles.appealLinkText}>Submit an appeal</Text>
+                        <Text style={styles.appealLinkText}>
+                          Submit an appeal
+                        </Text>
                       </Pressable>
                     )}
                   </View>
@@ -105,13 +116,18 @@ export default function LoginScreen() {
               <View style={styles.formGroup}>
                 <Text style={styles.label}>Email</Text>
                 <View style={styles.inputContainer}>
-                  <Ionicons name="mail-outline" size={20} color="#8a8f98" style={styles.inputIcon} />
+                  <Ionicons
+                    name="mail-outline"
+                    size={20}
+                    color="#64748B"
+                    style={styles.inputIcon}
+                  />
                   <TextInput
                     autoCapitalize="none"
                     autoCorrect={false}
                     keyboardType="email-address"
                     placeholder="Enter your email"
-                    placeholderTextColor="#8a8f98"
+                    placeholderTextColor="#94A3B8"
                     style={styles.input}
                     value={email}
                     onChangeText={setEmail}
@@ -124,12 +140,17 @@ export default function LoginScreen() {
               <View style={styles.formGroup}>
                 <Text style={styles.label}>Password</Text>
                 <View style={styles.inputContainer}>
-                  <Ionicons name="lock-closed-outline" size={20} color="#8a8f98" style={styles.inputIcon} />
+                  <Ionicons
+                    name="lock-closed-outline"
+                    size={20}
+                    color="#64748B"
+                    style={styles.inputIcon}
+                  />
                   <TextInput
                     secureTextEntry={!showPassword}
                     placeholder="Enter your password"
-                    placeholderTextColor="#8a8f98"
-                    style={styles.passwordInput}
+                    placeholderTextColor="#94A3B8"
+                    style={styles.input}
                     value={password}
                     onChangeText={setPassword}
                     editable={!isLoading}
@@ -143,7 +164,7 @@ export default function LoginScreen() {
                     <Ionicons
                       name={showPassword ? "eye-off-outline" : "eye-outline"}
                       size={20}
-                      color="#6b7280"
+                      color="#64748B"
                     />
                   </Pressable>
                 </View>
@@ -161,7 +182,7 @@ export default function LoginScreen() {
               >
                 {isLoading ? (
                   <View style={styles.loadingRow}>
-                    <ActivityIndicator color="#ffffff" size="small" />
+                    <ActivityIndicator color="#FFFFFF" size="small" />
                     <Text style={styles.loginButtonText}>Logging in...</Text>
                   </View>
                 ) : (
@@ -176,18 +197,18 @@ export default function LoginScreen() {
                   <Text style={styles.signUpText}>Sign up</Text>
                 </Pressable>
               </View>
-
             </View>
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
-    </LinearGradient>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  gradientBackground: {
+  container: {
     flex: 1,
+    backgroundColor: "#F8FAFC", // --background: 220 20% 98%
   },
   safeArea: {
     flex: 1,
@@ -203,87 +224,96 @@ const styles = StyleSheet.create({
   },
   headerContainer: {
     alignItems: "center",
-    marginBottom: 28,
+    marginBottom: 32,
+  },
+  logoWrapper: {
+    marginBottom: 20,
   },
   logoBadge: {
-    width: 64,
-    height: 64,
-    borderRadius: 18,
-    backgroundColor: "#ffffff",
+    width: 80,
+    height: 80,
+    borderRadius: 20,
+    backgroundColor: "#FFFFFF",
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 16,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 10,
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
     elevation: 5,
+  },
+  logoImage: {
+    width: 50,
+    height: 50,
   },
   brandText: {
     fontSize: 14,
     fontWeight: "700",
-    color: "#e0f2fe",
-    letterSpacing: 3,
+    color: "#6366F1", // --primary: 250 60% 55%
+    letterSpacing: 2,
     textTransform: "uppercase",
-    marginBottom: 8,
+    marginBottom: 12,
   },
   welcomeText: {
     fontSize: 32,
     fontWeight: "800",
-    color: "#ffffff",
-    marginBottom: 4,
+    color: "#0F172A", // --foreground: 222 47% 11%
+    marginBottom: 8,
   },
   subtitleText: {
     fontSize: 15,
-    color: "#bfdbfe",
+    color: "#64748B", // --muted-foreground: 215 16% 47%
     textAlign: "center",
   },
   containerCard: {
-    backgroundColor: "#ffffff",
-    borderRadius: 24,
+    backgroundColor: "#FFFFFF", // --card: 0 0% 100%
+    borderRadius: 16, // --radius: 0.75rem = 12px, slightly larger for mobile
     padding: 24,
-    shadowColor: "#142850",
-    shadowOffset: { width: 0, height: 16 },
-    shadowOpacity: 0.2,
-    shadowRadius: 24,
-    elevation: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: "#E2E8F0", // --border: 220 13% 91%
   },
   errorBox: {
-    backgroundColor: "#fee2e2",
-    borderColor: "#fecaca",
+    backgroundColor: "#FEF2F2", // Destructive light background
+    borderColor: "#FECACA",
     borderWidth: 1,
-    padding: 12,
+    padding: 14,
     borderRadius: 12,
-    marginBottom: 18,
+    marginBottom: 20,
     flexDirection: "row",
     alignItems: "flex-start",
   },
   errorIcon: {
     marginTop: 2,
-    marginRight: 8,
+    marginRight: 10,
   },
   errorTextContainer: {
     flex: 1,
   },
   errorText: {
-    color: "#b91c1c",
+    color: "#DC2626", // --destructive: 0 72% 51%
     fontSize: 14,
-    lineHeight: 18,
+    lineHeight: 20,
+    fontWeight: "500",
   },
   appealLink: {
-    marginTop: 6,
+    marginTop: 8,
   },
   appealLinkText: {
-    color: "#2563eb",
+    color: "#6366F1", // --primary
     fontSize: 14,
     fontWeight: "600",
     textDecorationLine: "underline",
   },
   formGroup: {
-    marginBottom: 18,
+    marginBottom: 20,
   },
   label: {
-    color: "#1e293b",
+    color: "#0F172A", // --foreground
     fontWeight: "600",
     fontSize: 14,
     marginBottom: 8,
@@ -292,9 +322,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "#e2e8f0",
-    borderRadius: 14,
-    backgroundColor: "#f8fafc",
+    borderColor: "#E2E8F0", // --border: 220 13% 91%
+    borderRadius: 12,
+    backgroundColor: "#F8FAFC", // --background
     paddingHorizontal: 14,
   },
   inputIcon: {
@@ -304,13 +334,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 14,
     fontSize: 15,
-    color: "#0f172a",
-  },
-  passwordInput: {
-    flex: 1,
-    paddingVertical: 14,
-    fontSize: 15,
-    color: "#0f172a",
+    color: "#0F172A", // --foreground
   },
   eyeButton: {
     paddingLeft: 10,
@@ -318,29 +342,29 @@ const styles = StyleSheet.create({
   },
   loginButton: {
     marginTop: 8,
-    borderRadius: 14,
+    borderRadius: 12,
     paddingVertical: 15,
     alignItems: "center",
-    backgroundColor: "#0b63f6",
-    shadowColor: "#0b63f6",
+    backgroundColor: "#6366F1", // --primary: 250 60% 55%
+    shadowColor: "#6366F1",
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.2,
     shadowRadius: 8,
     elevation: 3,
   },
   loginButtonPressed: {
-    opacity: 0.85,
-    transform: [{ scale: 0.99 }],
+    opacity: 0.9,
+    transform: [{ scale: 0.98 }],
   },
   loginButtonDisabled: {
-    backgroundColor: "#93c5fd",
+    backgroundColor: "#A5B4FC", // Lighter primary color
     shadowOpacity: 0,
     elevation: 0,
   },
   loginButtonText: {
-    color: "#ffffff",
+    color: "#FFFFFF", // --primary-foreground: 210 40% 98%
     fontSize: 16,
-    fontWeight: "700",
+    fontWeight: "600",
   },
   loadingRow: {
     flexDirection: "row",
@@ -351,14 +375,14 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
-    marginTop: 20,
+    marginTop: 24,
   },
   footerText: {
-    color: "#64748b",
+    color: "#64748B", // --muted-foreground: 215 16% 47%
     fontSize: 14,
   },
   signUpText: {
-    color: "#0b63f6",
+    color: "#6366F1", // --primary
     fontSize: 14,
     fontWeight: "600",
   },

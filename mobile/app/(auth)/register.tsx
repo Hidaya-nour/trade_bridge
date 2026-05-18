@@ -14,10 +14,11 @@ import {
   View,
   ScrollView,
   Modal,
+  Image,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { LinearGradient } from "expo-linear-gradient";
 import { useAuthStore } from "@/features/auth/auth.store";
+
 type RoleType = "retailer" | "distributor" | "factory" | "driver";
 
 export default function RegisterScreen() {
@@ -32,7 +33,7 @@ export default function RegisterScreen() {
     role: "retailer" as RoleType,
     phone: "",
     business_name: "",
-  });;
+  });
 
   const [confirmError, setConfirmError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
@@ -65,13 +66,17 @@ export default function RegisterScreen() {
       return;
     }
 
+    if (formData.password.length < 8) {
+      setConfirmError("Password must be at least 8 characters long.");
+      return;
+    }
+
     try {
-      const { confirmPassword: _, ...payload } = formData;
+      const {confirmPassword: _, ...payload } = formData;
       await register(payload);
       
       const needsApproval = formData.role === "factory" || formData.role === "distributor";
       
-      // Navigate back to login screen passing flash message params
       router.replace({
         pathname: "/login",
         params: {
@@ -88,8 +93,8 @@ export default function RegisterScreen() {
   const displayError = error || confirmError;
 
   return (
-    <LinearGradient colors={["#0b63f6", "#052e75"]} style={styles.gradientBackground}>
-      <StatusBar barStyle="light-content" />
+    <View style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="#F8FAFC" />
       <SafeAreaView style={styles.safeArea}>
         <KeyboardAvoidingView
           style={styles.keyboardRoot}
@@ -100,8 +105,17 @@ export default function RegisterScreen() {
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
           >
-            {/* Header Identity */}
+            {/* Header Identity with Logo */}
             <View style={styles.headerContainer}>
+              <View style={styles.logoWrapper}>
+                <View style={styles.logoBadge}>
+                  <Image
+                    source={require("@/assets/image/logo.png")}
+                    style={styles.logoImage}
+                    resizeMode="contain"
+                  />
+                </View>
+              </View>
               <Text style={styles.brandText}>TradeBridge</Text>
               <Text style={styles.welcomeText}>Create Account</Text>
               <Text style={styles.subtitleText}>Join our supply chain network</Text>
@@ -111,19 +125,19 @@ export default function RegisterScreen() {
             <View style={styles.containerCard}>
               {displayError ? (
                 <View style={styles.errorBox}>
-                  <Ionicons name="alert-circle-outline" size={18} color="#b91c1c" style={styles.errorIcon} />
+                  <Ionicons name="alert-circle-outline" size={18} color="#DC2626" style={styles.errorIcon} />
                   <Text style={styles.errorText}>{displayError}</Text>
                 </View>
               ) : null}
 
               {/* Full Name Field */}
               <View style={styles.formGroup}>
-                <Text style={styles.label}>Full Name</Text>
+                <Text style={styles.label}>Full Name <Text style={styles.requiredStar}>*</Text></Text>
                 <View style={styles.inputContainer}>
-                  <Ionicons name="person-outline" size={20} color="#8a8f98" style={styles.inputIcon} />
+                  <Ionicons name="person-outline" size={20} color="#64748B" style={styles.inputIcon} />
                   <TextInput
                     placeholder="Enter your full name"
-                    placeholderTextColor="#8a8f98"
+                    placeholderTextColor="#94A3B8"
                     style={styles.input}
                     value={formData.full_name}
                     onChangeText={(val) => setFormData({ ...formData, full_name: val })}
@@ -134,15 +148,15 @@ export default function RegisterScreen() {
 
               {/* Email Field */}
               <View style={styles.formGroup}>
-                <Text style={styles.label}>Email Address</Text>
+                <Text style={styles.label}>Email Address <Text style={styles.requiredStar}>*</Text></Text>
                 <View style={styles.inputContainer}>
-                  <Ionicons name="mail-outline" size={20} color="#8a8f98" style={styles.inputIcon} />
+                  <Ionicons name="mail-outline" size={20} color="#64748B" style={styles.inputIcon} />
                   <TextInput
                     autoCapitalize="none"
                     autoCorrect={false}
                     keyboardType="email-address"
                     placeholder="name@company.com"
-                    placeholderTextColor="#8a8f98"
+                    placeholderTextColor="#94A3B8"
                     style={styles.input}
                     value={formData.email}
                     onChangeText={(val) => setFormData({ ...formData, email: val })}
@@ -153,13 +167,13 @@ export default function RegisterScreen() {
 
               {/* Phone Field */}
               <View style={styles.formGroup}>
-                <Text style={styles.label}>Phone Number</Text>
+                <Text style={styles.label}>Phone Number <Text style={styles.requiredStar}>*</Text></Text>
                 <View style={styles.inputContainer}>
-                  <Ionicons name="call-outline" size={20} color="#8a8f98" style={styles.inputIcon} />
+                  <Ionicons name="call-outline" size={20} color="#64748B" style={styles.inputIcon} />
                   <TextInput
                     keyboardType="phone-pad"
                     placeholder="Enter phone number"
-                    placeholderTextColor="#8a8f98"
+                    placeholderTextColor="#94A3B8"
                     style={styles.input}
                     value={formData.phone}
                     onChangeText={(val) => setFormData({ ...formData, phone: val })}
@@ -170,16 +184,16 @@ export default function RegisterScreen() {
 
               {/* Custom Native Role Picker */}
               <View style={styles.formGroup}>
-                <Text style={styles.label}>Account Type</Text>
+                <Text style={styles.label}>Account Type <Text style={styles.requiredStar}>*</Text></Text>
                 <Pressable
                   style={[styles.inputContainer, styles.pickerTrigger]}
                   onPress={() => !isLoading && setIsPickerVisible(true)}
                 >
-                  <Ionicons name="briefcase-outline" size={20} color="#8a8f98" style={styles.inputIcon} />
-                  <Text style={[styles.input, { color: formData.role ? "#0f172a" : "#8a8f98" }]}>
+                  <Ionicons name="briefcase-outline" size={20} color="#64748B" style={styles.inputIcon} />
+                  <Text style={[styles.input, { color: formData.role ? "#0F172A" : "#94A3B8" }]}>
                     {roleLabels[formData.role]}
                   </Text>
-                  <Ionicons name="chevron-down" size={20} color="#64748b" />
+                  <Ionicons name="chevron-down" size={20} color="#64748B" />
                 </Pressable>
               </View>
 
@@ -188,10 +202,10 @@ export default function RegisterScreen() {
                 <View style={styles.formGroup}>
                   <Text style={styles.label}>Business Name (Optional)</Text>
                   <View style={styles.inputContainer}>
-                    <Ionicons name="business-outline" size={20} color="#8a8f98" style={styles.inputIcon} />
+                    <Ionicons name="business-outline" size={20} color="#64748B" style={styles.inputIcon} />
                     <TextInput
                       placeholder="Enter legal entity name"
-                      placeholderTextColor="#8a8f98"
+                      placeholderTextColor="#94A3B8"
                       style={styles.input}
                       value={formData.business_name}
                       onChangeText={(val) => setFormData({ ...formData, business_name: val })}
@@ -203,20 +217,20 @@ export default function RegisterScreen() {
 
               {/* Password Field */}
               <View style={styles.formGroup}>
-                <Text style={styles.label}>Password</Text>
+                <Text style={styles.label}>Password <Text style={styles.requiredStar}>*</Text></Text>
                 <View style={styles.inputContainer}>
-                  <Ionicons name="lock-closed-outline" size={20} color="#8a8f98" style={styles.inputIcon} />
+                  <Ionicons name="lock-closed-outline" size={20} color="#64748B" style={styles.inputIcon} />
                   <TextInput
                     secureTextEntry={!showPassword}
                     placeholder="Choose password"
-                    placeholderTextColor="#8a8f98"
+                    placeholderTextColor="#94A3B8"
                     style={styles.input}
                     value={formData.password}
                     onChangeText={(val) => setFormData({ ...formData, password: val })}
                     editable={!isLoading}
                   />
                   <Pressable onPress={() => setShowPassword(!showPassword)} style={styles.eyeButton} hitSlop={12}>
-                    <Ionicons name={showPassword ? "eye-off-outline" : "eye-outline"} size={20} color="#6b7280" />
+                    <Ionicons name={showPassword ? "eye-off-outline" : "eye-outline"} size={20} color="#64748B" />
                   </Pressable>
                 </View>
                 <Text style={styles.hintText}>Min. 8 characters with upper, numbers & symbols</Text>
@@ -224,20 +238,20 @@ export default function RegisterScreen() {
 
               {/* Confirm Password Field */}
               <View style={styles.formGroup}>
-                <Text style={styles.label}>Confirm Password</Text>
+                <Text style={styles.label}>Confirm Password <Text style={styles.requiredStar}>*</Text></Text>
                 <View style={styles.inputContainer}>
-                  <Ionicons name="lock-closed-outline" size={20} color="#8a8f98" style={styles.inputIcon} />
+                  <Ionicons name="lock-closed-outline" size={20} color="#64748B" style={styles.inputIcon} />
                   <TextInput
                     secureTextEntry={!showConfirmPassword}
                     placeholder="Repeat password"
-                    placeholderTextColor="#8a8f98"
+                    placeholderTextColor="#94A3B8"
                     style={styles.input}
                     value={formData.confirmPassword}
                     onChangeText={(val) => setFormData({ ...formData, confirmPassword: val })}
                     editable={!isLoading}
                   />
                   <Pressable onPress={() => setShowConfirmPassword(!showConfirmPassword)} style={styles.eyeButton} hitSlop={12}>
-                    <Ionicons name={showConfirmPassword ? "eye-off-outline" : "eye-outline"} size={20} color="#6b7280" />
+                    <Ionicons name={showConfirmPassword ? "eye-off-outline" : "eye-outline"} size={20} color="#64748B" />
                   </Pressable>
                 </View>
               </View>
@@ -254,7 +268,7 @@ export default function RegisterScreen() {
               >
                 {isLoading ? (
                   <View style={styles.loadingRow}>
-                    <ActivityIndicator color="#ffffff" size="small" />
+                    <ActivityIndicator color="#FFFFFF" size="small" />
                     <Text style={styles.registerButtonText}>Creating account...</Text>
                   </View>
                 ) : (
@@ -295,20 +309,21 @@ export default function RegisterScreen() {
                   {roleLabels[roleKey]}
                 </Text>
                 {formData.role === roleKey && (
-                  <Ionicons name="checkmark-circle" size={22} color="#0b63f6" />
+                  <Ionicons name="checkmark-circle" size={22} color="#6366F1" />
                 )}
               </Pressable>
             ))}
           </View>
         </Pressable>
       </Modal>
-    </LinearGradient>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  gradientBackground: {
+  container: {
     flex: 1,
+    backgroundColor: "#F8FAFC", // --background: 220 20% 98%
   },
   safeArea: {
     flex: 1,
@@ -324,137 +339,166 @@ const styles = StyleSheet.create({
   },
   headerContainer: {
     alignItems: "center",
-    marginBottom: 24,
+    marginBottom: 32,
+  },
+  logoWrapper: {
+    marginBottom: 20,
+  },
+  logoBadge: {
+    width: 80,
+    height: 80,
+    borderRadius: 20,
+    backgroundColor: "#FFFFFF",
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 5,
+  },
+  logoImage: {
+    width: 50,
+    height: 50,
   },
   brandText: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: "700",
-    color: "#e0f2fe",
-    letterSpacing: 2.5,
+    color: "#6366F1", // --primary: 250 60% 55%
+    letterSpacing: 2,
     textTransform: "uppercase",
-    marginBottom: 6,
+    marginBottom: 12,
   },
   welcomeText: {
-    fontSize: 30,
+    fontSize: 32,
     fontWeight: "800",
-    color: "#ffffff",
-    marginBottom: 4,
+    color: "#0F172A", // --foreground: 222 47% 11%
+    marginBottom: 8,
   },
   subtitleText: {
-    fontSize: 14,
-    color: "#bfdbfe",
+    fontSize: 15,
+    color: "#64748B", // --muted-foreground: 215 16% 47%
+    textAlign: "center",
   },
   containerCard: {
-    backgroundColor: "#ffffff",
-    borderRadius: 24,
+    backgroundColor: "#FFFFFF", // --card: 0 0% 100%
+    borderRadius: 16,
     padding: 24,
-    shadowColor: "#142850",
-    shadowOffset: { width: 0, height: 16 },
-    shadowOpacity: 0.2,
-    shadowRadius: 24,
-    elevation: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: "#E2E8F0", // --border: 220 13% 91%
   },
   errorBox: {
-    backgroundColor: "#fee2e2",
-    borderColor: "#fecaca",
+    backgroundColor: "#FEF2F2",
+    borderColor: "#FECACA",
     borderWidth: 1,
-    padding: 12,
+    padding: 14,
     borderRadius: 12,
-    marginBottom: 18,
+    marginBottom: 20,
     flexDirection: "row",
     alignItems: "center",
   },
   errorIcon: {
-    marginRight: 8,
+    marginRight: 10,
   },
   errorText: {
-    color: "#b91c1c",
+    color: "#DC2626", // --destructive: 0 72% 51%
     fontSize: 14,
     flex: 1,
+    lineHeight: 20,
+    fontWeight: "500",
   },
   formGroup: {
-    marginBottom: 16,
+    marginBottom: 18,
   },
   label: {
-    color: "#1e293b",
+    color: "#0F172A", // --foreground
     fontWeight: "600",
-    fontSize: 13,
-    marginBottom: 6,
+    fontSize: 14,
+    marginBottom: 8,
+  },
+  requiredStar: {
+    color: "#DC2626",
   },
   inputContainer: {
     flexDirection: "row",
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "#e2e8f0",
+    borderColor: "#E2E8F0", // --border: 220 13% 91%
     borderRadius: 12,
-    backgroundColor: "#f8fafc",
-    paddingHorizontal: 12,
+    backgroundColor: "#F8FAFC", // --background
+    paddingHorizontal: 14,
   },
   pickerTrigger: {
-    height: 48,
+    minHeight: 50,
   },
   inputIcon: {
-    marginRight: 8,
+    marginRight: 10,
   },
   input: {
     flex: 1,
-    paddingVertical: 12,
+    paddingVertical: 14,
     fontSize: 15,
-    color: "#0f172a",
+    color: "#0F172A", // --foreground
   },
   eyeButton: {
-    paddingLeft: 8,
+    paddingLeft: 10,
+    paddingVertical: 10,
   },
   hintText: {
     fontSize: 11,
-    color: "#64748b",
-    marginTop: 4,
+    color: "#64748B",
+    marginTop: 6,
     paddingHorizontal: 2,
   },
   registerButton: {
-    marginTop: 12,
+    marginTop: 8,
     borderRadius: 12,
-    paddingVertical: 14,
+    paddingVertical: 15,
     alignItems: "center",
-    backgroundColor: "#0b63f6",
-    shadowColor: "#0b63f6",
+    backgroundColor: "#6366F1", // --primary: 250 60% 55%
+    shadowColor: "#6366F1",
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 6,
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
     elevation: 3,
   },
   registerButtonPressed: {
-    opacity: 0.85,
-    transform: [{ scale: 0.99 }],
+    opacity: 0.9,
+    transform: [{ scale: 0.98 }],
   },
   registerButtonDisabled: {
-    backgroundColor: "#93c5fd",
+    backgroundColor: "#A5B4FC",
     shadowOpacity: 0,
     elevation: 0,
   },
   registerButtonText: {
-    color: "#ffffff",
-    fontSize: 15,
-    fontWeight: "700",
+    color: "#FFFFFF", // --primary-foreground: 210 40% 98%
+    fontSize: 16,
+    fontWeight: "600",
   },
   loadingRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: 10,
   },
   footerRow: {
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
-    marginTop: 18,
+    marginTop: 24,
   },
   footerText: {
-    color: "#64748b",
-    fontSize: 13,
+    color: "#64748B", // --muted-foreground: 215 16% 47%
+    fontSize: 14,
   },
   loginLinkText: {
-    color: "#0b63f6",
-    fontSize: 13,
+    color: "#6366F1", // --primary
+    fontSize: 14,
     fontWeight: "600",
   },
   modalOverlay: {
@@ -463,7 +507,7 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
   },
   modalSheet: {
-    backgroundColor: "#ffffff",
+    backgroundColor: "#FFFFFF",
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     paddingHorizontal: 24,
@@ -473,28 +517,28 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 18,
     fontWeight: "700",
-    color: "#0f172a",
-    marginBottom: 16,
+    color: "#0F172A",
+    marginBottom: 20,
     textAlign: "center",
   },
   modalItem: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 14,
+    paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: "#f1f5f9",
+    borderBottomColor: "#F1F5F9",
   },
   modalItemActive: {
-    borderBottomColor: "#e2e8f0",
+    borderBottomColor: "#E2E8F0",
   },
   modalItemText: {
-    fontSize: 15,
+    fontSize: 16,
     color: "#475569",
     fontWeight: "500",
   },
   modalItemTextActive: {
-    color: "#0b63f6",
+    color: "#6366F1",
     fontWeight: "600",
   },
 });
