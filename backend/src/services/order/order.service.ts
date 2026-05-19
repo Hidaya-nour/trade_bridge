@@ -6,6 +6,8 @@ import { OrderRepository } from '../../repositories/order.repository';
 import { ProductRepository } from '../../repositories/product.repository';
 import { UserRepository } from '../../repositories/user.repository';
 import notificationService from '../../services/notification/notification.service';
+import deliveryService from '../../services/delivery/delivery.service';
+import paymentService from '../../services/payment/payment.service';
 import { InventoryMovementRepository } from '../../repositories/inventory-movement.repository';
 import {
   CreateOrderDTO,
@@ -289,17 +291,15 @@ export class OrderService {
         await this.createPaymentRecord(order.id, total_price, payment_method);
       } catch (err) {
         logger.error(`Failed to create payment record for order ${order.id}`, err);
-      throw err;
-    }
+        throw err;
+      }
     }
 
-    // Create delivery record if address provided
-    if (delivery_address) {
-      try {
-        await this.createDeliveryRecord(order.id, delivery_address);
-      } catch (err) {
-        logger.error(`Failed to create delivery record for order ${order.id}`, err);
-      }
+    // Always create a delivery record for the order so buyer dropoff details can be captured later.
+    try {
+      await this.createDeliveryRecord(order.id, delivery_address || '');
+    } catch (err) {
+      logger.error(`Failed to create delivery record for order ${order.id}`, err);
     }
 
     logger.info(`Order created: ${order.id} by buyer: ${buyerId}`);
@@ -328,14 +328,12 @@ export class OrderService {
   }
 
   private async createPaymentRecord(orderId: string, amount: number, method: string) {
-    const paymentService = await import('../payment/payment.service');
-    return paymentService.default.createPayment(orderId, amount, method);
+    return paymentService.createPayment(orderId, amount, method);
   }
 
   private async createDeliveryRecord(orderId: string, address: string) {
-    const deliveryService = await import('../delivery/delivery.service');
     // address currently stored as dropoff_location, pickup left empty
-    return deliveryService.default.createDelivery(orderId, '', address);
+    return deliveryService.createDelivery(orderId, '', address);
   }
 
 
