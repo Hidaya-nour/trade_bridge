@@ -1452,26 +1452,7 @@ export const DeliveryManagement: React.FC<DeliveryManagementProps> = ({
                 </p>
               )}
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label htmlFor="vehicle_type">Vehicle type (optional)</Label>
-                <Input
-                  id="vehicle_type"
-                  placeholder="e.g. Truck"
-                  value={addDriverVehicleType}
-                  onChange={(e) => setAddDriverVehicleType(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="license_plate">License plate (optional)</Label>
-                <Input
-                  id="license_plate"
-                  placeholder="e.g. AA-1234"
-                  value={addDriverLicensePlate}
-                  onChange={(e) => setAddDriverLicensePlate(e.target.value)}
-                />
-              </div>
-            </div>
+           
           </div>
           <DialogFooter>
             <Button
