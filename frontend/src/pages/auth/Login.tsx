@@ -4,10 +4,9 @@ import { useAuthStore } from "../../stores/auth.store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+// Import icons for the password visibility toggle
+import { Eye, EyeOff } from "lucide-react";
 
-// Import your logo - adjust the path according to your project structure
-// If you're using Vite with SVGR, you might want: import { ReactComponent as Logo } from "../../assets/logo.svg";
-// For plain image assets, use:
 import Logo from "@/assets/image/logo.png";
 
 const roleDashboard = {
@@ -21,10 +20,12 @@ const roleDashboard = {
 export const LoginPage: React.FC = () => {
   const location = useLocation();
   const locationState = location.state as { message?: string } | null;
+  
   const [credentials, setCredentials] = useState({
     email: "",
     password: "",
   });
+  const [showPassword, setShowPassword] = useState(false);
   const [message, setMessage] = useState<string | null>(
     locationState?.message ?? null
   );
@@ -56,8 +57,8 @@ export const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-slate-200 flex items-center justify-center px-4 py-8">
-      <Card className="w-full max-w-md shadow-xl overflow-hidden transition-all duration-300 hover:shadow-2xl border-0">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-slate-200 flex items-center justify-center px-4 py-8 antialiased">
+      <Card className="w-full max-w-md shadow-xl overflow-hidden transition-all duration-300 hover:shadow-2xl border-0 ring-1 ring-black/[0.05]">
         <CardHeader className="bg-white px-8 pt-8 pb-4 text-center">
           <div className="flex justify-center mb-4">
             <img
@@ -66,13 +67,14 @@ export const LoginPage: React.FC = () => {
               className="h-16 w-auto object-contain transition-transform duration-200 hover:scale-105"
             />
           </div>
-          <CardTitle className="text-3xl font-semibold text-slate-900 tracking-tight">
+          <CardTitle className="text-3xl font-bold text-slate-900 tracking-tight">
             Sign in to your account
           </CardTitle>
           <p className="text-sm text-slate-500 mt-2">
             Welcome back! Please enter your credentials
           </p>
         </CardHeader>
+        
         <CardContent className="bg-white px-8 py-6">
           <form onSubmit={handleSubmit} className="space-y-5">
             {/* System Info Flash Messages */}
@@ -96,6 +98,7 @@ export const LoginPage: React.FC = () => {
               )
             )}
 
+            {/* Email Field */}
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-1.5">
                 Email address
@@ -108,31 +111,57 @@ export const LoginPage: React.FC = () => {
                 placeholder="you@example.com"
                 required
                 disabled={isLoading}
-                className="focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition-all"
+                className="focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:border-blue-500 transition-all"
                 autoComplete="username"
               />
             </div>
 
+            {/* Password Field */}
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-slate-700 mb-1.5">
-                Password
-              </label>
-              <Input
-                id="password"
-                type="password"
-                value={credentials.password}
-                onChange={(e) => setCredentials({ ...credentials, password: e.target.value })}
-                placeholder="Enter your password"
-                required
-                disabled={isLoading}
-                className="focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition-all"
-                autoComplete="current-password"
-              />
+              <div className="flex items-center justify-between mb-1.5">
+                <label htmlFor="password" className="block text-sm font-medium text-slate-700">
+                  Password
+                </label>
+                <Link 
+                  to="/forgot-password" 
+                  className="text-xs font-medium text-blue-600 hover:text-blue-800 hover:underline transition-colors"
+                >
+                  Forgot password?
+                </Link>
+              </div>
+              <div className="relative flex items-center">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  value={credentials.password}
+                  onChange={(e) => setCredentials({ ...credentials, password: e.target.value })}
+                  placeholder="Enter your password"
+                  required
+                  disabled={isLoading}
+                  className="focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:border-blue-500 transition-all pr-10"
+                  autoComplete="current-password"
+                />
+                <button
+                  type="button"
+                  tabIndex={-1} // Keeps keyboard navigation clean
+                  onClick={() => setShowPassword(!showPassword)}
+                  disabled={isLoading}
+                  className="absolute right-3 text-slate-400 hover:text-slate-600 dynamic-disabled transition-colors"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-4 w-4" aria-hidden="true" />
+                  ) : (
+                    <Eye className="h-4 w-4" aria-hidden="true" />
+                  )}
+                </button>
+              </div>
             </div>
 
+            {/* Submit Button */}
             <Button
               type="submit"
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white shadow-sm transition-all duration-200 transform active:scale-[0.98]"
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium shadow-sm transition-all duration-200 transform active:scale-[0.99] disabled:pointer-events-none disabled:opacity-70"
               disabled={isLoading}
             >
               {isLoading ? (
@@ -146,7 +175,8 @@ export const LoginPage: React.FC = () => {
               ) : "Sign in"}
             </Button>
 
-            <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-slate-600 pt-2 border-t border-slate-100 mt-4">
+            {/* Footer Links */}
+            <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-slate-600 pt-3 border-t border-slate-100 mt-5">
               <p>
                 Don't have an account?{" "}
                 <Link to="/register" className="text-blue-600 hover:text-blue-800 hover:underline font-medium transition-colors">
