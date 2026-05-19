@@ -1,0 +1,97 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* TradeBridge design system. All colors must be HSL. */
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 273 18% 5%;
+
+    --card: 0 0% 97.4%;
+    --card-foreground: 273 18% 5%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 273 18% 5%;
+
+    --primary: 222 57% 48%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 253 44% 55%;
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 345 18% 90%;
+    --muted-foreground: 273 6% 40%;
+
+    --accent: 215 75% 48%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 357 100% 45%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 273 19% 86%;
+    --input: 273 42% 97%;
+    --ring: 222 57% 48%;
+
+    --radius: 0.5rem;
+
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 273 18% 5%;
+    --sidebar-primary: 222 57% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 253 44% 55%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 273 19% 86%;
+    --sidebar-ring: 222 57% 48%;
+  }
+
+  .dark {
+    --background: 223 35% 3%;
+    --foreground: 345 94% 98%;
+
+    --card: 220 34% 8%;
+    --card-foreground: 345 94% 98%;
+
+    --popover: 220 34% 8%;
+    --popover-foreground: 345 94% 98%;
+
+    --primary: 218 96% 63%;
+    --primary-foreground: 223 35% 3%;
+
+    --secondary: 257 78% 72%;
+    --secondary-foreground: 223 35% 3%;
+
+    --muted: 220 9% 17%;
+    --muted-foreground: 273 7% 63%;
+
+    --accent: 210 100% 62%;
+    --accent-foreground: 223 35% 3%;
+
+    --destructive: 0 85% 62%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 18% 17%;
+    --input: 220 25% 11%;
+    --ring: 218 96% 63%;
+
+    --sidebar-background: 220 26% 5%;
+    --sidebar-foreground: 345 94% 98%;
+    --sidebar-primary: 218 96% 63%;
+    --sidebar-primary-foreground: 223 35% 3%;
+    --sidebar-accent: 257 78% 72%;
+    --sidebar-accent-foreground: 223 35% 3%;
+    --sidebar-border: 220 18% 17%;
+    --sidebar-ring: 218 96% 63%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+}
