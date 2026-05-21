@@ -33,7 +33,7 @@ import PurchaseOrdersPage from "./pages/distributor/PurchaseOrders";
 import MarketPlace from "./pages/distributor/MarketPlace";
 import FactoryForecastPage from "./pages/factory/Forecast";
 import FactoryDistributorProfilePage from "./pages/factory/DistributorProfile";
-import AdminDashboard from "./pages/admin/Dashboard";
+import AdminDashboard from "./pages/admin/dashboard";
 import UserManagementPage from "./pages/admin/UserManagementPage";
 import AdminUserDetailsPage from "./pages/admin/UserDetailsPage";
 import ProductListingsPage from "./pages/admin/ProductListingsPage";
@@ -69,6 +69,8 @@ import RequestDriverPage from "./pages/shared/RequestDriver";
 import HomePage from "./pages/Home";
 import NotificationsTab from "./components/setting/NotificationsTab";
 import Notifications from "./pages/shared/Notifications";
+import HowItWorks from "./pages/HowItWorks";
+import Pricing from "./pages/Pricing";
 
 function App() {
   return (
@@ -81,6 +83,8 @@ function App() {
           <Route path="/about" element={<AboutPage />} />
           <Route path="/contact" element={<ContactSupportPage />} />
           <Route path="/workspaces" element={<WorkspacesPage />} />
+          <Route path="/how-it-works" element={<HowItWorks />} />
+          <Route path="/pricing" element={<Pricing />} />
           {/* Public Auth Routes */}
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
