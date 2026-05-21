@@ -18,26 +18,37 @@ const buildOrderParams = (params?: OrderFilters) => ({
   sortOrder: params?.sortOrder,
 });
 
+const extractOrdersResponse = (response: ApiResponse<MyOrdersResult>) => {
+  return {
+    data: {
+      orders: response.data?.orders || response.data?.items || [],
+      total: response.data?.total || 0,
+      page: response.data?.page || 1,
+      limit: response.data?.limit || 10,
+    }
+  };
+};
+
 const orderService = {
   async getMyOrders(params?: OrderFilters) {
     const response = await api.get<ApiResponse<MyOrdersResult>>("/orders/my-orders", {
       params: buildOrderParams(params),
     });
-    return response.data;
+    return extractOrdersResponse(response.data);
   },
 
   async getOrdersAsBuyer(params?: OrderFilters) {
     const response = await api.get<ApiResponse<MyOrdersResult>>("/orders/as-buyer", {
       params: buildOrderParams(params),
     });
-    return response.data;
+    return extractOrdersResponse(response.data);
   },
 
   async getOrdersAsSupplier(params?: OrderFilters) {
     const response = await api.get<ApiResponse<MyOrdersResult>>("/orders/as-supplier", {
       params: buildOrderParams(params),
     });
-    return response.data;
+    return extractOrdersResponse(response.data);
   },
 
   async getOrderById(id: string) {
@@ -64,4 +75,3 @@ const orderService = {
 };
 
 export default orderService;
-
