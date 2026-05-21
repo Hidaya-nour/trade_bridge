@@ -1,22 +1,19 @@
-import api from "@/lib/api";
-import { mapApiDeliveryToDriverDelivery } from "./delivery.utils";
-import { type DriverDelivery } from "./delivery.types";
+// mobile/features/driver-deliveries/delivery.service.ts
+import api from '@/lib/api'; // Ensure this points to your mobile API config
 
-type DeliveriesResponse = {
-  data?: {
-    deliveries?: any[];
-  };
-};
+class DeliveryService {
+  private readonly BASE = '/deliveries';
 
-const deliveryService = {
-  async getMyDeliveries(): Promise<DriverDelivery[]> {
-    const response = await api.get<DeliveriesResponse>("/deliveries/my-deliveries");
-    const rows = Array.isArray(response.data?.data?.deliveries)
-      ? response.data.data.deliveries
-      : [];
+  async getMyDeliveries() {
+    const response = await api.get(`${this.BASE}/my-deliveries`);
+    return response.data;
+  }
 
-    return rows.map(mapApiDeliveryToDriverDelivery);
-  },
-};
+  // Standardized status updater based on your web example
+  async updateStatus(deliveryId: string, status: 'assigned' | 'picked_up' | 'delivered') {
+    const response = await api.patch(`${this.BASE}/${deliveryId}/status`, { status });
+    return response.data;
+  }
+}
 
-export default deliveryService;
+export default new DeliveryService();

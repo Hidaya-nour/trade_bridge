@@ -1,4 +1,4 @@
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View, Alert } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useState } from "react";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -19,21 +19,8 @@ const getStatusColors = (status: DeliveryStatus) => {
       return { bg: "#ecfdf3", text: "#15803d", border: "#bbf7d0" };
     case "pending":
       return { bg: "#fef3c7", text: "#d97706", border: "#fcd34d" };
-    case "failed":
-      return { bg: "#fee2e2", text: "#dc2626", border: "#fca5a5" };
-    case "cancelled":
-      return { bg: "#fee2e2", text: "#dc2626", border: "#fca5a5" };
-  }
-};
-
-const getPriorityColors = (priority: DeliveryPriority) => {
-  switch (priority) {
-    case "urgent":
-      return { bg: "#fef2f2", text: "#b91c1c" };
-    case "fragile":
-      return { bg: "#fff7ed", text: "#c2410c" };
     default:
-      return { bg: "#f8fafc", text: "#475569" };
+      return { bg: "#fee2e2", text: "#dc2626", border: "#fca5a5" };
   }
 };
 
@@ -42,28 +29,39 @@ export default function DriverDeliveryDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [delivery, setDelivery] = useState<DriverDelivery | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isUpdating, setIsUpdating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const loadDelivery = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const rows = await deliveryService.getMyDeliveries();
+      const found = rows.find((item: any) => item.id === id);
+      setDelivery(found ?? null);
+    } catch (loadError: any) {
+      setError(loadError?.response?.data?.message || "Failed to load delivery details.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const loadDelivery = async () => {
-      setIsLoading(true);
-      setError(null);
-
-      try {
-        const rows = await deliveryService.getMyDeliveries();
-        setDelivery(rows.find((item) => item.id === id) ?? null);
-      } catch (loadError: any) {
-        setError(
-          loadError?.response?.data?.message ||
-            "Failed to load delivery details from the backend.",
-        );
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
     loadDelivery();
   }, [id]);
+
+  const handleStatusUpdate = async (newStatus: DeliveryStatus) => {
+    try {
+      setIsUpdating(true);
+      await deliveryService.updateStatus(delivery!.id, newStatus);
+      await loadDelivery(); // Refresh data to show next step
+      Alert.alert("Success", `Status updated to ${formatStatus(newStatus)}`);
+    } catch (err: any) {
+      Alert.alert("Update Failed", err?.response?.data?.message || "Could not update status.");
+    } finally {
+      setIsUpdating(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -71,43 +69,17 @@ export default function DriverDeliveryDetailScreen() {
         <View style={styles.missingWrap}>
           <ActivityIndicator size="small" color="#2563eb" />
           <Text style={styles.missingTitle}>Loading delivery</Text>
-          <Text style={styles.missingSubtitle}>
-            Fetching delivery details from the backend.
-          </Text>
         </View>
       </ScreenWrapper>
     );
   }
 
-  if (error) {
+  if (error || !delivery) {
     return (
       <ScreenWrapper title="Delivery Details" subtitle="Driver">
         <View style={styles.missingWrap}>
-          <Text style={styles.missingTitle}>Could not load delivery</Text>
-          <Text style={styles.missingSubtitle}>{error}</Text>
-          <Pressable
-            style={styles.backButton}
-            onPress={() => router.replace("/driver/deliveries" as never)}
-          >
-            <Text style={styles.backButtonText}>Back to Deliveries</Text>
-          </Pressable>
-        </View>
-      </ScreenWrapper>
-    );
-  }
-
-  if (!delivery) {
-    return (
-      <ScreenWrapper title="Delivery Details" subtitle="Driver">
-        <View style={styles.missingWrap}>
-          <Text style={styles.missingTitle}>Delivery not found</Text>
-          <Text style={styles.missingSubtitle}>
-            This delivery may have been removed or the link is no longer valid.
-          </Text>
-          <Pressable
-            style={styles.backButton}
-            onPress={() => router.replace("/driver/deliveries" as never)}
-          >
+          <Text style={styles.missingTitle}>{error || "Delivery not found"}</Text>
+          <Pressable style={styles.backButton} onPress={() => router.replace("/driver/deliveries" as never)}>
             <Text style={styles.backButtonText}>Back to Deliveries</Text>
           </Pressable>
         </View>
@@ -116,100 +88,98 @@ export default function DriverDeliveryDetailScreen() {
   }
 
   const statusColors = getStatusColors(delivery.status);
-  const priorityColors = getPriorityColors(delivery.priority);
-  const totalUnits = delivery.products.reduce(
-    (total, product) => total + product.quantity,
-    0,
-  );
 
   return (
     <ScreenWrapper title="Delivery Details" subtitle={delivery.orderCode}>
       <ScrollView contentContainerStyle={styles.container}>
+        {/* Header Information */}
         <View style={styles.heroCard}>
           <View style={styles.heroTopRow}>
             <View>
               <Text style={styles.orderCode}>{delivery.orderCode}</Text>
-              <Text style={styles.routeText}>
-                {delivery.supplierName} to {delivery.buyerName}
-              </Text>
+              <Text style={styles.routeText}>{delivery.supplierName} to {delivery.buyerName}</Text>
             </View>
-           
-          </View>
-
-          <View style={styles.badgeRow}>
-            <Text
-              style={[
-                styles.badge,
-                {
-                  backgroundColor: statusColors.bg,
-                  color: statusColors.text,
-                  borderColor: statusColors.border,
-                },
-              ]}
-            >
+            <Text style={[styles.badge, { backgroundColor: statusColors.bg, color: statusColors.text, borderColor: statusColors.border }]}>
               {formatStatus(delivery.status)}
-            </Text>           
+            </Text>
           </View>
-
-          <View style={styles.metricRow}>
-        </View>
-        </View>
-        <View style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>Delivery Timeline</Text>
-          {delivery.timeline.map((item) => (
-            <View key={`${delivery.id}-${item.label}`} style={styles.timelineRow}>
-              <View
-                style={[
-                  styles.timelineDot,
-                  item.complete ? styles.timelineDotDone : styles.timelineDotPending,
-                ]}
-              />
-              <View style={styles.timelineTextWrap}>
-                <Text style={styles.timelineLabel}>{item.label}</Text>
-                <Text style={styles.timelineTime}>{item.time}</Text>
-              </View>
-            </View>
-          ))}
         </View>
 
+        {/* Dynamic Action Buttons based on Lifecycle */}
         <View style={styles.actionsRow}>
-          {delivery.status !== "delivered" ? (
-            <Pressable
-              style={styles.primaryButton}
-              onPress={() => router.push("/driver/tracking" as never)}
+          {isUpdating && <ActivityIndicator size="small" color="#1d4ed8" />}
+          
+          {/* 1. Pending -> Accept (Assigned) */}
+          {delivery.status === "pending" && (
+            <Pressable 
+              style={[styles.primaryButton, { backgroundColor: "#16a34a" }]} 
+              onPress={() => handleStatusUpdate("assigned")}
+              disabled={isUpdating}
             >
-              <Ionicons name="navigate-outline" size={16} color="#ffffff" />
-              <Text style={styles.primaryButtonText}>Open live tracking</Text>
+              <Ionicons name="checkmark-circle-outline" size={18} color="#ffffff" />
+              <Text style={styles.primaryButtonText}>Accept Delivery</Text>
             </Pressable>
-          ) : null}
-          <Pressable
-            style={styles.secondaryButton}
-            onPress={() =>
-              router.push(`/driver/issues?deliveryId=${delivery.id}` as never)
-            }
+          )}
+
+          {/* 2. Assigned -> Picked Up */}
+          {delivery.status === "assigned" && (
+            <Pressable 
+              style={[styles.primaryButton, { backgroundColor: "#6d28d9" }]} 
+              onPress={() => handleStatusUpdate("picked_up")}
+              disabled={isUpdating}
+            >
+              <Ionicons name="cube-outline" size={18} color="#ffffff" />
+              <Text style={styles.primaryButtonText}>Mark as Picked Up</Text>
+            </Pressable>
+          )}
+
+          {/* 3. Picked Up -> Tracking & Completion */}
+          {delivery.status === "picked_up" && (
+            <>
+              <Pressable 
+                style={styles.primaryButton} 
+                onPress={() => router.push("/driver/tracking" as never)}
+              >
+                <Ionicons name="navigate-outline" size={18} color="#ffffff" />
+                <Text style={styles.primaryButtonText}>Open Live Tracking</Text>
+              </Pressable>
+              <Pressable 
+                style={[styles.primaryButton, { backgroundColor: "#059669", marginTop: 8 }]} 
+                onPress={() => handleStatusUpdate("delivered")}
+                disabled={isUpdating}
+              >
+                <Ionicons name="flag-outline" size={18} color="#ffffff" />
+                <Text style={styles.primaryButtonText}>Mark as Delivered</Text>
+              </Pressable>
+            </>
+          )}
+
+          <Pressable 
+            style={styles.secondaryButton} 
+            onPress={() => router.push(`/driver/issues?deliveryId=${delivery.id}` as never)}
           >
-            <Ionicons name="alert-circle-outline" size={16} color="#334155" />
+            <Ionicons name="alert-circle-outline" size={18} color="#334155" />
             <Text style={styles.secondaryButtonText}>
               {delivery.issueReported ? "View issue log" : "Report issue"}
             </Text>
           </Pressable>
         </View>
- <View style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>Load Details</Text>
-          {delivery.products.map((product) => (
-            <View key={`${delivery.id}-${product.name}`} style={styles.productRow}>
-              <View style={styles.productIcon}>
-                <Ionicons name="cube-outline" size={16} color="#1d4ed8" />
-              </View>
-              <View style={styles.productTextWrap}>
-                <Text style={styles.productName}>{product.name}</Text>
-                <Text style={styles.productMeta}>
-                  {product.quantity} {product.unit}
-                </Text>
+
+        {/* Timeline */}
+        <View style={styles.sectionCard}>
+          <Text style={styles.sectionTitle}>Delivery Timeline</Text>
+          {delivery.timeline.map((item, idx) => (
+            <View key={idx} style={styles.timelineRow}>
+              <View style={[styles.timelineDot, item.complete ? styles.timelineDotDone : styles.timelineDotPending]} />
+              <View style={styles.timelineTextWrap}>
+                <Text style={styles.timelineLabel}>{item.label}</Text>
+                <Text style={styles.timelineTime}>{item.time || "Pending"}</Text>
               </View>
             </View>
           ))}
         </View>
+
+        {/* Route Info */}
         <View style={styles.sectionCard}>
           <Text style={styles.sectionTitle}>Route Information</Text>
           <View style={styles.detailRow}>
@@ -220,302 +190,57 @@ export default function DriverDeliveryDetailScreen() {
             <Text style={styles.detailLabel}>Dropoff</Text>
             <Text style={styles.detailValue}>{delivery.destination}</Text>
           </View>
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Delivery window</Text>
-            <Text style={styles.detailValue}>{delivery.scheduledWindow}</Text>
-          </View>
-          
         </View>
 
+        {/* Load Details */}
         <View style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>Recipient Details</Text>
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Contact person</Text>
-            <Text style={styles.detailValue}>{delivery.contactPerson}</Text>
-          </View>
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Phone</Text>
-            <Text style={styles.detailValue}>{delivery.contactPhone}</Text>
-          </View>
-          <View style={styles.noteBox}>
-            <Text style={styles.noteLabel}>Driver note</Text>
-            <Text style={styles.noteText}>{delivery.notes}</Text>
-          </View>
+          <Text style={styles.sectionTitle}>Load Details</Text>
+          {delivery.products.map((product, idx) => (
+            <View key={idx} style={styles.productRow}>
+              <View style={styles.productIcon}><Ionicons name="cube-outline" size={16} color="#1d4ed8" /></View>
+              <View style={styles.productTextWrap}>
+                <Text style={styles.productName}>{product.name}</Text>
+                <Text style={styles.productMeta}>{product.quantity} {product.unit}</Text>
+              </View>
+            </View>
+          ))}
         </View>
-
-       
-
-       
       </ScrollView>
     </ScreenWrapper>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    padding: 16,
-    paddingBottom: 40,
-    gap: 16,
-  },
-  heroCard: {
-    backgroundColor: "#ffffff",
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: "#e2e8f0",
-    padding: 16,
-    gap: 14,
-  },
-  heroTopRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    gap: 12,
-  },
-  orderCode: {
-    fontSize: 22,
-    fontWeight: "800",
-    color: "#0f172a",
-  },
-  routeText: {
-    marginTop: 4,
-    fontSize: 13,
-    color: "#475569",
-  },
-  inlineButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    backgroundColor: "#f8fafc",
-    borderWidth: 1,
-    borderColor: "#e2e8f0",
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-  },
-  inlineButtonText: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: "#0f172a",
-  },
-  badgeRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-  },
-  badge: {
-    fontSize: 11,
-    fontWeight: "700",
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 999,
-    borderWidth: 1,
-    overflow: "hidden",
-  },
-  metricRow: {
-    flexDirection: "row",
-    gap: 10,
-  },
-  metricCard: {
-    flex: 1,
-    backgroundColor: "#f8fafc",
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#e2e8f0",
-    padding: 12,
-  },
-  metricLabel: {
-    fontSize: 11,
-    fontWeight: "700",
-    color: "#64748b",
-    textTransform: "uppercase",
-  },
-  metricValue: {
-    marginTop: 5,
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#0f172a",
-  },
-  progressTrack: {
-    height: 8,
-    borderRadius: 999,
-    overflow: "hidden",
-    backgroundColor: "#dbeafe",
-  },
-  progressFill: {
-    height: "100%",
-    backgroundColor: "#2563eb",
-    borderRadius: 999,
-  },
-  progressLabel: {
-    fontSize: 12,
-    color: "#64748b",
-    fontWeight: "600",
-  },
-  sectionCard: {
-    backgroundColor: "#ffffff",
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "#e2e8f0",
-    padding: 16,
-    gap: 12,
-  },
-  sectionTitle: {
-    fontSize: 17,
-    fontWeight: "800",
-    color: "#0f172a",
-  },
-  detailRow: {
-    gap: 4,
-  },
-  detailLabel: {
-    fontSize: 12,
-    color: "#64748b",
-    fontWeight: "700",
-    textTransform: "uppercase",
-  },
-  detailValue: {
-    fontSize: 14,
-    color: "#0f172a",
-    fontWeight: "600",
-    lineHeight: 20,
-  },
-  noteBox: {
-    borderRadius: 12,
-    padding: 12,
-    backgroundColor: "#f8fafc",
-    borderWidth: 1,
-    borderColor: "#e2e8f0",
-  },
-  noteLabel: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: "#1d4ed8",
-    textTransform: "uppercase",
-  },
-  noteText: {
-    marginTop: 6,
-    fontSize: 13,
-    lineHeight: 19,
-    color: "#334155",
-  },
-  productRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    paddingVertical: 4,
-  },
-  productIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: "#eff6ff",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  productTextWrap: {
-    flex: 1,
-  },
-  productName: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#0f172a",
-  },
-  productMeta: {
-    marginTop: 2,
-    fontSize: 12,
-    color: "#64748b",
-  },
-  timelineRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 10,
-  },
-  timelineDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    marginTop: 4,
-  },
-  timelineDotDone: {
-    backgroundColor: "#16a34a",
-  },
-  timelineDotPending: {
-    backgroundColor: "#cbd5e1",
-  },
-  timelineTextWrap: {
-    flex: 1,
-  },
-  timelineLabel: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#0f172a",
-  },
-  timelineTime: {
-    marginTop: 2,
-    fontSize: 12,
-    color: "#64748b",
-  },
-  actionsRow: {
-    gap: 10,
-  },
-  primaryButton: {
-    backgroundColor: "#1d4ed8",
-    borderRadius: 12,
-    paddingVertical: 14,
-    alignItems: "center",
-    justifyContent: "center",
-    flexDirection: "row",
-    gap: 8,
-  },
-  primaryButtonText: {
-    color: "#ffffff",
-    fontSize: 14,
-    fontWeight: "700",
-  },
-  secondaryButton: {
-    backgroundColor: "#ffffff",
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#cbd5e1",
-    paddingVertical: 14,
-    alignItems: "center",
-    justifyContent: "center",
-    flexDirection: "row",
-    gap: 8,
-  },
-  secondaryButtonText: {
-    color: "#334155",
-    fontSize: 14,
-    fontWeight: "700",
-  },
-  missingWrap: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 24,
-    gap: 8,
-  },
-  missingTitle: {
-    fontSize: 20,
-    fontWeight: "800",
-    color: "#0f172a",
-  },
-  missingSubtitle: {
-    fontSize: 13,
-    color: "#64748b",
-    textAlign: "center",
-    lineHeight: 19,
-  },
-  backButton: {
-    marginTop: 8,
-    backgroundColor: "#1d4ed8",
-    borderRadius: 10,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-  },
-  backButtonText: {
-    color: "#ffffff",
-    fontSize: 13,
-    fontWeight: "700",
-  },
+  container: { padding: 16, paddingBottom: 40, gap: 16 },
+  heroCard: { backgroundColor: "#ffffff", borderRadius: 18, borderWidth: 1, borderColor: "#e2e8f0", padding: 16 },
+  heroTopRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" },
+  orderCode: { fontSize: 22, fontWeight: "800", color: "#0f172a" },
+  routeText: { marginTop: 4, fontSize: 13, color: "#475569" },
+  badge: { fontSize: 11, fontWeight: "700", paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999, borderWidth: 1, overflow: "hidden" },
+  sectionCard: { backgroundColor: "#ffffff", borderRadius: 16, borderWidth: 1, borderColor: "#e2e8f0", padding: 16, gap: 12 },
+  sectionTitle: { fontSize: 17, fontWeight: "800", color: "#0f172a" },
+  detailRow: { gap: 4, marginBottom: 8 },
+  detailLabel: { fontSize: 11, color: "#64748b", fontWeight: "700", textTransform: "uppercase" },
+  detailValue: { fontSize: 14, color: "#0f172a", fontWeight: "600" },
+  productRow: { flexDirection: "row", alignItems: "center", gap: 12 },
+  productIcon: { width: 32, height: 32, borderRadius: 16, backgroundColor: "#eff6ff", alignItems: "center", justifyContent: "center" },
+  productTextWrap: { flex: 1 },
+  productName: { fontSize: 14, fontWeight: "700" },
+  productMeta: { fontSize: 12, color: "#64748b" },
+  timelineRow: { flexDirection: "row", gap: 10, marginBottom: 10 },
+  timelineDot: { width: 12, height: 12, borderRadius: 6, marginTop: 4 },
+  timelineDotDone: { backgroundColor: "#16a34a" },
+  timelineDotPending: { backgroundColor: "#cbd5e1" },
+  timelineTextWrap: { flex: 1 },
+  timelineLabel: { fontSize: 14, fontWeight: "700" },
+  timelineTime: { fontSize: 12, color: "#64748b" },
+  actionsRow: { gap: 10 },
+  primaryButton: { backgroundColor: "#1d4ed8", borderRadius: 12, paddingVertical: 14, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 8 },
+  primaryButtonText: { color: "#ffffff", fontSize: 15, fontWeight: "700" },
+  secondaryButton: { backgroundColor: "#ffffff", borderRadius: 12, borderWidth: 1, borderColor: "#cbd5e1", paddingVertical: 14, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 8 },
+  secondaryButtonText: { color: "#334155", fontSize: 15, fontWeight: "700" },
+  missingWrap: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24, gap: 8 },
+  missingTitle: { fontSize: 18, fontWeight: "800", color: "#0f172a" },
+  backButton: { marginTop: 8, backgroundColor: "#1d4ed8", borderRadius: 10, paddingHorizontal: 16, paddingVertical: 10 },
+  backButtonText: { color: "#ffffff", fontWeight: "700" },
 });
