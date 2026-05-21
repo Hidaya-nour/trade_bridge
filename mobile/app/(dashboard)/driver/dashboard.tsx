@@ -68,19 +68,17 @@ export default function DriverDashboardScreen() {
 
   // ================= DERIVED (WEB MATCHED) =================
 
-  const active = deliveries.filter(
+  const safeDeliveries = Array.isArray(deliveries) ? deliveries : [];
+
+  const activeDeliveries = safeDeliveries.filter(
     (d) => !["delivered", "failed", "cancelled"].includes(d.status),
   );
 
-  const completed = deliveries.filter(
-    (d) => d.status === "delivered",
-  );
+  const completed = safeDeliveries.filter((d) => d.status === "delivered");
 
-  const pending = deliveries.filter(
-    (d) => d.status === "pending",
-  );
+  const pending = safeDeliveries.filter((d) => d.status === "pending");
 
-  const activeRoute = active[0];
+  const activeRoute = activeDeliveries[0];
 
   const vehicleLabel =
     activeRoute?.vehicleType || "Vehicle not assigned";
