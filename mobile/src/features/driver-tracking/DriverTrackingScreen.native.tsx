@@ -176,8 +176,6 @@ const openExternalUrl = async (url: string) => {
 };
 
 export default function DriverTrackingScreen() {
-  const mapRef = useRef<any | null>(null);
-
   const locationSubscriptionRef =
     useRef<Location.LocationSubscription | null>(null);
 
@@ -269,19 +267,7 @@ export default function DriverTrackingScreen() {
     : routeCoordinates[0] ?? null;
 
   // FIX 4: Explicit parsing on the destination placeholder vector array
-  const remainingCoordinates =
-    latestLocation && dropoffCoords
-      ? [
-          {
-            latitude: Number(latestLocation.latitude),
-            longitude: Number(latestLocation.longitude),
-          },
-          {
-            latitude: Number(dropoffCoords.lat),
-            longitude: Number(dropoffCoords.lng),
-          },
-        ]
-      : [];
+ 
 
   useEffect(() => {
     loadDeliveries();
@@ -342,21 +328,6 @@ export default function DriverTrackingScreen() {
       clearInterval(intervalId);
     };
   }, [activeDelivery?.orderId]);
-
-  useEffect(() => {
-    if (!currentCoordinate || !mapRef.current) {
-      return;
-    }
-
-    mapRef.current.animateToRegion(
-      {
-        ...currentCoordinate,
-        latitudeDelta: 0.02,
-        longitudeDelta: 0.02,
-      },
-      500,
-    );
-  }, [currentCoordinate]);
 
   useEffect(() => {
     return () => {
@@ -569,8 +540,8 @@ export default function DriverTrackingScreen() {
 
   const MapComp = mapLib?.MapView;
   const MarkerComp = mapLib?.Marker;
-  const PolylineComp = mapLib?.Polyline;
 
+  
   return (
     <ScreenWrapper
       title="Live Tracking"
@@ -585,7 +556,6 @@ export default function DriverTrackingScreen() {
               <View style={styles.mapWrap}>
                 {MapComp ? (
                   <MapComp
-                    ref={mapRef}
                     style={styles.map}
                     initialRegion={
                       currentCoordinate
@@ -606,22 +576,8 @@ export default function DriverTrackingScreen() {
                     showsMyLocationButton
                     showsCompass
                   >
-                    {PolylineComp && routeCoordinates.length > 1 && (
-                      <PolylineComp
-                        coordinates={routeCoordinates}
-                        strokeColor="#2563eb"
-                        strokeWidth={5}
-                      />
-                    )}
-                    {PolylineComp && remainingCoordinates.length === 2 && (
-                      <PolylineComp
-                        coordinates={remainingCoordinates}
-                        strokeColor="#93c5fd"
-                        strokeWidth={5}
-                      />
-                    )}
-
-                    {MarkerComp && startPoint && (
+                    
+                                  {MarkerComp && startPoint && (
                       <MarkerComp coordinate={startPoint}>
                         <View style={styles.routeIconStart}>
                           <Text style={styles.routeIconText}>S</Text>

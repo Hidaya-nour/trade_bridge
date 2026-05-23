@@ -212,13 +212,7 @@ const OrderTrackingPage: React.FC = () => {
     number,
     number,
   ][];
-  const remainingRoutePositions =
-    latestLocation && dropoffCoords
-      ? ([
-          [latestLocation.latitude, latestLocation.longitude],
-          [dropoffCoords.lat, dropoffCoords.lng],
-        ] as [number, number][])
-      : [];
+  
   const startPoint =
     pickupCoords ||
     (startLocation
@@ -380,7 +374,6 @@ const OrderTrackingPage: React.FC = () => {
                   }
                   dropoffPoint={dropoffCoords}
                   traveledRoute={routePositions}
-                  remainingRoute={remainingRoutePositions}
                   className="h-80 w-full"
                 />
               </div>
