@@ -42,7 +42,7 @@ export interface DriverDelivery {
   etaMinutes: number;
   routeProgress: number;
   status: DeliveryStatus;
-  products: DeliveryProduct[];
+  products?: DeliveryProduct[];
   contactPerson: string;
   contactPhone: string;
   vehiclePlate: string;
@@ -52,5 +52,5 @@ export interface DriverDelivery {
   notes: string;
   deliveredAt?: string;
   issueReported: boolean;
-  timeline: DeliveryTimelineItem[];
+  timeline?: DeliveryTimelineItem[];
 }

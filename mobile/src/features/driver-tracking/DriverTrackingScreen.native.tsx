@@ -123,6 +123,20 @@ const latestAddressCoords = (
   return null;
 };
 
+const getAddressLabel = (
+  addresses?: Array<{
+    common_name?: string | null;
+    subcity?: string | null;
+    city?: string | null;
+  }>,
+) => {
+  if (!Array.isArray(addresses) || !addresses.length) return null;
+
+  const row = addresses[0];
+  const values = [row?.common_name, row?.subcity, row?.city].filter(Boolean);
+  return values.join(", ") || null;
+};
+
 const getStatusTone = (status: DeliveryStatus) => {
   switch (status) {
     case "assigned":
@@ -681,6 +695,31 @@ export default function DriverTrackingScreen() {
                 )}
               </View>
 
+              <View style={styles.locationSummary}>
+                <View style={styles.locationRow}>
+                  <Text style={styles.locationLabel}>Pickup</Text>
+                  <Text style={styles.locationValue} numberOfLines={2}>
+                    {activeDelivery?.pickupPoint ||
+                      getAddressLabel(activeDelivery?.supplierAddresses) ||
+                      "Unknown pickup"}
+                  </Text>
+                </View>
+                <View style={styles.locationRow}>
+                  <Text style={styles.locationLabel}>Dropoff</Text>
+                  <Text style={styles.locationValue} numberOfLines={2}>
+                    {activeDelivery?.destination ||
+                      getAddressLabel(activeDelivery?.buyerAddresses) ||
+                      "Unknown dropoff"}
+                  </Text>
+                </View>
+                <View style={styles.locationRow}>
+                  <Text style={styles.locationLabel}>Last shared</Text>
+                  <Text style={styles.locationValue}>
+                    {lastSentAt ? formatDateTime(lastSentAt) : "Not shared yet"}
+                  </Text>
+                </View>
+              </View>
+
               <View style={styles.actionsWrap}>
                 <Pressable
                   style={[
@@ -856,6 +895,28 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "700",
     color: "#0f172a",
+  },
+  locationSummary: {
+    backgroundColor: "#f8fafc",
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    padding: 14,
+    gap: 10,
+  },
+  locationRow: {
+    gap: 6,
+  },
+  locationLabel: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#64748b",
+    textTransform: "uppercase",
+  },
+  locationValue: {
+    fontSize: 13,
+    color: "#0f172a",
+    fontWeight: "600",
   },
   routeIconStart: {
     width: 34,
