@@ -684,34 +684,18 @@ export default function RetailerDashboardScreen() {
           )}
         </View>
 
-        <View style={styles.panel}>
-          <SectionHeader
-            title="Quick Actions"
-            subtitle="Frequently used features"
-          />
-          <View style={styles.quickActionsGrid}>
-            {quickActions.map((action, index) => (
-              <QuickActionTile key={index} {...action} />
-            ))}
-          </View>
-        </View>
-
-        <Pressable
-          style={styles.summaryToggle}
-          onPress={() => setSummaryExpanded((current) => !current)}
-        >
+        <View
+          style={styles.summaryToggle}        >
           <View>
             <Text style={styles.summaryToggleTitle}>Order Summary</Text>
-            <Text style={styles.summaryToggleSubtitle}>Tap to {summaryExpanded ? "collapse" : "expand"}</Text>
           </View>
-          <Ionicons
+          {/* <Ionicons
             name={summaryExpanded ? "chevron-up-outline" : "chevron-down-outline"}
             size={20}
             color="#0f172a"
-          />
-        </Pressable>
+          /> */}
+        </View>
 
-        {summaryExpanded ? (
           <View style={styles.summaryCard}>
             <View style={styles.summaryRow}>
               <Text style={styles.summaryLabel}>Delivered</Text>
@@ -735,7 +719,6 @@ export default function RetailerDashboardScreen() {
               <Text style={styles.summaryTotalValue}>{orderSummary.total}</Text>
             </View>
           </View>
-        ) : null}
       </ScrollView>
     </ScreenWrapper>
   );

@@ -1,20 +1,19 @@
-import { useEffect, useState } from "react";
-import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import React, { useEffect, useMemo, useState } from "react";
+import { Pressable, StyleSheet, Text, TextInput, View, ScrollView } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-
 import BottomSheetModal from "@/components/retailer/BottomSheetModal";
+import { SupplierPaymentMethodConfig } from "../../features/orders/order.types";
 
-export type MobilePaymentMethod = "app_payment" | "mobile_banking";
+export type PaymentMethod = "app_payment" | "mobile_banking" | "credit";
 
 export interface PaymentSheetSubmitPayload {
-  method: MobilePaymentMethod;
+  method: PaymentMethod;
   notes?: string;
   payment_details?: {
-    transactionId?: string;
-    transferDate?: string;
     mobileProvider?: string;
     phoneNumber?: string;
   };
+  proofFile?: any; // To handle uploaded receipt image/document info
 }
 
 interface PaymentSheetProps {
@@ -24,7 +23,11 @@ interface PaymentSheetProps {
   onClose: () => void;
   onSubmit: (payload: PaymentSheetSubmitPayload) => Promise<void> | void;
   submitting?: boolean;
+  supplierPaymentMethods?: SupplierPaymentMethodConfig[];
 }
+
+const isSupplierMobileMethodType = (type: string) => type === "mobile_money" || type === "mobile_banking";
+const isSupplierAppMethodType = (type: string) => type === "credit_card" || type === "chapa";
 
 export default function PaymentSheet({
   visible,
@@ -33,252 +36,277 @@ export default function PaymentSheet({
   onClose,
   onSubmit,
   submitting = false,
+  supplierPaymentMethods = [],
 }: PaymentSheetProps) {
-  const [method, setMethod] = useState<MobilePaymentMethod>("app_payment");
-  const [transactionId, setTransactionId] = useState("");
-  const [transferDate, setTransferDate] = useState("");
+  const [selectedMethod, setSelectedMethod] = useState<PaymentMethod>("app_payment");
   const [mobileProvider, setMobileProvider] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [notes, setNotes] = useState("");
+  const [selectedFile, setSelectedFile] = useState<{ name: string; uri: string } | null>(null);
 
+// Ensure we always have an iterable array, even if the backend returns undefined
+const safeMethods = supplierPaymentMethods || [];
+
+const hasAppConfiguration = useMemo(() => {
+  // FALLBACK: If the API doesn't provide any configuration array, 
+  // explicitly default to true so your users aren't left stranded with a blank screen.
+  if (!supplierPaymentMethods || supplierPaymentMethods.length === 0) {
+    return true;
+  }
+  return safeMethods.some((m) => m && isSupplierAppMethodType(m.method_type));
+}, [supplierPaymentMethods, safeMethods]);
+
+const hasMobileConfiguration = useMemo(() => {
+  // Never show mobile banking forms blindly if there are no provider details to build the inputs.
+  if (!supplierPaymentMethods || supplierPaymentMethods.length === 0) {
+    return false;
+  }
+  return safeMethods.some(
+    (m) => m && isSupplierMobileMethodType(m.method_type) && m.provider_name && m.provider_name.trim() !== ""
+  );
+}, [supplierPaymentMethods, safeMethods]);
+
+const hasCreditConfiguration = useMemo(() => {
+  if (!supplierPaymentMethods || supplierPaymentMethods.length === 0) {
+    return false;
+  }
+  return safeMethods.some((m) => m && m.method_type === "credit");
+}, [supplierPaymentMethods, safeMethods]);
+  // 2. Automatically select the first available payment method tab when the sheet opens
   useEffect(() => {
     if (visible) {
-      setMethod("app_payment");
-      setTransactionId("");
-      setTransferDate("");
+      if (hasAppConfiguration) {
+        setSelectedMethod("app_payment");
+      } else if (hasMobileConfiguration) {
+        setSelectedMethod("mobile_banking");
+      } else if (hasCreditConfiguration) {
+        setSelectedMethod("credit");
+      }
+    }
+  }, [visible, hasAppConfiguration, hasMobileConfiguration, hasCreditConfiguration]);
+
+  // 3. Filter backend accounts based on what tab is currently active
+  const currentSupplierDetails = useMemo(() => {
+    if (!supplierPaymentMethods.length) return [];
+    return supplierPaymentMethods.filter((item) =>
+      selectedMethod === "app_payment"
+        ? isSupplierAppMethodType(item.method_type)
+        : selectedMethod === "credit"
+        ? item.method_type === "credit"
+        : isSupplierMobileMethodType(item.method_type)
+    );
+  }, [supplierPaymentMethods, selectedMethod]);
+
+  // 4. Collect unique list of provider options for the dynamic selector chips
+  const providerOptions = useMemo(() => {
+    if (selectedMethod !== "mobile_banking" || !hasMobileConfiguration) return [];
+    
+    const sorted = [...currentSupplierDetails].sort(
+      (a, b) => Number(Boolean(b.is_primary)) - Number(Boolean(a.is_primary))
+    );
+    const uniqueNames = new Set<string>();
+    return sorted
+      .map((m) => m.provider_name?.trim())
+      .filter((name): name is string => Boolean(name))
+      .filter((name) => {
+        const key = name.toLowerCase();
+        if (uniqueNames.has(key)) return false;
+        uniqueNames.add(key);
+        return true;
+      });
+  }, [selectedMethod, hasMobileConfiguration, currentSupplierDetails]);
+
+  // Handle dialog state initialization / resets
+  useEffect(() => {
+    if (visible) {
+      setNotes("");
       setMobileProvider("");
       setPhoneNumber("");
-      setNotes("");
+      setSelectedFile(null);
     }
   }, [visible]);
 
+  // Dummy mock document handler - hook up DocumentPicker here
+  const handlePickDocument = () => {
+    setSelectedFile({ name: "payment_receipt.png", uri: "file://path/to/file" });
+  };
+
+  const handleFormSubmit = () => {
+    onSubmit({
+      method: selectedMethod,
+      notes,
+      payment_details: selectedMethod === "mobile_banking" ? { mobileProvider, phoneNumber } : undefined,
+      proofFile: selectedFile,
+    });
+  };
+
   return (
-    <BottomSheetModal
-      visible={visible}
-      title="Complete payment"
-      subtitle={`Submit payment for ${orderLabel}.`}
-      onClose={onClose}
-    >
-      <View style={styles.amountCard}>
-        <Text style={styles.amountLabel}>Amount due</Text>
-        <Text style={styles.amountValue}>${amount.toFixed(2)}</Text>
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Payment method</Text>
-        <View style={styles.methodRow}>
-          <Pressable
-            style={[styles.methodCard, method === "app_payment" && styles.methodCardActive]}
-            onPress={() => setMethod("app_payment")}
-          >
-            <Ionicons name="card-outline" size={18} color="#1d4ed8" />
-            <Text style={styles.methodTitle}>App Payment</Text>
-            <Text style={styles.methodText}>Open secure checkout</Text>
-          </Pressable>
-          <Pressable
-            style={[styles.methodCard, method === "mobile_banking" && styles.methodCardActive]}
-            onPress={() => setMethod("mobile_banking")}
-          >
-            <Ionicons name="phone-portrait-outline" size={18} color="#1d4ed8" />
-            <Text style={styles.methodTitle}>Mobile Banking</Text>
-            <Text style={styles.methodText}>Submit transfer details</Text>
-          </Pressable>
+    <BottomSheetModal visible={visible} title="Complete payment" subtitle={`For ${orderLabel}`} onClose={onClose}>
+      <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
+        
+        {/* Amount Box */}
+        <View style={styles.amountCard}>
+          <Text style={styles.amountLabel}>Amount due</Text>
+          <Text style={styles.amountValue}>${amount.toFixed(2)}</Text>
         </View>
-      </View>
 
-      {method === "mobile_banking" ? (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Transfer details</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Transaction ID"
-            value={transactionId}
-            onChangeText={setTransactionId}
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Transfer date (YYYY-MM-DD)"
-            value={transferDate}
-            onChangeText={setTransferDate}
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Mobile provider"
-            value={mobileProvider}
-            onChangeText={setMobileProvider}
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Phone number"
-            value={phoneNumber}
-            onChangeText={setPhoneNumber}
-          />
-        </View>
-      ) : (
-        <View style={styles.infoCard}>
-          <Ionicons name="information-circle-outline" size={18} color="#1d4ed8" />
-          <Text style={styles.infoText}>
-            You will be redirected to the in-app online checkout flow to complete payment securely.
-          </Text>
-        </View>
-      )}
+        {/* Tab Selection Row */}
+        <Text style={styles.sectionTitle}>Select Payment Method</Text>
+        <View style={styles.tabContainer}>
+          {/* Only show App Pay if configured by distributor */}
+          {hasAppConfiguration && (
+            <Pressable 
+              style={[styles.tabButton, selectedMethod === "app_payment" && styles.tabButtonActive]}
+              onPress={() => setSelectedMethod("app_payment")}
+            >
+              <Ionicons name="card-outline" size={20} color={selectedMethod === "app_payment" ? "#1d4ed8" : "#64748b"} />
+              <Text style={[styles.tabLabel, selectedMethod === "app_payment" && styles.tabLabelActive]}>App Pay</Text>
+            </Pressable>
+          )}
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Notes</Text>
+          {/* Only show Mobile Banking if configured by distributor */}
+          {hasMobileConfiguration && (
+            <Pressable 
+              style={[styles.tabButton, selectedMethod === "mobile_banking" && styles.tabButtonActive]}
+              onPress={() => setSelectedMethod("mobile_banking")}
+            >
+              <Ionicons name="phone-portrait-outline" size={20} color={selectedMethod === "mobile_banking" ? "#1d4ed8" : "#64748b"} />
+              <Text style={[styles.tabLabel, selectedMethod === "mobile_banking" && styles.tabLabelActive]}>Banking</Text>
+            </Pressable>
+          )}
+
+          {/* Only show Credit if configured by distributor */}
+          {hasCreditConfiguration && (
+            <Pressable 
+              style={[styles.tabButton, selectedMethod === "credit" && styles.tabButtonActive]}
+              onPress={() => setSelectedMethod("credit")}
+            >
+              <Ionicons name="time-outline" size={20} color={selectedMethod === "credit" ? "#1d4ed8" : "#64748b"} />
+              <Text style={[styles.tabLabel, selectedMethod === "credit" && styles.tabLabelActive]}>Credit</Text>
+            </Pressable>
+          )}
+        </View>
+
+        {/* Supplier Target Account Configurations View Area */}
+        {currentSupplierDetails.length > 0 && selectedMethod !== "app_payment" && (
+          <View style={styles.supplierDetailsBox}>
+            <Text style={styles.boxTitle}>Supplier Target Account Info:</Text>
+            {currentSupplierDetails.map((account) => (
+              <View key={account.id} style={styles.accountItem}>
+                <Text style={styles.accountHeader}>
+                  {account.provider_name} {account.is_primary && "(Primary)"}
+                </Text>
+                <Text style={styles.accountSubtext}>
+                  {account.account_display || account.account_holder_name}
+                </Text>
+                {account.credit_limit && (
+                  <Text style={styles.creditMetaText}>
+                    Limit: ETB {account.credit_limit.toLocaleString()} · Due: {account.credit_due_days} days
+                  </Text>
+                )}
+              </View>
+            ))}
+          </View>
+        )}
+
+        {/* Conditional Content Inputs Blocks */}
+        {selectedMethod === "app_payment" && (
+          <View style={styles.infoBox}>
+            <Ionicons name="information-circle-outline" size={18} color="#1e40af" />
+            <Text style={styles.infoText}>You will continue to the secure integrated checkout portal page.</Text>
+          </View>
+        )}
+
+        {selectedMethod === "mobile_banking" && (
+          <View style={styles.formGroup}>
+            {providerOptions.length > 0 && (
+              <>
+                <Text style={styles.inputLabel}>Mobile Provider Selector</Text>
+                <View style={styles.pickerAlternative}>
+                  {providerOptions.map((prov) => (
+                    <Pressable
+                      key={prov}
+                      style={[styles.chip, mobileProvider === prov && styles.chipActive]}
+                      onPress={() => setMobileProvider(prov)}
+                    >
+                      <Text style={[styles.chipText, mobileProvider === prov && styles.chipTextActive]}>{prov}</Text>
+                    </Pressable>
+                  ))}
+                </View>
+              </>
+            )}
+
+            <Text style={styles.inputLabel}>Sender Phone Number</Text>
+            <TextInput style={styles.input} placeholder="+251..." keyboardType="phone-pad" value={phoneNumber} onChangeText={setPhoneNumber} />
+
+            <Text style={styles.inputLabel}>Upload Transfer Receipt Proof</Text>
+            <Pressable style={styles.uploadArea} onPress={handlePickDocument}>
+              <Ionicons name="cloud-upload-outline" size={24} color="#64748b" />
+              <Text style={styles.uploadText}>{selectedFile ? selectedFile.name : "Tap to choose document proof"}</Text>
+            </Pressable>
+          </View>
+        )}
+
+        {/* Notes Input Field shared across states */}
+        <Text style={styles.inputLabel}>Notes</Text>
         <TextInput
-          style={[styles.input, styles.notesInput]}
-          placeholder="Optional payment note"
+          style={[styles.input, styles.textArea]}
+          placeholder="Optional notes for reference..."
+          multiline
           value={notes}
           onChangeText={setNotes}
-          multiline
         />
-      </View>
 
-      <View style={styles.footer}>
-        <Pressable style={styles.cancelButton} onPress={onClose}>
-          <Text style={styles.cancelButtonText}>Cancel</Text>
-        </Pressable>
-        <Pressable
-          style={[styles.submitButton, submitting && styles.submitButtonDisabled]}
-          disabled={submitting}
-          onPress={() =>
-            void onSubmit({
-              method,
-              notes,
-              payment_details:
-                method === "mobile_banking"
-                  ? {
-                      transactionId,
-                      transferDate,
-                      mobileProvider,
-                      phoneNumber,
-                    }
-                  : undefined,
-            })
-          }
-        >
-          <Text style={styles.submitButtonText}>
-            {submitting ? "Submitting..." : method === "app_payment" ? "Continue" : "Submit"}
-          </Text>
-        </Pressable>
-      </View>
+        {/* Bottom Action Footer */}
+        <View style={styles.footerRow}>
+          <Pressable style={styles.cancelBtn} onPress={onClose}>
+            <Text style={styles.cancelBtnText}>Cancel</Text>
+          </Pressable>
+          <Pressable style={[styles.submitBtn, submitting && { opacity: 0.5 }]} onPress={handleFormSubmit} disabled={submitting}>
+            <Text style={styles.submitBtnText}>
+              {submitting ? "Processing..." : selectedMethod === "app_payment" ? "Continue" : "Submit"}
+            </Text>
+          </Pressable>
+        </View>
+
+      </ScrollView>
     </BottomSheetModal>
   );
 }
 
 const styles = StyleSheet.create({
-  amountCard: {
-    borderRadius: 18,
-    backgroundColor: "#eff6ff",
-    padding: 16,
-    gap: 6,
-  },
-  amountLabel: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: "#1e40af",
-  },
-  amountValue: {
-    fontSize: 24,
-    fontWeight: "800",
-    color: "#0f172a",
-  },
-  section: {
-    gap: 10,
-  },
-  sectionTitle: {
-    fontSize: 14,
-    fontWeight: "800",
-    color: "#0f172a",
-  },
-  methodRow: {
-    flexDirection: "row",
-    gap: 12,
-  },
-  methodCard: {
-    flex: 1,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: "#dbe3ef",
-    backgroundColor: "#ffffff",
-    padding: 14,
-    gap: 6,
-  },
-  methodCardActive: {
-    borderColor: "#93c5fd",
-    backgroundColor: "#eff6ff",
-  },
-  methodTitle: {
-    fontSize: 13,
-    fontWeight: "800",
-    color: "#0f172a",
-  },
-  methodText: {
-    fontSize: 12,
-    color: "#64748b",
-  },
-  input: {
-    minHeight: 48,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "#dbe3ef",
-    backgroundColor: "#ffffff",
-    paddingHorizontal: 14,
-    fontSize: 14,
-    color: "#0f172a",
-  },
-  notesInput: {
-    minHeight: 92,
-    paddingTop: 12,
-    textAlignVertical: "top",
-  },
-  infoCard: {
-    flexDirection: "row",
-    gap: 10,
-    borderRadius: 18,
-    backgroundColor: "#eff6ff",
-    padding: 14,
-  },
-  infoText: {
-    flex: 1,
-    fontSize: 12,
-    lineHeight: 18,
-    color: "#1e40af",
-  },
-  footer: {
-    flexDirection: "row",
-    gap: 12,
-    paddingTop: 4,
-  },
-  cancelButton: {
-    flex: 1,
-    minHeight: 48,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "#cbd5e1",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#ffffff",
-  },
-  cancelButtonText: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#334155",
-  },
-  submitButton: {
-    flex: 1,
-    minHeight: 48,
-    borderRadius: 16,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#1d4ed8",
-  },
-  submitButtonDisabled: {
-    opacity: 0.6,
-  },
-  submitButtonText: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#ffffff",
-  },
+  scrollContainer: { gap: 16, paddingBottom: 32 },
+  amountCard: { padding: 16, backgroundColor: "#eff6ff", borderRadius: 16 },
+  amountLabel: { fontSize: 12, color: "#1e40af", fontWeight: "600" },
+  amountValue: { fontSize: 24, fontWeight: "800", marginTop: 4, color: "#1e293b" },
+  sectionTitle: { fontSize: 14, fontWeight: "700", color: "#1e293b", marginTop: 8 },
+  tabContainer: { flexDirection: "row", gap: 8 },
+  tabButton: { flex: 1, padding: 12, borderWidth: 1, borderColor: "#cbd5e1", borderRadius: 12, alignItems: "center", gap: 4 },
+  tabButtonActive: { borderColor: "#3b82f6", backgroundColor: "#eff6ff" },
+  tabLabel: { fontSize: 12, color: "#64748b", fontWeight: "600" },
+  tabLabelActive: { color: "#1d4ed8" },
+  supplierDetailsBox: { padding: 12, backgroundColor: "#f8fafc", borderRadius: 12, borderWidth: 1, borderColor: "#e2e8f0" },
+  boxTitle: { fontSize: 12, fontWeight: "700", color: "#475569", marginBottom: 6 },
+  accountItem: { paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: "#f1f5f9" },
+  accountHeader: { fontSize: 13, fontWeight: "700", color: "#1e293b" },
+  accountSubtext: { fontSize: 12, color: "#64748b" },
+  creditMetaText: { fontSize: 11, color: "#059669", fontWeight: "600", marginTop: 2 },
+  infoBox: { flexDirection: "row", padding: 12, backgroundColor: "#f0f9ff", borderRadius: 12, gap: 8, alignItems: "center" },
+  infoText: { fontSize: 12, color: "#0369a1", flex: 1 },
+  formGroup: { gap: 10 },
+  inputLabel: { fontSize: 13, fontWeight: "600", color: "#475569" },
+  input: { borderWidth: 1, borderColor: "#cbd5e1", padding: 12, borderRadius: 12, fontSize: 14, backgroundColor: "#fff" },
+  textArea: { height: 80, textAlignVertical: "top" },
+  pickerAlternative: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
+  chip: { paddingVertical: 6, paddingHorizontal: 12, borderRadius: 20, borderWidth: 1, borderColor: "#cbd5e1" },
+  chipActive: { backgroundColor: "#1d4ed8", borderColor: "#1d4ed8" },
+  chipText: { fontSize: 12, color: "#475569" },
+  chipTextActive: { color: "#fff", fontWeight: "600" },
+  uploadArea: { padding: 20, borderStyle: "dashed", borderWidth: 1, borderColor: "#94a3b8", borderRadius: 12, alignItems: "center", gap: 6, backgroundColor: "#f8fafc" },
+  uploadText: { fontSize: 12, color: "#64748b" },
+  footerRow: { flexDirection: "row", gap: 12, marginTop: 12 },
+  cancelBtn: { flex: 1, padding: 14, borderWidth: 1, borderColor: "#cbd5e1", borderRadius: 12, alignItems: "center" },
+  cancelBtnText: { fontWeight: "600", color: "#475569" },
+  submitBtn: { flex: 1, padding: 14, backgroundColor: "#1d4ed8", borderRadius: 12, alignItems: "center" },
+  submitBtnText: { fontWeight: "600", color: "#fff" }
 });

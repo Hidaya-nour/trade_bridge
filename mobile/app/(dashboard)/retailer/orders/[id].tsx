@@ -59,6 +59,16 @@ export default function RetailerOrderDetailScreen() {
     }
   }, [fetchOrderById, id]);
 
+  // Temporary debug logger to find out why mobile banking option won't disappear
+  useEffect(() => {
+    if (currentOrder?.supplier) {
+      console.log("==========================================");
+      console.log("DEBUG PAYLOAD FOR SUPPLIER PAYMENT METHODS:");
+      console.log(JSON.stringify(currentOrder.supplier.supplierPaymentMethods, null, 2));
+      console.log("==========================================");
+    }
+  }, [currentOrder]);
+
   const order = currentOrder;
 
   const summary = useMemo(() => {
@@ -76,7 +86,7 @@ export default function RetailerOrderDetailScreen() {
     const index = statusIndex[order.order_status] ?? 0;
     const effectiveIndex = index < 0 ? 0 : index;
 
-    return steps.map((step, stepIndex) => ({
+  return steps.map((step, stepIndex) => ({
       label: step,
       completed: stepIndex <= effectiveIndex,
       date: stepIndex === 0 ? order.created_at : undefined,
@@ -89,6 +99,7 @@ export default function RetailerOrderDetailScreen() {
     return ["pending", "failed"].includes(order.payment.payment_status);
   }, [order]);
 
+  const isApproved = order?.order_status === "approved";
   const canRate = order?.order_status === "delivered" || order?.order_status === "closed";
 
   const handlePaymentSubmit = useCallback(
@@ -141,35 +152,7 @@ export default function RetailerOrderDetailScreen() {
       supplier_id: order.supplier_id,
       items,
     });
-
-    if (created) {
-      Alert.alert("Reorder placed", "Your reorder has been created successfully.", [
-        { text: "Done", onPress: () => router.push("/retailer/orders") },
-        {
-          text: "Pay Now",
-          onPress: () => {
-            router.push(`/retailer/orders/${created.id}`);
-          },
-        },
-      ]);
-    }
-  }, [createOrder, order, router]);
-
-  const handleCancel = useCallback(() => {
-    if (!order) return;
-
-    Alert.alert("Cancel order", "Do you want to cancel this order?", [
-      { text: "Keep order", style: "cancel" },
-      {
-        text: "Cancel",
-        style: "destructive",
-        onPress: async () => {
-          await cancelOrder(order.id, "Cancelled from mobile order details");
-          await fetchOrderById(order.id);
-        },
-      },
-    ]);
-  }, [cancelOrder, fetchOrderById, order]);
+  }, [createOrder, order]);
 
   const handleReviewSubmit = useCallback(
     async ({ rating, review }: { rating: number; review: string }) => {
@@ -192,7 +175,7 @@ export default function RetailerOrderDetailScreen() {
         setReviewSubmitting(false);
       }
     },
-    [order, reviewingProduct],
+    [reviewingProduct],
   );
 
   if (isLoading && !order) {
@@ -236,22 +219,27 @@ export default function RetailerOrderDetailScreen() {
             <Ionicons name="arrow-back-outline" size={16} color="#334155" />
             <Text style={styles.actionButtonText}>Back</Text>
           </Pressable>
+
           {needsPayment ? (
-            <Pressable style={styles.primaryActionButton} onPress={() => setPaymentOpen(true)}>
+            <Pressable 
+              disabled={!isApproved}
+              style={[
+                styles.primaryActionButton, 
+                !isApproved && styles.disabledActionButton
+              ]} 
+              onPress={() => setPaymentOpen(true)}
+            >
               <Ionicons name="card-outline" size={16} color="#ffffff" />
-              <Text style={styles.primaryActionText}>Pay Now</Text>
+              <Text style={styles.primaryActionText}>
+                {order.order_status === "pending" ? "Awaiting Approval" : "Pay Now"}
+              </Text>
             </Pressable>
           ) : null}
+
           <Pressable style={styles.actionButton} onPress={() => void handleReorder()}>
             <Ionicons name="repeat-outline" size={16} color="#334155" />
             <Text style={styles.actionButtonText}>Reorder</Text>
           </Pressable>
-          {order.order_status !== "cancelled" ? (
-            <Pressable style={styles.actionButton} onPress={handleCancel}>
-              <Ionicons name="close-circle-outline" size={16} color="#dc2626" />
-              <Text style={[styles.actionButtonText, styles.destructiveText]}>Cancel</Text>
-            </Pressable>
-          ) : null}
           {order.order_status === "shipped" ? (
             <Pressable
               style={styles.actionButton}
@@ -361,6 +349,7 @@ export default function RetailerOrderDetailScreen() {
         onClose={() => setPaymentOpen(false)}
         onSubmit={handlePaymentSubmit}
         submitting={paymentProcessing}
+        supplierPaymentMethods={order.supplier?.supplierPaymentMethods}
       />
 
       <ReviewSheet
@@ -457,6 +446,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 6,
+  },
+  disabledActionButton: {
+    backgroundColor: "#94a3b8",
+    opacity: 0.6,
   },
   actionButtonText: {
     fontSize: 12,

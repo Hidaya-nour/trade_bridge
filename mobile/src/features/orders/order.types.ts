@@ -22,6 +22,17 @@ export type DeliveryStatus =
   | "failed"
   | "cancelled";
 
+export interface SupplierPaymentMethodConfig {
+  id: string;
+  method_type: "credit_card" | "chapa" | "mobile_money" | "mobile_banking" | "credit";
+  provider_name?: string;
+  account_display?: string;
+  account_holder_name?: string;
+  is_primary?: boolean;
+  credit_limit?: number;
+  credit_due_days?: number;
+}
+
 export interface OrderParty {
   id: string;
   full_name: string;
@@ -29,6 +40,7 @@ export interface OrderParty {
   email?: string;
   phone?: string;
   tin_number?: string;
+  supplierPaymentMethods?: SupplierPaymentMethodConfig[];
 }
 
 export interface OrderItem {
