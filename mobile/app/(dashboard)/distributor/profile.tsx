@@ -1,5 +1,5 @@
-import { ProfileScreen } from "@/features/profile/ProfileScreen";
+import { SettingsScreen } from "@/features/settings/SettingsScreen";
 
 export default function DistributorProfileRoute() {
-  return <ProfileScreen role="distributor" />;
+  return <SettingsScreen initialTab="profile" role="distributor" />;
 }

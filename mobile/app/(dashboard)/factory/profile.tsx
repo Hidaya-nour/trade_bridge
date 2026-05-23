@@ -1,5 +1,5 @@
-import { ProfileScreen } from "@/features/profile/ProfileScreen";
+import { SettingsScreen } from "@/features/settings/SettingsScreen";
 
 export default function FactoryProfileRoute() {
-  return <ProfileScreen role="factory" />;
+  return <SettingsScreen initialTab="profile" role="factory" />;
 }
