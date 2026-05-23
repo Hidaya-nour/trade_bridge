@@ -32,7 +32,7 @@ const STATUS_OPTIONS: Array<{ label: string; value: OrderStatus | "all" }> = [
   { label: "Shipped", value: "shipped" },
   { label: "Delivered", value: "delivered" },
   { label: "Closed", value: "closed" },
-  { label: "Cancelled", value: "cancelled" },
+  // { label: "Cancelled", value: "cancelled" },
 ];
 
 const formatDate = (value: string) =>
@@ -145,9 +145,6 @@ export default function RetailerOrdersScreen() {
   }, [orders, searchQuery, statusFilter, supplierFilter]);
 
   const needsPayment = useCallback((order: Order) => {
-    if (order.order_status === "cancelled") {
-      return false;
-    }
 
     if (!order.payment) {
       return true;
@@ -155,23 +152,6 @@ export default function RetailerOrdersScreen() {
 
     return ["pending", "failed"].includes(order.payment.payment_status);
   }, []);
-
-  const handleCancelOrder = useCallback(
-    (order: Order) => {
-      Alert.alert("Cancel order", "Do you want to cancel this order?", [
-        { text: "Keep order", style: "cancel" },
-        {
-          text: "Cancel order",
-          style: "destructive",
-          onPress: async () => {
-            await cancelOrder(order.id, "Cancelled from mobile orders");
-            await onRefresh();
-          },
-        },
-      ]);
-    },
-    [cancelOrder, onRefresh],
-  );
 
   const handleReorder = useCallback(
     (order: Order) => {
@@ -390,19 +370,6 @@ export default function RetailerOrdersScreen() {
                   <Text style={styles.outlineActionText}>Details</Text>
                 </Pressable>
 
-                {needsPayment(item) ? (
-                  <Pressable
-                    style={styles.outlineAction}
-                    onPress={() => {
-                      setSelectedOrder(item);
-                      setPaymentOpen(true);
-                    }}
-                  >
-                    <Ionicons name="card-outline" size={15} color="#334155" />
-                    <Text style={styles.outlineActionText}>Pay</Text>
-                  </Pressable>
-                ) : null}
-
                 {item.order_status === "shipped" ? (
                   <Pressable
                     style={styles.outlineAction}
@@ -417,13 +384,6 @@ export default function RetailerOrdersScreen() {
                   <Ionicons name="repeat-outline" size={15} color="#334155" />
                   <Text style={styles.outlineActionText}>Reorder</Text>
                 </Pressable>
-
-                {item.order_status !== "cancelled" ? (
-                  <Pressable style={styles.outlineAction} onPress={() => handleCancelOrder(item)}>
-                    <Ionicons name="close-circle-outline" size={15} color="#dc2626" />
-                    <Text style={[styles.outlineActionText, styles.destructiveText]}>Cancel</Text>
-                  </Pressable>
-                ) : null}
               </View>
             </View>
           );
