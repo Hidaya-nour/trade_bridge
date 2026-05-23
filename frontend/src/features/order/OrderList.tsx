@@ -5,7 +5,6 @@ import {
   StatsCard,
   StatusBadge,
 } from "@/components";
-import OrderTrackingDialog from "@/components/order/OrderTrackingDialog";
 import { PlaceOrderDialog } from "@/components/order/PlaceOrderDialog";
 import { RateReviewDialog } from "@/components/product/RateReviewDialog";
 import {
@@ -56,7 +55,7 @@ import {
 } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import toast from "react-hot-toast";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 interface OrderListProps {
   config: {
@@ -170,7 +169,6 @@ export const OrderList: React.FC<OrderListProps> = ({
   >({});
   const [currentPage, setCurrentPage] = useState(1);
   const [paymentProcessing, setPaymentProcessing] = useState(false);
-  const [trackingOrder, setTrackingOrder] = useState<Order | null>(null);
   const itemsPerPage = 5;
 
   useEffect(() => {
@@ -235,6 +233,7 @@ export const OrderList: React.FC<OrderListProps> = ({
     // If there is a payment record, check if it's pending or failed
     return ["pending", "failed"].includes(order.payment.payment_status);
   };
+  const navigate = useNavigate();
 
   // Handle payment submission
   const handlePaymentSubmit = async (
@@ -872,7 +871,9 @@ export const OrderList: React.FC<OrderListProps> = ({
                           size="sm"
                           variant="outline"
                           className="h-7 text-xs bg-white"
-                          onClick={() => setTrackingOrder(order)}
+                          onClick={() => navigate(
+                      `/${"retailer"}/tracking/${order.id}?from=${encodeURIComponent(location.pathname)}`,
+                    )}
                         >
                           Track Driver
                         </Button>
@@ -1133,21 +1134,7 @@ export const OrderList: React.FC<OrderListProps> = ({
         />
       )}
 
-      {/* Live Tracking Dialog */}
-      {trackingOrder &&
-        trackingOrder.order_status === "shipped" &&
-        trackingOrder.delivery && (
-          <OrderTrackingDialog
-            open={!!trackingOrder}
-            onOpenChange={(open) => {
-              if (!open) {
-                setTrackingOrder(null);
-              }
-            }}
-            orderId={trackingOrder.id}
-            deliveryId={trackingOrder.delivery.id}
-          />
-        )}
+     
     </div>
   );
 };

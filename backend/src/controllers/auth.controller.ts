@@ -326,7 +326,7 @@ export class AuthController {
       }
 
       const { id } = req.params;
-      const user = await this.authService.suspendUser(id);
+      const user = await this.authService.suspendUser(id, adminId);
 
       res.json({
         success: true,
@@ -356,7 +356,7 @@ export class AuthController {
       }
 
       const { id } = req.params;
-      const user = await this.authService.reactivateUser(id);
+      const user = await this.authService.reactivateUser(id, adminId);
 
       res.json({
         success: true,
@@ -564,7 +564,7 @@ export class AuthController {
       }
 
       const { id } = req.params;
-      const user = await this.authService.updateUserByIdAdmin(id, req.body || {});
+      const user = await this.authService.updateUserByIdAdmin(id, req.body || {}, adminId);
 
       res.json({
         success: true,

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { type ReactNode, type FC, useEffect, useState } from "react";
 import DashboardHeader from "./DashboardHeader";
 import DashboardSidebar from "./DashboardSidebar";
 import { cn } from "@/lib/utils";
@@ -8,10 +8,10 @@ import { SupplierPaymentSetupBanner } from "@/components/supplier/SupplierPaymen
 import { RealtimeStatusSync } from "@/components/realtime/RealtimeStatusSync";
 
 interface DashboardLayoutProps {
-  children: React.ReactNode;
+  children: ReactNode;
 }
 
-const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
+const DashboardLayout: FC<DashboardLayoutProps> = ({ children }) => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const { user, fetchUser, accountBlocked } = useAuthStore();

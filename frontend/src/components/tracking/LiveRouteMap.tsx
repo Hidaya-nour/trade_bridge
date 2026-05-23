@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from "react";
+import React, { useEffect, useMemo, useRef } from "react";
 import L from "leaflet";
 import {
   MapContainer,
@@ -56,10 +56,18 @@ const dropoffIcon = createRouteIcon("E", "#dc2626");
 const MapViewportUpdater: React.FC<{
   center: LatLngPoint;
   boundsPoints: LatLngPoint[];
-}> = ({ center, boundsPoints }) => {
+  viewportKey: string;
+}> = ({ center, boundsPoints, viewportKey }) => {
   const map = useMap();
+  const lastViewportKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
+    if (lastViewportKeyRef.current === viewportKey) {
+      return;
+    }
+
+    lastViewportKeyRef.current = viewportKey;
+
     if (boundsPoints.length > 1) {
       map.fitBounds(
         L.latLngBounds(boundsPoints.map((point) => [point.lat, point.lng])),
@@ -69,7 +77,7 @@ const MapViewportUpdater: React.FC<{
     }
 
     map.setView(center, Math.max(map.getZoom(), 14));
-  }, [boundsPoints, center, map]);
+  }, [boundsPoints, center, map, viewportKey]);
 
   return null;
 };
@@ -90,6 +98,13 @@ const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
       ) as LatLngPoint[],
     [currentPoint, dropoffPoint, startPoint],
   );
+  const viewportKey = useMemo(
+    () =>
+      [startPoint, dropoffPoint]
+        .map((point) => (point ? `${point.lat},${point.lng}` : "none"))
+        .join("|"),
+    [dropoffPoint, startPoint],
+  );
 
   return (
     <MapContainer
@@ -102,7 +117,11 @@ const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
-      <MapViewportUpdater center={center} boundsPoints={boundsPoints} />
+      <MapViewportUpdater
+        center={center}
+        boundsPoints={boundsPoints}
+        viewportKey={viewportKey}
+      />
       {traveledRoute.length > 1 && (
         <Polyline
           positions={traveledRoute}

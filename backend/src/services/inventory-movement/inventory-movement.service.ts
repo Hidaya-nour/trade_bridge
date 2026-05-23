@@ -5,6 +5,7 @@ import { IInventoryMovement } from '../../types/inventory-movement.types';
 import { Product } from '../../models/product.model';
 import { User } from '../../models/user.model';
 import logger from '../../utils/logger';
+import { recordAuditLog } from '../../utils/audit';
 
 export class InventoryMovementService {
   private inventoryRepo = new InventoryMovementRepository();
@@ -63,6 +64,13 @@ export class InventoryMovementService {
     }
 
     logger.info(`Inventory movement created: ${data.movement_type} ${data.quantity} for product ${data.product_id}`);
+
+    await recordAuditLog({
+      userId: data.user_id,
+      action: `inventory.${data.movement_type}`,
+      entityType: 'inventory_movement',
+      entityId: movement.id,
+    });
 
     return movement;
   }

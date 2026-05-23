@@ -82,7 +82,7 @@ function DeliveryCard({
 }) {
   const statusColors = getStatusColors(delivery.status);
   const priorityColors = getPriorityColors(delivery.priority);
-  const productCount = delivery.products.reduce(
+  const productCount = (delivery.products ?? []).reduce(
     (total, product) => total + product.quantity,
     0,
   );

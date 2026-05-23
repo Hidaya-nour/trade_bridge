@@ -35,12 +35,24 @@ export default function DriverDeliveryDetailScreen() {
   const loadDelivery = async () => {
     setIsLoading(true);
     setError(null);
+
+    if (!id) {
+      setError('Delivery reference is missing.');
+      setIsLoading(false);
+      return;
+    }
+
     try {
-      const rows = await deliveryService.getMyDeliveries();
-      const found = rows.find((item: any) => item.id === id);
-      setDelivery(found ?? null);
+      const deliveryItem = await deliveryService.getDeliveryById(id);
+      if (!deliveryItem) {
+        setError('Delivery not found');
+        setDelivery(null);
+      } else {
+        setDelivery(deliveryItem);
+      }
     } catch (loadError: any) {
-      setError(loadError?.response?.data?.message || "Failed to load delivery details.");
+      setError(loadError?.response?.data?.message || 'Failed to load delivery details.');
+      setDelivery(null);
     } finally {
       setIsLoading(false);
     }
@@ -168,15 +180,19 @@ export default function DriverDeliveryDetailScreen() {
         {/* Timeline */}
         <View style={styles.sectionCard}>
           <Text style={styles.sectionTitle}>Delivery Timeline</Text>
-          {delivery.timeline.map((item, idx) => (
-            <View key={idx} style={styles.timelineRow}>
-              <View style={[styles.timelineDot, item.complete ? styles.timelineDotDone : styles.timelineDotPending]} />
-              <View style={styles.timelineTextWrap}>
-                <Text style={styles.timelineLabel}>{item.label}</Text>
-                <Text style={styles.timelineTime}>{item.time || "Pending"}</Text>
+          {Array.isArray(delivery.timeline) && delivery.timeline.length ? (
+            delivery.timeline.map((item, idx) => (
+              <View key={idx} style={styles.timelineRow}>
+                <View style={[styles.timelineDot, item.complete ? styles.timelineDotDone : styles.timelineDotPending]} />
+                <View style={styles.timelineTextWrap}>
+                  <Text style={styles.timelineLabel}>{item.label}</Text>
+                  <Text style={styles.timelineTime}>{item.time || 'Pending'}</Text>
+                </View>
               </View>
-            </View>
-          ))}
+            ))
+          ) : (
+            <Text style={styles.emptySubtitle}>No timeline data is available for this delivery.</Text>
+          )}
         </View>
 
         {/* Route Info */}
@@ -195,15 +211,19 @@ export default function DriverDeliveryDetailScreen() {
         {/* Load Details */}
         <View style={styles.sectionCard}>
           <Text style={styles.sectionTitle}>Load Details</Text>
-          {delivery.products.map((product, idx) => (
-            <View key={idx} style={styles.productRow}>
-              <View style={styles.productIcon}><Ionicons name="cube-outline" size={16} color="#1d4ed8" /></View>
-              <View style={styles.productTextWrap}>
-                <Text style={styles.productName}>{product.name}</Text>
-                <Text style={styles.productMeta}>{product.quantity} {product.unit}</Text>
+          {Array.isArray(delivery.products) && delivery.products.length ? (
+            delivery.products.map((product, idx) => (
+              <View key={idx} style={styles.productRow}>
+                <View style={styles.productIcon}><Ionicons name="cube-outline" size={16} color="#1d4ed8" /></View>
+                <View style={styles.productTextWrap}>
+                  <Text style={styles.productName}>{product.name}</Text>
+                  <Text style={styles.productMeta}>{product.quantity} {product.unit}</Text>
+                </View>
               </View>
-            </View>
-          ))}
+            ))
+          ) : (
+            <Text style={styles.emptySubtitle}>No load details are available for this delivery.</Text>
+          )}
         </View>
       </ScrollView>
     </ScreenWrapper>
@@ -243,4 +263,5 @@ const styles = StyleSheet.create({
   missingTitle: { fontSize: 18, fontWeight: "800", color: "#0f172a" },
   backButton: { marginTop: 8, backgroundColor: "#1d4ed8", borderRadius: 10, paddingHorizontal: 16, paddingVertical: 10 },
   backButtonText: { color: "#ffffff", fontWeight: "700" },
+  emptySubtitle: { marginTop: 10, fontSize: 13, color: "#64748b", lineHeight: 18 },
 });

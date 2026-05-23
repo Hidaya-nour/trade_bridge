@@ -289,13 +289,7 @@ const DriverLiveTrackingPage: React.FC = () => {
 
   const traveledRoutePositions = filteredLocations.map((row) => [row.latitude, row.longitude]) as [number, number][];
 
-  const remainingRoutePositions =
-    latestLocation && dropoffCoords
-      ? ([
-          [latestLocation.latitude, latestLocation.longitude],
-          [dropoffCoords.lat, dropoffCoords.lng],
-        ] as [number, number][])
-      : [];
+  
   const resolvedDropoffLabel = hasDropoff
     ? activeDelivery?.dropoff_location
     : addressLabel(activeDelivery?.order?.buyer?.addresses) || "Not provided";
@@ -565,9 +559,9 @@ const DriverLiveTrackingPage: React.FC = () => {
         
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-6 lg:grid-cols-3">
         {/* Left Column - Deliveries List */}
-        <div className="space-y-4">
+  <div className="space-y-4 lg:col-span-1">
           <Card>
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
@@ -651,7 +645,7 @@ const DriverLiveTrackingPage: React.FC = () => {
         </div>
 
         {/* Right Column - Map and Controls */}
-        <div className="space-y-4">
+  <div className="space-y-4 lg:col-span-2">
           {/* Map Card */}
           <Card>
             <CardHeader>
@@ -679,7 +673,6 @@ const DriverLiveTrackingPage: React.FC = () => {
                             ? traveledRoutePositions
                             : []
                         }
-                        remainingRoute={remainingRoutePositions}
                         className="h-[400px] w-full"
                       />
                     ) : (

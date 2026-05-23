@@ -7,6 +7,7 @@ import logger from '../../utils/logger';
 import { IUser, ITokens, UserRole, UserStatus } from '../../types/auth.types';
 import crypto from 'crypto';
 import { isCloudinaryConfigured, uploadBufferToCloudinary } from '../../config/cloudinary';
+import { recordAuditLog } from '../../utils/audit';
 
 export interface RegisterDTO {
   email: string;
@@ -87,6 +88,12 @@ async register(data: RegisterDTO): Promise<{ user: SafeUser }> {
 
   // Log registration
   logger.info(`User registered: ${user.id} (${user.role})`);
+  await recordAuditLog({
+    userId: user.id,
+    action: 'auth.registered',
+    entityType: 'user',
+    entityId: user.id,
+  });
 
   const userResponse = user.toJSON();
   const { password_hash: _, ...safeUser } = userResponse;
@@ -141,6 +148,13 @@ async register(data: RegisterDTO): Promise<{ user: SafeUser }> {
 
     // Log login
     logger.info(`User logged in: ${user.id}`);
+    await recordAuditLog({
+      userId: user.id,
+      action: 'auth.login',
+      entityType: 'user',
+      entityId: user.id,
+      ipAddress: data.ipAddress,
+    });
 
     const userResponse = user.toJSON();
     const { password_hash: _, ...safeUser } = userResponse;
@@ -189,6 +203,12 @@ async register(data: RegisterDTO): Promise<{ user: SafeUser }> {
     if (typeof data.profile_image === 'string') updates.profile_image = data.profile_image.trim();
 
     await this.userRepo.update(userId, updates as any);
+    await recordAuditLog({
+      userId,
+      action: 'user.profile_updated',
+      entityType: 'user',
+      entityId: userId,
+    });
 
     const updated = await this.userRepo.findById(userId);
     if (!updated) {
@@ -229,6 +249,12 @@ async register(data: RegisterDTO): Promise<{ user: SafeUser }> {
 
     await this.tokenService.revokeAllUserTokens(userId);
     logger.info(`Password changed for user: ${userId}`);
+    await recordAuditLog({
+      userId,
+      action: 'auth.password_changed',
+      entityType: 'user',
+      entityId: userId,
+    });
   }
 
   async approveUser(userId: string, approvedBy: string): Promise<SafeUser> {
@@ -238,6 +264,12 @@ async register(data: RegisterDTO): Promise<{ user: SafeUser }> {
     }
 
     await this.userRepo.approveUser(userId, approvedBy);
+    await recordAuditLog({
+      userId: approvedBy,
+      action: 'user.approved',
+      entityType: 'user',
+      entityId: userId,
+    });
     const updated = await this.userRepo.findById(userId);
     if (!updated) {
       throw new AppError('Failed to approve user', 500);
@@ -248,13 +280,19 @@ async register(data: RegisterDTO): Promise<{ user: SafeUser }> {
     return safeUser as SafeUser;
   }
 
-  async suspendUser(userId: string): Promise<SafeUser> {
+  async suspendUser(userId: string, actorId: string = userId): Promise<SafeUser> {
     const user = await this.userRepo.findById(userId);
     if (!user || user.deleted_at) {
       throw new AppError('User not found', 404);
     }
 
     await this.userRepo.suspendUser(userId);
+    await recordAuditLog({
+      userId: actorId,
+      action: 'user.suspended',
+      entityType: 'user',
+      entityId: userId,
+    });
     const updated = await this.userRepo.findById(userId);
     if (!updated) {
       throw new AppError('Failed to suspend user', 500);
@@ -265,13 +303,19 @@ async register(data: RegisterDTO): Promise<{ user: SafeUser }> {
     return safeUser as SafeUser;
   }
 
-  async reactivateUser(userId: string): Promise<SafeUser> {
+  async reactivateUser(userId: string, actorId: string = userId): Promise<SafeUser> {
     const user = await this.userRepo.findById(userId);
     if (!user || user.deleted_at) {
       throw new AppError('User not found', 404);
     }
 
     await this.userRepo.update(userId, { status: 'active' } as any);
+    await recordAuditLog({
+      userId: actorId,
+      action: 'user.reactivated',
+      entityType: 'user',
+      entityId: userId,
+    });
     const updated = await this.userRepo.findById(userId);
     if (!updated) {
       throw new AppError('Failed to reactivate user', 500);
@@ -305,6 +349,12 @@ async register(data: RegisterDTO): Promise<{ user: SafeUser }> {
   async logout(refreshToken: string, userId: string): Promise<void> {
     await this.tokenService.revokeToken(refreshToken);
     logger.info(`User logged out: ${userId}`);
+    await recordAuditLog({
+      userId,
+      action: 'auth.logout',
+      entityType: 'user',
+      entityId: userId,
+    });
   }
 
   /**
@@ -313,6 +363,12 @@ async register(data: RegisterDTO): Promise<{ user: SafeUser }> {
   async logoutAll(userId: string): Promise<void> {
     await this.tokenService.revokeAllUserTokens(userId);
     logger.info(`User logged out from all devices: ${userId}`);
+    await recordAuditLog({
+      userId,
+      action: 'auth.logout_all',
+      entityType: 'user',
+      entityId: userId,
+    });
   }
 
   /**
@@ -453,6 +509,7 @@ async register(data: RegisterDTO): Promise<{ user: SafeUser }> {
       status: UserStatus;
       verified: boolean;
     }>,
+    actorId: string = userId,
   ): Promise<SafeUser> {
     const user = await this.userRepo.findById(userId);
     if (!user || (user as any).deleted_at) {
@@ -469,6 +526,12 @@ async register(data: RegisterDTO): Promise<{ user: SafeUser }> {
     if (patch.verified !== undefined) next.verified = patch.verified === true;
 
     await this.userRepo.update(userId, next as any);
+    await recordAuditLog({
+      userId: actorId,
+      action: 'user.updated',
+      entityType: 'user',
+      entityId: userId,
+    });
     return this.getUserByIdAdmin(userId);
   }
 }

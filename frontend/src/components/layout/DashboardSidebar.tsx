@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { type FC, useEffect, useState } from "react";
 import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -203,7 +203,7 @@ interface DashboardSidebarProps {
   onToggle?: () => void;
 }
 
-const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
+const DashboardSidebar: FC<DashboardSidebarProps> = ({
   collapsed = false,
   onToggle,
 }) => {

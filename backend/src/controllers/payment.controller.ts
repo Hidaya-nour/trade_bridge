@@ -4,6 +4,7 @@ import Payment from '../models/payment.model';
 import Order from '../models/order.model';
 import logger from '../utils/logger';
 import { AppError } from '../utils/errors';
+import { recordAuditLog } from '../utils/audit';
 
 class PaymentController {
   private isAdmin(role?: string) {
@@ -118,6 +119,12 @@ class PaymentController {
       }
       this.ensureBuyerAccess(order, req);
       const result = await paymentService.submitPaymentByOrderId(orderId, req.body);
+      await recordAuditLog({
+        userId: req.user?.id,
+        action: 'payment.submitted',
+        entityType: 'payment',
+        entityId: result.payment.id,
+      });
       return res.json({ success: true, data: result });
     } catch (err) {
       return this.handleError(res, err, 'Submit payment by order error');
@@ -257,6 +264,12 @@ class PaymentController {
       this.ensureSupplierAccess(order, req);
       const payment = await paymentService.updatePaymentStatusById(id, status, amount_paid);
       if (!payment) return res.status(404).json({ success: false, message: 'Payment not found' });
+      await recordAuditLog({
+        userId: req.user?.id,
+        action: `payment.status.${status}`,
+        entityType: 'payment',
+        entityId: payment.id,
+      });
       return res.json({ success: true, data: { payment } });
     } catch (err) {
       return this.handleError(res, err, 'Update payment status error');

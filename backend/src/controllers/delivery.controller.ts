@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import deliveryService from '../services/delivery/delivery.service';
 import logger from '../utils/logger';
 import { AppError } from '../utils/errors';
+import { recordAuditLog } from '../utils/audit';
 
 class DeliveryController {
   async getAvailableDriversForBuyer(req: Request, res: Response): Promise<any> {
@@ -125,6 +126,12 @@ class DeliveryController {
         userRole,
       );
       if (!delivery) return res.status(404).json({ success: false, message: 'Delivery not found' });
+      await recordAuditLog({
+        userId,
+        action: `delivery.status.${status}`,
+        entityType: 'delivery',
+        entityId: delivery.id,
+      });
       return res.json({ success: true, data: { delivery } });
     } catch (err) {
       if (err instanceof AppError) {
@@ -145,6 +152,12 @@ class DeliveryController {
       const { driver_id } = req.body;
       const supplierId = (req as any).user.id as string;
       const delivery = await deliveryService.assignDriver(id, supplierId, driver_id);
+      await recordAuditLog({
+        userId: supplierId,
+        action: 'delivery.driver_assigned',
+        entityType: 'delivery',
+        entityId: delivery.id,
+      });
       return res.json({ success: true, data: { delivery } });
     } catch (err) {
       if (err instanceof AppError) {
@@ -177,6 +190,13 @@ class DeliveryController {
         buyerId,
         driverRecordId: String(driver_id || ''),
         dropoff_location,
+      });
+
+      await recordAuditLog({
+        userId: buyerId,
+        action: 'delivery.driver_requested',
+        entityType: 'delivery',
+        entityId: delivery.id,
       });
 
       return res.json({ success: true, data: { delivery } });
