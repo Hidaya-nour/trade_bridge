@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { type FC, type FormEvent, useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   Bell,
@@ -89,7 +89,7 @@ interface DashboardHeaderProps {
   onMenuClick?: () => void;
 }
 
-const DashboardHeader: React.FC<DashboardHeaderProps> = ({ onMenuClick }) => {
+const DashboardHeader: FC<DashboardHeaderProps> = ({ onMenuClick }) => {
   const { user, logout } = useAuthStore();
   const location = useLocation();
   const navigate = useNavigate();
@@ -97,7 +97,6 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ onMenuClick }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [showNotificationSheet, setShowNotificationSheet] = useState(false);
-  useState<Notification | null>(null);
 
   // Get notifications from store
   const {
@@ -227,7 +226,7 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ onMenuClick }) => {
     return `${years} year${years > 1 ? "s" : ""} ago`;
   };
 
-  const handleSearch = (e: React.FormEvent) => {
+  const handleSearch = (e: FormEvent) => {
     e.preventDefault();
     console.log("Searching:", searchQuery);
     // Implement search
