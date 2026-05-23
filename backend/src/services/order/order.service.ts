@@ -20,6 +20,7 @@ import {
 } from '../../types/order.types';
 import { AppError } from '../../utils/errors';
 import logger from '../../utils/logger';
+import { recordAuditLog } from '../../utils/audit';
 import { SupplierPaymentMethodService } from '../supplier-payment-method/supplier-payment-method.service';
 
 const DEFAULT_VAT_RATE = 0.15;
@@ -285,6 +286,27 @@ export class OrderService {
       throw err;
     }
 
+    for (const item of orderItems) {
+      try {
+        await this.inventoryMovementRepo.createMovement({
+          product_id: item.product_id,
+          movement_type: 'out',
+          quantity: item.quantity,
+          reason: `order_created:${order.id}`,
+          user_id: supplier_id,
+        });
+      } catch (err) {
+        logger.error('Failed to record inventory movement for ordered item', err);
+      }
+    }
+
+    await recordAuditLog({
+      userId: buyerId,
+      action: 'order.created',
+      entityType: 'order',
+      entityId: order.id,
+    });
+
     // Create payment record only when method is explicitly provided
     if (typeof payment_method === 'string' && payment_method.trim().length > 0) {
       try {
@@ -390,6 +412,13 @@ export class OrderService {
 
     logger.info(`Order ${orderId} approved by supplier ${supplierId} with delivery fee ${fee}`);
 
+    await recordAuditLog({
+      userId: supplierId,
+      action: 'order.approved',
+      entityType: 'order',
+      entityId: orderId,
+    });
+
     try {
       await notificationService.createNotification({
         user_id: order.buyer_id,
@@ -447,6 +476,13 @@ export class OrderService {
 
     logger.info(`Order ${orderId} status updated to ${statusData.status} by user ${userId}`);
 
+    await recordAuditLog({
+      userId,
+      action: `order.status.${statusData.status}`,
+      entityType: 'order',
+      entityId: orderId,
+    });
+
     // Notify parties about status change
     try {
       await notificationService.createNotification({
@@ -470,6 +506,12 @@ export class OrderService {
       const payment = await Payment.findOne({ where: { order_id: orderId } });
       if (payment?.payment_status === 'completed') {
         await this.orderRepo.updateOrderStatus(orderId, 'closed');
+        await recordAuditLog({
+          userId,
+          action: 'order.closed',
+          entityType: 'order',
+          entityId: orderId,
+        });
         try {
           await notificationService.createNotification({
             user_id: order.buyer_id,
@@ -565,6 +607,13 @@ export class OrderService {
     }
 
     logger.info(`Order ${orderId} cancelled by user ${userId}. Reason: ${reason || 'Not provided'}`);
+
+    await recordAuditLog({
+      userId,
+      action: 'order.cancelled',
+      entityType: 'order',
+      entityId: orderId,
+    });
 
     try {
       await notificationService.createNotification({ user_id: order.buyer_id, type: 'order', title: 'Order Cancelled', message: `Order ${orderId} has been cancelled.`, } as any);

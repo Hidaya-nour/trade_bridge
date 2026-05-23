@@ -7,6 +7,7 @@ import logger from '../../utils/logger';
 import { InventoryMovementRepository } from '../../repositories/inventory-movement.repository';
 import { isCloudinaryConfigured, uploadBufferToCloudinary } from '../../config/cloudinary';
 import Address from '../../models/address.model';
+import { recordAuditLog } from '../../utils/audit';
 
 export class ProductService {
   private productRepo = new ProductRepository();
@@ -185,6 +186,24 @@ export class ProductService {
           : freeDeliveryMaxDistanceKm,
     });
 
+    const initialStock = Number(product.stock_quantity || 0);
+    if (initialStock > 0) {
+      await this.inventoryMovementRepo.createMovement({
+        product_id: product.id,
+        movement_type: 'in',
+        quantity: initialStock,
+        reason: 'initial_stock',
+        user_id: userId,
+      });
+    }
+
+    await recordAuditLog({
+      userId,
+      action: 'product.created',
+      entityType: 'product',
+      entityId: product.id,
+    });
+
     logger.info(`Product created: ${product.id} by user: ${userId}`);
     return product;
   }
@@ -263,8 +282,39 @@ export class ProductService {
     updateData.pickup_location = nextPickup || (await this.resolveSupplierDefaultPickupLocation(product.supplier_id));
   }
 
+  const previousStock = Number(product.stock_quantity || 0);
+  const hasStockQuantityUpdate = updateData.stock_quantity !== undefined;
+  if (hasStockQuantityUpdate) {
+    const parsedStock = Number(updateData.stock_quantity);
+    if (!Number.isFinite(parsedStock) || parsedStock < 0) {
+      throw new AppError('Stock quantity cannot be negative', 400);
+    }
+    updateData.stock_quantity = parsedStock;
+  }
+
   const updated = await this.productRepo.updateProduct(productId, updateData);
   if (!updated) throw new AppError('Failed to update product', 500);
+
+  if (hasStockQuantityUpdate) {
+    const nextStock = Number(updateData.stock_quantity);
+    const delta = nextStock - previousStock;
+    if (delta !== 0) {
+      await this.inventoryMovementRepo.createMovement({
+        product_id: productId,
+        movement_type: delta > 0 ? 'in' : 'out',
+        quantity: Math.abs(delta),
+        reason: 'product_stock_field_update',
+        user_id: userId,
+      });
+    }
+  }
+
+  await recordAuditLog({
+    userId,
+    action: hasStockQuantityUpdate ? 'product.stock_updated' : 'product.updated',
+    entityType: 'product',
+    entityId: productId,
+  });
 
   // ✅ Fetch updated product explicitly
   const updatedProduct = await this.productRepo.findById(productId);
@@ -294,6 +344,13 @@ export class ProductService {
       await this.productRepo.softDelete(productId);
       logger.info(`Product soft deleted: ${productId} by user: ${userId}`);
     }
+
+    await recordAuditLog({
+      userId,
+      action: permanent ? 'product.deleted_permanently' : 'product.deleted',
+      entityType: 'product',
+      entityId: productId,
+    });
   }
 
   async getCategories() {
@@ -333,6 +390,13 @@ export class ProductService {
         user_id: userId,
       });
     }
+
+    await recordAuditLog({
+      userId,
+      action: 'product.stock_updated',
+      entityType: 'product',
+      entityId: productId,
+    });
 
     logger.info(`Stock updated for product: ${productId} to ${quantity}`);
     return { productId, stock_quantity: quantity };
@@ -430,6 +494,12 @@ export class ProductService {
     }
 
     const newStatus = product.is_available === true ? 'unavailable' : 'available';
+    await recordAuditLog({
+      userId,
+      action: product.is_available === true ? 'product.deactivated' : 'product.activated',
+      entityType: 'product',
+      entityId: productId,
+    });
     logger.info(`Product ${productId} is now ${newStatus}`);
     return { productId, is_available: product.is_available === true ? false : true };
   }
