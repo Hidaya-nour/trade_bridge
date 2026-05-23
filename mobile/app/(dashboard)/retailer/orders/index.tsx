@@ -14,9 +14,11 @@ import * as ExpoLinking from "expo-linking";
 import { useRouter } from "expo-router";
 
 import ScreenWrapper from "@/components/layout/ScreenWrapper";
+import OrderDialog from "@/components/retailer/OrderDialog";
 import BottomSheetModal from "@/components/retailer/BottomSheetModal";
 import PaymentSheet, { type PaymentSheetSubmitPayload } from "@/components/retailer/PaymentSheet";
 import SearchBar from "@/components/shared/SearchBar";
+import addressService, { type RetailerAddress } from "../../../../src/features/address/address.service";
 import { useOrderStore } from "@/features/orders/order.store";
 import { type Order, type OrderStatus } from "@/features/orders/order.types";
 import paymentService from "@/features/payments/payment.service";
@@ -69,6 +71,15 @@ export default function RetailerOrdersScreen() {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [paymentProcessing, setPaymentProcessing] = useState(false);
+  const [reorderOpen, setReorderOpen] = useState(false);
+  const [reorderOrder, setReorderOrder] = useState<Order | null>(null);
+  const [deliveryAddress, setDeliveryAddress] = useState("");
+  const [reorderNotes, setReorderNotes] = useState("");
+  const [requestCredit, setRequestCredit] = useState(false);
+  const [savedAddresses, setSavedAddresses] = useState<RetailerAddress[]>([]);
+  const [selectedAddressId, setSelectedAddressId] = useState("");
+  const [addressesLoading, setAddressesLoading] = useState(false);
+  const [addressesError, setAddressesError] = useState<string | null>(null);
   const { onScroll } = useScrollDirection({
     onDirectionChange: (direction) => setTabBarVisible(direction === "up"),
   });
@@ -89,6 +100,54 @@ export default function RetailerOrdersScreen() {
       limit: 50,
     });
   }, [fetchOrdersAsBuyer]);
+
+  useEffect(() => {
+    if (!reorderOpen || savedAddresses.length > 0) return;
+    let cancelled = false;
+
+    const loadAddresses = async () => {
+      setAddressesLoading(true);
+      setAddressesError(null);
+      try {
+        const response = await addressService.getAll();
+        const data = response?.data;
+        const next = Array.isArray(data) ? data : [];
+        if (!cancelled) setSavedAddresses(next);
+      } catch (error: any) {
+        if (!cancelled) {
+          setAddressesError(
+            error?.response?.data?.message || error?.message || "Failed to load saved locations",
+          );
+        }
+      } finally {
+        if (!cancelled) setAddressesLoading(false);
+      }
+    };
+
+    void loadAddresses();
+    return () => {
+      cancelled = true;
+    };
+  }, [reorderOpen, savedAddresses.length]);
+
+  useEffect(() => {
+    if (!selectedAddressId) return;
+    const selected = savedAddresses.find((address) => address.id === selectedAddressId);
+    if (!selected) return;
+    const formatted = [
+      selected.common_name,
+      selected.subcity,
+      selected.city,
+      selected.region,
+    ]
+      .map((value) => String(value || "").trim())
+      .filter(Boolean)
+      .join(", ");
+
+    if (formatted) {
+      setDeliveryAddress(formatted);
+    }
+  }, [selectedAddressId, savedAddresses]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -155,82 +214,152 @@ export default function RetailerOrdersScreen() {
 
   const handleReorder = useCallback(
     (order: Order) => {
-      Alert.alert(
-        "Reorder items",
-        "Create a fresh order with the same items from this supplier?",
-        [
-          { text: "Not now", style: "cancel" },
-          {
-            text: "Reorder",
-            onPress: async () => {
-              const items =
-                order.items?.map((item) => ({
-                  product_id: item.product_id,
-                  quantity: item.quantity,
-                })) || [];
+      setReorderOrder(order);
+      setDeliveryAddress(order.delivery?.dropoff_location || "");
+      setReorderNotes("");
+      setRequestCredit(false);
+      setSelectedAddressId("");
+      setSavedAddresses([]);
+      setReorderOpen(true);
+    },
+    [],
+  );
 
-              const created = await createOrder({
-                supplier_id: order.supplier_id,
-                items,
-              });
+  const confirmReorder = useCallback(async () => {
+    if (!reorderOrder) return;
 
-              if (created) {
-                Alert.alert("Reorder placed", "Your reorder was created successfully.", [
-                  { text: "Done", onPress: () => void onRefresh() },
-                  {
-                    text: "Pay Now",
-                    onPress: () => {
-                      setSelectedOrder(created);
-                      setPaymentOpen(true);
-                    },
-                  },
-                ]);
-              }
-            },
-          },
-        ],
+    const items =
+      reorderOrder.items?.map((item) => ({
+        product_id: item.product_id,
+        quantity: item.quantity,
+      })) || [];
+
+    const payload: any = {
+      supplier_id: reorderOrder.supplier_id,
+      items,
+      delivery_address: deliveryAddress || undefined,
+      notes: reorderNotes || undefined,
+    };
+    if (requestCredit) payload.payment_method = "credit";
+
+    const created = await createOrder(payload);
+    setReorderOpen(false);
+
+    if (created) {
+      Alert.alert("Reorder placed", "Your reorder was created successfully.", [
+        {
+          text: "Done",
+          onPress: () => void onRefresh(),
+        },
+      ]);
+    } else {
+      Alert.alert("Reorder failed", "Unable to create reorder. Please try again.");
+    }
+  }, [createOrder, deliveryAddress, onRefresh, reorderNotes, reorderOrder, requestCredit]);
+const normalizeProofFile = (file: any) => {
+  const uri = file.uri;
+
+  const name =
+    file.name ||
+    uri.split("/").pop() ||
+    `payment-proof-${Date.now()}.jpg`;
+
+  let type = file.mimeType;
+
+  if (!type) {
+    if (name.endsWith(".pdf")) type = "application/pdf";
+    else if (name.endsWith(".png")) type = "image/png";
+    else type = "image/jpeg";
+  }
+
+  // IMPORTANT FIX
+  if (type === "image/jpg") {
+    type = "image/jpeg";
+  }
+
+  return { uri, name, type };
+};
+const handlePaymentSubmit = useCallback(
+  async ({ method, notes, payment_details, proofFile }: PaymentSheetSubmitPayload) => {
+    if (!selectedOrder) return;
+
+    setPaymentProcessing(true);
+
+    try {
+      let proofDocumentId: string | undefined;
+
+      // =========================
+      // Upload payment proof
+    if (proofFile?.uri) {
+  const normalized = normalizeProofFile(proofFile);
+
+  const formData = new FormData();
+
+  formData.append("document_type", "payment_proof"); // MUST MATCH WEB
+
+  formData.append("file", {
+    uri: normalized.uri,
+    name: normalized.name,
+    type: normalized.type,
+  } as any);
+
+  const uploadResponse = await paymentService.uploadProofDocument(formData);
+
+  proofDocumentId =
+    uploadResponse?.data?.data?.id ||
+    uploadResponse?.data?.id;
+}
+
+      // =========================
+      // Submit payment
+      // =========================
+      const amount = Number(
+        selectedOrder.payment?.total_amount ||
+          selectedOrder.total_price ||
+          0,
       );
-    },
-    [createOrder, onRefresh],
-  );
 
-  const handlePaymentSubmit = useCallback(
-    async ({ method, notes, payment_details }: PaymentSheetSubmitPayload) => {
-      if (!selectedOrder) return;
+      const result = await paymentService.submitByOrder(selectedOrder.id, {
+        payment_method: method,
+        amount_paid: method === "app_payment" ? undefined : amount,
+        notes,
+        payment_details,
+        proof_document_id: proofDocumentId,
+      });
 
-      setPaymentProcessing(true);
-      try {
-        const amount = Number(selectedOrder.payment?.total_amount || selectedOrder.total_price || 0);
-        const result = await paymentService.submitByOrder(selectedOrder.id, {
-          payment_method: method,
-          amount_paid: method === "app_payment" ? undefined : amount,
-          notes,
-          payment_details,
-        });
+      // =========================
+      // Chapa payment
+      // =========================
+      if (method === "app_payment") {
+        const checkoutUrl =
+          result?.data?.chapa?.checkout_url ||
+          result?.data?.payment?.chapa_payment_url;
 
-        if (method === "app_payment") {
-          const checkoutUrl =
-            result?.data?.chapa?.checkout_url || result?.data?.payment?.chapa_payment_url;
-
-          if (checkoutUrl) {
-            await ExpoLinking.openURL(checkoutUrl);
-          }
+        if (checkoutUrl) {
+          await ExpoLinking.openURL(checkoutUrl);
         }
-
-        setPaymentOpen(false);
-        await onRefresh();
-      } catch (paymentError: any) {
-        Alert.alert(
-          "Payment failed",
-          paymentError?.response?.data?.message || paymentError?.message || "Please try again.",
-        );
-      } finally {
-        setPaymentProcessing(false);
       }
-    },
-    [onRefresh, selectedOrder],
-  );
 
+      setPaymentOpen(false);
+
+      await onRefresh();
+
+      Alert.alert("Success", "Payment submitted successfully.");
+    } catch (paymentError: any) {
+      console.error("Payment failed:", paymentError);
+
+      Alert.alert(
+        "Payment failed",
+        paymentError?.response?.data?.message ||
+          paymentError?.message ||
+          "Please try again.",
+      );
+    } finally {
+      setPaymentProcessing(false);
+    }
+  },
+  [onRefresh, selectedOrder],
+);
   const statusMeta = (status: OrderStatus) => {
     switch (status) {
       case "approved":
@@ -479,6 +608,30 @@ export default function RetailerOrdersScreen() {
           </Pressable>
         </View>
       </BottomSheetModal>
+
+      <OrderDialog
+        visible={reorderOpen}
+        title="Reorder"
+        subtitle="Use saved addresses, add notes, or request credit."
+        itemCount={reorderOrder?.items?.length}
+        totalAmount={Number(reorderOrder?.total_price || 0)}
+        deliveryAddress={deliveryAddress}
+        onDeliveryAddressChange={(value) => {
+          setSelectedAddressId("");
+          setDeliveryAddress(value);
+        }}
+        notes={reorderNotes}
+        onNotesChange={setReorderNotes}
+        requestCredit={requestCredit}
+        onRequestCreditChange={setRequestCredit}
+        savedAddresses={savedAddresses}
+        selectedAddressId={selectedAddressId}
+        onSelectAddress={setSelectedAddressId}
+        confirmLabel="Place Reorder"
+        onClose={() => setReorderOpen(false)}
+        onConfirm={() => void confirmReorder()}
+        isSubmitting={false}
+      />
 
       <PaymentSheet
         visible={paymentOpen}

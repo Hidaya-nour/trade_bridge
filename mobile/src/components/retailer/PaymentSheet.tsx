@@ -3,8 +3,9 @@ import { Pressable, StyleSheet, Text, TextInput, View, ScrollView } from "react-
 import { Ionicons } from "@expo/vector-icons";
 import BottomSheetModal from "@/components/retailer/BottomSheetModal";
 import { SupplierPaymentMethodConfig } from "../../features/orders/order.types";
+import * as DocumentPicker from "expo-document-picker";
 
-export type PaymentMethod = "app_payment" | "mobile_banking" | "credit";
+export type PaymentMethod = "app_payment" | "mobile_banking" | "credit" | "cod";
 
 export interface PaymentSheetSubmitPayload {
   method: PaymentMethod;
@@ -28,6 +29,7 @@ interface PaymentSheetProps {
 
 const isSupplierMobileMethodType = (type: string) => type === "mobile_money" || type === "mobile_banking";
 const isSupplierAppMethodType = (type: string) => type === "credit_card" || type === "chapa";
+const isSupplierCodType = (type: string) => type === "cod" || type === "cash_on_delivery";
 
 export default function PaymentSheet({
   visible,
@@ -62,33 +64,40 @@ const hasMobileConfiguration = useMemo(() => {
 const hasCreditConfiguration = useMemo(() => {
   return safeMethods.some((m) => m && m.method_type === "credit");
 }, [safeMethods]);
-  const hasAnyPaymentMethod = hasAppConfiguration || hasMobileConfiguration || hasCreditConfiguration;
-  // 2. Automatically select the first available payment method tab when the sheet opens
-  useEffect(() => {
-    if (visible) {
-      if (hasAppConfiguration) {
-        setSelectedMethod("app_payment");
-      } else if (hasMobileConfiguration) {
-        setSelectedMethod("mobile_banking");
-      } else if (hasCreditConfiguration) {
-        setSelectedMethod("credit");
-      }
+const hasCodConfiguration = useMemo(() => {
+  return safeMethods.some((m) => m && isSupplierCodType(m.method_type));
+}, [safeMethods]);
+const hasAnyPaymentMethod = hasAppConfiguration || hasMobileConfiguration || hasCreditConfiguration || hasCodConfiguration;
+
+const currentSupplierDetails = useMemo(() => {
+  if (!supplierPaymentMethods.length) return [];
+  return supplierPaymentMethods.filter((item) =>
+    selectedMethod === "app_payment"
+      ? isSupplierAppMethodType(item.method_type)
+      : selectedMethod === "credit"
+      ? item.method_type === "credit"
+      : selectedMethod === "cod"
+      ? isSupplierCodType(item.method_type)
+      : isSupplierMobileMethodType(item.method_type)
+  );
+}, [supplierPaymentMethods, selectedMethod]);
+
+// 2. Automatically select the first available payment method tab when the sheet opens
+useEffect(() => {
+  if (visible) {
+    if (hasAppConfiguration) {
+      setSelectedMethod("app_payment");
+    } else if (hasMobileConfiguration) {
+      setSelectedMethod("mobile_banking");
+    } else if (hasCreditConfiguration) {
+      setSelectedMethod("credit");
+    } else if (hasCodConfiguration) {
+      setSelectedMethod("cod");
     }
-  }, [visible, hasAppConfiguration, hasMobileConfiguration, hasCreditConfiguration]);
+  }
+}, [visible, hasAppConfiguration, hasMobileConfiguration, hasCreditConfiguration, hasCodConfiguration]);
 
-  // 3. Filter backend accounts based on what tab is currently active
-  const currentSupplierDetails = useMemo(() => {
-    if (!supplierPaymentMethods.length) return [];
-    return supplierPaymentMethods.filter((item) =>
-      selectedMethod === "app_payment"
-        ? isSupplierAppMethodType(item.method_type)
-        : selectedMethod === "credit"
-        ? item.method_type === "credit"
-        : isSupplierMobileMethodType(item.method_type)
-    );
-  }, [supplierPaymentMethods, selectedMethod]);
-
-  // 4. Collect unique list of provider options for the dynamic selector chips
+// 4. Collect unique list of provider options for the dynamic selector chips
   const providerOptions = useMemo(() => {
     if (selectedMethod !== "mobile_banking" || !hasMobileConfiguration) return [];
     
@@ -117,11 +126,26 @@ const hasCreditConfiguration = useMemo(() => {
     }
   }, [visible]);
 
-  // Dummy mock document handler - hook up DocumentPicker here
-  const handlePickDocument = () => {
-    setSelectedFile({ name: "payment_receipt.png", uri: "file://path/to/file" });
-  };
+  const handlePickDocument = async () => {
+  try {
+    const result = await DocumentPicker.getDocumentAsync({
+      type: "*/*", // allow all files
+      copyToCacheDirectory: true,
+      multiple: false,
+    });
 
+    if (result.canceled) return;
+
+    const file = result.assets[0];
+
+    setSelectedFile({
+      name: file.name,
+      uri: file.uri,
+    });
+  } catch (error) {
+    console.log("Document picker error:", error);
+  }
+};
   const handleFormSubmit = () => {
     if (!hasAnyPaymentMethod) return;
     onSubmit({
@@ -185,6 +209,15 @@ const hasCreditConfiguration = useMemo(() => {
               <Text style={[styles.tabLabel, selectedMethod === "credit" && styles.tabLabelActive]}>Credit</Text>
             </Pressable>
           )}
+          {hasCodConfiguration && (
+            <Pressable 
+              style={[styles.tabButton, selectedMethod === "cod" && styles.tabButtonActive]}
+              onPress={() => setSelectedMethod("cod")}
+            >
+              <Ionicons name="cash-outline" size={20} color={selectedMethod === "cod" ? "#1d4ed8" : "#64748b"} />
+              <Text style={[styles.tabLabel, selectedMethod === "cod" && styles.tabLabelActive]}>Cash on delivery</Text>
+            </Pressable>
+          )}
         </View>
         )}
 
@@ -215,6 +248,13 @@ const hasCreditConfiguration = useMemo(() => {
           <View style={styles.infoBox}>
             <Ionicons name="information-circle-outline" size={18} color="#1e40af" />
             <Text style={styles.infoText}>You will continue to the secure integrated checkout portal page.</Text>
+          </View>
+        )}
+
+        {selectedMethod === "cod" && (
+          <View style={styles.infoBox}>
+            <Ionicons name="checkmark-done-outline" size={18} color="#166534" />
+            <Text style={styles.infoText}>Cash on delivery selected. The supplier will collect payment when the order is delivered.</Text>
           </View>
         )}
 

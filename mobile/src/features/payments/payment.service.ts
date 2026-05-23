@@ -1,7 +1,7 @@
 import api from "@/lib/api";
 
 export interface SubmitOrderPaymentData {
-  payment_method: "app_payment" | "mobile_banking" | "credit";
+  payment_method: "app_payment" | "mobile_banking" | "credit" | "cod";
   amount_paid?: number;
   notes?: string;
   proof_document_id?: string;
@@ -13,16 +13,19 @@ export interface SubmitOrderPaymentData {
   };
 }
 
-const paymentService = {
-  async getByOrderId(orderId: string) {
-    const response = await api.get(`/payments/order/${orderId}`);
-    return response.data;
-  },
-
-  async submitByOrder(orderId: string, data: SubmitOrderPaymentData) {
-    const response = await api.post(`/payments/order/${orderId}/submit`, data);
-    return response.data;
-  },
+const submitByOrder = async (orderId: string, payload: any) => {
+  return api.post(`/payments/order/${orderId}`, payload);
 };
 
-export default paymentService;
+const uploadProofDocument = async (formData: FormData) => {
+  return api.post("/documents", formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
+};
+
+export default {
+  submitByOrder,
+  uploadProofDocument,
+};

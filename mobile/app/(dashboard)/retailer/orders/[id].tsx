@@ -11,10 +11,11 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import * as ExpoLinking from "expo-linking";
 import { useLocalSearchParams, useRouter } from "expo-router";
-
 import ScreenWrapper from "@/components/layout/ScreenWrapper";
 import PaymentSheet, { type PaymentSheetSubmitPayload } from "@/components/retailer/PaymentSheet";
 import ReviewSheet from "@/components/retailer/ReviewSheet";
+import OrderDialog from "@/components/retailer/OrderDialog";
+import addressService, { type RetailerAddress } from "../../../../src/features/address/address.service";
 import { useOrderStore } from "@/features/orders/order.store";
 import { type Order, type OrderStatus } from "@/features/orders/order.types";
 import paymentService from "@/features/payments/payment.service";
@@ -51,6 +52,16 @@ export default function RetailerOrderDetailScreen() {
   const [reviewingProduct, setReviewingProduct] = useState<{ id: string; name: string } | null>(null);
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
 
+  // Reorder dialog state
+  const [checkoutOpen, setCheckoutOpen] = useState(false);
+  const [deliveryAddress, setDeliveryAddress] = useState("");
+  const [checkoutNotes, setCheckoutNotes] = useState("");
+  const [requestCredit, setRequestCredit] = useState(false);
+  const [savedAddresses, setSavedAddresses] = useState<RetailerAddress[]>([]);
+  const [selectedAddressId, setSelectedAddressId] = useState("");
+  const [addressesLoading, setAddressesLoading] = useState(false);
+  const [addressesError, setAddressesError] = useState<string | null>(null);
+
   const { currentOrder, isLoading, error, fetchOrderById, createOrder, cancelOrder } = useOrderStore();
 
   useEffect(() => {
@@ -58,6 +69,54 @@ export default function RetailerOrderDetailScreen() {
       void fetchOrderById(id);
     }
   }, [fetchOrderById, id]);
+
+  useEffect(() => {
+    if (!checkoutOpen || savedAddresses.length > 0) return;
+    let cancelled = false;
+
+    const loadAddresses = async () => {
+      setAddressesLoading(true);
+      setAddressesError(null);
+      try {
+        const response = await addressService.getAll();
+        const data = response?.data;
+        const next = Array.isArray(data) ? data : [];
+        if (!cancelled) setSavedAddresses(next);
+      } catch (error: any) {
+        if (!cancelled) {
+          setAddressesError(
+            error?.response?.data?.message || error?.message || "Failed to load saved locations",
+          );
+        }
+      } finally {
+        if (!cancelled) setAddressesLoading(false);
+      }
+    };
+
+    void loadAddresses();
+    return () => {
+      cancelled = true;
+    };
+  }, [checkoutOpen, savedAddresses.length]);
+
+  useEffect(() => {
+    if (!selectedAddressId) return;
+    const selected = savedAddresses.find((address) => address.id === selectedAddressId);
+    if (!selected) return;
+    const formatted = [
+      selected.common_name,
+      selected.subcity,
+      selected.city,
+      selected.region,
+    ]
+      .map((value) => String(value || "").trim())
+      .filter(Boolean)
+      .join(", ");
+
+    if (formatted) {
+      setDeliveryAddress(formatted);
+    }
+  }, [selectedAddressId, savedAddresses]);
 
   const order = currentOrder;
 
@@ -93,17 +152,32 @@ export default function RetailerOrderDetailScreen() {
   const canRate = order?.order_status === "delivered" || order?.order_status === "closed";
 
   const handlePaymentSubmit = useCallback(
-    async ({ method, notes, payment_details }: PaymentSheetSubmitPayload) => {
+    async ({ method, notes, payment_details, proofFile }: PaymentSheetSubmitPayload) => {
       if (!order) return;
 
       setPaymentProcessing(true);
       try {
+        let proofDocumentId: string | undefined;
+        
+        // Upload proof file if provided
+        if (proofFile?.uri) {
+          try {
+            proofDocumentId = await paymentService.uploadProofFile(proofFile.uri);
+          } catch (uploadError: any) {
+            console.error('Failed to upload proof file:', uploadError);
+            Alert.alert('Upload Failed', 'Could not upload payment proof. Please try again.');
+            setPaymentProcessing(false);
+            return;
+          }
+        }
+
         const amount = Number(order.payment?.total_amount || order.total_price || 0);
         const result = await paymentService.submitByOrder(order.id, {
           payment_method: method,
           amount_paid: method === "app_payment" ? undefined : amount,
           notes,
           payment_details,
+          proof_document_id: proofDocumentId,
         });
 
         if (method === "app_payment") {
@@ -131,18 +205,49 @@ export default function RetailerOrderDetailScreen() {
 
   const handleReorder = useCallback(async () => {
     if (!order) return;
+    setDeliveryAddress(order.delivery?.dropoff_location || "");
+    setCheckoutNotes("");
+    setRequestCredit(false);
+    setSelectedAddressId("");
+    setSavedAddresses([]);
+    setCheckoutOpen(true);
+  }, [order]);
 
+  const confirmReorder = useCallback(async () => {
+    if (!order) return;
     const items =
       order.items?.map((item) => ({
         product_id: item.product_id,
         quantity: item.quantity,
+        unit_price: item.unit_price,
       })) || [];
 
-    const created = await createOrder({
+    const payload: any = {
       supplier_id: order.supplier_id,
       items,
-    });
-  }, [createOrder, order]);
+      delivery_address: deliveryAddress || undefined,
+      notes: checkoutNotes || undefined,
+    };
+    if (requestCredit) payload.payment_method = "credit";
+
+    const created = await createOrder(payload);
+    setCheckoutOpen(false);
+
+    if (created) {
+      Alert.alert(
+        "Reorder placed",
+        "Your reorder was created successfully.",
+        [
+          {
+            text: "OK",
+            onPress: () => router.push("/retailer/orders"),
+          },
+        ],
+      );
+    } else {
+      Alert.alert("Reorder failed", "Unable to create reorder. Please try again.");
+    }
+  }, [createOrder, deliveryAddress, checkoutNotes, order, requestCredit, router]);
 
   const handleReviewSubmit = useCallback(
     async ({ rating, review }: { rating: number; review: string }) => {
@@ -331,6 +436,30 @@ export default function RetailerOrderDetailScreen() {
           </Text>
         </View>
       </ScrollView>
+
+      <OrderDialog
+        visible={checkoutOpen}
+        title="Reorder"
+        subtitle="Provide delivery details, saved location and credit request"
+        itemCount={order.items?.length}
+        totalAmount={summary?.total}
+        deliveryAddress={deliveryAddress}
+        onDeliveryAddressChange={(value) => {
+          setSelectedAddressId("");
+          setDeliveryAddress(value);
+        }}
+        notes={checkoutNotes}
+        onNotesChange={setCheckoutNotes}
+        requestCredit={requestCredit}
+        onRequestCreditChange={setRequestCredit}
+        savedAddresses={savedAddresses}
+        selectedAddressId={selectedAddressId}
+        onSelectAddress={setSelectedAddressId}
+        confirmLabel="Place Reorder"
+        onClose={() => setCheckoutOpen(false)}
+        onConfirm={() => void confirmReorder()}
+        isSubmitting={false}
+      />
 
       <PaymentSheet
         visible={paymentOpen}

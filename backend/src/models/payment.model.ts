@@ -11,7 +11,7 @@ interface PaymentCreationAttributes extends Optional<IPayment, 'id' | 'created_a
 export class Payment extends Model<IPayment, PaymentCreationAttributes> implements IPayment {
   public id!: string;
   public order_id!: string;
-  public payment_method!: 'mobile_banking' | 'chapa' | 'credit';
+  public payment_method!: 'mobile_banking' | 'chapa' | 'credit' | 'cod';
   public total_amount!: number;
   public amount_paid!: number;
   public payment_status!: PaymentStatus; 
@@ -46,7 +46,7 @@ Payment.init(
       },
     },
     payment_method: {
-      type: DataTypes.ENUM( 'mobile_banking', 'chapa', 'credit'),
+      type: DataTypes.ENUM('mobile_banking', 'chapa', 'credit', 'cod'),
       allowNull: false,
     },
     total_amount: {

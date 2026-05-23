@@ -19,6 +19,7 @@ const paymentMethodValues = [
   'app_payment',
   'mobile_banking',
   'credit',
+  'cod',
 ];
 
 const paymentStatusValues = [

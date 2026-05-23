@@ -1113,7 +1113,7 @@ const [cancelling, setCancelling] = useState(false);
                       <span>Status</span>
                     </div>
                     <div className="space-y-2 max-h-48 overflow-y-auto">
-                      {buyerOrderHistory.slice(0, 5).map((prevOrder) => (
+                      {buyerOrderHistory.slice().map((prevOrder) => (
                         <div
                           key={prevOrder.id}
                           className="flex justify-between text-sm"
@@ -1130,11 +1130,11 @@ const [cancelling, setCancelling] = useState(false);
                       ))}
                     </div>
                   </div>
-                  {buyerOrderHistory.length > 5 && (
+                  {/* {buyerOrderHistory.length > 5 && (
                     <p className="text-xs text-muted-foreground text-center">
                       Showing last 5 of {buyerOrderHistory.length} orders.
                     </p>
-                  )}
+                  )} */}
                 </CardContent>
               </Card>
             )}

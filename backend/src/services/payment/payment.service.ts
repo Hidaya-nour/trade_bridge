@@ -10,7 +10,8 @@ type PaymentMethod =
   | 'app_payment'
   | 'mobile_banking'
   | 'chapa'
-  | 'credit';
+  | 'credit'
+  | 'cod';
 
 const supplierPaymentToOrderMethodMap: Record<string, PaymentMethod | null> = {
   mobile_money: 'mobile_banking',
@@ -18,6 +19,8 @@ const supplierPaymentToOrderMethodMap: Record<string, PaymentMethod | null> = {
   credit_card: 'app_payment',
   chapa: 'app_payment',
   credit: 'credit',
+  cod: 'cod',
+  cash_on_delivery: 'cod',
 };
 
 interface SubmitPaymentPayload {
@@ -36,11 +39,12 @@ interface SubmitPaymentPayload {
 class PaymentService {
   private supplierPaymentMethodService = new SupplierPaymentMethodService();
 
-  private toStoredPaymentMethod(method: string): 'mobile_banking' | 'chapa' | 'credit' {
-  if (method === 'app_payment' || method === 'chapa') return 'chapa';
-  if (method === 'credit') return 'credit';
-  return 'mobile_banking';
-}
+  private toStoredPaymentMethod(method: string): 'mobile_banking' | 'chapa' | 'credit' | 'cod' {
+    if (method === 'app_payment' || method === 'chapa') return 'chapa';
+    if (method === 'credit') return 'credit';
+    if (method === 'cod') return 'cod';
+    return 'mobile_banking';
+  }
 
   private toChapaPhoneNumber(phone?: string | null): string | undefined {
     if (!phone) return undefined;

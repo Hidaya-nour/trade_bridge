@@ -27,13 +27,15 @@ const DEFAULT_VAT_RATE = 0.15;
 
 const supplierPaymentToOrderMethodMap: Record<
   string,
-  'app_payment' | 'mobile_banking' | 'credit' | null
+  'app_payment' | 'mobile_banking' | 'credit' | 'cod' | null
 > = {
   mobile_money: 'mobile_banking',
   mobile_banking: 'mobile_banking',
   credit_card: 'app_payment',
   chapa: 'app_payment',
   credit: 'credit',
+  cod: 'cod',
+  cash_on_delivery: 'cod',
 };
 
 export class OrderService {

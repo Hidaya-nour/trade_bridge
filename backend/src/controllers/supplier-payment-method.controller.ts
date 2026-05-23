@@ -186,10 +186,16 @@ export class SupplierPaymentMethodController {
   }
 
   static createValidation = [
-    body('method_type').isIn(['mobile_money', 'credit_card', 'mobile_banking', 'chapa', 'credit']),
+    body('method_type').isIn(['mobile_money', 'credit_card', 'mobile_banking', 'chapa', 'credit', 'cod', 'cash_on_delivery']),
     body('provider_name').isString().notEmpty(),
     body('account_holder_name').isString().notEmpty(),
-    body('account_identifier').if(body('method_type').not().equals('credit')).isString().notEmpty(),
+    body('account_identifier')
+      .if((value, { req }) => {
+        const method = req.body.method_type;
+        return method !== 'credit' && method !== 'cod' && method !== 'cash_on_delivery';
+      })
+      .isString()
+      .notEmpty(),
     body('account_display').optional().isString(),
     body('credit_due_days').optional({ nullable: true }).isInt({ min: 1 }),
     body('credit_limit').optional({ nullable: true }).isFloat({ min: 0 }),

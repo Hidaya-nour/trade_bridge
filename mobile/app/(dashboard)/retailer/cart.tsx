@@ -19,6 +19,9 @@ import BottomSheetModal from "@/components/retailer/BottomSheetModal";
 import PaymentSheet, {
   type PaymentSheetSubmitPayload,
 } from "@/components/retailer/PaymentSheet";
+import addressService, {
+  type RetailerAddress,
+} from "../../../src/features/address/address.service";
 import { useCartStore } from "@/features/cart/cart.store";
 import { type CartItem } from "@/features/cart/cart.types";
 import { useOrderStore } from "@/features/orders/order.store";
@@ -55,6 +58,11 @@ export default function RetailerCartScreen() {
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [deliveryAddress, setDeliveryAddress] = useState("");
   const [checkoutNotes, setCheckoutNotes] = useState("");
+  const [requestCredit, setRequestCredit] = useState(false);
+  const [savedAddresses, setSavedAddresses] = useState<RetailerAddress[]>([]);
+  const [selectedAddressId, setSelectedAddressId] = useState("");
+  const [addressesLoading, setAddressesLoading] = useState(false);
+  const [addressesError, setAddressesError] = useState<string | null>(null);
   const [paymentOrderId, setPaymentOrderId] = useState<string | null>(null);
   const [paymentTotal, setPaymentTotal] = useState(0);
   const [paymentProcessing, setPaymentProcessing] = useState(false);
@@ -108,6 +116,55 @@ export default function RetailerCartScreen() {
       return next;
     });
   }, [cartItems]);
+
+  useEffect(() => {
+    if (!checkoutOpen || savedAddresses.length > 0) return;
+    let cancelled = false;
+
+    const loadAddresses = async () => {
+      setAddressesLoading(true);
+      setAddressesError(null);
+      try {
+        const response = await addressService.getAll();
+        const data = response?.data;
+        const next = Array.isArray(data) ? data : [];
+        if (!cancelled) {
+          setSavedAddresses(next);
+        }
+      } catch (error: any) {
+        if (!cancelled) {
+          setAddressesError(
+            error?.response?.data?.message || error?.message || "Failed to load saved locations",
+          );
+        }
+      } finally {
+        if (!cancelled) setAddressesLoading(false);
+      }
+    };
+
+    void loadAddresses();
+    return () => {
+      cancelled = true;
+    };
+  }, [checkoutOpen, savedAddresses.length]);
+
+  useEffect(() => {
+    if (!selectedAddressId) return;
+    const selected = savedAddresses.find((address) => address.id === selectedAddressId);
+    if (!selected) return;
+    const formatted = [
+      selected.common_name,
+      selected.subcity,
+      selected.city,
+      selected.region,
+    ]
+      .map((value) => String(value || "").trim())
+      .filter(Boolean)
+      .join(", ");
+    if (formatted) {
+      setDeliveryAddress(formatted);
+    }
+  }, [selectedAddressId, savedAddresses]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -340,6 +397,7 @@ export default function RetailerCartScreen() {
         delivery_option: "supplier_policy",
         delivery_address: deliveryAddress || undefined,
         notes: checkoutNotes || undefined,
+        payment_method: requestCredit ? "credit" : undefined,
       });
 
       if (order) {
@@ -369,14 +427,7 @@ export default function RetailerCartScreen() {
           text: "Finish",
           onPress: () => router.push("/retailer/orders"),
         },
-        {
-          text: "Pay Now",
-          onPress: () => {
-            setPaymentOrderId(createdOrders[0].id);
-            setPaymentTotal(createdOrders[0].total_price);
-            setPaymentOpen(true);
-          },
-        },
+       
       ],
     );
   }, [
@@ -392,16 +443,31 @@ export default function RetailerCartScreen() {
   ]);
 
   const handlePaymentSubmit = useCallback(
-    async ({ method, notes, payment_details }: PaymentSheetSubmitPayload) => {
+    async ({ method, notes, payment_details, proofFile }: PaymentSheetSubmitPayload) => {
       if (!paymentOrderId) return;
 
       setPaymentProcessing(true);
       try {
+        let proofDocumentId: string | undefined;
+        
+        // Upload proof file if provided
+        if (proofFile?.uri) {
+          try {
+            proofDocumentId = await paymentService.uploadProofFile(proofFile.uri);
+          } catch (uploadError: any) {
+            console.error('Failed to upload proof file:', uploadError);
+            Alert.alert('Upload Failed', 'Could not upload payment proof. Please try again.');
+            setPaymentProcessing(false);
+            return;
+          }
+        }
+
         const result = await paymentService.submitByOrder(paymentOrderId, {
           payment_method: method,
           amount_paid: method === "app_payment" ? undefined : paymentTotal,
           notes,
           payment_details,
+          proof_document_id: proofDocumentId,
         });
 
         if (method === "app_payment") {
@@ -726,13 +792,57 @@ export default function RetailerCartScreen() {
           </View>
         </View>
 
+        {savedAddresses.length > 0 ? (
+          <View style={styles.formSection}>
+            <Text style={styles.formLabel}>Saved locations</Text>
+            <View style={styles.savedAddressList}>
+              {savedAddresses.map((address) => {
+                const formatted = [
+                  address.common_name,
+                  address.subcity,
+                  address.city,
+                  address.region,
+                ]
+                  .map((value) => String(value || "").trim())
+                  .filter(Boolean)
+                  .join(", ");
+
+                const selected = selectedAddressId === address.id;
+                return (
+                  <Pressable
+                    key={address.id}
+                    style={[styles.savedAddressItem, selected && styles.savedAddressItemSelected]}
+                    onPress={() => setSelectedAddressId(address.id)}
+                  >
+                    <Text style={styles.savedAddressText}>{formatted || "Saved location"}</Text>
+                    <Ionicons
+                      name={selected ? "checkmark-circle" : "ellipse-outline"}
+                      size={18}
+                      color={selected ? "#1d4ed8" : "#94a3b8"}
+                    />
+                  </Pressable>
+                );
+              })}
+              {addressesLoading ? (
+                <Text style={styles.savedAddressInfo}>Loading saved locations...</Text>
+              ) : null}
+              {addressesError ? (
+                <Text style={styles.savedAddressError}>{addressesError}</Text>
+              ) : null}
+            </View>
+          </View>
+        ) : null}
+
         <View style={styles.formSection}>
           <Text style={styles.formLabel}>Delivery address</Text>
           <TextInput
             style={[styles.promoInput, styles.notesInput]}
             placeholder="Optional delivery address"
             value={deliveryAddress}
-            onChangeText={setDeliveryAddress}
+            onChangeText={(text) => {
+              setSelectedAddressId("");
+              setDeliveryAddress(text);
+            }}
             multiline
           />
         </View>
@@ -747,6 +857,15 @@ export default function RetailerCartScreen() {
             multiline
           />
         </View>
+
+        <Pressable style={styles.creditRow} onPress={() => setRequestCredit((current) => !current)}>
+          <Ionicons
+            name={requestCredit ? "checkbox" : "square-outline"}
+            size={20}
+            color={requestCredit ? "#1d4ed8" : "#94a3b8"}
+          />
+          <Text style={styles.creditText}>Request credit (pay later after supplier approval)</Text>
+        </Pressable>
 
         <View style={styles.sheetFooter}>
           <Pressable style={styles.sheetCancelButton} onPress={() => setCheckoutOpen(false)}>
@@ -1217,5 +1336,45 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "700",
     color: "#ffffff",
+  },
+  savedAddressList: {
+    gap: 10,
+  },
+  savedAddressItem: {
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    borderRadius: 14,
+    padding: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#ffffff",
+  },
+  savedAddressItemSelected: {
+    borderColor: "#1d4ed8",
+    backgroundColor: "#eff6ff",
+  },
+  savedAddressText: {
+    fontSize: 13,
+    color: "#0f172a",
+  },
+  savedAddressInfo: {
+    fontSize: 12,
+    color: "#64748b",
+  },
+  savedAddressError: {
+    fontSize: 12,
+    color: "#dc2626",
+  },
+  creditRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingVertical: 12,
+  },
+  creditText: {
+    fontSize: 13,
+    color: "#334155",
+    flex: 1,
   },
 });
