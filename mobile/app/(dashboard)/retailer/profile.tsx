@@ -1,5 +1,5 @@
-import { ProfileScreen } from "@/features/profile/ProfileScreen";
+import { SettingsScreen } from "@/features/settings/SettingsScreen";
 
 export default function RetailerProfileRoute() {
-  return <ProfileScreen role="retailer" />;
+  return <SettingsScreen initialTab="profile" role="retailer" />;
 }

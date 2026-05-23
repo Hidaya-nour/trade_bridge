@@ -1,5 +1,5 @@
-import { ProfileScreen } from "@/features/profile/ProfileScreen";
+import { SettingsScreen } from "@/features/settings/SettingsScreen";
 
 export default function DriverProfileRoute() {
-  return <ProfileScreen role="driver" />;
+  return <SettingsScreen initialTab="profile" role="driver" />;
 }
