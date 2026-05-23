@@ -40,7 +40,17 @@ export interface OrderParty {
   email?: string;
   phone?: string;
   tin_number?: string;
+  paymentMethods?: SupplierPaymentMethodConfig[];
   supplierPaymentMethods?: SupplierPaymentMethodConfig[];
+  addresses?: Array<{
+    id?: string;
+    common_name?: string | null;
+    subcity?: string | null;
+    city?: string | null;
+    latitude?: number | string | null;
+    longitude?: number | string | null;
+    created_at?: string | null;
+  }>;
 }
 
 export interface OrderItem {

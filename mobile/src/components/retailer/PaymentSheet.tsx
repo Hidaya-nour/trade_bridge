@@ -47,31 +47,22 @@ export default function PaymentSheet({
 // Ensure we always have an iterable array, even if the backend returns undefined
 const safeMethods = supplierPaymentMethods || [];
 
-const hasAppConfiguration = useMemo(() => {
-  // FALLBACK: If the API doesn't provide any configuration array, 
-  // explicitly default to true so your users aren't left stranded with a blank screen.
-  if (!supplierPaymentMethods || supplierPaymentMethods.length === 0) {
-    return true;
-  }
-  return safeMethods.some((m) => m && isSupplierAppMethodType(m.method_type));
-}, [supplierPaymentMethods, safeMethods]);
+const hasAppConfiguration = useMemo(
+  () => safeMethods.some((m) => m && isSupplierAppMethodType(m.method_type)),
+  [safeMethods],
+);
 
 const hasMobileConfiguration = useMemo(() => {
   // Never show mobile banking forms blindly if there are no provider details to build the inputs.
-  if (!supplierPaymentMethods || supplierPaymentMethods.length === 0) {
-    return false;
-  }
   return safeMethods.some(
     (m) => m && isSupplierMobileMethodType(m.method_type) && m.provider_name && m.provider_name.trim() !== ""
   );
-}, [supplierPaymentMethods, safeMethods]);
+}, [safeMethods]);
 
 const hasCreditConfiguration = useMemo(() => {
-  if (!supplierPaymentMethods || supplierPaymentMethods.length === 0) {
-    return false;
-  }
   return safeMethods.some((m) => m && m.method_type === "credit");
-}, [supplierPaymentMethods, safeMethods]);
+}, [safeMethods]);
+  const hasAnyPaymentMethod = hasAppConfiguration || hasMobileConfiguration || hasCreditConfiguration;
   // 2. Automatically select the first available payment method tab when the sheet opens
   useEffect(() => {
     if (visible) {
@@ -132,6 +123,7 @@ const hasCreditConfiguration = useMemo(() => {
   };
 
   const handleFormSubmit = () => {
+    if (!hasAnyPaymentMethod) return;
     onSubmit({
       method: selectedMethod,
       notes,
@@ -147,11 +139,19 @@ const hasCreditConfiguration = useMemo(() => {
         {/* Amount Box */}
         <View style={styles.amountCard}>
           <Text style={styles.amountLabel}>Amount due</Text>
-          <Text style={styles.amountValue}>${amount.toFixed(2)}</Text>
+          <Text style={styles.amountValue}>ETB {amount.toFixed(2)}</Text>
         </View>
 
         {/* Tab Selection Row */}
         <Text style={styles.sectionTitle}>Select Payment Method</Text>
+        {!hasAnyPaymentMethod ? (
+          <View style={styles.infoBox}>
+            <Ionicons name="alert-circle-outline" size={18} color="#b45309" />
+            <Text style={styles.warningText}>
+              This supplier has not enabled a payment method for this order.
+            </Text>
+          </View>
+        ) : (
         <View style={styles.tabContainer}>
           {/* Only show App Pay if configured by distributor */}
           {hasAppConfiguration && (
@@ -186,6 +186,7 @@ const hasCreditConfiguration = useMemo(() => {
             </Pressable>
           )}
         </View>
+        )}
 
         {/* Supplier Target Account Configurations View Area */}
         {currentSupplierDetails.length > 0 && selectedMethod !== "app_payment" && (
@@ -262,7 +263,11 @@ const hasCreditConfiguration = useMemo(() => {
           <Pressable style={styles.cancelBtn} onPress={onClose}>
             <Text style={styles.cancelBtnText}>Cancel</Text>
           </Pressable>
-          <Pressable style={[styles.submitBtn, submitting && { opacity: 0.5 }]} onPress={handleFormSubmit} disabled={submitting}>
+          <Pressable
+            style={[styles.submitBtn, (submitting || !hasAnyPaymentMethod) && { opacity: 0.5 }]}
+            onPress={handleFormSubmit}
+            disabled={submitting || !hasAnyPaymentMethod}
+          >
             <Text style={styles.submitBtnText}>
               {submitting ? "Processing..." : selectedMethod === "app_payment" ? "Continue" : "Submit"}
             </Text>
@@ -293,6 +298,7 @@ const styles = StyleSheet.create({
   creditMetaText: { fontSize: 11, color: "#059669", fontWeight: "600", marginTop: 2 },
   infoBox: { flexDirection: "row", padding: 12, backgroundColor: "#f0f9ff", borderRadius: 12, gap: 8, alignItems: "center" },
   infoText: { fontSize: 12, color: "#0369a1", flex: 1 },
+  warningText: { fontSize: 12, color: "#92400e", flex: 1 },
   formGroup: { gap: 10 },
   inputLabel: { fontSize: 13, fontWeight: "600", color: "#475569" },
   input: { borderWidth: 1, borderColor: "#cbd5e1", padding: 12, borderRadius: 12, fontSize: 14, backgroundColor: "#fff" },

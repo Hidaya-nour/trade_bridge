@@ -9,13 +9,15 @@ import { SupplierPaymentMethodService } from '../supplier-payment-method/supplie
 type PaymentMethod =
   | 'app_payment'
   | 'mobile_banking'
-  | 'chapa';
+  | 'chapa'
+  | 'credit';
 
 const supplierPaymentToOrderMethodMap: Record<string, PaymentMethod | null> = {
   mobile_money: 'mobile_banking',
   mobile_banking: 'mobile_banking',
   credit_card: 'app_payment',
   chapa: 'app_payment',
+  credit: 'credit',
 };
 
 interface SubmitPaymentPayload {

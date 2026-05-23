@@ -59,16 +59,6 @@ export default function RetailerOrderDetailScreen() {
     }
   }, [fetchOrderById, id]);
 
-  // Temporary debug logger to find out why mobile banking option won't disappear
-  useEffect(() => {
-    if (currentOrder?.supplier) {
-      console.log("==========================================");
-      console.log("DEBUG PAYLOAD FOR SUPPLIER PAYMENT METHODS:");
-      console.log(JSON.stringify(currentOrder.supplier.supplierPaymentMethods, null, 2));
-      console.log("==========================================");
-    }
-  }, [currentOrder]);
-
   const order = currentOrder;
 
   const summary = useMemo(() => {
@@ -94,12 +84,12 @@ export default function RetailerOrderDetailScreen() {
   }, [order]);
 
   const needsPayment = useMemo(() => {
-    if (!order || order.order_status === "cancelled") return false;
+    if (!order || order.payment?.payment_status === "failed") return false;
     if (!order.payment) return true;
     return ["pending", "failed"].includes(order.payment.payment_status);
   }, [order]);
 
-  const isApproved = order?.order_status === "approved";
+  const isApproved = order?.order_status == "pending" || order?.order_status != "cancelled";
   const canRate = order?.order_status === "delivered" || order?.order_status === "closed";
 
   const handlePaymentSubmit = useCallback(
@@ -231,7 +221,7 @@ export default function RetailerOrderDetailScreen() {
             >
               <Ionicons name="card-outline" size={16} color="#ffffff" />
               <Text style={styles.primaryActionText}>
-                {order.order_status === "pending" ? "Awaiting Approval" : "Pay Now"}
+                {order.payment?.payment_status === "pending" ? "Awaiting Approval" : "Pay Now"}
               </Text>
             </Pressable>
           ) : null}

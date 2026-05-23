@@ -19,13 +19,31 @@ const buildOrderParams = (params?: OrderFilters) => ({
 });
 
 const extractOrdersResponse = (response: ApiResponse<MyOrdersResult>) => {
+  const orders = response.data?.orders || response.data?.items || [];
   return {
     data: {
-      orders: response.data?.orders || response.data?.items || [],
+      orders: orders.map(normalizeOrder),
       total: response.data?.total || 0,
       page: response.data?.page || 1,
       limit: response.data?.limit || 10,
+      totalPages: response.data?.totalPages || 1,
     }
+  };
+};
+
+const normalizeOrder = (order: Order): Order => {
+  const supplier = order.supplier;
+  if (!supplier) return order;
+
+  const supplierPaymentMethods =
+    supplier.supplierPaymentMethods || supplier.paymentMethods || [];
+
+  return {
+    ...order,
+    supplier: {
+      ...supplier,
+      supplierPaymentMethods,
+    },
   };
 };
 
@@ -53,7 +71,13 @@ const orderService = {
 
   async getOrderById(id: string) {
     const response = await api.get<ApiResponse<{ order: Order }>>(`/orders/${id}`);
-    return response.data;
+    const order = response.data.data?.order;
+    return {
+      ...response.data,
+      data: {
+        order: order ? normalizeOrder(order) : order,
+      },
+    };
   },
 
   async getOrderStats() {

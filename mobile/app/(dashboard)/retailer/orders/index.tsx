@@ -380,6 +380,25 @@ export default function RetailerOrdersScreen() {
                   </Pressable>
                 ) : null}
 
+                {needsPayment(item) ? (
+                  <Pressable
+                    style={[
+                      styles.primaryOutlineAction,
+                      item.order_status !== "approved" && styles.disabledAction,
+                    ]}
+                    disabled={item.order_status !== "approved"}
+                    onPress={() => {
+                      setSelectedOrder(item);
+                      setPaymentOpen(true);
+                    }}
+                  >
+                    <Ionicons name="card-outline" size={15} color="#ffffff" />
+                    <Text style={styles.primaryOutlineActionText}>
+                      {item.order_status === "pending" ? "Awaiting Approval" : "Pay"}
+                    </Text>
+                  </Pressable>
+                ) : null}
+
                 <Pressable style={styles.outlineAction} onPress={() => void handleReorder(item)}>
                   <Ionicons name="repeat-outline" size={15} color="#334155" />
                   <Text style={styles.outlineActionText}>Reorder</Text>
@@ -468,6 +487,7 @@ export default function RetailerOrdersScreen() {
         onClose={() => setPaymentOpen(false)}
         onSubmit={handlePaymentSubmit}
         submitting={paymentProcessing}
+        supplierPaymentMethods={selectedOrder?.supplier?.supplierPaymentMethods}
       />
     </ScreenWrapper>
   );
@@ -709,6 +729,24 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "700",
     color: "#334155",
+  },
+  primaryOutlineAction: {
+    minHeight: 38,
+    borderRadius: 14,
+    backgroundColor: "#1d4ed8",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingHorizontal: 12,
+  },
+  primaryOutlineActionText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#ffffff",
+  },
+  disabledAction: {
+    opacity: 0.55,
   },
   destructiveText: {
     color: "#dc2626",

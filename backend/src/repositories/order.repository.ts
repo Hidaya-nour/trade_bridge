@@ -6,6 +6,7 @@ import Driver from '../models/driver.model';
 import { Order } from '../models/order.model';
 import { Payment } from '../models/payment.model';
 import { Product } from '../models/product.model';
+import SupplierPaymentMethod from '../models/supplier-payment-method.model';
 import { User } from '../models/user.model';
 import { BaseRepository } from './base.repository';
 
@@ -32,7 +33,25 @@ export class OrderRepository extends BaseRepository<Order> {
         {
           model: User,
           as: 'supplier',
-          attributes: ['id', 'full_name', 'email', 'business_name', 'phone', 'tin_number']
+          attributes: ['id', 'full_name', 'email', 'business_name', 'phone', 'tin_number'],
+          include: [
+            {
+              model: SupplierPaymentMethod,
+              as: 'paymentMethods',
+              attributes: [
+                'id',
+                'method_type',
+                'provider_name',
+                'account_holder_name',
+                'account_display',
+                'credit_limit',
+                'credit_due_days',
+                'is_primary',
+              ],
+              where: { is_active: true },
+              required: false,
+            },
+          ],
         },
         {
           model: OrderItems,
@@ -138,7 +157,25 @@ export class OrderRepository extends BaseRepository<Order> {
         {
           model: User,
           as: 'supplier',
-          attributes: ['id', 'full_name', 'business_name']
+          attributes: ['id', 'full_name', 'business_name'],
+          include: [
+            {
+              model: SupplierPaymentMethod,
+              as: 'paymentMethods',
+              attributes: [
+                'id',
+                'method_type',
+                'provider_name',
+                'account_holder_name',
+                'account_display',
+                'credit_limit',
+                'credit_due_days',
+                'is_primary',
+              ],
+              where: { is_active: true },
+              required: false,
+            },
+          ],
         },
         {
           model: OrderItems,
