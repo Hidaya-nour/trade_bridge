@@ -140,8 +140,8 @@ register: async (payload) => {
           try {
             await useAuthStore.getState().fetchUser();
             set({ isInitialized: true, error: null });
-          } catch {
-            await useAuthStore.getState().logout();
+          } catch (error) {
+            console.log("Initialize auth failed:", error);
             set({ isInitialized: true });
           }
         })();

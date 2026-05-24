@@ -1403,26 +1403,7 @@ export const DeliveryManagement: React.FC<DeliveryManagementProps> = ({
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
-            <div className="space-y-2">
-              <Label>Search by name or email</Label>
-              <div className="flex gap-2">
-                <Input
-                  placeholder="Search drivers..."
-                  value={addDriverSearch}
-                  onChange={(e) => setAddDriverSearch(e.target.value)}
-                  onKeyDown={(e) =>
-                    e.key === "Enter" && searchAvailableDrivers()
-                  }
-                />
-                <Button
-                  variant="outline"
-                  onClick={searchAvailableDrivers}
-                  disabled={addDriverLoading}
-                >
-                  Search
-                </Button>
-              </div>
-            </div>
+            
             <div className="space-y-2">
               <Label>Select driver</Label>
               <Select
