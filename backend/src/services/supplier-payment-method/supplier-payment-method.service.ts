@@ -5,7 +5,48 @@ import { AppError } from '../../utils/errors';
 import logger from '../../utils/logger';
 import User from '../../models/user.model';
 import { createChapaSubaccount } from '../../config/chapa';
-import { mapBankNameToChapaSlug as mapBankNameToCode } from '../../utils/chapa-bank.util';
+
+const bankNameToChapaCode: Record<string, string> = {
+  'commercial bank of ethiopia': '96e2e0fb-e4f6-47c1-a8cf-312cfb5e1df1',
+  'cbe': '96e2e0fb-e4f6-47c1-a8cf-312cfb5e1df1',
+  'bank of abyssinia': '6b8159bf-a8ed-4b2a-89a3-5c26b9a846c9',
+  'abyssinia': '6b8159bf-a8ed-4b2a-89a3-5c26b9a846c9',
+  'boa': '6b8159bf-a8ed-4b2a-89a3-5c26b9a846c9',
+  'awash bank': '80a510ea-7497-4499-8b4f-7a5486c6e3b5',
+  'awash': '80a510ea-7497-4499-8b4f-7a5486c6e3b5',
+  'dashen bank': '0ab7bfa8-76a0-47b8-bc23-018f6834d8a5',
+  'dashen': '0ab7bfa8-76a0-47b8-bc23-018f6834d8a5',
+  'wegagen bank': '0b9c3f4e-28b9-4c28-971a-6d60aefcfb4e',
+  'wegagen': '0b9c3f4e-28b9-4c28-971a-6d60aefcfb4e',
+  'cooperative bank of oromia': '802d3345-4235-46b5-be12-9c3f0907e8ef',
+  'coopay ebirr': '802d3345-4235-46b5-be12-9c3f0907e8ef',
+  'telebirr': '1496a7ef-8fa6-4074-b52b-734fb46aa2f4',
+  'm-pesa': 'mpesa',
+  'mpesa': 'mpesa',
+  'cbe birr': 'cbe_birr',
+  'amole': 'amole',
+  'hello cash': 'hellocash',
+  'hellocash': 'hellocash',
+  'oromia bank': '802d3345-4235-46b5-be12-9c3f0907e8ef',
+  'hibret bank': 'hibret',
+  'nib international bank': 'nib',
+  'zemen bank': 'zemen',
+  'berhan bank': 'berhan',
+  'bunna bank': 'bunna',
+  'abay bank': 'abay',
+  'enat bank': 'enat',
+  'zamzam bank': 'zamzam'
+};
+
+const mapBankNameToCode = (providerName: string): string => {
+  const normalized = String(providerName || '').trim().toLowerCase();
+  for (const [key, value] of Object.entries(bankNameToChapaCode)) {
+    if (normalized.includes(key) || key.includes(normalized)) {
+      return value;
+    }
+  }
+  return '96e2e0fb-e4f6-47c1-a8cf-312cfb5e1df1'; // CBE Default
+};
 
 export class SupplierPaymentMethodService {
   private paymentMethodRepo = new SupplierPaymentMethodRepository();
@@ -21,14 +62,14 @@ export class SupplierPaymentMethodService {
   }
 
   async createPaymentMethod(data: CreateSupplierPaymentMethodDTO): Promise<ISupplierPaymentMethod> {
-   // In SupplierPaymentMethodService.createPaymentMethod
-if (!data.supplier_id) throw new AppError('Supplier ID is missing', 400);
-if (!data.method_type) throw new AppError('Method type is required', 400);
-if (!data.provider_name) throw new AppError('Provider name is required', 400);
-if (!data.account_holder_name) throw new AppError('Account holder name is required', 400);
-if (data.method_type !== 'credit' && !data.account_identifier) {
-  throw new AppError('Account identifier is required for non-credit methods', 400);
-}
+    // In SupplierPaymentMethodService.createPaymentMethod
+    if (!data.supplier_id) throw new AppError('Supplier ID is missing', 400);
+    if (!data.method_type) throw new AppError('Method type is required', 400);
+    if (!data.provider_name) throw new AppError('Provider name is required', 400);
+    if (!data.account_holder_name) throw new AppError('Account holder name is required', 400);
+    if (data.method_type !== 'credit' && !data.account_identifier) {
+      throw new AppError('Account identifier is required for non-credit methods', 400);
+    }
 
     if (data.method_type === 'credit') {
       const dueDays = Number(data.credit_due_days || 0);
@@ -50,15 +91,15 @@ if (data.method_type !== 'credit' && !data.account_identifier) {
     }
 
     // Automatic Chapa Subaccount creation on adding payment method (bank account / mobile payment)
-    const user = await User.findByPk(data.supplier_id) as any;
+    const user = await User.findByPk(data.supplier_id);
     const isBankingMethod = data.method_type === 'chapa' || data.method_type === 'mobile_money' || data.method_type === 'mobile_banking';
     if (user && !user.chapa_subaccount_id && isBankingMethod) {
       try {
         const bankCode = mapBankNameToCode(data.provider_name);
         const platformFee = Number(process.env.CHAPA_PLATFORM_FEE_PERCENTAGE || 0.02);
-        
+
         logger.info(`Auto-creating Chapa subaccount for supplier ${data.supplier_id} with bank code ${bankCode}`);
-        
+
         const subaccountRes = await createChapaSubaccount({
           business_name: user.business_name || data.account_holder_name || user.full_name,
           account_name: data.account_holder_name,
@@ -76,7 +117,7 @@ if (data.method_type !== 'credit' && !data.account_identifier) {
         }
       } catch (chapaError: any) {
         logger.warn(`Failed to auto-create Chapa subaccount via API: ${chapaError?.message}. Falling back to sandbox/test subaccount ID for demo.`);
-        
+
         // Safeguard for demo: Generate a test subaccount ID so the split payment flow still functions!
         const mockSubaccountId = `SUB-TEST-${data.supplier_id.slice(0, 8)}-${Date.now()}`;
         user.chapa_subaccount_id = mockSubaccountId;
