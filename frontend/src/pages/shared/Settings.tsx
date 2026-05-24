@@ -27,7 +27,6 @@ import { useSupplierPaymentMethodStore } from "@/stores/supplier-payment-method.
 import BusinessTab from "../../components/setting/BusinessTab";
 import NotificationsTab from "../../components/setting/NotificationsTab";
 import PaymentTab from "../../components/setting/PaymentTab";
-import PreferencesTab from "../../components/setting/PreferencesTab";
 import ProfileTab from "../../components/setting/ProfileTab";
 import SecurityTab from "../../components/setting/SecurityTab";
 import VehicleTab from "../../components/setting/VehicleTab";
@@ -104,13 +103,7 @@ const userData = {
     creditAvailable: "ETB 37,500",
     paymentTerms: "30 days",
   },
-  preferences: {
-    language: "english",
-    theme: "light",
-    timezone: "Africa/Addis_Ababa",
-    dateFormat: "DD/MM/YYYY",
-    currency: "ETB",
-  },
+  
 };
 
 const DEFAULT_MAP_CENTER = { lat: 8.9806, lng: 38.7578 };
@@ -845,7 +838,7 @@ const SettingsPage: React.FC = () => {
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
         <p className="text-muted-foreground mt-1">
-          Manage your account settings and preferences
+          Manage your account settings 
         </p>
       </div>
 
@@ -906,14 +899,7 @@ const SettingsPage: React.FC = () => {
                     Payment Settings
                   </Button>
                 )}
-                <Button
-                  variant={activeTab === "preferences" ? "secondary" : "ghost"}
-                  className="w-full justify-start"
-                  onClick={() => setActiveTab("preferences")}
-                >
-                  <Globe className="h-4 w-4 mr-2" />
-                  Preferences
-                </Button>
+               
               </div>
             </CardContent>
           </Card>
@@ -1037,13 +1023,7 @@ const SettingsPage: React.FC = () => {
               handleDeletePaymentMethod={handleDeletePaymentMethod}
             />
 
-            {/* Preferences Tab */}
-            <PreferencesTab
-              preferences={userData.preferences}
-              showDeleteDialog={showDeleteDialog}
-              setShowDeleteDialog={setShowDeleteDialog}
-              handleDeleteAccount={handleDeleteAccount}
-            />
+            
           </Tabs>
         </div>
       </div>

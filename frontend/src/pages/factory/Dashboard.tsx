@@ -471,36 +471,13 @@ const FactoryDashboard: React.FC = () => {
                             </Button>
                           </>
                         )}
-                        {order.status === "approved" && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="h-8 text-xs"
-                          >
-                            <Clock className="h-3 w-3 mr-1" />
-                            Schedule
-                          </Button>
-                        )}
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-8 w-8 p-0"
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
+                    
                       </div>
                     </div>
                   ))}
               </div>
             </CardContent>
-            <CardFooter className="border-t pt-4">
-              <Button variant="outline" className="w-full" asChild>
-                <Link to="/factory/approve">
-                  <CheckCircle2 className="h-4 w-4 mr-2" />
-                  Process Pending Orders
-                </Link>
-              </Button>
-            </CardFooter>
+            
           </Card>
           {/* Inventory Alerts */}
           <Card>
@@ -570,14 +547,7 @@ const FactoryDashboard: React.FC = () => {
                 </div>
               </ScrollArea>
             </CardContent>
-            <CardFooter className="border-t pt-4">
-              <Button variant="ghost" className="w-full text-xs" asChild>
-                <Link to="/factory/inventory">
-                  Manage Inventory
-                  <ChevronRight className="h-3 w-3 ml-1" />
-                </Link>
-              </Button>
-            </CardFooter>
+           
           </Card>
         </div>
 
@@ -670,17 +640,7 @@ const FactoryDashboard: React.FC = () => {
               <CardTitle className="text-base">Quick Actions</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
-              <Button
-                variant="outline"
-                className="w-full justify-start"
-                size="sm"
-                asChild
-              >
-                <Link to="/factory/approve">
-                  <CheckCircle2 className="mr-2 h-4 w-4" />
-                  Process Orders
-                </Link>
-              </Button>
+              
               <Button
                 variant="outline"
                 className="w-full justify-start"

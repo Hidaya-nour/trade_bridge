@@ -436,7 +436,7 @@ export const UserManagementPage: React.FC = () => {
       )}
 
       {/* Bulk Actions */}
-      {selectedUsers.length > 0 && (
+      {/* {selectedUsers.length > 0 && (
         <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 flex items-center justify-between">
           <span className="text-sm">
             <span className="font-medium">{selectedUsers.length}</span> users
@@ -451,22 +451,10 @@ export const UserManagementPage: React.FC = () => {
               Clear
             </Button>
 
-            <Button
-              size="sm"
-              variant="outline"
-              className="text-amber-600"
-              onClick={() => setShowSuspendDialog(true)}
-            >
-              <Ban className="h-4 w-4 mr-2" />
-              Suspend
-            </Button>
-            <Button size="sm" variant="outline" className="text-green-600">
-              <CheckCheck className="h-4 w-4 mr-2" />
-              Verify
-            </Button>
+           
           </div>
         </div>
-      )}
+      )} */}
 
       {loading ? (
         <Card>
@@ -513,8 +501,8 @@ export const UserManagementPage: React.FC = () => {
                   <TableHead>Role</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Business</TableHead>
-                  <TableHead>Location</TableHead>
-                  <TableHead>Reports</TableHead>
+                  {/* <TableHead>Location</TableHead>
+                  <TableHead>Reports</TableHead> */}
                   <TableHead>
                     <Button
                       variant="ghost"
@@ -577,13 +565,13 @@ export const UserManagementPage: React.FC = () => {
                     <TableCell>
                       <p className="text-sm">{user.business}</p>
                     </TableCell>
-                    <TableCell>
+                    {/* <TableCell>
                       <div className="flex items-center gap-1 text-sm">
                         <MapPin className="h-3 w-3 text-muted-foreground" />
                         {user.location}
                       </div>
-                    </TableCell>
-                    <TableCell>
+                    </TableCell> */}
+                    {/* <TableCell>
                       {(() => {
                         const counts = reportCountsByUser[user.id];
                         if (!counts || counts.total === 0) {
@@ -611,7 +599,7 @@ export const UserManagementPage: React.FC = () => {
                           </Button>
                         );
                       })()}
-                    </TableCell>
+                    </TableCell> */}
                     <TableCell>
                       <div className="text-sm">
                         {formatDate(user.joinedDate)}
@@ -631,35 +619,10 @@ export const UserManagementPage: React.FC = () => {
                               View Details
                             </Link>
                           </DropdownMenuItem>
-                          <DropdownMenuItem asChild>
-                            <Link to={`/admin/users/${user.id}?edit=1`}>
-                              <Edit className="h-4 w-4 mr-2" />
-                              Edit User
-                            </Link>
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          {user.status === "active" ? (
-                            <DropdownMenuItem className="text-amber-600">
-                              <Ban className="h-4 w-4 mr-2" />
-                              Suspend
-                            </DropdownMenuItem>
-                          ) : user.status === "suspended" ? (
-                            <DropdownMenuItem className="text-green-600">
-                              <RefreshCw className="h-4 w-4 mr-2" />
-                              Reactivate
-                            </DropdownMenuItem>
-                          ) : null}
-                          {!user.verified && (
-                            <DropdownMenuItem className="text-green-600">
-                              <CheckCircle2 className="h-4 w-4 mr-2" />
-                              Verify User
-                            </DropdownMenuItem>
-                          )}
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem className="text-red-600">
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Delete
-                          </DropdownMenuItem>
+                          
+                          
+                         
+                          
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>

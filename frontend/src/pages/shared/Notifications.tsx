@@ -687,7 +687,7 @@ const NotificationsPage: React.FC = () => {
       </Card>
 
       {/* Notification Preferences Summary */}
-      <Card>
+      {/* <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-sm font-medium">
             Notification Preferences
@@ -733,7 +733,7 @@ const NotificationsPage: React.FC = () => {
             </Button>
           </div>
         </CardContent>
-      </Card>
+      </Card> */}
     </div>
   );
 };
