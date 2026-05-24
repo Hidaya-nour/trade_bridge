@@ -10,7 +10,8 @@
         {
           "locationWhenInUsePermission": "Trade Bridge uses your location to show the driver's live route and share delivery progress while a trip is active."
         }
-      ]
+      ],
+      "expo-font"
     ],
     "ios": {
       "infoPlist": {

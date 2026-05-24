@@ -379,23 +379,31 @@ const BusinessTab: React.FC<BusinessTabProps> = (props) => {
                 </TouchableOpacity>
               )}
               <View style={styles.mapContainer}>
-                <MapView
-                  provider={PROVIDER_GOOGLE}
-                  style={styles.map}
-                  region={mapRegion}
-                  onPress={(e) => {
-                    const { latitude, longitude } = e.nativeEvent.coordinate;
-                    setAddressForm(prev => ({
-                      ...prev,
-                      latitude: latitude.toFixed(6),
-                      longitude: longitude.toFixed(6),
-                    }));
-                  }}
-                >
-                  {hasCoordinates && (
-                    <Marker coordinate={{ latitude: mapCenter.lat, longitude: mapCenter.lng }} />
-                  )}
-                </MapView>
+                {!isWeb && MapView ? (
+                  <MapView
+                    provider={PROVIDER_GOOGLE}
+                    style={styles.map}
+                    region={mapRegion}
+                    onPress={(e) => {
+                      const { latitude, longitude } = e.nativeEvent.coordinate;
+                      setAddressForm(prev => ({
+                        ...prev,
+                        latitude: latitude.toFixed(6),
+                        longitude: longitude.toFixed(6),
+                      }));
+                    }}
+                  >
+                    {hasCoordinates && (
+                      <Marker coordinate={{ latitude: mapCenter.lat, longitude: mapCenter.lng }} />
+                    )}
+                  </MapView>
+                ) : (
+                  <View style={styles.mapPlaceholder}>
+                    <Text style={styles.mapPlaceholderText}>
+                      Map view is not available on web. Use a native device to select a location.
+                    </Text>
+                  </View>
+                )}
               </View>
               <Text style={styles.helperText}>
                 Click the map to drop a pin. We will use this to help locate your business.
@@ -825,6 +833,18 @@ const styles = StyleSheet.create({
   },
   map: {
     flex: 1,
+  },
+  mapPlaceholder: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f3f4f6',
+    padding: 12,
+  },
+  mapPlaceholderText: {
+    fontSize: 13,
+    color: '#6b7280',
+    textAlign: 'center',
   },
   saveButton: {
     backgroundColor: '#e5e7eb',
