@@ -244,18 +244,17 @@ export const DriverDashboard: React.FC = () => {
     loadDeliveries();
   }, []);
 
-  if (!authUser) return null;
   const primaryVehicle =
     deliveries.find((d) => d.vehicleType || d.licensePlate) || null;
   const vehicleLabel = primaryVehicle?.vehicleType || "Vehicle not assigned";
   const plateLabel = primaryVehicle?.licensePlate || "Plate not assigned";
 
   const driverUser = {
-    id: authUser.id,
-    name: authUser.full_name,
+    id: authUser?.id || '',
+    name: authUser?.full_name || '',
     business: `${vehicleLabel} • ${plateLabel}`,
-    role: authUser.role,
-    verified: authUser.verified,
+    role: authUser?.role || '',
+    verified: authUser?.verified || false,
   };
 
   // Filter deliveries
@@ -631,7 +630,9 @@ export const DriverDashboard: React.FC = () => {
           ) : (
             completedDeliveries.map((delivery) => {
               const StatusIcon = statusIcons[delivery.status];
-              return (
+              if (!authUser) return null;
+
+  return (
                 <Card key={delivery.id}>
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between">

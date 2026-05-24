@@ -39,9 +39,9 @@ const roleTitles = {
 };
 
 export const WelcomeHeader = ({ user, variant = "dashboard" }: WelcomeHeaderProps) => {
-  const RoleIcon = roleIcons[user.role];
-  const title = roleTitles[user.role];
-  const firstName = user.name.split(" ")[0] || "there";
+  const RoleIcon = roleIcons[user.role as UserRole] || Store;
+  const title = roleTitles[user.role as UserRole] || "business";
+  const firstName = user.name?.split(" ")[0] || "there";
 
   if (variant === "login") {
     return (

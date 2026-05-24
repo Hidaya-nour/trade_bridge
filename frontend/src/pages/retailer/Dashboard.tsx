@@ -237,14 +237,13 @@ const RetailerDashboard: React.FC = () => {
       iconBg: "bg-purple-100",
     },
   ];
-  if (!authUser) return null; // prevent crash if not loaded
 
   const user = {
-    name: authUser.full_name,
-    business: authUser.business_name ?? "No Business Name",
-    id: authUser.id,
-    role: authUser.role,
-    verified: authUser.verified,
+    name: authUser?.full_name || '',
+    business: authUser?.business_name ?? "No Business Name",
+    id: authUser?.id || '',
+    role: authUser?.role || '',
+    verified: authUser?.verified || false,
   };
 
   const frequentProducts = useMemo(() => {
@@ -339,6 +338,8 @@ const RetailerDashboard: React.FC = () => {
     }),
     [orderStats],
   );
+
+  if (!authUser) return null; // prevent crash if not loaded
 
   return (
     <div className="space-y-6">

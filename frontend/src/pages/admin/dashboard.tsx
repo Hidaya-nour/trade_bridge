@@ -318,14 +318,13 @@ const AdminDashboard: React.FC = () => {
     setDisputesData(normalizedDisputes);
   }, [disputeItems]);
 
-  if (!authUser) return null; // prevent crash if not loaded
 
   const user = {
-    name: authUser.full_name,
-    business: authUser.business_name ?? "No Business Name",
-    id: authUser.id,
-    role: authUser.role,
-    verified: authUser.verified,
+    name: authUser?.full_name || '',
+    business: authUser?.business_name ?? "No Business Name",
+    id: authUser?.id || '',
+    role: authUser?.role || '',
+    verified: authUser?.verified || false,
   };
 
   const livePlatformStats = useMemo<PlatformStats>(
@@ -406,6 +405,8 @@ const AdminDashboard: React.FC = () => {
       iconColor: "text-amber-600",
     },
   ];
+
+  if (!authUser) return null; // prevent crash if not loaded
 
   return (
     <div className="space-y-6">

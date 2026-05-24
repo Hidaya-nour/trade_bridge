@@ -156,7 +156,7 @@ const FactoryDashboard: React.FC = () => {
       limit: 20,
     });
     fetchProducts(
-      { supplier_id: authUser.id, sortBy: "created_at", sortOrder: "DESC", limit: 30 } as any,
+      { supplier_id: authUser?.id || '', sortBy: "created_at", sortOrder: "DESC", limit: 30 } as any,
       {
         replace: true,
       },
@@ -214,14 +214,13 @@ const FactoryDashboard: React.FC = () => {
     loadForecasts();
   }, [products]);
 
-  if (!authUser) return null; // prevent crash if not loaded
 
   const user = {
-    name: authUser.full_name,
-    business: authUser.business_name ?? "No Business Name",
-    id: authUser.id,
-    role: authUser.role,
-    verified: authUser.verified,
+    name: authUser?.full_name || '',
+    business: authUser?.business_name ?? "No Business Name",
+    id: authUser?.id || '',
+    role: authUser?.role || '',
+    verified: authUser?.verified || false,
   };
 
   const recentOrders = useMemo<ProductionOrder[]>(() => {
@@ -365,6 +364,8 @@ const FactoryDashboard: React.FC = () => {
       iconBg: "bg-rose-100",
     },
   ];
+
+  if (!authUser) return null; // prevent crash if not loaded
 
   return (
     <div className="space-y-6">

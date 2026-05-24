@@ -154,14 +154,12 @@ const DistributorDashboard: React.FC = () => {
     loadPromotions();
   }, []);
 
-  if (!authUser) return null; // prevent crash if not loaded
-
   const user = {
-    name: authUser.full_name,
-    business: authUser.business_name ?? "No Business Name",
-    id: authUser.id,
-    role: authUser.role,
-    verified: authUser.verified,
+    name: authUser?.full_name || "",
+    business: authUser?.business_name ?? "No Business Name",
+    id: authUser?.id || "",
+    role: authUser?.role || "",
+    verified: authUser?.verified || false,
   };
 
   const incomingOrders = useMemo<DashboardIncomingOrder[]>(() => {
@@ -206,10 +204,10 @@ const DistributorDashboard: React.FC = () => {
         supplier:
           product.supplier?.business_name ||
           product.supplier?.full_name ||
-          authUser.business_name ||
+          authUser?.business_name ||
           "Current supplier",
       }));
-  }, [products, authUser.business_name]);
+  }, [products, authUser?.business_name]);
 
   const stats = useMemo(
     () => [
@@ -291,6 +289,8 @@ const DistributorDashboard: React.FC = () => {
       pendingPickups: pendingPickupCount,
     };
   }, [shipmentRows, incomingOrders]);
+
+  if (!authUser) return null; // prevent crash if not loaded
 
   return (
     <div className="space-y-6">
