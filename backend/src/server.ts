@@ -196,6 +196,16 @@ const startServer = async () => {
     process.exit(1);
   }
 
+  if (process.env.NODE_ENV !== 'production') {
+    try {
+      await sequelize.sync({ alter: false });
+      logger.info('✅ Database synced');
+    } catch (error) {
+      logger.error('❌ Database sync failed', error);
+      process.exit(1);
+    }
+  }
+
   try {
     await ensureWalletSchema();
     logger.info('✅ Wallet schema ready');
@@ -204,8 +214,8 @@ const startServer = async () => {
     process.exit(1);
   }
 
-  if (process.env.NODE_ENV === 'development') {
-     try {
+  if (process.env.NODE_ENV !== 'production') {
+    try {
       await sequelize.query(
         "UPDATE supplier_payment_methods SET method_type='mobile_banking' WHERE method_type='' OR method_type IS NULL",
       );
@@ -233,13 +243,6 @@ const startServer = async () => {
         error,
       );
     }
-
-    try {
-      await sequelize.sync({ alter: false });
-      logger.info('✅ Database synced (alter)');
-    } catch (error) {
-      logger.error('❌ Database sync (alter) failed', error);
-       }
   }
 
    try {
