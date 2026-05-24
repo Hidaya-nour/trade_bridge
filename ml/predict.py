@@ -1,4 +1,5 @@
 import argparse
+import json
 
 from src.models.predict import forecast_demand, recommend_suppliers
 
@@ -33,13 +34,12 @@ def main() -> None:
         )
         return
 
-    print(
-        forecast_demand(
-            product_id=args.product_id,
-            seller_id=args.seller_id,
-            horizon_days=args.horizon_days,
-        )
+    result = forecast_demand(
+        product_id=args.product_id,
+        seller_id=args.seller_id,
+        horizon_days=args.horizon_days,
     )
+    print(json.dumps(result))
 
 
 if __name__ == "__main__":

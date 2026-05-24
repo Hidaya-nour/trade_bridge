@@ -674,6 +674,132 @@ def recommend_suppliers_with_meta(
     }
     return recommendations, meta
 
+def _forecast_tradebridge_demand(
+    model: Any,
+    product_id: str,
+    horizon_days: int = 7,
+) -> List[Dict[str, Any]] | None:
+    snapshot = _read_json(APP_SNAPSHOT_PATH)
+    if not snapshot:
+        return None
+
+    # Check if the product exists in the snapshot
+    products = _snapshot_items(snapshot, "products")
+    product = None
+    for p in products:
+        if str(p.get("id")) == str(product_id):
+            product = p
+            break
+    if not product:
+        return None
+
+    # Extract sales history for this product from orders
+    orders = _snapshot_items(snapshot, "orders")
+    sales_data = []
+    for order in orders:
+        order_date_str = order.get("created_at")
+        if not order_date_str:
+            continue
+        try:
+            order_date = pd.to_datetime(order_date_str[:10])
+        except Exception:
+            continue
+
+        for item in order.get("items", []) or []:
+            if str(item.get("product_id")) == str(product_id):
+                qty = _as_int(item.get("quantity"), 0)
+                if qty > 0:
+                    sales_data.append({
+                        "date": order_date,
+                        "quantity": qty,
+                        "order_id": order.get("id")
+                    })
+
+    # If no sales history, return a baseline or zero-filled history
+    if not sales_data:
+        end_date = pd.Timestamp.now().floor("D")
+        start_date = end_date - pd.Timedelta(days=35)
+        df_history = pd.DataFrame({
+            "date": pd.date_range(start_date, end_date, freq="D"),
+            "demand_qty": 0.0,
+            "order_count": 0.0,
+            "supplier_id": str(product.get("supplier_id") or "unknown")
+        })
+    else:
+        df_sales = pd.DataFrame(sales_data)
+        daily_sales = df_sales.groupby("date").agg(
+            demand_qty=("quantity", "sum"),
+            order_count=("order_id", "nunique")
+        ).reset_index()
+
+        end_date = pd.Timestamp.now().floor("D")
+        start_date = min(daily_sales["date"].min(), end_date - pd.Timedelta(days=35))
+        full_dates = pd.date_range(start_date, end_date, freq="D")
+        
+        df_history = pd.DataFrame({"date": full_dates})
+        df_history = df_history.merge(daily_sales, on="date", how="left")
+        df_history["demand_qty"] = df_history["demand_qty"].fillna(0.0)
+        df_history["order_count"] = df_history["order_count"].fillna(0.0)
+        df_history["supplier_id"] = str(product.get("supplier_id") or "unknown")
+
+    df_history = df_history.sort_values("date").reset_index(drop=True)
+    
+    recent_demand = df_history["demand_qty"].tolist()
+    recent_orders = df_history["order_count"].tolist()
+    last_row = df_history.iloc[-1].copy()
+    last_date = last_row["date"]
+
+    forecasts = []
+    for step in range(1, horizon_days + 1):
+        forecast_date = last_date + pd.Timedelta(days=step)
+        
+        new_row = {
+            "supplier_id": str(product.get("supplier_id") or "unknown"),
+            "date": forecast_date,
+            "month": forecast_date.month,
+            "quarter": (forecast_date.month - 1) // 3 + 1,
+            "day_of_week": forecast_date.dayofweek,
+            "order_count": 0.0
+        }
+        
+        new_row["lag_1"] = recent_demand[-1] if len(recent_demand) >= 1 else 0.0
+        new_row["lag_7"] = recent_demand[-7] if len(recent_demand) >= 7 else (recent_demand[-1] if recent_demand else 0.0)
+        new_row["lag_30"] = recent_demand[-30] if len(recent_demand) >= 30 else (recent_demand[-1] if recent_demand else 0.0)
+        
+        new_row["ma_7"] = np.mean(recent_demand[-7:]) if len(recent_demand) >= 7 else (np.mean(recent_demand) if recent_demand else 0.0)
+        new_row["ma_30"] = np.mean(recent_demand[-30:]) if len(recent_demand) >= 30 else (np.mean(recent_demand) if recent_demand else 0.0)
+        
+        new_row["order_freq_7"] = np.sum(recent_orders[-7:]) if len(recent_orders) >= 7 else (np.sum(recent_orders) if recent_orders else 0.0)
+        new_row["order_freq_30"] = np.sum(recent_orders[-30:]) if len(recent_orders) >= 30 else (np.sum(recent_orders) if recent_orders else 0.0)
+        
+        feature_cols = [
+            "lag_1", "lag_7", "lag_30", "ma_7", "ma_30",
+            "order_freq_7", "order_freq_30", "order_count",
+            "month", "quarter", "day_of_week", "supplier_id"
+        ]
+        
+        X = pd.DataFrame([new_row])
+        X = X[feature_cols]
+        
+        try:
+            if model is not None:
+                prediction = max(0.0, float(model.predict(X)[0]))
+            else:
+                prediction = np.mean(recent_demand[-7:]) if len(recent_demand) >= 7 else (np.mean(recent_demand) if recent_demand else 0.0)
+        except Exception as e:
+            print(f"TradeBridge prediction error: {e}")
+            prediction = np.mean(recent_demand[-7:]) if len(recent_demand) >= 7 else (np.mean(recent_demand) if recent_demand else 0.0)
+            
+        forecasts.append({
+            "date": forecast_date.strftime("%Y-%m-%d"),
+            "forecast_quantity": int(round(prediction))
+        })
+        
+        recent_demand.append(prediction)
+        recent_orders.append(0.0)
+
+    return forecasts
+
 def forecast_demand(
     product_id: str,
     seller_id: str | None = None,
@@ -691,16 +817,32 @@ def forecast_demand(
         List of daily forecasts with dates and quantities
     """
     # Load trained Random Forest model (this is a Pipeline object directly)
+    model = None
     model_path = MODELS_DIR / "demand_random_forest.joblib"
     if not model_path.exists():
         # Try linear regression as fallback
         model_path = MODELS_DIR / "demand_linear_regression.joblib"
-        if not model_path.exists():
-            raise FileNotFoundError(
-                f"No demand model found. Run: python -m src.models.train_forecast"
-            )
     
-    model = load_joblib(model_path)  # This is the Pipeline, not a dict
+    if model_path.exists():
+        try:
+            model = load_joblib(model_path)
+        except Exception as e:
+            print(f"Failed to load demand model: {e}")
+
+    # Check TradeBridge snapshot path first
+    tradebridge_forecast = _forecast_tradebridge_demand(
+        model=model,
+        product_id=product_id,
+        horizon_days=horizon_days,
+    )
+    if tradebridge_forecast is not None:
+        return tradebridge_forecast
+
+    # Fallback to Olist dataset if no TradeBridge product matches
+    if model is None:
+        raise FileNotFoundError(
+            "No demand model found. Run: python -m src.models.train_forecast"
+        )
     
     # Load demand dataset
     dataset_path = PROCESSED_DATA_DIR / "demand_dataset.csv"
@@ -716,11 +858,11 @@ def forecast_demand(
     if seller_id:
         history = history[history["supplier_id"] == seller_id]
     
-    if history.empty:
-        return []
-    
     # Sort and prepare for forecasting
     history = history.sort_values("date").reset_index(drop=True)
+    
+    if history.empty:
+        return []
     
     # Define feature columns (excluding target and metadata)
     exclude_cols = ["supplier_id", "date", "demand_qty", "split"]

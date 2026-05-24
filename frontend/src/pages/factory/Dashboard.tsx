@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   Package,
@@ -146,25 +146,28 @@ const FactoryDashboard: React.FC = () => {
   >({});
   const [forecastLoading, setForecastLoading] = useState(false);
   const [forecastError, setForecastError] = useState<string | null>(null);
+  const forecastFetchedRef = useRef(false);
 
   useEffect(() => {
+    if (!authUser?.id) return;
     fetchOrdersAsSupplier({
       sortBy: "created_at",
       sortOrder: "DESC",
       limit: 20,
     });
     fetchProducts(
-      { sortBy: "created_at", sortOrder: "DESC", limit: 30 } as any,
+      { supplier_id: authUser.id, sortBy: "created_at", sortOrder: "DESC", limit: 30 } as any,
       {
         replace: true,
       },
     );
-  }, [fetchOrdersAsSupplier, fetchProducts]);
+  }, [fetchOrdersAsSupplier, fetchProducts, authUser?.id]);
 
   useEffect(() => {
     const loadForecasts = async () => {
-      if (!products.length) return;
+      if (!products.length || forecastFetchedRef.current) return;
 
+      forecastFetchedRef.current = true;
       setForecastLoading(true);
       setForecastError(null);
 
@@ -194,15 +197,13 @@ const FactoryDashboard: React.FC = () => {
                 product.id,
                 fetchError,
               );
-              return [
-                product.id,
-                { totalForecast: 0, trend: "stable" as const },
-              ] as const;
+              return null;
             }
           }),
         );
 
-        setProductForecasts(Object.fromEntries(forecastEntries));
+        const validEntries = forecastEntries.filter((e) => e !== null) as [string, { totalForecast: number; trend: "up" | "down" | "stable" }][];
+        setProductForecasts(Object.fromEntries(validEntries));
       } catch (error: any) {
         setForecastError(error.message || "Unable to load forecast");
       } finally {
@@ -277,40 +278,28 @@ const FactoryDashboard: React.FC = () => {
   }, [products]);
 
   const demandForecasts = useMemo<ProductForecast[]>(() => {
-    return products.slice(0, 6).map((product: any) => {
-      const stock = Number(product.stock_quantity || 0);
-      const forecastData = productForecasts[product.id];
-      const forecastedDemand = forecastLoading
-        ? stock + 20
-        : forecastData?.totalForecast ||
-          Math.max(
-            stock + 20,
-            Math.max(10, Math.floor(stock * 0.6) || 10) + 10,
-          );
-      const trend =
-        forecastData?.trend ??
-        (stock < forecastedDemand
-          ? "up"
-          : stock > forecastedDemand
-            ? "down"
-            : "stable");
+    if (forecastLoading || Object.keys(productForecasts).length === 0) return [];
 
-      return {
-        id: Number(product.id),
-        name: product.name,
-        category: product.category || "General",
-        forecastedDemand,
-        currentStock: stock,
-        reorderPoint: Math.max(10, Math.floor(stock * 0.6) || 10),
-        confidence: forecastLoading
-          ? 75
-          : forecastData
-            ? Math.min(98, Math.max(65, 80 + Math.floor(stock / 20)))
-            : 75,
-        trend,
-        seasonality: "Live",
-      };
-    });
+    return products.slice(0, 6)
+      .filter((product: any) => productForecasts[product.id] != null)
+      .map((product: any) => {
+        const stock = Number(product.stock_quantity || 0);
+        const forecastData = productForecasts[product.id];
+        const forecastedDemand = forecastData.totalForecast;
+        const trend = forecastData.trend;
+
+        return {
+          id: Number(product.id),
+          name: product.name,
+          category: product.category || "General",
+          forecastedDemand,
+          currentStock: stock,
+          reorderPoint: Math.max(10, Math.floor(stock * 0.6) || 10),
+          confidence: Math.min(98, Math.max(65, 80 + Math.floor(stock / 20))),
+          trend,
+          seasonality: "This Week",
+        };
+      });
   }, [products, productForecasts, forecastLoading]);
 
   const productionSchedule = useMemo(() => {
@@ -603,64 +592,64 @@ const FactoryDashboard: React.FC = () => {
                 </Badge>
               </div>
               <CardDescription>
-                Predicted demand for next 30 days
+                Predicted demand for this week (next 7 days)
               </CardDescription>
             </CardHeader>
             <CardContent className="pb-3">
               <ScrollArea className="h-[240px] pr-3">
                 <div className="space-y-4">
-                  {demandForecasts.map((product) => (
-                    <div key={product.id} className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm font-medium">{product.name}</p>
-                          <p className="text-xs text-muted-foreground">
-                            Stock: {product.currentStock} units • Min:{" "}
-                            {product.reorderPoint}
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <div className="flex items-center gap-1">
-                            <span className="text-sm font-semibold">
-                              {product.forecastedDemand}
-                            </span>
-                            <span className="text-xs text-muted-foreground">
-                              units
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-1 mt-0.5">
-                            {getDemandTrendIcon(product.trend)}
-                            <span
-                              className={`text-xs font-medium ${
-                                product.trend === "up"
-                                  ? "text-green-600"
-                                  : product.trend === "down"
-                                    ? "text-red-600"
-                                    : "text-amber-600"
-                              }`}
-                            >
-                              {product.trend === "up"
-                                ? "+12%"
-                                : product.trend === "down"
-                                  ? "-5%"
-                                  : "0%"}
-                            </span>
-                            <span className="text-xs text-muted-foreground ml-1">
-                              {product.confidence}% confidence
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="relative h-1.5 w-full bg-muted rounded-full overflow-hidden">
-                        <div
-                          className="absolute top-0 left-0 h-full bg-primary rounded-full"
-                          style={{
-                            width: `${(product.currentStock / product.forecastedDemand) * 100}%`,
-                          }}
-                        />
-                      </div>
+                  {forecastLoading ? (
+                    <div className="flex flex-col items-center justify-center py-8 gap-2">
+                      <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                      <p className="text-xs text-muted-foreground">Loading ML forecast…</p>
                     </div>
-                  ))}
+                  ) : forecastError ? (
+                    <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700 text-center">
+                      {forecastError}
+                    </div>
+                  ) : demandForecasts.length === 0 ? (
+                    <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
+                      No forecast data available for your products.
+                    </div>
+                  ) : (
+                    demandForecasts.map((product) => (
+                      <div key={product.id} className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium">{product.name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              Stock: {product.currentStock} units • Min:{" "}
+                              {product.reorderPoint}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <div className="flex items-center gap-1">
+                              <span className="text-sm font-semibold">
+                                {product.forecastedDemand}
+                              </span>
+                              <span className="text-xs text-muted-foreground">
+                                units
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-1 mt-0.5">
+                              {getDemandTrendIcon(product.trend)}
+                              <span className="text-xs text-muted-foreground ml-1">
+                                {product.confidence}% confidence
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="relative h-1.5 w-full bg-muted rounded-full overflow-hidden">
+                          <div
+                            className="absolute top-0 left-0 h-full bg-primary rounded-full"
+                            style={{
+                              width: `${Math.min(100, product.forecastedDemand > 0 ? (product.currentStock / product.forecastedDemand) * 100 : 100)}%`,
+                            }}
+                          />
+                        </div>
+                      </div>
+                    ))
+                  )}
                 </div>
               </ScrollArea>
             </CardContent>
