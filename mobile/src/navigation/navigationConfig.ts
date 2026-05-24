@@ -88,14 +88,7 @@ export const roleNavigationConfig: Record<UserRole, RoleNavigationConfig> = {
         screen: "orders",
         kind: "tab",
       },
-      {
-        key: "profile",
-        label: "Profile",
-        icon: "person-outline",
-        href: "/retailer/profile",
-        screen: "profile",
-        kind: "tab",
-      },
+      
     ],
     drawer: [
       ...sharedDrawerItems("retailer"),
@@ -107,16 +100,9 @@ export const roleNavigationConfig: Record<UserRole, RoleNavigationConfig> = {
         screen: "cart",
         kind: "drawer",
       },
-      {
-        key: "compare",
-        label: "Compare Suppliers",
-        icon: "git-compare-outline",
-        href: "/retailer/compare",
-        screen: "compare",
-        kind: "drawer",
-      },
+      
     ],
-    hiddenScreens: ["notifications", "messages", "support", "settings", "cart", "compare", "tracking"],
+    hiddenScreens: ["notifications", "messages", "support", "settings", "cart", "tracking"],
   },
   factory: {
     tabs: [
