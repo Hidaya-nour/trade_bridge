@@ -625,7 +625,7 @@ export const IncomingOrders: React.FC<IncomingOrdersProps> = ({
                   </div>
 
                   <div className="flex items-center gap-2 flex-wrap">
-                    {order.status === "processing" &&
+                    {/* {order.status === "processing" &&
                       (config.role === "distributor" ||
                         config.role === "factory") &&
                       order.deliveryId && (
@@ -637,7 +637,7 @@ export const IncomingOrders: React.FC<IncomingOrdersProps> = ({
                           <Truck className="h-4 w-4 mr-2" />
                           {order.deliveryId ? "Change Driver" : "Assign Driver"}
                         </Button>
-                      )}
+                      )} */}
 
                     {order.status === "shipped" && order.trackingNumber && (
                       <Badge variant="outline" className="bg-purple-50">

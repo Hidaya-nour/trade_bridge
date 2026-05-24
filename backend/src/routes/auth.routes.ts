@@ -33,7 +33,7 @@ const registerLimiter = rateLimit({
 // Public routes
 router.post(
   '/register',
-  registerLimiter,
+  // registerLimiter,
 //   validate(registerSchema),
   authController.register
 );

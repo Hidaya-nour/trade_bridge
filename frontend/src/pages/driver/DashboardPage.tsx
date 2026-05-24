@@ -470,10 +470,10 @@ export const DriverDashboard: React.FC = () => {
                                 <p className="text-xs text-muted-foreground">
                                   {delivery.pickupAddress}
                                 </p>
-                                <div className="flex items-center gap-2 mt-1 text-xs">
+                                {/* <div className="flex items-center gap-2 mt-1 text-xs">
                                   <Phone className="h-3 w-3" />
                                   {formatPhone(delivery.pickupPhone)}
-                                </div>
+                                </div> */}
                                 {delivery.pickedUpAt && (
                                   <p className="text-xs text-muted-foreground mt-1">
                                     Picked up: {formatTime(delivery.pickedUpAt)}
@@ -497,10 +497,10 @@ export const DriverDashboard: React.FC = () => {
                                 <p className="text-xs text-muted-foreground">
                                   {delivery.dropoffAddress}
                                 </p>
-                                <div className="flex items-center gap-2 mt-1 text-xs">
+                                {/* <div className="flex items-center gap-2 mt-1 text-xs">
                                   <Phone className="h-3 w-3" />
                                   {formatPhone(delivery.dropoffPhone)}
-                                </div>
+                                </div> */}
                               </div>
                             </div>
                           </div>
@@ -524,10 +524,7 @@ export const DriverDashboard: React.FC = () => {
 
                         {/* Delivery Info */}
                         <div className="flex flex-wrap gap-4 mt-3 text-xs text-muted-foreground">
-                          <span className="flex items-center">
-                            <Navigation className="h-3 w-3 mr-1" />
-                            {delivery.distance} km
-                          </span>
+                          
                           
                           <span className="flex items-center">
                             <Calendar className="h-3 w-3 mr-1" />

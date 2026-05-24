@@ -870,6 +870,7 @@ export const OrderList: React.FC<OrderListProps> = ({
                             )}
                           </div>
                         </div>
+                        {config.role=="retailer"?
                         <Button
                           size="sm"
                           variant="outline"
@@ -880,6 +881,16 @@ export const OrderList: React.FC<OrderListProps> = ({
                         >
                           Track Driver
                         </Button>
+                        :<Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 text-xs bg-white"
+                          onClick={() => navigate(
+                      `/${"distributor"}/tracking/${order.id}?from=${encodeURIComponent(location.pathname)}`,
+                    )}
+                        >
+                          Track Driver
+                        </Button>}
                       </div>
                     </div>
                   )}
