@@ -446,6 +446,16 @@ class DeliveryService {
     if (status === 'picked_up') delivery.started_at = new Date() as any;
     if (status === 'delivered') delivery.completed_at = new Date() as any;
     await delivery.save();
+
+    if (status === 'delivered') {
+      try {
+        const sellerWalletService = (await import('../wallet/seller-wallet.service')).default;
+        await sellerWalletService.settleOrderFunds(delivery.order_id);
+      } catch (err) {
+        console.error('Wallet settlement after delivery status update failed', err);
+      }
+    }
+
     return delivery;
   }
 

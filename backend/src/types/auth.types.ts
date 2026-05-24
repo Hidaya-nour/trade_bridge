@@ -22,6 +22,8 @@ export interface IUser {
   approved_by?: string;
   last_login?: Date;
   chapa_subaccount_id?: string;
+  pending_balance?: number;
+  available_balance?: number;
 }
 
 export interface IRefreshToken {

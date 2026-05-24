@@ -19,6 +19,7 @@ import {
   FileText,
   Star,
   CreditCard,
+  Wallet,
   LogOut,
   Shield,
   AlertCircle,
@@ -106,6 +107,11 @@ const roleNavigation = {
         href: "/distributor/disputes",
         icon: AlertCircle,
       },
+      {
+        name: "Seller Wallet",
+        href: "/distributor/wallet",
+        icon: Wallet,
+      },
     ],
     purchasing: [
       {
@@ -151,6 +157,11 @@ const roleNavigation = {
       icon: AlertCircle,
     },
     {
+      name: "Seller Wallet",
+      href: "/factory/wallet",
+      icon: Wallet,
+    },
+    {
       name: "Agents",
       href: "/factory/agents",
       icon: Warehouse,
@@ -193,6 +204,11 @@ const roleNavigation = {
       name: "User Reports",
       href: "/admin/user-reports",
       icon: AlertCircle,
+    },
+    {
+      name: "Payout Approvals",
+      href: "/admin/withdrawals",
+      icon: Wallet,
     },
     { name: "Platform Analytics", href: "/admin/analytics", icon: BarChart3 },
   ],

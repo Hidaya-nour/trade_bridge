@@ -43,6 +43,7 @@ import SuspensionAppeal from './models/suspension-appeal.model';
 import './models/driver.model';
 import './models/dispute.model';
 import './models/payment.model';
+import './models/withdrawal.model';
 
 import { setupAssociations } from './models/associations';
 import productRoutes from './routes/product.routes';
@@ -52,6 +53,7 @@ import notificationRoutes from './routes/notification.routes';
 import disputeRoutes from './routes/dispute.routes';
 import broadcastRoutes from './routes/broadcast.routes';
 import paymentRoutes from './routes/payment.routes';
+import walletRoutes from './routes/wallet.routes';
 import inventoryMovementRoutes from './routes/inventory-movement.routes';
 import chatMessageRoutes from './routes/chat-message.route';
 import loginAttemptRoutes from './routes/login-attempt.routes';
@@ -68,7 +70,9 @@ import driverRoutes from './routes/driver.routes';
 import deliveryRoutes from './routes/delivery.routes';
 import forecastRoutes from './routes/forecast.routes';
 import reportRoutes from './routes/report.routes';
+import Withdrawal from './models/withdrawal.model';
 import { AppError, ValidationError } from './utils/errors';
+import { ensureWalletSchema } from './utils/ensure-wallet-schema';
 dotenv.config();
 
 const app = express();
@@ -117,6 +121,7 @@ app.use('/api/orders', orderRoutes);
 app.use('/api/cart', cartRoutes);
 app.use('/api/broadcasts', broadcastRoutes);
 app.use('/api/payments', paymentRoutes);
+app.use('/api/wallet', walletRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/disputes', disputeRoutes);
 app.use('/api/inventory-movements', inventoryMovementRoutes);
@@ -191,6 +196,14 @@ const startServer = async () => {
     process.exit(1);
   }
 
+  try {
+    await ensureWalletSchema();
+    logger.info('✅ Wallet schema ready');
+  } catch (error) {
+    logger.error('❌ Wallet schema migration failed', error);
+    process.exit(1);
+  }
+
   if (process.env.NODE_ENV === 'development') {
      try {
       await sequelize.query(
@@ -212,7 +225,7 @@ const startServer = async () => {
         "ALTER TABLE `supplier_payment_methods` ADD COLUMN IF NOT EXISTS `credit_limit` DECIMAL(12,2) NULL",
       );
       await sequelize.query(
-        "ALTER TABLE `payments` MODIFY `payment_method` ENUM('mobile_banking','chapa','credit') NOT NULL",
+        "ALTER TABLE `payments` MODIFY `payment_method` ENUM('mobile_banking','chapa','credit','cod') NOT NULL",
       );
     } catch (error) {
       logger.warn(
@@ -238,6 +251,11 @@ const startServer = async () => {
     await SuspensionAppeal.sync();
   } catch (error) {
     logger.warn('Failed to ensure suspension_appeals table exists', error);
+  }
+  try {
+    await Withdrawal.sync();
+  } catch (error) {
+    logger.warn('Failed to ensure withdrawals table exists', error);
   }
 
   app.listen(Number(PORT), "0.0.0.0", () => {

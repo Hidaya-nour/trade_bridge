@@ -126,6 +126,91 @@ export interface CreateSubaccountPayload {
   split_value: number;
 }
 
+export interface ChapaTransferPayload {
+  account_name: string;
+  account_number: string;
+  amount: string;
+  currency: string;
+  reference: string;
+  /** Chapa numeric bank id (see GET /banks). */
+  bank_code: number;
+}
+
+export const createChapaTransfer = async (payload: ChapaTransferPayload) => {
+  const CHAPA_BASE_URL = process.env.CHAPA_BASE_URL || 'https://api.chapa.co/v1';
+  try {
+    const body = {
+      ...payload,
+      bank_code: Number(payload.bank_code),
+    };
+
+    const response = await fetch(`${CHAPA_BASE_URL}/transfers`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(body),
+    });
+
+    const raw = await response.text();
+    let data: any = {};
+    try {
+      data = raw ? JSON.parse(raw) : {};
+    } catch {
+      throw new AppError(`Invalid Chapa transfer response: ${raw || 'empty body'}`, 502);
+    }
+
+    if (!response.ok || data?.status !== 'success') {
+      throw new AppError(
+        normalizeChapaMessage(data, 'Failed to create Chapa transfer'),
+        400,
+      );
+    }
+
+    return data;
+  } catch (error: any) {
+    if (error instanceof AppError) throw error;
+    throw new AppError(
+      `Unable to reach Chapa transfer API: ${error?.message || 'unknown network error'}`,
+      502,
+    );
+  }
+};
+
+export const verifyChapaTransfer = async (reference: string) => {
+  const CHAPA_BASE_URL = process.env.CHAPA_BASE_URL || 'https://api.chapa.co/v1';
+  try {
+    const response = await fetch(
+      `${CHAPA_BASE_URL}/transfers/verify/${encodeURIComponent(reference)}`,
+      {
+        method: 'GET',
+        headers: getHeaders(),
+      },
+    );
+
+    const raw = await response.text();
+    let data: any = {};
+    try {
+      data = raw ? JSON.parse(raw) : {};
+    } catch {
+      throw new AppError(`Invalid Chapa transfer verification response: ${raw || 'empty body'}`, 502);
+    }
+
+    if (!response.ok) {
+      throw new AppError(
+        normalizeChapaMessage(data, 'Failed to verify Chapa transfer'),
+        400,
+      );
+    }
+
+    return data;
+  } catch (error: any) {
+    if (error instanceof AppError) throw error;
+    throw new AppError(
+      `Unable to reach Chapa transfer API: ${error?.message || 'unknown network error'}`,
+      502,
+    );
+  }
+};
+
 export const createChapaSubaccount = async (payload: CreateSubaccountPayload) => {
   const CHAPA_BASE_URL = process.env.CHAPA_BASE_URL || 'https://api.chapa.co/v1';
   try {

@@ -5,6 +5,7 @@ import Order from '../models/order.model';
 import logger from '../utils/logger';
 import { AppError } from '../utils/errors';
 import { recordAuditLog } from '../utils/audit';
+import { createChapaSubaccount } from '../config/chapa';
 
 class PaymentController {
   private isAdmin(role?: string) {
@@ -215,15 +216,59 @@ class PaymentController {
         return res.status(400).json({ success: false, message: 'Missing required bank details' });
       }
 
-      const { createChapaSubaccount } = await import('../config/chapa');
-      
+      // Map bank_code to one of the verified active Chapa slugs
+      const bankNameToChapaCode: Record<string, string> = {
+        'telebirr': 'telebirr',
+        'cbe birr': 'cbebirr',
+        'cbebirr': 'cbebirr',
+        'm-pesa': 'mpesa',
+        'mpesa': 'mpesa',
+        'yaya': 'yaya',
+        'kacha': 'kacha',
+        'commercial bank of ethiopia': 'cbebirr',
+        'cbe': 'cbebirr',
+        'wegagen bank': 'wegagen_bank',
+        'wegagen': 'wegagen_bank',
+        'berhan bank': 'berhan_bank',
+        'berhan': 'berhan_bank',
+        'enat bank': 'enat_bank',
+        'enat': 'enat_bank',
+        'addis international bank': 'addis_int_bank',
+        'addis': 'addis_int_bank',
+        'ahadu bank': 'ahadu_bank',
+        'ahadu': 'ahadu_bank',
+        'global bank': 'global_bank',
+        'global': 'global_bank',
+        'lion bank': 'anbesa_bank',
+        'anbesa bank': 'anbesa_bank',
+        'lion': 'anbesa_bank'
+      };
+
+      const normalized = String(bank_code || '').trim().toLowerCase();
+      let activeBankCode = 'cbebirr'; // default fallback
+      let foundMatch = false;
+
+      // First try exact or substring matches
+      for (const [key, value] of Object.entries(bankNameToChapaCode)) {
+        if (normalized === key || normalized.includes(key) || key.includes(normalized)) {
+          activeBankCode = value;
+          foundMatch = true;
+          break;
+        }
+      }
+
+      // If no match found but it is already one of the active values, preserve it
+      if (!foundMatch && Object.values(bankNameToChapaCode).includes(normalized)) {
+        activeBankCode = normalized;
+      }
+
       // Default platform fee: 2% (0.02)
       const platformFee = Number(process.env.CHAPA_PLATFORM_FEE_PERCENTAGE || 0.02);
 
       const chapaResponse = await createChapaSubaccount({
         business_name,
         account_name,
-        bank_code,
+        bank_code: activeBankCode,
         account_number,
         split_type: 'percentage',
         split_value: platformFee, 

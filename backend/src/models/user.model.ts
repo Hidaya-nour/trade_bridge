@@ -24,6 +24,9 @@ export class User extends Model<IUser, UserCreationAttributes> implements IUser 
   public approved_at?: Date;
   public approved_by?: string;
   public last_login?: Date;
+  public chapa_subaccount_id?: string;
+  public pending_balance?: number;
+  public available_balance?: number;
 
   // Will be populated by association
   public readonly refreshTokens?: any[];
@@ -119,6 +122,16 @@ User.init(
     chapa_subaccount_id: {
       type: DataTypes.STRING(255),
       allowNull: true,
+    },
+    pending_balance: {
+      type: DataTypes.DECIMAL(12, 2),
+      allowNull: false,
+      defaultValue: 0,
+    },
+    available_balance: {
+      type: DataTypes.DECIMAL(12, 2),
+      allowNull: false,
+      defaultValue: 0,
     },
   },
   {

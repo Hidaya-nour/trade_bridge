@@ -108,6 +108,9 @@ export interface IPayment {
   refunded_by?: string;
   payment_date?: Date;
   notes?: string;
+  seller_net_amount?: number;
+  platform_fee_amount?: number;
+  settlement_status?: 'none' | 'pending' | 'released' | 'reversed';
   created_at: Date;
   updated_at: Date;
   deleted_at?: Date;

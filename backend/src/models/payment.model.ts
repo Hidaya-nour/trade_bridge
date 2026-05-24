@@ -24,6 +24,9 @@ export class Payment extends Model<IPayment, PaymentCreationAttributes> implemen
   public refunded_by?: string;
   public payment_date?: Date;
   public notes?: string;
+  public seller_net_amount?: number;
+  public platform_fee_amount?: number;
+  public settlement_status!: 'none' | 'pending' | 'released' | 'reversed';
   public created_at!: Date;
   public updated_at!: Date;
   public deleted_at?: Date;
@@ -100,6 +103,19 @@ Payment.init(
       type: DataTypes.TEXT,
       allowNull: true,
     },
+    seller_net_amount: {
+      type: DataTypes.DECIMAL(12, 2),
+      allowNull: true,
+    },
+    platform_fee_amount: {
+      type: DataTypes.DECIMAL(12, 2),
+      allowNull: true,
+    },
+    settlement_status: {
+      type: DataTypes.ENUM('none', 'pending', 'released', 'reversed'),
+      allowNull: false,
+      defaultValue: 'none',
+    },
     created_at: {
       type: DataTypes.DATE,
       defaultValue: DataTypes.NOW,
@@ -154,6 +170,14 @@ Payment.init(
                 message: `Payment for order ${order.id} has been received.`,
                 is_read: 0
               } as any);
+
+              // Escrow: credit supplier pending balance when buyer payment completes
+              try {
+                const walletModule = await import('../services/wallet/seller-wallet.service');
+                await walletModule.default.settleOrderFunds(payment.order_id);
+              } catch (walletErr) {
+                console.error('Payment hook wallet settlement error', walletErr);
+              }
             }
           }
         } catch (err) {

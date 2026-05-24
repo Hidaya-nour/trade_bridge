@@ -22,6 +22,7 @@ import { AppError } from '../../utils/errors';
 import logger from '../../utils/logger';
 import { recordAuditLog } from '../../utils/audit';
 import { SupplierPaymentMethodService } from '../supplier-payment-method/supplier-payment-method.service';
+import sellerWalletService from '../wallet/seller-wallet.service';
 
 const DEFAULT_VAT_RATE = 0.15;
 
@@ -507,6 +508,7 @@ export class OrderService {
     if (statusData.status === 'delivered') {
       const payment = await Payment.findOne({ where: { order_id: orderId } });
       if (payment?.payment_status === 'completed') {
+        await sellerWalletService.settleOrderFunds(orderId);
         await this.orderRepo.updateOrderStatus(orderId, 'closed');
         await recordAuditLog({
           userId,

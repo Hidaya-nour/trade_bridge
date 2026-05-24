@@ -5,6 +5,7 @@ import Payment from '../../models/payment.model';
 import User from '../../models/user.model';
 import { AppError } from '../../utils/errors';
 import { SupplierPaymentMethodService } from '../supplier-payment-method/supplier-payment-method.service';
+import sellerWalletService from '../wallet/seller-wallet.service';
 
 type PaymentMethod =
   | 'app_payment'
@@ -73,6 +74,7 @@ class PaymentService {
     if (payment.payment_status !== 'completed') return;
     order.order_status = 'closed' as any;
     await order.save();
+    await sellerWalletService.settleOrderFunds(orderId);
   }
   private isValidEmail(email: string) {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -192,7 +194,6 @@ class PaymentService {
 
       if (selectedMethod === 'app_payment') {
         const buyer = await User.findByPk(order.buyer_id);
-        const supplier = await User.findByPk(order.supplier_id);
 
         if (!buyer?.email || !buyer?.full_name) {
           throw new AppError('Buyer profile must include name and email for app payment', 400);
@@ -233,9 +234,6 @@ class PaymentService {
           callback_url: `${backendBaseUrl}/api/payments/chapa/callback?tx_ref=${encodeURIComponent(txRef)}`,
           return_url: returnUrl,
           phone_number: chapaPhone,
-          ...((supplier as any)?.chapa_subaccount_id
-            ? { 'subaccounts[id]': (supplier as any).chapa_subaccount_id }
-            : {}),
           customization: {
             title: 'TradeBridge',
             description: `Order ${order.id.slice(0, 8)} payment`,
@@ -322,6 +320,7 @@ if (selectedMethod === 'mobile_banking') {
     }
     await payment.save();
     if (isSuccess) {
+      await sellerWalletService.settleOrderFunds(payment.order_id);
       await this.closeOrderIfPaidAndDelivered(payment.order_id);
     }
 
@@ -338,6 +337,7 @@ if (selectedMethod === 'mobile_banking') {
     payment.payment_status = status as any;
     await payment.save();
     if (status === 'completed') {
+      await sellerWalletService.settleOrderFunds(payment.order_id);
       await this.closeOrderIfPaidAndDelivered(payment.order_id);
     }
     return payment;
@@ -350,6 +350,7 @@ if (selectedMethod === 'mobile_banking') {
     payment.payment_status = status as any;
     await payment.save();
     if (status === 'completed') {
+      await sellerWalletService.settleOrderFunds(orderId);
       await this.closeOrderIfPaidAndDelivered(orderId);
     }
     return payment;

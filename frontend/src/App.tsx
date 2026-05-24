@@ -42,6 +42,8 @@ import { DisputesManagementPage } from "./pages/admin/DisputesManagementPage";
 import { ReportsPage } from "./pages/admin/AnalyticsPage";
 import UserReportsManagementPage from "./pages/admin/UserReportsManagementPage";
 import AdminOrderDetailsPage from "./pages/admin/AdminOrderDetailsPage";
+import AdminWithdrawalsPage from "./pages/admin/AdminWithdrawalsPage";
+import SellerWalletPage from "./pages/shared/SellerWalletPage";
 import { DriverDashboard } from "./pages/driver/DashboardPage";
 import PaymentsPage from "./features/payment/Payments";
 import DistributorOrderDetailsPage from "./pages/distributor/DistributorOrderDetails";
@@ -411,6 +413,14 @@ function App() {
             }
           />
           <Route
+            path="/distributor/wallet"
+            element={
+              <DashboardLayout>
+                <SellerWalletPage />
+              </DashboardLayout>
+            }
+          />
+          <Route
             path="/distributor/disputes"
             element={
               <DashboardLayout>
@@ -548,6 +558,14 @@ function App() {
               </DashboardLayout>
             }
           />
+          <Route
+            path="/factory/wallet"
+            element={
+              <DashboardLayout>
+                <SellerWalletPage />
+              </DashboardLayout>
+            }
+          />
 
           <Route
             path="/admin/dashboard"
@@ -634,6 +652,14 @@ function App() {
             element={
               <DashboardLayout>
                 <UserReportsManagementPage />
+              </DashboardLayout>
+            }
+          />
+          <Route
+            path="/admin/withdrawals"
+            element={
+              <DashboardLayout>
+                <AdminWithdrawalsPage />
               </DashboardLayout>
             }
           />
