@@ -230,8 +230,11 @@ export const OrderList: React.FC<OrderListProps> = ({
     if (!order.payment) {
       return true;
     }
-    // If there is a payment record, check if it's pending or failed
-    return ["pending", "failed"].includes(order.payment.payment_status);
+    if (order.payment && order.payment.payment_status === "pending") {
+      return false;
+    }
+    // If there is a payment record, check if it's failed
+    return ["failed"].includes(order.payment.payment_status);
   };
   const navigate = useNavigate();
 
@@ -260,7 +263,7 @@ export const OrderList: React.FC<OrderListProps> = ({
         );
         return true;
       } else {
-        toast.error("Payment failed. Please try again.");
+        toast.error(error || "Payment submission failed");
         return false;
       }
     } catch (error) {

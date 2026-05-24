@@ -10,8 +10,8 @@ const sequelize = new Sequelize(
   process.env.DB_USER || 'avnadmin',
   process.env.DB_PASSWORD || '1234567890',
   {
-    host: process.env.DB_HOST || 'mysql-11c9a362-nourhidaya921-a902.l.aivencloud.com',
-    port: parseInt(process.env.DB_PORT || '21581'),
+    host: process.env.DB_HOST ,
+    port: parseInt(process.env.DB_PORT || '3306'),
     dialect: 'mysql',
     ...(dbSslEnabled
       ? {
