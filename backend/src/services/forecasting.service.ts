@@ -1,5 +1,6 @@
 import { spawn } from 'child_process';
 import path from 'path';
+import fs from 'fs';
 import { InventoryForecastPoint } from '../../types/forecast.types';
 
 export interface ForecastResponse {
@@ -8,19 +9,38 @@ export interface ForecastResponse {
 }
 
 export class ForecastingService {
+  private getPythonPath(): string {
+    const possiblePaths = [
+      // Check for .venv in ml folder
+      path.join(process.cwd(), '..', 'ml', '.venv', 'Scripts', 'python.exe'),
+      path.join(process.cwd(), '..', 'ml', '.venv', 'bin', 'python'),
+      // Check for .venv in backend parent folder (trade_bridge root)
+      path.join(process.cwd(), '..', '.venv', 'Scripts', 'python.exe'),
+      path.join(process.cwd(), '..', '.venv', 'bin', 'python'),
+      // Check for the original path configuration
+      path.join(process.cwd(), '..', '..', '.venv', 'Scripts', 'python.exe'),
+    ];
+
+    for (const p of possiblePaths) {
+      if (fs.existsSync(p)) {
+        return p;
+      }
+    }
+
+    // Default to system python
+    return process.platform === 'win32' ? 'python' : 'python3';
+  }
+
   async getInventoryForecast(productId: string, days: number = 7): Promise<ForecastResponse> {
     return new Promise((resolve, reject) => {
-      const pythonPath = path.join(process.cwd(), '..', '..', '.venv', 'Scripts', 'python.exe');
-      const predictScript = path.join(process.cwd(), '..', '..', 'ml', 'predict.py');
-      const modelPath = path.join(process.cwd(), '..', '..', 'ml', 'models', 'demand_forecast_model.pkl');
-      const historyFile = path.join(process.cwd(), '..', '..', 'ml', 'data', 'demand_data.csv');
+      const pythonPath = this.getPythonPath();
+      const predictScript = path.join(process.cwd(), '..', 'ml', 'predict.py');
 
       const pythonProcess = spawn(pythonPath, [
         predictScript,
-        '--model', modelPath,
+        'forecast-demand',
         '--product-id', productId,
-        '--days', days.toString(),
-        '--history-file', historyFile
+        '--horizon-days', days.toString()
       ]);
 
       let stdout = '';
@@ -43,40 +63,19 @@ export class ForecastingService {
               forecast: forecastData
             });
           } catch (parseError) {
-            // Fallback to simple forecast
-            resolve(this.getFallbackForecast(productId, days));
+            console.error('Failed to parse forecast output:', stdout);
+            reject(new Error('Failed to parse ML forecast output'));
           }
         } else {
           console.error('Python forecast failed:', stderr);
-          // Fallback to simple forecast
-          resolve(this.getFallbackForecast(productId, days));
+          reject(new Error(stderr || 'ML forecast process failed'));
         }
       });
 
       pythonProcess.on('error', (error) => {
         console.error('Failed to start Python process:', error);
-        // Fallback to simple forecast
-        resolve(this.getFallbackForecast(productId, days));
+        reject(new Error('Failed to start ML forecast process'));
       });
     });
-  }
-
-  private getFallbackForecast(productId: string, days: number): ForecastResponse {
-    const forecast: InventoryForecastPoint[] = [];
-    const baseDate = new Date();
-
-    for (let i = 0; i < days; i++) {
-      const date = new Date(baseDate);
-      date.setDate(date.getDate() + i + 1);
-      forecast.push({
-        date: date.toISOString().split('T')[0],
-        forecast_quantity: Math.floor(Math.random() * 20) + 10 // Random between 10-30
-      });
-    }
-
-    return {
-      source: 'fallback',
-      forecast
-    };
   }
 }

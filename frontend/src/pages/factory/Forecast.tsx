@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
@@ -42,6 +42,7 @@ const FactoryForecast: React.FC = () => {
   >([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const forecastFetchedRef = useRef(false);
 
   useEffect(() => {
     if (!authUser) return;
@@ -55,8 +56,10 @@ const FactoryForecast: React.FC = () => {
       setLoading(false);
       return;
     }
+    if (forecastFetchedRef.current) return;
 
     const loadForecasts = async () => {
+      forecastFetchedRef.current = true;
       setLoading(true);
       setError(null);
 
@@ -124,7 +127,7 @@ const FactoryForecast: React.FC = () => {
         <div>
           <h1 className="text-3xl font-semibold">Inventory Forecast</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Demand prediction for your factory products over the next 7 days.
+            Demand prediction for your factory products for this week (next 7 days).
           </p>
         </div>
         <Button size="sm" asChild>

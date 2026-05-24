@@ -104,18 +104,19 @@ const DistributorDashboard: React.FC = () => {
   const [promotions, setPromotions] = useState<BroadcastRecord[]>([]);
 
   useEffect(() => {
+    if (!authUser?.id) return;
     fetchOrdersAsSupplier({
       sortBy: "created_at",
       sortOrder: "DESC",
       limit: 20,
     });
     fetchProducts(
-      { sortBy: "created_at", sortOrder: "DESC", limit: 30 } as any,
+      { supplier_id: authUser.id, sortBy: "created_at", sortOrder: "DESC", limit: 30 } as any,
       {
         replace: true,
       },
     );
-  }, [fetchOrdersAsSupplier, fetchProducts]);
+  }, [fetchOrdersAsSupplier, fetchProducts, authUser?.id]);
 
   useEffect(() => {
     const loadShipments = async () => {
