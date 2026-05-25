@@ -131,7 +131,7 @@ export default function RetailerOrderDetailScreen() {
 
   const timeline = useMemo(() => {
     if (!order) return [];
-    const steps = ["Order Placed", "Order Approved", "Processing", "Shipped", "Delivered", "Closed"];
+    const steps = ["Order Placed", "Order Approved", "Processing", "Shipped", "Delivered"];
     const index = statusIndex[order.order_status] ?? 0;
     const effectiveIndex = index < 0 ? 0 : index;
 
@@ -151,6 +151,38 @@ export default function RetailerOrderDetailScreen() {
   const isApproved = order?.order_status == "pending" || order?.order_status != "cancelled";
   const canRate = order?.order_status === "delivered" || order?.order_status === "closed";
 
+  const normalizeProofFile = (file: any) => {
+    const uri = file.uri;
+    const name =
+      file.name ||
+      uri.split("/").pop() ||
+      `payment-proof-${Date.now()}.jpg`;
+    let type = file.type || file.mimeType;
+
+    if (!type) {
+      if (name.endsWith(".pdf")) type = "application/pdf";
+      else if (name.endsWith(".png")) type = "image/png";
+      else type = "image/jpeg";
+    }
+
+    // Normalize all image/* variants to supported types
+    if (type === "image/jpg" || type === "image/heic" || type === "image/heif" ||
+      type === "application/octet-stream" || !['image/jpeg', 'image/png', 'image/webp', 'application/pdf'].includes(type)) {
+      // If it's clearly a PDF by name, keep it; otherwise default to jpeg
+      if (name.toLowerCase().endsWith(".pdf")) {
+        type = "application/pdf";
+      } else if (name.toLowerCase().endsWith(".png")) {
+        type = "image/png";
+      } else if (name.toLowerCase().endsWith(".webp")) {
+        type = "image/webp";
+      } else {
+        type = "image/jpeg";
+      }
+    }
+
+    return { uri, name, type };
+  };
+
   const handlePaymentSubmit = useCallback(
     async ({ method, notes, payment_details, proofFile }: PaymentSheetSubmitPayload) => {
       if (!order) return;
@@ -162,7 +194,17 @@ export default function RetailerOrderDetailScreen() {
         // Upload proof file if provided
         if (proofFile?.uri) {
           try {
-            proofDocumentId = await paymentService.uploadProofFile(proofFile.uri);
+            const normalized = normalizeProofFile(proofFile);
+            const formData = new FormData();
+            formData.append("document_type", "other");
+            formData.append("file", {
+              uri: normalized.uri,
+              name: normalized.name,
+              type: normalized.type,
+            } as any);
+
+            const uploadResponse = await paymentService.uploadProofDocument(formData);
+            proofDocumentId = uploadResponse?.data?.data?.id || uploadResponse?.data?.id;
           } catch (uploadError: any) {
             console.error('Failed to upload proof file:', uploadError);
             Alert.alert('Upload Failed', 'Could not upload payment proof. Please try again.');
@@ -415,25 +457,6 @@ export default function RetailerOrderDetailScreen() {
               </View>
             </View>
           ))}
-        </View>
-
-        <View style={styles.deliveryCard}>
-          <Text style={styles.sectionTitle}>Delivery & Payment</Text>
-          <Text style={styles.metaText}>
-            Delivery: {order.delivery?.dropoff_location || "Awaiting delivery details"}
-          </Text>
-          <Text style={styles.metaText}>
-            Driver:{" "}
-            {order.delivery?.driver?.driverUser?.full_name ||
-              order.delivery?.driver?.full_name ||
-              "Not assigned"}
-          </Text>
-          <Text style={styles.metaText}>
-            Payment method: {order.payment?.payment_method || "Not selected"}
-          </Text>
-          <Text style={styles.metaText}>
-            Payment status: {order.payment?.payment_status || "pending"}
-          </Text>
         </View>
       </ScrollView>
 

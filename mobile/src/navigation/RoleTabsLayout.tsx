@@ -19,7 +19,9 @@
     const config = roleNavigationConfig[role];
 
     useEffect(() => {
-      setIsTabBarVisible(true);
+      // Hide tab bar on conversation screens so the composer input isn't obscured
+      const isConversationScreen = /\/messages\/[^/]+$/.test(pathname);
+      setIsTabBarVisible(!isConversationScreen);
     }, [pathname]);
 
     const providerValue = useMemo(

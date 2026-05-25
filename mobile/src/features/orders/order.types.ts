@@ -25,13 +25,13 @@ export type DeliveryStatus =
 export interface SupplierPaymentMethodConfig {
   id: string;
   method_type:
-    | "credit_card"
-    | "chapa"
-    | "mobile_money"
-    | "mobile_banking"
-    | "credit"
-    | "cod"
-    | "cash_on_delivery";
+  | "credit_card"
+  | "chapa"
+  | "mobile_money"
+  | "mobile_banking"
+  | "credit"
+  | "cod"
+  | "cash_on_delivery";
   provider_name?: string;
   account_display?: string;
   account_holder_name?: string;

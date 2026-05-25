@@ -256,110 +256,117 @@ export default function RetailerOrdersScreen() {
       Alert.alert("Reorder failed", "Unable to create reorder. Please try again.");
     }
   }, [createOrder, deliveryAddress, onRefresh, reorderNotes, reorderOrder, requestCredit]);
-const normalizeProofFile = (file: any) => {
-  const uri = file.uri;
+  const normalizeProofFile = (file: any) => {
+    const uri = file.uri;
 
-  const name =
-    file.name ||
-    uri.split("/").pop() ||
-    `payment-proof-${Date.now()}.jpg`;
+    const name =
+      file.name ||
+      uri.split("/").pop() ||
+      `payment-proof-${Date.now()}.jpg`;
 
-  let type = file.mimeType;
+    let type = file.type || file.mimeType;
 
-  if (!type) {
-    if (name.endsWith(".pdf")) type = "application/pdf";
-    else if (name.endsWith(".png")) type = "image/png";
-    else type = "image/jpeg";
-  }
+    if (!type) {
+      if (name.endsWith(".pdf")) type = "application/pdf";
+      else if (name.endsWith(".png")) type = "image/png";
+      else type = "image/jpeg";
+    }
 
-  // IMPORTANT FIX
-  if (type === "image/jpg") {
-    type = "image/jpeg";
-  }
+    // Normalize all image/* variants to supported types
+    if (type === "image/jpg" || type === "image/heic" || type === "image/heif" ||
+      type === "application/octet-stream" || !['image/jpeg', 'image/png', 'image/webp', 'application/pdf'].includes(type)) {
+      if (name.toLowerCase().endsWith(".pdf")) {
+        type = "application/pdf";
+      } else if (name.toLowerCase().endsWith(".png")) {
+        type = "image/png";
+      } else if (name.toLowerCase().endsWith(".webp")) {
+        type = "image/webp";
+      } else {
+        type = "image/jpeg";
+      }
+    }
 
-  return { uri, name, type };
-};
-const handlePaymentSubmit = useCallback(
-  async ({ method, notes, payment_details, proofFile }: PaymentSheetSubmitPayload) => {
-    if (!selectedOrder) return;
+    return { uri, name, type };
+  };
+  const handlePaymentSubmit = useCallback(
+    async ({ method, notes, payment_details, proofFile }: PaymentSheetSubmitPayload) => {
+      if (!selectedOrder) return;
 
-    setPaymentProcessing(true);
+      setPaymentProcessing(true);
 
-    try {
-      let proofDocumentId: string | undefined;
+      try {
+        let proofDocumentId: string | undefined;
 
-      // =========================
-      // Upload payment proof
-    if (proofFile?.uri) {
-  const normalized = normalizeProofFile(proofFile);
+        // =========================
+        // Upload payment proof
+        if (proofFile?.uri) {
+          const normalized = normalizeProofFile(proofFile);
+          const formData = new FormData();
+          formData.append("document_type", "other");
 
-  const formData = new FormData();
+          formData.append("file", {
+            uri: normalized.uri,
+            name: normalized.name,
+            type: normalized.type,
+          } as any);
 
-  formData.append("document_type", "payment_proof"); // MUST MATCH WEB
+          const uploadResponse = await paymentService.uploadProofDocument(formData);
 
-  formData.append("file", {
-    uri: normalized.uri,
-    name: normalized.name,
-    type: normalized.type,
-  } as any);
+          proofDocumentId =
+            uploadResponse?.data?.data?.id ||
+            uploadResponse?.data?.id;
+        }
 
-  const uploadResponse = await paymentService.uploadProofDocument(formData);
-
-  proofDocumentId =
-    uploadResponse?.data?.data?.id ||
-    uploadResponse?.data?.id;
-}
-
-      // =========================
-      // Submit payment
-      // =========================
-      const amount = Number(
-        selectedOrder.payment?.total_amount ||
+        // =========================
+        // Submit payment
+        // =========================
+        const amount = Number(
+          selectedOrder.payment?.total_amount ||
           selectedOrder.total_price ||
           0,
-      );
+        );
 
-      const result = await paymentService.submitByOrder(selectedOrder.id, {
-        payment_method: method,
-        amount_paid: method === "app_payment" ? undefined : amount,
-        notes,
-        payment_details,
-        proof_document_id: proofDocumentId,
-      });
+        const result = await paymentService.submitByOrder(selectedOrder.id, {
+          payment_method: method,
+          amount_paid: method === "app_payment" ? undefined : amount,
+          notes,
+          payment_details,
+          proof_document_id: proofDocumentId,
+        });
 
-      // =========================
-      // Chapa payment
-      // =========================
-      if (method === "app_payment") {
-        const checkoutUrl =
-          result?.data?.chapa?.checkout_url ||
-          result?.data?.payment?.chapa_payment_url;
+        // =========================
+        // Chapa payment
+        // =========================
+        if (method === "app_payment") {
+          const checkoutUrl =
+            result?.data?.chapa?.checkout_url ||
+            result?.data?.payment?.chapa_payment_url;
 
-        if (checkoutUrl) {
-          await ExpoLinking.openURL(checkoutUrl);
+          if (checkoutUrl) {
+            await ExpoLinking.openURL(checkoutUrl);
+          }
         }
-      }
 
-      setPaymentOpen(false);
+        setPaymentOpen(false);
 
-      await onRefresh();
+        await onRefresh();
 
-      Alert.alert("Success", "Payment submitted successfully.");
-    } catch (paymentError: any) {
-      console.error("Payment failed:", paymentError);
+        Alert.alert("Success", "Payment submitted successfully.");
+      } catch (paymentError: any) {
+        console.error("Payment failed:", paymentError);
 
-      Alert.alert(
-        "Payment failed",
-        paymentError?.response?.data?.message ||
+        Alert.alert(
+          "Payment failed",
+          paymentError?.response?.data?.message ||
           paymentError?.message ||
           "Please try again.",
-      );
-    } finally {
-      setPaymentProcessing(false);
-    }
-  },
-  [onRefresh, selectedOrder],
-);
+        );
+      } finally {
+        setPaymentProcessing(false);
+      }
+    },
+    [onRefresh, selectedOrder],
+  );
   const statusMeta = (status: OrderStatus) => {
     switch (status) {
       case "approved":
