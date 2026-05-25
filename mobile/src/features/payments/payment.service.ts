@@ -14,7 +14,7 @@ export interface SubmitOrderPaymentData {
 }
 
 const submitByOrder = async (orderId: string, payload: any) => {
-  return api.post(`/payments/order/${orderId}`, payload);
+  return api.post(`/payments/order/${orderId}/submit`, payload);
 };
 
 const uploadProofDocument = async (formData: FormData) => {

@@ -122,9 +122,9 @@ const mapOrderToDetails = (order: Order): OrderDetailsData => {
     timeline: buildTimeline(order),
     delivery: {
       deliveryId: order.delivery?.id,
- pickupLocation: order.delivery?.pickup_location || order.delivery?.dropoff_location || "Not provided",
-  address: order.delivery?.dropoff_location || "Not provided",
-        status: order.delivery?.status,
+      pickupLocation: order.delivery?.pickup_location || order.delivery?.dropoff_location || "Not provided",
+      address: order.delivery?.dropoff_location || "Not provided",
+      status: order.delivery?.status,
       recipient: recipientName,
       phone: recipientPhone || "N/A",
       requestedDate: undefined,
@@ -237,20 +237,20 @@ const OrderDetailsPage: React.FC = () => {
       return false;
     }
   };
-const handleCancelOrder = async (orderId: string, reason: string): Promise<boolean> => {
-  try {
-    // Call your order cancellation API – adjust endpoint as needed
-    await orderService.cancelOrder(orderId, reason);
-    // Alternatively, if your store has a cancel method:
-    // await useOrderStore.getState().cancelOrder(orderId, reason);
-    await fetchOrderById(orderId); // refresh order
-    toast.success("Order cancelled successfully");
-    return true;
-  } catch (err: any) {
-    toast.error(err?.response?.data?.message || "Failed to cancel order.");
-    return false;
-  }
-};
+  const handleCancelOrder = async (orderId: string, reason: string): Promise<boolean> => {
+    try {
+      // Call your order cancellation API – adjust endpoint as needed
+      await orderService.cancelOrder(orderId, reason);
+      // Alternatively, if your store has a cancel method:
+      // await useOrderStore.getState().cancelOrder(orderId, reason);
+      await fetchOrderById(orderId); // refresh order
+      toast.success("Order cancelled successfully");
+      return true;
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || "Failed to cancel order.");
+      return false;
+    }
+  };
   return (
     <WithAsync
       isLoading={isLoading && !orderDetails}
@@ -265,21 +265,21 @@ const handleCancelOrder = async (orderId: string, reason: string): Promise<boole
       }
     >
       {hasNoSupplierDelivery(currentOrder) && !currentOrder?.delivery?.driver_id && !currentOrder?.delivery?.driver ? (
-  <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-lg border bg-muted/30 p-3">
-    <div className="text-sm text-muted-foreground">
-      This supplier did not provide delivery for this order. You can
-      request an independent driver.
-    </div>
-    <Button
-      onClick={() =>
-        currentOrder &&
-        navigate(`/retailer/orders/${currentOrder.id}/request-driver`)
-      }
-    >
-      Request Driver
-    </Button>
-  </div>
-) : null}
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-lg border bg-muted/30 p-3">
+          <div className="text-sm text-muted-foreground">
+            This supplier did not provide delivery for this order. You can
+            request an independent driver.
+          </div>
+          <Button
+            onClick={() =>
+              currentOrder &&
+              navigate(`/retailer/orders/${currentOrder.id}/request-driver`)
+            }
+          >
+            Request Driver
+          </Button>
+        </div>
+      ) : null}
       <OrderDetailsView
         key={orderDetails?.id}
         initialOrder={orderDetails as OrderDetailsData}
@@ -289,7 +289,7 @@ const handleCancelOrder = async (orderId: string, reason: string): Promise<boole
         onReorderPlaceOrder={handleReorderPlaceOrder}
         onProcessPayment={handleProcessPayment}
         ordersPath="/retailer/orders"
-          onCancelOrder={handleCancelOrder}
+        onCancelOrder={handleCancelOrder}
 
         links={{
           party: (supplierId) => `/retailer/supplier/${supplierId}`,

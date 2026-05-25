@@ -1,9 +1,10 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Pressable, StyleSheet, Text, TextInput, View, ScrollView } from "react-native";
+import { Pressable, StyleSheet, Text, TextInput, View, ScrollView, Image, Alert } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import BottomSheetModal from "@/components/retailer/BottomSheetModal";
 import { SupplierPaymentMethodConfig } from "../../features/orders/order.types";
 import * as DocumentPicker from "expo-document-picker";
+import * as ImagePicker from "expo-image-picker";
 
 export type PaymentMethod = "app_payment" | "mobile_banking" | "credit" | "cod";
 
@@ -44,15 +45,12 @@ export default function PaymentSheet({
   const [mobileProvider, setMobileProvider] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [notes, setNotes] = useState("");
-  const [selectedFile, setSelectedFile] = useState<{ name: string; uri: string } | null>(null);
+  const [selectedFile, setSelectedFile] = useState<{ name: string; uri: string; type?: string } | null>(null);
 
   // Ensure we always have an iterable array, even if the backend returns undefined
   const safeMethods = supplierPaymentMethods || [];
 
-  const hasAppConfiguration = useMemo(
-    () => safeMethods.some((m) => m && isSupplierAppMethodType(m.method_type)),
-    [safeMethods],
-  );
+  const hasAppConfiguration = false; // Disabled as per user request
 
   const hasMobileConfiguration = useMemo(() => {
     // Never show mobile banking forms blindly if there are no provider details to build the inputs.
@@ -129,7 +127,7 @@ export default function PaymentSheet({
   const handlePickDocument = async () => {
     try {
       const result = await DocumentPicker.getDocumentAsync({
-        type: "*/*", // allow all files
+        type: ["image/*", "application/pdf"],
         copyToCacheDirectory: true,
         multiple: false,
       });
@@ -138,16 +136,107 @@ export default function PaymentSheet({
 
       const file = result.assets[0];
 
+      // Determine a safe MIME type — avoid application/octet-stream which multer rejects
+      let mimeType = file.mimeType || "";
+      if (!["image/jpeg", "image/png", "image/webp", "application/pdf"].includes(mimeType)) {
+        if (file.name?.toLowerCase().endsWith(".pdf")) mimeType = "application/pdf";
+        else if (file.name?.toLowerCase().endsWith(".png")) mimeType = "image/png";
+        else if (file.name?.toLowerCase().endsWith(".webp")) mimeType = "image/webp";
+        else mimeType = "image/jpeg";
+      }
       setSelectedFile({
         name: file.name,
         uri: file.uri,
+        type: mimeType,
       });
     } catch (error) {
       console.log("Document picker error:", error);
     }
   };
+
+  const handleTakePhoto = async () => {
+    try {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission needed', 'Please allow access to your camera to take photos.');
+        return;
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        quality: 0.8,
+      });
+
+      if (result.canceled) return;
+
+      const asset = result.assets[0];
+      setSelectedFile({
+        name: asset.fileName || `photo_${Date.now()}.jpg`,
+        uri: asset.uri,
+        type: asset.mimeType || "image/jpeg",
+      });
+    } catch (error) {
+      console.log("Camera error:", error);
+    }
+  };
+
+  const handlePickImage = async () => {
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission needed', 'Please allow access to your photo library to pick images.');
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        allowsEditing: true,
+        quality: 0.8,
+      });
+
+      if (result.canceled) return;
+
+      const asset = result.assets[0];
+      setSelectedFile({
+        name: asset.fileName || `image_${Date.now()}.jpg`,
+        uri: asset.uri,
+        type: asset.mimeType || "image/jpeg",
+      });
+    } catch (error) {
+      console.log("Image library error:", error);
+    }
+  };
+
+  const showUploadOptions = () => {
+    Alert.alert(
+      "Upload Payment Proof",
+      "Select an option to upload your receipt:",
+      [
+        { text: "Take Photo", onPress: handleTakePhoto },
+        { text: "Choose Photo", onPress: handlePickImage },
+        { text: "Choose Document (PDF)", onPress: handlePickDocument },
+        { text: "Cancel", style: "cancel" }
+      ]
+    );
+  };
+
   const handleFormSubmit = () => {
     if (!hasAnyPaymentMethod) return;
+
+    if (selectedMethod === "mobile_banking") {
+      if (!mobileProvider) {
+        Alert.alert("Validation Error", "Please select a mobile provider");
+        return;
+      }
+      if (!phoneNumber.trim()) {
+        Alert.alert("Validation Error", "Please enter your sender phone number");
+        return;
+      }
+      if (!selectedFile) {
+        Alert.alert("Validation Error", "Please upload a transfer receipt proof");
+        return;
+      }
+    }
+
     onSubmit({
       method: selectedMethod,
       notes,
@@ -281,10 +370,31 @@ export default function PaymentSheet({
             <TextInput style={styles.input} placeholder="+251..." keyboardType="phone-pad" value={phoneNumber} onChangeText={setPhoneNumber} />
 
             <Text style={styles.inputLabel}>Upload Transfer Receipt Proof</Text>
-            <Pressable style={styles.uploadArea} onPress={handlePickDocument}>
+            <Pressable style={styles.uploadArea} onPress={showUploadOptions}>
               <Ionicons name="cloud-upload-outline" size={24} color="#64748b" />
-              <Text style={styles.uploadText}>{selectedFile ? selectedFile.name : "Tap to choose document proof"}</Text>
+              <Text style={styles.uploadText}>
+                {selectedFile ? "Change payment proof" : "Tap to upload receipt photo/document"}
+              </Text>
             </Pressable>
+
+            {selectedFile && (
+              <View style={styles.previewContainer}>
+                {selectedFile.type?.startsWith("image/") || selectedFile.name.match(/\.(jpg|jpeg|png|gif|webp|heic)$/i) ? (
+                  <Image source={{ uri: selectedFile.uri }} style={styles.previewImage} />
+                ) : (
+                  <View style={styles.filePlaceholder}>
+                    <Ionicons name="document-text-outline" size={32} color="#1d4ed8" />
+                    <Text style={styles.filePlaceholderText} numberOfLines={1}>{selectedFile.name}</Text>
+                  </View>
+                )}
+                <View style={styles.previewInfo}>
+                  <Text style={styles.previewName} numberOfLines={1}>{selectedFile.name}</Text>
+                  <Pressable onPress={() => setSelectedFile(null)}>
+                    <Text style={styles.removeText}>Remove</Text>
+                  </Pressable>
+                </View>
+              </View>
+            )}
           </View>
         )}
 
@@ -354,5 +464,51 @@ const styles = StyleSheet.create({
   cancelBtn: { flex: 1, padding: 14, borderWidth: 1, borderColor: "#cbd5e1", borderRadius: 12, alignItems: "center" },
   cancelBtnText: { fontWeight: "600", color: "#475569" },
   submitBtn: { flex: 1, padding: 14, backgroundColor: "#1d4ed8", borderRadius: 12, alignItems: "center" },
-  submitBtnText: { fontWeight: "600", color: "#fff" }
+  submitBtnText: { fontWeight: "600", color: "#fff" },
+  previewContainer: {
+    marginTop: 10,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    borderRadius: 12,
+    backgroundColor: "#f8fafc",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  previewImage: {
+    width: 60,
+    height: 60,
+    borderRadius: 8,
+    backgroundColor: "#e2e8f0",
+  },
+  filePlaceholder: {
+    width: 60,
+    height: 60,
+    borderRadius: 8,
+    backgroundColor: "#eff6ff",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 4,
+  },
+  filePlaceholderText: {
+    fontSize: 8,
+    color: "#1e40af",
+    textAlign: "center",
+    marginTop: 2,
+  },
+  previewInfo: {
+    flex: 1,
+    gap: 4,
+  },
+  previewName: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#1e293b",
+  },
+  removeText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#dc2626",
+  },
 });

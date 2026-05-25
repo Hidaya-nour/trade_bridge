@@ -442,6 +442,37 @@ export default function RetailerCartScreen() {
     selectedItems,
   ]);
 
+const normalizeProofFile = (file: any) => {
+  const uri = file.uri;
+  const name =
+    file.name ||
+    uri.split("/").pop() ||
+    `payment-proof-${Date.now()}.jpg`;
+  let type = file.type || file.mimeType;
+
+  if (!type) {
+    if (name.endsWith(".pdf")) type = "application/pdf";
+    else if (name.endsWith(".png")) type = "image/png";
+    else type = "image/jpeg";
+  }
+
+  // Normalize all image/* variants to supported types
+  if (type === "image/jpg" || type === "image/heic" || type === "image/heif" ||
+      type === "application/octet-stream" || !['image/jpeg','image/png','image/webp','application/pdf'].includes(type)) {
+    if (name.toLowerCase().endsWith(".pdf")) {
+      type = "application/pdf";
+    } else if (name.toLowerCase().endsWith(".png")) {
+      type = "image/png";
+    } else if (name.toLowerCase().endsWith(".webp")) {
+      type = "image/webp";
+    } else {
+      type = "image/jpeg";
+    }
+  }
+
+  return { uri, name, type };
+};
+
   const handlePaymentSubmit = useCallback(
     async ({ method, notes, payment_details, proofFile }: PaymentSheetSubmitPayload) => {
       if (!paymentOrderId) return;
@@ -453,7 +484,17 @@ export default function RetailerCartScreen() {
         // Upload proof file if provided
         if (proofFile?.uri) {
           try {
-            proofDocumentId = await paymentService.uploadProofFile(proofFile.uri);
+            const normalized = normalizeProofFile(proofFile);
+            const formData = new FormData();
+            formData.append("document_type", "other");
+            formData.append("file", {
+              uri: normalized.uri,
+              name: normalized.name,
+              type: normalized.type,
+            } as any);
+
+            const uploadResponse = await paymentService.uploadProofDocument(formData);
+            proofDocumentId = uploadResponse?.data?.data?.id || uploadResponse?.data?.id;
           } catch (uploadError: any) {
             console.error('Failed to upload proof file:', uploadError);
             Alert.alert('Upload Failed', 'Could not upload payment proof. Please try again.');
