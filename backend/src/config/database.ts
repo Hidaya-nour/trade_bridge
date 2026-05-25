@@ -3,28 +3,31 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const dbSslEnabled = String(process.env.DB_SSL || '').toLowerCase() === 'true';
+// Detect environment status
+const isProduction = process.env.NODE_ENV === 'production';
+const dbSslEnabled = String(process.env.DB_SSL || '').toLowerCase() === 'true' || isProduction;
 
 const sequelize = new Sequelize(
-  process.env.DB_NAME || 'defaultdb',
-  process.env.DB_USER || 'avnadmin',
-  process.env.DB_PASSWORD || '1234567890',
+  isProduction ? process.env.MYSQL_DB! : (process.env.DB_NAME || 'trade_bridge'),
+  isProduction ? process.env.MYSQL_USER! : (process.env.DB_USER || 'root'),
+  isProduction ? process.env.MYSQL_PASSWORD! : (process.env.DB_PASSWORD || 'root'),
   {
-    host: process.env.DB_HOST ,
-    port: parseInt(process.env.DB_PORT || '3306'),
+    host: isProduction ? process.env.MYSQL_HOST! : (process.env.DB_HOST || 'localhost'),
+    port: Number(isProduction ? process.env.MYSQL_PORT : (process.env.DB_PORT || 3308)),
     dialect: 'mysql',
-    ...(dbSslEnabled
-      ? {
-          dialectOptions: {
-            ssl: {
-              rejectUnauthorized: false
-            }
+    
+    dialectOptions: {
+      ssl: dbSslEnabled
+        ? {
+            rejectUnauthorized: false // Required for secure Aiven connection handshakes
           }
-        }
-      : {}),
+        : false,
+    },
+    
     logging: process.env.NODE_ENV === 'development' ? console.log : false,
+    
     pool: {
-      max: 10,
+      max: isProduction ? 5 : 10, // Keeps connection numbers low on serverless Vercel functions
       min: 0,
       acquire: 30000,
       idle: 10000
