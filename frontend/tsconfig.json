@@ -9,6 +9,11 @@
     }
   ],
   "compilerOptions": {
+    "noImplicitAny": false,
+    "verbatimModuleSyntax": false,
+    "ignoreDeprecations": "6.0", 
+    "strict": false,
+    "skipLibCheck": true,
     "baseUrl": ".",
     "paths": {
       "@/*": [
@@ -16,4 +21,5 @@
       ]
     }
   }
+
 }

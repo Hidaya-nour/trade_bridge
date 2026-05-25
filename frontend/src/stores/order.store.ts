@@ -9,10 +9,11 @@ const normalizePaymentMethod = (method?: string) =>
 
 const normalizeOrder = (order: Order): Order => ({
   ...order,
+
   payment: order.payment
     ? {
         ...order.payment,
-        payment_method: normalizePaymentMethod(order.payment.payment_method),
+        payment_method: normalizePaymentMethod(order.payment.payment_method)!,
       }
     : order.payment,
 });

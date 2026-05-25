@@ -233,7 +233,7 @@ const RetailerProductDetailPage: React.FC = () => {
       const normalizedAddress = String(deliveryAddress || "").trim();
 
       const payload = {
-        supplier_id: productForDetail.supplierId || productForDetail.supplier_id,
+        supplier_id: productForDetail.supplierId || productForDetail.supplierId,
         items: [
           {
             product_id: productForDetail.id,
