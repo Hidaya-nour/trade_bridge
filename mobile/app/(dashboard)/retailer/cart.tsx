@@ -427,7 +427,7 @@ export default function RetailerCartScreen() {
           text: "Finish",
           onPress: () => router.push("/retailer/orders"),
         },
-       
+
       ],
     );
   }, [
@@ -449,7 +449,7 @@ export default function RetailerCartScreen() {
       setPaymentProcessing(true);
       try {
         let proofDocumentId: string | undefined;
-        
+
         // Upload proof file if provided
         if (proofFile?.uri) {
           try {

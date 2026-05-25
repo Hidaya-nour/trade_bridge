@@ -1,14 +1,17 @@
 import axios from "axios";
 import { API_BASE_URL } from "./constants";
-import { useAuthStore } from "@/features/auth/auth.store";
 
 const api = axios.create({
   baseURL: API_BASE_URL,
   timeout: 15000,
+  headers: {
+    "ngrok-skip-browser-warning": "true",
+  },
 });
 
 api.interceptors.request.use(
   (config) => {
+    const { useAuthStore } = require("@/features/auth/auth.store");
     const { accessToken } = useAuthStore.getState();
 
     if (accessToken) {
@@ -34,6 +37,7 @@ api.interceptors.response.use(
       originalRequest._retry = true;
 
       try {
+        const { useAuthStore } = require("@/features/auth/auth.store");
         const { refreshToken } = useAuthStore.getState();
 
         if (!refreshToken) {
@@ -42,6 +46,8 @@ api.interceptors.response.use(
 
         const refreshResponse = await axios.post(`${API_BASE_URL}/auth/refresh`, {
           refreshToken,
+        }, {
+          headers: { "ngrok-skip-browser-warning": "true" }
         });
         const accessToken = refreshResponse.data?.data?.accessToken;
 
@@ -50,6 +56,7 @@ api.interceptors.response.use(
 
         return api(originalRequest);
       } catch (refreshError) {
+        const { useAuthStore } = require("@/features/auth/auth.store");
         await useAuthStore.getState().logout();
         return Promise.reject(refreshError);
       }

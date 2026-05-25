@@ -46,61 +46,61 @@ export default function PaymentSheet({
   const [notes, setNotes] = useState("");
   const [selectedFile, setSelectedFile] = useState<{ name: string; uri: string } | null>(null);
 
-// Ensure we always have an iterable array, even if the backend returns undefined
-const safeMethods = supplierPaymentMethods || [];
+  // Ensure we always have an iterable array, even if the backend returns undefined
+  const safeMethods = supplierPaymentMethods || [];
 
-const hasAppConfiguration = useMemo(
-  () => safeMethods.some((m) => m && isSupplierAppMethodType(m.method_type)),
-  [safeMethods],
-);
-
-const hasMobileConfiguration = useMemo(() => {
-  // Never show mobile banking forms blindly if there are no provider details to build the inputs.
-  return safeMethods.some(
-    (m) => m && isSupplierMobileMethodType(m.method_type) && m.provider_name && m.provider_name.trim() !== ""
+  const hasAppConfiguration = useMemo(
+    () => safeMethods.some((m) => m && isSupplierAppMethodType(m.method_type)),
+    [safeMethods],
   );
-}, [safeMethods]);
 
-const hasCreditConfiguration = useMemo(() => {
-  return safeMethods.some((m) => m && m.method_type === "credit");
-}, [safeMethods]);
-const hasCodConfiguration = useMemo(() => {
-  return safeMethods.some((m) => m && isSupplierCodType(m.method_type));
-}, [safeMethods]);
-const hasAnyPaymentMethod = hasAppConfiguration || hasMobileConfiguration || hasCreditConfiguration || hasCodConfiguration;
+  const hasMobileConfiguration = useMemo(() => {
+    // Never show mobile banking forms blindly if there are no provider details to build the inputs.
+    return safeMethods.some(
+      (m) => m && isSupplierMobileMethodType(m.method_type) && m.provider_name && m.provider_name.trim() !== ""
+    );
+  }, [safeMethods]);
 
-const currentSupplierDetails = useMemo(() => {
-  if (!supplierPaymentMethods.length) return [];
-  return supplierPaymentMethods.filter((item) =>
-    selectedMethod === "app_payment"
-      ? isSupplierAppMethodType(item.method_type)
-      : selectedMethod === "credit"
-      ? item.method_type === "credit"
-      : selectedMethod === "cod"
-      ? isSupplierCodType(item.method_type)
-      : isSupplierMobileMethodType(item.method_type)
-  );
-}, [supplierPaymentMethods, selectedMethod]);
+  const hasCreditConfiguration = useMemo(() => {
+    return safeMethods.some((m) => m && m.method_type === "credit");
+  }, [safeMethods]);
+  const hasCodConfiguration = useMemo(() => {
+    return safeMethods.some((m) => m && isSupplierCodType(m.method_type));
+  }, [safeMethods]);
+  const hasAnyPaymentMethod = hasAppConfiguration || hasMobileConfiguration || hasCreditConfiguration || hasCodConfiguration;
 
-// 2. Automatically select the first available payment method tab when the sheet opens
-useEffect(() => {
-  if (visible) {
-    if (hasAppConfiguration) {
-      setSelectedMethod("app_payment");
-    } else if (hasMobileConfiguration) {
-      setSelectedMethod("mobile_banking");
-    } else if (hasCreditConfiguration) {
-      setSelectedMethod("credit");
-    } else if (hasCodConfiguration) {
-      setSelectedMethod("cod");
+  const currentSupplierDetails = useMemo(() => {
+    if (!supplierPaymentMethods.length) return [];
+    return supplierPaymentMethods.filter((item) =>
+      selectedMethod === "app_payment"
+        ? isSupplierAppMethodType(item.method_type)
+        : selectedMethod === "credit"
+          ? item.method_type === "credit"
+          : selectedMethod === "cod"
+            ? isSupplierCodType(item.method_type)
+            : isSupplierMobileMethodType(item.method_type)
+    );
+  }, [supplierPaymentMethods, selectedMethod]);
+
+  // 2. Automatically select the first available payment method tab when the sheet opens
+  useEffect(() => {
+    if (visible) {
+      if (hasAppConfiguration) {
+        setSelectedMethod("app_payment");
+      } else if (hasMobileConfiguration) {
+        setSelectedMethod("mobile_banking");
+      } else if (hasCreditConfiguration) {
+        setSelectedMethod("credit");
+      } else if (hasCodConfiguration) {
+        setSelectedMethod("cod");
+      }
     }
-  }
-}, [visible, hasAppConfiguration, hasMobileConfiguration, hasCreditConfiguration, hasCodConfiguration]);
+  }, [visible, hasAppConfiguration, hasMobileConfiguration, hasCreditConfiguration, hasCodConfiguration]);
 
-// 4. Collect unique list of provider options for the dynamic selector chips
+  // 4. Collect unique list of provider options for the dynamic selector chips
   const providerOptions = useMemo(() => {
     if (selectedMethod !== "mobile_banking" || !hasMobileConfiguration) return [];
-    
+
     const sorted = [...currentSupplierDetails].sort(
       (a, b) => Number(Boolean(b.is_primary)) - Number(Boolean(a.is_primary))
     );
@@ -127,25 +127,25 @@ useEffect(() => {
   }, [visible]);
 
   const handlePickDocument = async () => {
-  try {
-    const result = await DocumentPicker.getDocumentAsync({
-      type: "*/*", // allow all files
-      copyToCacheDirectory: true,
-      multiple: false,
-    });
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: "*/*", // allow all files
+        copyToCacheDirectory: true,
+        multiple: false,
+      });
 
-    if (result.canceled) return;
+      if (result.canceled) return;
 
-    const file = result.assets[0];
+      const file = result.assets[0];
 
-    setSelectedFile({
-      name: file.name,
-      uri: file.uri,
-    });
-  } catch (error) {
-    console.log("Document picker error:", error);
-  }
-};
+      setSelectedFile({
+        name: file.name,
+        uri: file.uri,
+      });
+    } catch (error) {
+      console.log("Document picker error:", error);
+    }
+  };
   const handleFormSubmit = () => {
     if (!hasAnyPaymentMethod) return;
     onSubmit({
@@ -159,7 +159,7 @@ useEffect(() => {
   return (
     <BottomSheetModal visible={visible} title="Complete payment" subtitle={`For ${orderLabel}`} onClose={onClose}>
       <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
-        
+
         {/* Amount Box */}
         <View style={styles.amountCard}>
           <Text style={styles.amountLabel}>Amount due</Text>
@@ -176,49 +176,49 @@ useEffect(() => {
             </Text>
           </View>
         ) : (
-        <View style={styles.tabContainer}>
-          {/* Only show App Pay if configured by distributor */}
-          {hasAppConfiguration && (
-            <Pressable 
-              style={[styles.tabButton, selectedMethod === "app_payment" && styles.tabButtonActive]}
-              onPress={() => setSelectedMethod("app_payment")}
-            >
-              <Ionicons name="card-outline" size={20} color={selectedMethod === "app_payment" ? "#1d4ed8" : "#64748b"} />
-              <Text style={[styles.tabLabel, selectedMethod === "app_payment" && styles.tabLabelActive]}>App Pay</Text>
-            </Pressable>
-          )}
+          <View style={styles.tabContainer}>
+            {/* Only show App Pay if configured by distributor */}
+            {hasAppConfiguration && (
+              <Pressable
+                style={[styles.tabButton, selectedMethod === "app_payment" && styles.tabButtonActive]}
+                onPress={() => setSelectedMethod("app_payment")}
+              >
+                <Ionicons name="card-outline" size={20} color={selectedMethod === "app_payment" ? "#1d4ed8" : "#64748b"} />
+                <Text style={[styles.tabLabel, selectedMethod === "app_payment" && styles.tabLabelActive]}>App Pay</Text>
+              </Pressable>
+            )}
 
-          {/* Only show Mobile Banking if configured by distributor */}
-          {hasMobileConfiguration && (
-            <Pressable 
-              style={[styles.tabButton, selectedMethod === "mobile_banking" && styles.tabButtonActive]}
-              onPress={() => setSelectedMethod("mobile_banking")}
-            >
-              <Ionicons name="phone-portrait-outline" size={20} color={selectedMethod === "mobile_banking" ? "#1d4ed8" : "#64748b"} />
-              <Text style={[styles.tabLabel, selectedMethod === "mobile_banking" && styles.tabLabelActive]}>Banking</Text>
-            </Pressable>
-          )}
+            {/* Only show Mobile Banking if configured by distributor */}
+            {hasMobileConfiguration && (
+              <Pressable
+                style={[styles.tabButton, selectedMethod === "mobile_banking" && styles.tabButtonActive]}
+                onPress={() => setSelectedMethod("mobile_banking")}
+              >
+                <Ionicons name="phone-portrait-outline" size={20} color={selectedMethod === "mobile_banking" ? "#1d4ed8" : "#64748b"} />
+                <Text style={[styles.tabLabel, selectedMethod === "mobile_banking" && styles.tabLabelActive]}>Banking</Text>
+              </Pressable>
+            )}
 
-          {/* Only show Credit if configured by distributor */}
-          {hasCreditConfiguration && (
-            <Pressable 
-              style={[styles.tabButton, selectedMethod === "credit" && styles.tabButtonActive]}
-              onPress={() => setSelectedMethod("credit")}
-            >
-              <Ionicons name="time-outline" size={20} color={selectedMethod === "credit" ? "#1d4ed8" : "#64748b"} />
-              <Text style={[styles.tabLabel, selectedMethod === "credit" && styles.tabLabelActive]}>Credit</Text>
-            </Pressable>
-          )}
-          {hasCodConfiguration && (
-            <Pressable 
-              style={[styles.tabButton, selectedMethod === "cod" && styles.tabButtonActive]}
-              onPress={() => setSelectedMethod("cod")}
-            >
-              <Ionicons name="cash-outline" size={20} color={selectedMethod === "cod" ? "#1d4ed8" : "#64748b"} />
-              <Text style={[styles.tabLabel, selectedMethod === "cod" && styles.tabLabelActive]}>Cash on delivery</Text>
-            </Pressable>
-          )}
-        </View>
+            {/* Only show Credit if configured by distributor */}
+            {hasCreditConfiguration && (
+              <Pressable
+                style={[styles.tabButton, selectedMethod === "credit" && styles.tabButtonActive]}
+                onPress={() => setSelectedMethod("credit")}
+              >
+                <Ionicons name="time-outline" size={20} color={selectedMethod === "credit" ? "#1d4ed8" : "#64748b"} />
+                <Text style={[styles.tabLabel, selectedMethod === "credit" && styles.tabLabelActive]}>Credit</Text>
+              </Pressable>
+            )}
+            {hasCodConfiguration && (
+              <Pressable
+                style={[styles.tabButton, selectedMethod === "cod" && styles.tabButtonActive]}
+                onPress={() => setSelectedMethod("cod")}
+              >
+                <Ionicons name="cash-outline" size={20} color={selectedMethod === "cod" ? "#1d4ed8" : "#64748b"} />
+                <Text style={[styles.tabLabel, selectedMethod === "cod" && styles.tabLabelActive]}>Cash on delivery</Text>
+              </Pressable>
+            )}
+          </View>
         )}
 
         {/* Supplier Target Account Configurations View Area */}
