@@ -608,18 +608,7 @@ const RetailerDashboard: React.FC = () => {
                               View Profile
                             </Link>
                           </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="h-7 text-xs"
-                            asChild
-                          >
-                            <Link
-                              to={`/retailer/compare?supplier=${supplier.id}`}
-                            >
-                              Compare
-                            </Link>
-                          </Button>
+                          
                         </div>
                       </div>
                     </div>

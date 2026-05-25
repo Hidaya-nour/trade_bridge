@@ -1,16 +1,67 @@
-# ============================================
-# Node / Frontend / Mobile
-# ============================================
+# ============================================================================
+# 1. ROOT GLOBAL / OS / EDITOR RULES
+# ============================================================================
+.DS_Store
+Thumbs.db
+*.bak
+*.tmp
+*.cache
+*~
+
+# IDE Settings
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+*.swo
+*.sw?
+
+# Testing Framework Caches
+.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+coverage/
+*.lcov
+
+# System Processes & Runtimes
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# ============================================================================
+# 2. GLOBAL NODE & PACKAGE MANAGER RULES
+# ============================================================================
 node_modules/
 dist/
 build/
-.expo/
-.expo-shared/
-mobile/dist-web/
+dist-ssr/
+web-build/
 
-# ============================================
-# Python
-# ============================================
+# Lockfiles (Included as per your mobile/frontend listings)
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Universal Log Files
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+pip-log.txt
+pip-delete-this-directory.txt
+
+# ============================================================================
+# 3. GLOBAL PYTHON ENVIRONMENT RULES
+# ============================================================================
 .venv/
 venv/
 env/
@@ -21,56 +72,47 @@ __pycache__/
 *.so
 .Python
 
-# ============================================
-# Environment files
-# ============================================
+# ============================================================================
+# 4. GLOBAL ENVIRONMENT VARIABLES (NEVER COMMIT SECRETS)
+# ============================================================================
 .env
 .env.*
+*.local
 !.env.example
 
-# ============================================
-# OS / Editor
-# ============================================
-.DS_Store
-Thumbs.db
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
+# ============================================================================
+# 5. MODULE SPECIFIC: MOBILE / EXPO
+# ============================================================================
+.expo/
+.expo-shared/
+mobile/dist-web/
 
-# ============================================
-# Logs
-# ============================================
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pip-log.txt
-pip-delete-this-directory.txt
+# ============================================================================
+# 6. MODULE SPECIFIC: MACHINE LEARNING (ml/)
+# ============================================================================
+# Notebook files & caching
+.ipynb_checkpoints/
+*.ipynb
+*.html
+ml/scripts/__pycache__/
+ml/src/__pycache__/
+ml/src/**/__pycache__/
 
-# ============================================
-# ML Raw Data (NEVER COMMIT RAW DATA)
-# ============================================
+# ML Data Directories (NEVER COMMIT RAW OR DERIVED CSV LABELS)
+ml/data/
 ml/data/raw/
 ml/data/raw/*.csv
 ml/data/raw/*.zip
 ml/data/raw/*.tar.gz
-
-# ============================================
-# ML Processed Data (Derived, can be regenerated)
-# ============================================
 ml/data/processed/*.csv
 ml/data/processed/*.json
 ml/data/processed/*_report.json
 ml/data/processed/*metrics.json
 
-# Keep processed folder structure but not files
+# Whitelist structure rules (Preserves directories using empty .gitkeep tags)
 !ml/data/processed/.gitkeep
 
-# ============================================
-# Trained Model Artifacts (CAN BE RE-TRAINED)
-# ============================================
+# Trained Model Architecture Binaries
 ml/models/*.joblib
 ml/models/*.pkl
 ml/models/*.pickle
@@ -79,30 +121,4 @@ ml/models/*.pt
 ml/models/*.onnx
 ml/models/*.pth
 
-# Keep models folder structure
 !ml/models/.gitkeep
-
-# ============================================
-# Jupyter / Notebooks
-# ============================================
-.ipynb_checkpoints/
-*.ipynb
-*.html
-
-# ============================================
-# Python cache inside ml scripts
-# ============================================
-ml/scripts/__pycache__/
-ml/src/__pycache__/
-ml/src/**/__pycache__/
-
-# ============================================
-# IDE / Project specific
-# ============================================
-*.bak
-*.tmp
-*.cache
-.pytest_cache/
-.mypy_cache/
-.coverage
-htmlcov/
