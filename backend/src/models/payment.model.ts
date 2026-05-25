@@ -173,7 +173,7 @@ Payment.init(
 
               // Escrow: credit supplier pending balance when buyer payment completes
               try {
-                const walletModule = await import('../services/wallet/seller-wallet.service');
+                const walletModule = await import('../services/wallet/seller-wallet.service.js');
                 await (walletModule.default as any).settleOrderFunds(payment.order_id);
               } catch (walletErr) {
                 console.error('Payment hook wallet settlement error', walletErr);

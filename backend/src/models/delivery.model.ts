@@ -142,7 +142,7 @@ Delivery.init(
                   }
 
                   // Auto-close when delivered & paid
-                  const paymentModule: any = await import('./payment.model');
+                  const paymentModule: any = await import('./payment.model.js');
                   const PaymentModel = paymentModule.Payment || paymentModule.default;
                   const payment = await PaymentModel.findOne({
                     where: { order_id: (order as any).id },
@@ -155,7 +155,7 @@ Delivery.init(
 
               if (status === 'delivered') {
                 try {
-                  const walletModule = await import('../services/wallet/seller-wallet.service');
+                  const walletModule = await import('../services/wallet/seller-wallet.service.js');
                   await (walletModule.default as any).settleOrderFunds((order as any).id);
                 } catch (walletErr) {
                   console.error('Delivery hook wallet settlement error', walletErr);

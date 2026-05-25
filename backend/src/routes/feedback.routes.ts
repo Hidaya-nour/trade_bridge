@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authorizeRoles } from '../middleware/auth.middleware';
+import { authorize } from '../middleware/auth.middleware';
 // import { FeedbackController } from '../controllers/feedback.controller';
 
 const router = Router();

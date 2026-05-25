@@ -1,7 +1,7 @@
 import { spawn } from 'child_process';
 import path from 'path';
 import fs from 'fs';
-import { InventoryForecastPoint } from '../../types/forecast.types';
+import { InventoryForecastPoint } from '../types/forecast.types';
 
 export interface ForecastResponse {
   source: string;

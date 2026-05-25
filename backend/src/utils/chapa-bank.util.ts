@@ -31,8 +31,7 @@ const loadChapaBanks = (): ChapaBankRecord[] => {
           slug: String(b.slug).toLowerCase(),
           name: String(b.name || '').toLowerCase(),
         }));
-      return banksCache;
-    } catch {
+        return banksCache || [];    } catch {
       // try next path
     }
   }

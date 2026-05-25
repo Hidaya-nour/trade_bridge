@@ -88,7 +88,8 @@ try {
     ];
     
     for (const stat of stats) {
-      const data = seededData[stat.key];
+// Cast seededData as any or Record right when you index it
+const data = (seededData as any)[stat.key];
       const count = data ? (Array.isArray(data) ? data.length : (data as any).length || 0) : 0;
       console.log(`   ${stat.name.padEnd(20)}: ${String(count).padStart(6)} records`);
     }

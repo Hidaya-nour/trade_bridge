@@ -1,5 +1,5 @@
 // src/scripts/reset-database.ts
-import sequelize from '../config/database.ts';
+import sequelize from '../config/database';
 import dotenv from 'dotenv';
 import { execSync } from 'child_process';
 
