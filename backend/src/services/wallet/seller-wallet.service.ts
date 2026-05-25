@@ -400,7 +400,7 @@ export class SellerWalletService {
   async executeWithdrawalPayout(
     withdrawalId: string,
     adminId: string,
-    skipAdminRoleCheck = false,
+    _skipAdminRoleCheck = false,
   ) {
     const withdrawal = await Withdrawal.findByPk(withdrawalId);
     if (!withdrawal) throw new AppError('Withdrawal not found', 404);

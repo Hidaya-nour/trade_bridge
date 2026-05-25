@@ -156,7 +156,7 @@ Delivery.init(
               if (status === 'delivered') {
                 try {
                   const walletModule = await import('../services/wallet/seller-wallet.service');
-                  await walletModule.default.settleOrderFunds((order as any).id);
+                  await (walletModule.default as any).settleOrderFunds((order as any).id);
                 } catch (walletErr) {
                   console.error('Delivery hook wallet settlement error', walletErr);
                 }
