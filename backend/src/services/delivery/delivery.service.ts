@@ -6,6 +6,10 @@ import User from '../../models/user.model';
 import OrderItems from '../../models/order-item.model';
 import Product from '../../models/product.model';
 import Address from '../../models/address.model';
+import Payment from '../../models/payment.model';
+import sellerWalletService from '../wallet/seller-wallet.service';
+import notificationService from '../notification/notification.service';
+import { recordAuditLog } from '../../utils/audit';
 import { AppError } from '../../utils/errors';
 
 class DeliveryService {
@@ -443,18 +447,112 @@ class DeliveryService {
     }
 
     delivery.status = status as any;
-    if (status === 'picked_up') delivery.started_at = new Date() as any;
-    if (status === 'delivered') delivery.completed_at = new Date() as any;
-    await delivery.save();
-
-    if (status === 'delivered') {
+    if (status === 'picked_up') {
+      delivery.started_at = new Date() as any;
       try {
-        const sellerWalletService = (await import('../wallet/seller-wallet.service')).default;
-        await sellerWalletService.settleOrderFunds(delivery.order_id);
+        await Order.update(
+          { order_status: 'shipped' },
+          { where: { id: delivery.order_id } }
+        );
+        if (actingUserId) {
+          await recordAuditLog({
+            userId: actingUserId,
+            action: 'order.status.shipped',
+            entityType: 'order',
+            entityId: delivery.order_id,
+          }).catch((e: any) => console.error('Failed to record shipped audit log', e));
+        }
+        const orderRecord = await Order.findByPk(delivery.order_id);
+        if (orderRecord) {
+          await notificationService.createNotification({
+            user_id: orderRecord.buyer_id,
+            type: 'order',
+            title: 'Order Shipped',
+            message: `Your order ${delivery.order_id} has been shipped.`,
+          } as any).catch((e: any) => console.error(e));
+        }
       } catch (err) {
-        console.error('Wallet settlement after delivery status update failed', err);
+        console.error('Failed to update order status to shipped after delivery picked up', err);
       }
     }
+
+    if (status === 'delivered') {
+      delivery.completed_at = new Date() as any;
+      try {
+        await Order.update(
+          { order_status: 'delivered' },
+          { where: { id: delivery.order_id } }
+        );
+
+        const payment = await Payment.findOne({ where: { order_id: delivery.order_id } });
+
+        await sellerWalletService.settleOrderFunds(delivery.order_id);
+
+        if (payment && payment.payment_status === 'completed') {
+          await Order.update(
+            { order_status: 'closed' },
+            { where: { id: delivery.order_id } }
+          );
+
+          if (actingUserId) {
+            await recordAuditLog({
+              userId: actingUserId,
+              action: 'order.status.closed',
+              entityType: 'order',
+              entityId: delivery.order_id,
+            }).catch((e: any) => console.error('Failed to record closed audit log', e));
+          }
+
+          const orderRecord = await Order.findByPk(delivery.order_id);
+          if (orderRecord) {
+            await Promise.all([
+              notificationService.createNotification({
+                user_id: orderRecord.buyer_id,
+                type: 'order',
+                title: 'Order Closed',
+                message: `Order ${delivery.order_id} is now closed (delivered and paid)`,
+              } as any),
+              notificationService.createNotification({
+                user_id: orderRecord.supplier_id,
+                type: 'order',
+                title: 'Order Closed',
+                message: `Order ${delivery.order_id} is now closed (delivered and paid)`,
+              } as any)
+            ]).catch((e: any) => console.error(e));
+          }
+        } else {
+          if (actingUserId) {
+            await recordAuditLog({
+              userId: actingUserId,
+              action: 'order.status.delivered',
+              entityType: 'order',
+              entityId: delivery.order_id,
+            }).catch((e: any) => console.error('Failed to record delivered audit log', e));
+          }
+
+          const orderRecord = await Order.findByPk(delivery.order_id);
+          if (orderRecord) {
+            await Promise.all([
+              notificationService.createNotification({
+                user_id: orderRecord.buyer_id,
+                type: 'order',
+                title: 'Order Delivered',
+                message: `Your order ${delivery.order_id} has been delivered.`,
+              } as any),
+              notificationService.createNotification({
+                user_id: orderRecord.supplier_id,
+                type: 'order',
+                title: 'Order Delivered',
+                message: `Order ${delivery.order_id} has been delivered.`,
+              } as any)
+            ]).catch((e: any) => console.error(e));
+          }
+        }
+      } catch (err) {
+        console.error('Failed to update order status/wallet settlement after delivery completed', err);
+      }
+    }
+    await delivery.save();
 
     return delivery;
   }

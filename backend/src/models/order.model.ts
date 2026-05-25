@@ -14,6 +14,7 @@ export class Order extends Model<IOrder, OrderCreationAttributes> implements IOr
   public supplier_id!: string;
   public total_price!: number;
   public order_status!: OrderStatus;
+  public delivery_fee!: number;
   public created_at!: Date;
   public updated_at!: Date;
   public deleted_at?: Date;

@@ -227,6 +227,9 @@ export const OrderList: React.FC<OrderListProps> = ({
     // if (order.order_status !== "approved") {
     //   return false;
     // }
+    if (!order.payment && order.order_status === "pending") {
+      return false;
+    }
     if (!order.payment) {
       return true;
     }
