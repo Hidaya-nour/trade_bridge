@@ -268,4 +268,11 @@ const startServer = async () => {
 
 startServer();
 
-
+app.get('/api/test-db', async (req, res) => {
+  try {
+    await sequelize.authenticate();
+    res.json({ message: "Database connection successful!" });
+  } catch (error) {
+    res.status(500).json({ error: "Database connection failed", details: error.message });
+  }
+});
