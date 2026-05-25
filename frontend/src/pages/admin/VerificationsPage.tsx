@@ -667,17 +667,7 @@ export const VerificationsPage: React.FC = () => {
                             <CheckCircle2 className="h-4 w-4 mr-2" />
                             Approve User
                           </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="text-amber-600 w-full"
-                            onClick={() => {
-                              handleRequestMoreInfo(request);
-                            }}
-                          >
-                            <AlertCircle className="h-4 w-4 mr-2" />
-                            Request Info
-                          </Button>
+                         
                         </div>
                       ) : (
                         <div className="flex flex-col gap-2 min-w-[120px]">

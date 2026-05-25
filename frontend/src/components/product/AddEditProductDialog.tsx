@@ -743,7 +743,7 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
                     </div>
                   )}
 
-                  <div className="space-y-2">
+                  {/* <div className="space-y-2">
                     <Label htmlFor="free_delivery_max_distance_km">
                       Max Distance For Free Delivery (KM) (Optional)
                     </Label>
@@ -764,7 +764,7 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
                     <p className="text-xs text-muted-foreground">
                       If buyer is within this distance, delivery becomes free.
                     </p>
-                  </div>
+                  </div> */}
                 </>
               )}
             </div>

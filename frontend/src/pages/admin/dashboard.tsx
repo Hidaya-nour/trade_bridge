@@ -766,18 +766,7 @@ const AdminDashboard: React.FC = () => {
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-2">
-                        <Button size="sm" variant="outline">
-                          <Eye className="h-4 w-4 mr-2" />
-                          Review
-                        </Button>
-                        <Button
-                          size="sm"
-                          className="bg-blue-600 hover:bg-blue-700"
-                        >
-                          Investigate
-                        </Button>
-                      </div>
+                      
                     </div>
                   </CardContent>
                 </Card>

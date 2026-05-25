@@ -297,19 +297,7 @@ const PaymentTab: React.FC<PaymentTabProps> = ({
                         )}
                       </div>
                       <div className="flex items-center gap-2">
-                        {method.is_primary ? (
-                          <Badge>Primary</Badge>
-                        ) : (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() =>
-                              void handleSetPrimaryPaymentMethod(method.id)
-                            }
-                          >
-                            Set Primary
-                          </Button>
-                        )}
+                        
                         <Button
                           variant="ghost"
                           size="sm"

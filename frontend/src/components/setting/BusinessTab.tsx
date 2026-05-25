@@ -234,6 +234,8 @@ const BusinessTab: React.FC<BusinessTabProps> = ({
                 className={
                   businessFieldErrors.business_name ? "border-red-500" : ""
                 }
+                                  placeholder="e.g water distributor"
+
                 required={isSupplier}
               />
               {businessFieldErrors.business_name && (
@@ -636,6 +638,47 @@ const BusinessTab: React.FC<BusinessTabProps> = ({
                 </div>
               ) : (
                 <>
+                <div className="rounded-md border border-blue-200 bg-blue-50 p-4 text-sm">
+                <h4 className="font-semibold text-blue-900">
+                  Supplier Verification Requirements
+                </h4>
+
+                <p className="mt-1 text-blue-800 text-xs">
+                  To verify your business account, please upload clear and valid copies of
+                  the following documents:
+                </p>
+
+                <ul className="mt-3 space-y-2 text-xs text-blue-900 list-disc pl-5">
+                  <li>
+                    <span className="font-medium">Business License</span> — must be valid
+                    and clearly readable
+                  </li>
+
+                  <li>
+                    <span className="font-medium">TIN Certificate</span> — TIN number and
+                    business name must be visible
+                  </li>
+
+                  <li>
+                    <span className="font-medium">Owner Identification</span> — National
+                    ID, Fayda ID, Passport, or Kebele ID
+                  </li>
+
+                  <li>
+                    <span className="font-medium">Bank Account Information</span> — account
+                    name should match the supplier or business name
+                  </li>
+                </ul>
+
+                <div className="mt-3 rounded-md bg-white/70 border border-blue-100 p-3 text-[11px] text-blue-800">
+                  Optional documents may include VAT certificates, import/export licenses,
+                  or product-specific permits depending on your business type.
+                </div>
+
+                <p className="mt-3 text-[11px] text-muted-foreground">
+                  Verification usually takes 1–3 business days after document submission.
+                </p>
+              </div>
                   {businessLicenseDoc && (
                     <div className="rounded-md border border-amber-200 bg-white/70 p-3 text-xs">
                       <div className="flex items-center justify-between">
@@ -808,6 +851,12 @@ const BusinessTab: React.FC<BusinessTabProps> = ({
                                   <SelectValue placeholder="Select type" />
                                 </SelectTrigger>
                                 <SelectContent>
+                                  <SelectItem value="business_license">
+                                  Business License
+                                  </SelectItem>
+                                  <SelectItem value="vat_certificate">
+                                  VAT Certificate
+                                  </SelectItem>
                                   <SelectItem value="tax_certificate">
                                     TIN / Tax Certificate
                                   </SelectItem>

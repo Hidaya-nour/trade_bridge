@@ -501,225 +501,227 @@ export const DisputesManagementPage: React.FC = () => {
         </Card>
       )}
 
-      <Dialog open={showDetailsDialog} onOpenChange={setShowDetailsDialog}>
-        <DialogContent className="max-w-3xl">
-          <DialogHeader>
-            <DialogTitle>Dispute Details</DialogTitle>
-            <DialogDescription>
-              {selectedDispute
-                ? `DSP-${selectedDispute.id.slice(0, 8).toUpperCase()}`
-                : "Selected dispute"}
-            </DialogDescription>
-          </DialogHeader>
+     <Dialog open={showDetailsDialog} onOpenChange={setShowDetailsDialog}>
+  <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col">
+    <DialogHeader className="flex-shrink-0">
+      <DialogTitle>Dispute Details</DialogTitle>
+      <DialogDescription>
+        {selectedDispute
+          ? `DSP-${selectedDispute.id.slice(0, 8).toUpperCase()}`
+          : "Selected dispute"}
+      </DialogDescription>
+    </DialogHeader>
 
-          {selectedDispute && (
-            <div className="space-y-6">
-              <div className="flex flex-wrap gap-2">
-                <StatusBadge status={selectedDispute.status} />
-                <Badge className={priorityTone[selectedDispute.priority]}>
-                  {selectedDispute.priority} priority
-                </Badge>
-                <Badge variant="outline">
-                  {prettifyReason(selectedDispute.reason)}
-                </Badge>
-              </div>
+    {selectedDispute && (
+      <div className="flex-1 overflow-y-auto pr-1 -mr-1">
+        <div className="space-y-6">
+          <div className="flex flex-wrap gap-2">
+            <StatusBadge status={selectedDispute.status} />
+            <Badge className={priorityTone[selectedDispute.priority]}>
+              {selectedDispute.priority} priority
+            </Badge>
+            <Badge variant="outline">
+              {prettifyReason(selectedDispute.reason)}
+            </Badge>
+          </div>
 
-              <div className="grid gap-4 md:grid-cols-2">
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm">Raised By</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-2 text-sm">
-                    <div className="flex items-center gap-3">
-                      <Avatar>
-                        <AvatarFallback
-                          className={roleTone[selectedDispute.raisedBy.role]}
-                        >
-                          {getInitials(selectedDispute.raisedBy.name)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <p className="font-medium">
-                          {selectedDispute.raisedBy.name}
-                        </p>
-                        <p className="text-muted-foreground">
-                          {selectedDispute.raisedBy.business}
-                        </p>
-                      </div>
-                    </div>
-                    <StatusBadge status={selectedDispute.raisedBy.role} />
-                    {selectedDispute.raisedBy.email && (
-                      <p className="text-muted-foreground">
-                        {selectedDispute.raisedBy.email}
-                      </p>
-                    )}
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm">Against</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-2 text-sm">
-                    <div className="flex items-center gap-3">
-                      <Avatar>
-                        <AvatarFallback
-                          className={roleTone[selectedDispute.against.role]}
-                        >
-                          {getInitials(selectedDispute.against.name)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <p className="font-medium">
-                          {selectedDispute.against.name}
-                        </p>
-                        <p className="text-muted-foreground">
-                          {selectedDispute.against.business}
-                        </p>
-                      </div>
-                    </div>
-                    <StatusBadge status={selectedDispute.against.role} />
-                    {selectedDispute.against.email && (
-                      <p className="text-muted-foreground">
-                        {selectedDispute.against.email}
-                      </p>
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
-
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm">Dispute Information</CardTitle>
-                  <CardDescription>
-                    Dispute opened {formatDateTime(selectedDispute.createdAt)}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-3 text-sm">
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    <div>
-                      <p className="text-xs font-semibold text-muted-foreground">
-                        Order Placed
-                      </p>
-                      <p className="font-medium">
-                        {selectedDispute.orderPlacedAt
-                          ? formatDateTime(selectedDispute.orderPlacedAt)
-                          : "N/A"}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs font-semibold text-muted-foreground">
-                        Order Status
-                      </p>
-                      <p className="font-medium capitalize">
-                        {selectedDispute.orderStatus || "N/A"}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Package className="h-4 w-4 text-muted-foreground" />
-                    <span className="font-medium">
-                      Amount in dispute: {formatPrice(selectedDispute.amount)}
-                    </span>
-                  </div>
-                  <div className="rounded-lg bg-muted p-3">
-                    {selectedDispute.description}
-                  </div>
-                  {selectedDispute.resolution && (
-                    <div className="rounded-lg border border-green-200 bg-green-50 p-3">
-                      <p className="font-medium text-green-800">Resolution</p>
-                      <p className="mt-1 text-green-700">
-                        {selectedDispute.resolution}
-                      </p>
-                      {selectedDispute.resolvedAt && (
-                        <p className="mt-2 text-xs text-green-700">
-                          Resolved {formatDateTime(selectedDispute.resolvedAt)}
-                          {selectedDispute.resolvedBy
-                            ? ` by ${selectedDispute.resolvedBy}`
-                            : ""}
-                        </p>
-                      )}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm">Investigation Shortcuts</CardTitle>
-                  <CardDescription>
-                    Jump into the supplier profile, catalog, and order context.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="flex flex-wrap gap-2">
-                  {selectedDispute.orderId ? (
-                    <Button size="sm" variant="outline" asChild>
-                      <Link to={`/admin/orders/${selectedDispute.orderId}`}>
-                        <Eye className="mr-2 h-4 w-4" />
-                        View Order
-                      </Link>
-                    </Button>
-                  ) : null}
-                  {selectedDispute.against?.id ? (
-                    <Button size="sm" variant="outline" asChild>
-                      <Link to={`/admin/users?search=${selectedDispute.against.id}`}>
-                        <Store className="mr-2 h-4 w-4" />
-                        Supplier Profile
-                      </Link>
-                    </Button>
-                  ) : null}
-                  {selectedDispute.against?.id ? (
-                    <Button size="sm" variant="outline" asChild>
-                      <Link to={`/admin/products?supplier_id=${selectedDispute.against.id}`}>
-                        <Package className="mr-2 h-4 w-4" />
-                        Supplier Products
-                      </Link>
-                    </Button>
-                  ) : null}
-                </CardContent>
-              </Card>
-
-              {selectedDispute.status !== "resolved" &&
-                selectedDispute.status !== "closed" && (
-                  <div className="flex flex-wrap justify-end gap-2">
-                    <Button
-                      variant="outline"
-                      onClick={() =>
-                        handleStatusUpdate(selectedDispute, "investigating")
-                      }
+          <div className="grid gap-4 md:grid-cols-2">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm">Raised By</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2 text-sm">
+                <div className="flex items-center gap-3">
+                  <Avatar>
+                    <AvatarFallback
+                      className={roleTone[selectedDispute.raisedBy.role]}
                     >
-                      <RefreshCw className="mr-2 h-4 w-4" />
-                      Mark Investigating
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className="text-red-600"
-                      onClick={() =>
-                        handleStatusUpdate(selectedDispute, "escalated")
-                      }
-                    >
-                      <Flag className="mr-2 h-4 w-4" />
-                      Escalate
-                    </Button>
-                    <Button onClick={() => setShowResolveDialog(true)}>
-                      <CheckCircle2 className="mr-2 h-4 w-4" />
-                      Resolve
-                    </Button>
+                      {getInitials(selectedDispute.raisedBy.name)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <p className="font-medium">
+                      {selectedDispute.raisedBy.name}
+                    </p>
+                    <p className="text-muted-foreground">
+                      {selectedDispute.raisedBy.business}
+                    </p>
                   </div>
+                </div>
+                <StatusBadge status={selectedDispute.raisedBy.role} />
+                {selectedDispute.raisedBy.email && (
+                  <p className="text-muted-foreground">
+                    {selectedDispute.raisedBy.email}
+                  </p>
                 )}
-            </div>
-          )}
+              </CardContent>
+            </Card>
 
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setShowDetailsDialog(false)}
-            >
-              Close
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm">Against</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2 text-sm">
+                <div className="flex items-center gap-3">
+                  <Avatar>
+                    <AvatarFallback
+                      className={roleTone[selectedDispute.against.role]}
+                    >
+                      {getInitials(selectedDispute.against.name)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <p className="font-medium">
+                      {selectedDispute.against.name}
+                    </p>
+                    <p className="text-muted-foreground">
+                      {selectedDispute.against.business}
+                    </p>
+                  </div>
+                </div>
+                <StatusBadge status={selectedDispute.against.role} />
+                {selectedDispute.against.email && (
+                  <p className="text-muted-foreground">
+                    {selectedDispute.against.email}
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm">Dispute Information</CardTitle>
+              <CardDescription>
+                Dispute opened {formatDateTime(selectedDispute.createdAt)}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm">
+              <div className="grid gap-2 sm:grid-cols-2">
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground">
+                    Order Placed
+                  </p>
+                  <p className="font-medium">
+                    {selectedDispute.orderPlacedAt
+                      ? formatDateTime(selectedDispute.orderPlacedAt)
+                      : "N/A"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground">
+                    Order Status
+                  </p>
+                  <p className="font-medium capitalize">
+                    {selectedDispute.orderStatus || "N/A"}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Package className="h-4 w-4 text-muted-foreground" />
+                <span className="font-medium">
+                  Amount in dispute: {formatPrice(selectedDispute.amount)}
+                </span>
+              </div>
+              <div className="rounded-lg bg-muted p-3">
+                {selectedDispute.description}
+              </div>
+              {selectedDispute.resolution && (
+                <div className="rounded-lg border border-green-200 bg-green-50 p-3">
+                  <p className="font-medium text-green-800">Resolution</p>
+                  <p className="mt-1 text-green-700">
+                    {selectedDispute.resolution}
+                  </p>
+                  {selectedDispute.resolvedAt && (
+                    <p className="mt-2 text-xs text-green-700">
+                      Resolved {formatDateTime(selectedDispute.resolvedAt)}
+                      {selectedDispute.resolvedBy
+                        ? ` by ${selectedDispute.resolvedBy}`
+                        : ""}
+                    </p>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm">Investigation Shortcuts</CardTitle>
+              <CardDescription>
+                Jump into the supplier profile, catalog, and order context.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-wrap gap-2">
+              {selectedDispute.orderId ? (
+                <Button size="sm" variant="outline" asChild>
+                  <Link to={`/admin/orders/${selectedDispute.orderId}`}>
+                    <Eye className="mr-2 h-4 w-4" />
+                    View Order
+                  </Link>
+                </Button>
+              ) : null}
+              {selectedDispute.against?.id ? (
+                <Button size="sm" variant="outline" asChild>
+                  <Link to={`/admin/users?search=${selectedDispute.against.id}`}>
+                    <Store className="mr-2 h-4 w-4" />
+                    Supplier Profile
+                  </Link>
+                </Button>
+              ) : null}
+              {selectedDispute.against?.id ? (
+                <Button size="sm" variant="outline" asChild>
+                  <Link to={`/admin/products?supplier_id=${selectedDispute.against.id}`}>
+                    <Package className="mr-2 h-4 w-4" />
+                    Supplier Products
+                  </Link>
+                </Button>
+              ) : null}
+            </CardContent>
+          </Card>
+
+          {selectedDispute.status !== "resolved" &&
+            selectedDispute.status !== "closed" && (
+              <div className="flex flex-wrap justify-end gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() =>
+                    handleStatusUpdate(selectedDispute, "investigating")
+                  }
+                >
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  Mark Investigating
+                </Button>
+                <Button
+                  variant="outline"
+                  className="text-red-600"
+                  onClick={() =>
+                    handleStatusUpdate(selectedDispute, "escalated")
+                  }
+                >
+                  <Flag className="mr-2 h-4 w-4" />
+                  Escalate
+                </Button>
+                <Button onClick={() => setShowResolveDialog(true)}>
+                  <CheckCircle2 className="mr-2 h-4 w-4" />
+                  Resolve
+                </Button>
+              </div>
+            )}
+        </div>
+      </div>
+    )}
+
+    <DialogFooter className="flex-shrink-0 mt-4">
+      <Button
+        variant="outline"
+        onClick={() => setShowDetailsDialog(false)}
+      >
+        Close
+      </Button>
+    </DialogFooter>
+  </DialogContent>
+</Dialog>
 
       <Dialog open={showResolveDialog} onOpenChange={setShowResolveDialog}>
         <DialogContent>

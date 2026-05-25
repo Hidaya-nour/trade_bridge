@@ -111,7 +111,7 @@ export const LoginPage: React.FC = () => {
                 placeholder="you@example.com"
                 required
                 disabled={isLoading}
-                className="focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:border-blue-500 transition-all"
+                className="focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:border-purple-500 transition-all"
                 autoComplete="username"
               />
             </div>
@@ -124,7 +124,7 @@ export const LoginPage: React.FC = () => {
                 </label>
                 <Link 
                   to="/forgot-password" 
-                  className="text-xs font-medium text-blue-600 hover:text-blue-800 hover:underline transition-colors"
+                  className="text-xs font-medium text-purple-600 hover:text-purple-800 hover:underline transition-colors"
                 >
                   Forgot password?
                 </Link>
@@ -138,7 +138,7 @@ export const LoginPage: React.FC = () => {
                   placeholder="Enter your password"
                   required
                   disabled={isLoading}
-                  className="focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:border-blue-500 transition-all pr-10"
+                  className="focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:border-purple-500 transition-all pr-10"
                   autoComplete="current-password"
                 />
                 <button
@@ -161,7 +161,7 @@ export const LoginPage: React.FC = () => {
             {/* Submit Button */}
             <Button
               type="submit"
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium shadow-sm transition-all duration-200 transform active:scale-[0.99] disabled:pointer-events-none disabled:opacity-70"
+              className="w-full bg-purple-600 hover:bg-purple-700 text-white font-medium shadow-sm transition-all duration-200 transform active:scale-[0.99] disabled:pointer-events-none disabled:opacity-70"
               disabled={isLoading}
             >
               {isLoading ? (
@@ -179,11 +179,11 @@ export const LoginPage: React.FC = () => {
             <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-slate-600 pt-3 border-t border-slate-100 mt-5">
               <p>
                 Don't have an account?{" "}
-                <Link to="/register" className="text-blue-600 hover:text-blue-800 hover:underline font-medium transition-colors">
+                <Link to="/register" className="text-purple-600 hover:text-purple-800 hover:underline font-medium transition-colors">
                   Create one
                 </Link>
               </p>
-              <Link to="/" className="text-blue-600 hover:text-blue-800 hover:underline font-medium transition-colors">
+              <Link to="/" className="text-purple-600 hover:text-purple-800 hover:underline font-medium transition-colors">
                 Back to home
               </Link>
             </div>
