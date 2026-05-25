@@ -51,6 +51,7 @@ import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { useNotificationStore } from "@/stores/notification.store";
 import type { Notification } from "@/types/notification.types";
+import { useAuthStore } from "@/stores/auth.store";
 
 const NotificationsPage: React.FC = () => {
   // Get notifications from store
@@ -69,7 +70,8 @@ const NotificationsPage: React.FC = () => {
   const [detailOpen, setDetailOpen] = useState(false);
   const [selectedNotification, setSelectedNotification] =
     useState<Notification | null>(null);
-
+  const navigate = useNavigate();
+  const user = useAuthStore((state) => state.user);
   const handleMarkAsRead = async (notificationId?: string) => {
     if (notificationId) {
       await markAsRead(notificationId);
@@ -411,7 +413,7 @@ const NotificationsPage: React.FC = () => {
                         onKeyDown={(event) => {
                           if (event.key === "Enter" || event.key === " ") {
                             event.preventDefault();
-                            handleMarkAllAsRead(notification.id);
+                            handleMarkAllAsRead();
                           }
                         }}
                       >
