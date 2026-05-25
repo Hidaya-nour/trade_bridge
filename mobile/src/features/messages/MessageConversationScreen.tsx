@@ -7,11 +7,13 @@ import {
   Platform,
   Pressable,
   ScrollView,
+  StatusBar,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import type { UserRole } from "@/features/auth/auth.types";
 import { roleConfig } from "@/config/roleConfig";
@@ -29,6 +31,7 @@ export function MessageConversationScreen({ role, userId }: MessageConversationS
   const currentUser = useAuthStore((state) => state.user);
   const scrollViewRef = useRef<ScrollView>(null);
   const [draft, setDraft] = useState("");
+  const insets = useSafeAreaInsets();
 
   const {
     conversations,
@@ -94,9 +97,10 @@ export function MessageConversationScreen({ role, userId }: MessageConversationS
   return (
     <KeyboardAvoidingView
       style={styles.screen}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 0 : StatusBar.currentHeight ?? 0}
     >
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: Math.max(insets.top, 16) }]}>
         <Pressable style={styles.backButton} onPress={() => router.back()}>
           <Ionicons name="arrow-back-outline" size={20} color="#0f172a" />
         </Pressable>
@@ -165,7 +169,7 @@ export function MessageConversationScreen({ role, userId }: MessageConversationS
         )}
       </ScrollView>
 
-      <View style={styles.composer}>
+      <View style={[styles.composer, { paddingBottom: Math.max(insets.bottom, 16) }]}>
         <TextInput
           style={styles.composerInput}
           multiline
@@ -193,7 +197,7 @@ export function MessageConversationScreen({ role, userId }: MessageConversationS
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: "#f8fafc" },
   header: {
-    paddingTop: 56,
+    paddingTop: 16,
     paddingHorizontal: 16,
     paddingBottom: 14,
     flexDirection: "row",
@@ -258,7 +262,7 @@ const styles = StyleSheet.create({
     borderTopColor: "#e2e8f0",
     paddingHorizontal: 16,
     paddingTop: 12,
-    paddingBottom: Platform.OS === "ios" ? 28 : 16,
+    paddingBottom: 16,
     flexDirection: "row",
     alignItems: "flex-end",
     gap: 10,
