@@ -28,10 +28,10 @@ import reviewService from "@/features/reviews/review.service";
 const formatDate = (value?: string | null) =>
   value
     ? new Date(value).toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-      })
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    })
     : "Pending";
 
 const statusIndex: Record<OrderStatus, number> = {
@@ -135,7 +135,7 @@ export default function RetailerOrderDetailScreen() {
     const index = statusIndex[order.order_status] ?? 0;
     const effectiveIndex = index < 0 ? 0 : index;
 
-  return steps.map((step, stepIndex) => ({
+    return steps.map((step, stepIndex) => ({
       label: step,
       completed: stepIndex <= effectiveIndex,
       date: stepIndex === 0 ? order.created_at : undefined,
@@ -158,7 +158,7 @@ export default function RetailerOrderDetailScreen() {
       setPaymentProcessing(true);
       try {
         let proofDocumentId: string | undefined;
-        
+
         // Upload proof file if provided
         if (proofFile?.uri) {
           try {
@@ -316,12 +316,12 @@ export default function RetailerOrderDetailScreen() {
           </Pressable>
 
           {needsPayment ? (
-            <Pressable 
+            <Pressable
               disabled={!isApproved}
               style={[
-                styles.primaryActionButton, 
+                styles.primaryActionButton,
                 !isApproved && styles.disabledActionButton
-              ]} 
+              ]}
               onPress={() => setPaymentOpen(true)}
             >
               <Ionicons name="card-outline" size={16} color="#ffffff" />

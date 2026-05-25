@@ -13,7 +13,7 @@ import {
   Platform,
   StyleSheet,
 } from 'react-native';
-import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
+import { BusinessMap } from './BusinessMap';
 import { Picker } from '@react-native-picker/picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as DocumentPicker from 'expo-document-picker';
@@ -379,31 +379,12 @@ const BusinessTab: React.FC<BusinessTabProps> = (props) => {
                 </TouchableOpacity>
               )}
               <View style={styles.mapContainer}>
-                {!isWeb && MapView ? (
-                  <MapView
-                    provider={PROVIDER_GOOGLE}
-                    style={styles.map}
-                    region={mapRegion}
-                    onPress={(e) => {
-                      const { latitude, longitude } = e.nativeEvent.coordinate;
-                      setAddressForm(prev => ({
-                        ...prev,
-                        latitude: latitude.toFixed(6),
-                        longitude: longitude.toFixed(6),
-                      }));
-                    }}
-                  >
-                    {hasCoordinates && (
-                      <Marker coordinate={{ latitude: mapCenter.lat, longitude: mapCenter.lng }} />
-                    )}
-                  </MapView>
-                ) : (
-                  <View style={styles.mapPlaceholder}>
-                    <Text style={styles.mapPlaceholderText}>
-                      Map view is not available on web. Use a native device to select a location.
-                    </Text>
-                  </View>
-                )}
+                <BusinessMap
+                  mapRegion={mapRegion}
+                  setAddressForm={setAddressForm}
+                  hasCoordinates={hasCoordinates}
+                  mapCenter={mapCenter}
+                />
               </View>
               <Text style={styles.helperText}>
                 Click the map to drop a pin. We will use this to help locate your business.

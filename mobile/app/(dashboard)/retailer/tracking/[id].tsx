@@ -13,6 +13,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 
 import ScreenWrapper from "@/components/layout/ScreenWrapper";
+import { MapView, Marker, Polyline } from "@/components/MapLoader";
 import driverLocationService, {
   type DriverLocationPoint,
 } from "@/features/driver-location/driver-location.service";
@@ -162,7 +163,6 @@ export default function RetailerTrackingScreen() {
   const [isLoadingOrder, setIsLoadingOrder] = useState(true);
   const [isLoadingLocations, setIsLoadingLocations] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [mapLib, setMapLib] = useState<any | null>(null);
 
   const sortedLocations = useMemo(
     () =>
@@ -209,25 +209,7 @@ export default function RetailerTrackingScreen() {
     longitude: Number(point.longitude),
   }));
 
-  useEffect(() => {
-    let mounted = true;
-    try {
-      const RNMaps = require("react-native-maps");
-      if (mounted) {
-        setMapLib({
-          MapView: RNMaps.default,
-          Marker: RNMaps.Marker,
-          Polyline: RNMaps.Polyline,
-        });
-      }
-    } catch {
-      if (mounted) setMapLib(null);
-    }
 
-    return () => {
-      mounted = false;
-    };
-  }, []);
 
   useEffect(() => {
     if (!orderId) return;
@@ -285,9 +267,9 @@ export default function RetailerTrackingScreen() {
     };
   }, [orderId]);
 
-  const MapComp = mapLib?.MapView;
-  const MarkerComp = mapLib?.Marker;
-  const PolylineComp = mapLib?.Polyline;
+  const MapComp = MapView;
+  const MarkerComp = Marker;
+  const PolylineComp = Polyline;
   const isInitialLoading = (isLoadingOrder || isLoadingLocations) && !center;
   const dropoffLabel =
     order?.delivery?.dropoff_location ||
